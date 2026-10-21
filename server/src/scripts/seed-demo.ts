@@ -200,7 +200,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     buy('Taśma aluminiowa 50 m', 'Castorama Sucha', 'Materiały');
     buy('Wkrętarka akumulatorowa', 'Elektronarzędzia Maków', 'Narzędzia', 'Zamówione');
     buy('Filtry G4 do centrali', 'Hurtownia Wentylacja', 'Materiały', 'Zamówione');
-    buy('Rolka papieru do plotera', 'Biuro Plus', 'Biuro', 'Kupione', 4_500);
+    buy('Rolka papieru do plotera', 'Biuro Plus', 'Materiały', 'Kupione', 4_500);
 
     // Listy „na jutro”.
     const tomorrow = addDays(today, 1);

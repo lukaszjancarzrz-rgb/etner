@@ -29,7 +29,7 @@ export const SEED: Record<DictRodzaj, Item[]> = {
   status_zadania: ['Do zrobienia', 'W toku', 'Zrobione'],
   grupa_zadan: ['Firma', 'Klienci', 'Sprzęt'],
   status_zakupu: ['Do kupienia', 'Zamówione', 'Kupione'],
-  grupa_zakupow: ['Materiały', 'Narzędzia', 'Biuro'],
+  grupa_zakupow: ['Materiały', 'Narzędzia'],
   dzien_wolny: [],
 };
 
