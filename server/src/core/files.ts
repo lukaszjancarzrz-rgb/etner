@@ -28,6 +28,7 @@ const TYPES: Record<string, string> = { webp: 'image/webp', jpg: 'image/jpeg', j
 const typeOf = (key: string) => TYPES[key.split('.').pop()!.toLowerCase()] ?? 'application/octet-stream';
 
 export function diskStore(dir: string, secret: string): DiskStore {
+  if (!secret) throw new Error('Brak APP_SECRET – podpisy linków do plików wymagają sekretu.');
   const sign = (key: string, exp: number) => createHmac('sha256', secret).update(`${key}\n${exp}`).digest('base64url');
   const path = (key: string) => join(dir, checkKey(key));
   return {

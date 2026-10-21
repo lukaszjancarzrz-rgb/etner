@@ -41,7 +41,11 @@ describe('diskStore', () => {
     expect(ok.status).toBe(200);
     expect(ok.headers.get('content-type')).toBe('image/webp');
     expect(Buffer.from(await ok.arrayBuffer()).equals(body)).toBe(true);
-    expect((await app.request(url.replace(/sig=.{3}/, 'sig=AAA'))).status).toBe(403);
+    const last = url.slice(-1);
+    expect((await app.request(url.slice(0, -1) + (last === 'A' ? 'B' : 'A'))).status).toBe(403);
+    expect((await app.request(url.replace(/exp=(\d+)/, (_, n) => `exp=${Number(n) + 1000}`))).status).toBe(403);
+    expect((await app.request('/api/files/a%ZZ?exp=1&sig=x')).status).toBe(403);
+    expect((await app.request(await deps.files.url('nie/ma.webp'))).status).toBe(404);
     expect((await app.request(url.replace('a/b.webp', 'a/c.webp'))).status).toBe(403);
     const expired = await deps.files.url('a/b.webp', -10);
     expect((await app.request(expired)).status).toBe(403);
@@ -57,6 +61,12 @@ describe('diskStore', () => {
 });
 
 describe('fileStoreFromEnv', () => {
+  it('bez sekretu rzuca', () => {
+    expect(() => fileStoreFromEnv({ DATA_DIR: tmp() })).toThrow();
+    expect(() => fileStoreFromEnv({ DATA_DIR: tmp(), APP_SECRET: '' })).toThrow();
+    expect(() => diskStore(tmp(), '')).toThrow();
+  });
+
   it('R2 gdy komplet zmiennych, inaczej dysk', () => {
     const r2 = { R2_BUCKET: 'b', R2_ENDPOINT: 'https://x.r2.cloudflarestorage.com', R2_KEY: 'k', R2_SECRET: 's' };
     expect(fileStoreFromEnv({ ...r2, APP_SECRET: 's', DATA_DIR: tmp() }).kind).toBe('r2');
