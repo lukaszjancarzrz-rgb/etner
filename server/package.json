@@ -8,6 +8,7 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "test": "vitest run",
+    "create-admin": "node dist/scripts/create-admin-cli.js",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

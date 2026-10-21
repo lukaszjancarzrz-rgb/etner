@@ -3,7 +3,6 @@ import { newId } from '@etner/shared';
 import { revokeUser } from '../../core/auth.js';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
-import { hashPassword } from '../../core/password.js';
 import { users } from '../../core/schema-base.js';
 import { schedulePeople } from './schema.js';
 
@@ -39,11 +38,11 @@ export const admins = (db: Db): string[] =>
 export class LoginTakenError extends Error {}
 
 type NewUser = { login: string; name: string; role: 'pracownik' | 'admin'; perms: string[]; ekipa?: string | null; scheduleCol?: string | null };
-export function create(db: Db, by: string, d: NewUser & { haslo: string }): PublicUser {
+export function create(db: Db, by: string, d: NewUser & { passwordHash: string }): PublicUser {
   if (loginTaken(db, d.login)) throw new LoginTakenError();
-  const { haslo, ...rest } = d;
+  const { passwordHash, ...rest } = d;
   const now = new Date().toISOString();
-  const row = db.insert(users).values({ id: newId(), ...rest, ekipa: d.ekipa ?? null, scheduleCol: d.scheduleCol ?? null, passwordHash: hashPassword(haslo), createdAt: now, createdBy: by, updatedAt: now }).returning().get();
+  const row = db.insert(users).values({ id: newId(), ...rest, ekipa: d.ekipa ?? null, scheduleCol: d.scheduleCol ?? null, passwordHash, createdAt: now, createdBy: by, updatedAt: now }).returning().get();
   recordChange(db, by, 'users', row.id, 'create', null, strip(row));
   return strip(row);
 }
@@ -59,10 +58,10 @@ export function update(db: Db, by: string, id: string, d: Partial<NewUser> & { a
 }
 
 /** Nowe hasło (reset przez admina), wszystkie sesje użytkownika kończą się. */
-export function setPassword(db: Db, by: string, id: string, haslo: string): PublicUser | null {
+export function setPassword(db: Db, by: string, id: string, passwordHash: string): PublicUser | null {
   const old = get(db, id);
   if (!old || old.deletedAt) return null;
-  const row = db.update(users).set({ passwordHash: hashPassword(haslo), updatedAt: new Date().toISOString() }).where(eq(users.id, id)).returning().get();
+  const row = db.update(users).set({ passwordHash, updatedAt: new Date().toISOString() }).where(eq(users.id, id)).returning().get();
   revokeUser(db, id);
   recordChange(db, by, 'users', id, 'update', strip(old), strip(row));
   return strip(row);

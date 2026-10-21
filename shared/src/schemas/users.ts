@@ -34,4 +34,4 @@ export const schedulePersonSchema = z.object({
 });
 export const schedulePersonUpdateSchema = schedulePersonSchema.partial();
 export const userPasswordSchema = z.object({ opId, haslo: hasloSchema });
-export const ownPasswordSchema = z.object({ stare: z.string().min(1), nowe: hasloSchema });
+export const ownPasswordSchema = z.object({ stare: z.string().min(1).max(200), nowe: hasloSchema });

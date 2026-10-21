@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import { addDays, dayOf, isWorkday, mondayOf, newId, type ScheduleProposal } from '@etner/shared';
+import { hashPassword } from '../core/password.js';
 import { tx, type Db } from '../core/db.js';
 import { makeVariants, type FileStore } from '../core/files.js';
 import { users } from '../core/schema-base.js';
@@ -30,11 +31,11 @@ const DEMO_USERS = [
 /** Jedno hasło wszystkich kont demo (dane wymyślone, wersja testowa). */
 export const DEMO_PASSWORD = 'demo1234';
 
-export type DemoAccount = { name: string; role: string; ekipa: string | null; login: string };
+export type DemoAccount = { name: string; role: string; ekipa: string | null; login: string; haslo: string };
 export function demoAccounts(db: Db): DemoAccount[] {
   const byName = new Map(uzytkownicy.list(db).map((u) => [u.name, u]));
   return [...DEMO_USERS].sort((a, b) => Number(b.role === 'admin') - Number(a.role === 'admin')).filter((d) => byName.has(d.name))
-    .map(({ name, role, ekipa, login }) => ({ name, role, ekipa, login }));
+    .map(({ name, role, ekipa, login }) => ({ name, role, ekipa, login, haslo: DEMO_PASSWORD }));
 }
 
 const CLIENTS = [
@@ -94,6 +95,8 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
   const today = dayOf(now);
   const { w, h } = opts.photo ?? { w: 1600, h: 1200 };
 
+  const passwordHash = await hashPassword(DEMO_PASSWORD); // jeden skrót dla wszystkich kont demo
+
   // Pliki najpierw (async), potem jedna transakcja na wszystkie zapisy.
   const ph = await Promise.all(Array.from({ length: 10 }, async (_, i) => {
     const id = newId();
@@ -109,7 +112,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     const u: Record<string, ReturnType<typeof uzytkownicy.create>> = {};
     let by = 'demo';
     for (const d of [...DEMO_USERS].sort((a, b) => Number(b.role === 'admin') - Number(a.role === 'admin'))) {
-      const user = uzytkownicy.create(db, by, { login: d.login, haslo: DEMO_PASSWORD, name: d.name, role: d.role, perms: [], ekipa: d.ekipa });
+      const user = uzytkownicy.create(db, by, { login: d.login, passwordHash, name: d.name, role: d.role, perms: [], ekipa: d.ekipa });
       u[d.login] = user;
       if (by === 'demo') by = user.id;
     }

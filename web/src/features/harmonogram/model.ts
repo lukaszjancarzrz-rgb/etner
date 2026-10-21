@@ -41,7 +41,7 @@ export const cellText = (slots: Slot[], jobs: Map<string, JobView>) =>
 /** Treść błędu: sesja (401), serwer (5xx), brak sieci albo komunikat serwera. */
 export function errText(e: unknown): string {
   if (e instanceof ApiError) {
-    if (e.status === 401) return 'Sesja wygasła. Otwórz swój link logowania jeszcze raz.';
+    if (e.status === 401) return 'Sesja wygasła. Zaloguj się ponownie.';
     if (e.status >= 500) return 'Błąd serwera. Spróbuj ponownie za chwilę.';
     return e.message;
   }

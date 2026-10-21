@@ -67,7 +67,7 @@ describe('seedDemo', () => {
     const konta = demoAccounts(deps.db);
     expect(konta).toHaveLength(7);
     expect(konta.map((k) => k.login)).toEqual(['tomek', 'anna', 'bartek', 'piotr', 'kamil', 'marek', 'adam']);
-    expect(konta[0]).toEqual({ name: 'Tomasz Wrona', role: 'admin', ekipa: null, login: 'tomek' });
+    expect(konta[0]).toEqual({ name: 'Tomasz Wrona', role: 'admin', ekipa: null, login: 'tomek', haslo: 'demo1234' });
     expect(DEMO_PASSWORD).toBe('demo1234');
     for (const k of konta) expect(await loginCookie(app, k.login, DEMO_PASSWORD)).toContain('etner_s=');
     expect(JSON.stringify(deps.db.$client.prepare('select * from users').all())).not.toContain(DEMO_PASSWORD);
@@ -82,6 +82,6 @@ describe('seedDemo', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>[];
     expect(body).toHaveLength(7);
-    expect(Object.keys(body[0]!).sort()).toEqual(['ekipa', 'login', 'name', 'role']);
+    expect(Object.keys(body[0]!).sort()).toEqual(['ekipa', 'haslo', 'login', 'name', 'role']);
   });
 });

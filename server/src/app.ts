@@ -36,7 +36,7 @@ export interface AppDeps {
   /** Czy klient ma nieusunięte zlecenie (dostarcza moduł zleceń); brak = nikt, więc pracownik nie widzi klientów. */
   clientHasJobs?: (clientId: string) => boolean;
   /** Tryb demo (DEMO=1): konta do wyboru na ekranie logowania; brak = trasa /api/demo/konta nie istnieje. */
-  demoAccounts?: () => { name: string; role: string; ekipa: string | null; login: string }[];
+  demoAccounts?: () => { name: string; role: string; ekipa: string | null; login: string; haslo: string }[];
   /** Cookie Secure; domyślnie włączone w produkcji. */
   secureCookie?: boolean;
 }

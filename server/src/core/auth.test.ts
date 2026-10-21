@@ -46,9 +46,10 @@ describe('logowanie hasłem', () => {
     const ph = deps.db.select().from(users).get()!.passwordHash!;
     expect(ph).toMatch(/^scrypt\$[A-Za-z0-9+/=]+\$[A-Za-z0-9+/=]+$/);
     expect(ph).not.toContain(haslo);
-    expect(hashPassword(haslo)).not.toBe(ph); // losowa sól
-    expect(verifyPassword(haslo, ph)).toBe(true);
-    expect(verifyPassword('inne', ph)).toBe(false);
+    expect(await hashPassword(haslo)).not.toBe(ph); // losowa sól
+    expect(await verifyPassword(haslo, ph)).toBe(true);
+    expect(await verifyPassword('inne', ph)).toBe(false);
+    for (const bad of [null, '', 'scrypt$', 'x$y$z']) expect(await verifyPassword(haslo, bad)).toBe(false);
   });
 
   it('Secure gdy secureCookie', async () => {
@@ -93,6 +94,36 @@ describe('logowanie hasłem', () => {
       vi.advanceTimersByTime(15 * 60_000 + 1000);
       expect((await post(app, '/api/login', { login, haslo })).status).toBe(200);
     } finally { vi.useRealTimers(); }
+  });
+
+  it('równoległe próby też są ograniczone do 5; wariant wielkości liter i spacji dzieli licznik', async () => {
+    const { deps, app } = setup();
+    const { login, haslo } = addUser(deps);
+    const variants = [login, ` ${login.toUpperCase()} `];
+    const res = await Promise.all(Array.from({ length: 12 }, (_, i) => post(app, '/api/login', { login: variants[i % 2], haslo: i === 11 ? haslo : 'zle-haslo' })));
+    const codes = res.map((r) => r.status);
+    expect(codes.filter((c) => c === 429).length).toBe(7);
+    expect(codes.filter((c) => c === 401 || c === 200).length).toBe(5);
+    expect((await post(app, '/api/login', { login, haslo })).status).toBe(429);
+  });
+
+  it('hasło dłuższe niż 200 znaków: 401 bez scrypt', async () => {
+    const { deps, app } = setup();
+    const { login } = addUser(deps);
+    const res = await post(app, '/api/login', { login, haslo: 'x'.repeat(201) });
+    expect(res.status).toBe(401);
+    expect((await post(app, '/api/me/haslo', { stare: 'x'.repeat(201), nowe: 'nowe-haslo-1' }, await loginCookie(app, login))).status).toBe(400);
+  });
+
+  it('logowanie z istniejącym cookie kasuje starą sesję', async () => {
+    const { deps, app } = setup();
+    const { login, haslo } = addUser(deps);
+    const first = await loginCookie(app, login);
+    const res = await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json', cookie: first }, body: JSON.stringify({ login, haslo }) });
+    const second = res.headers.get('set-cookie')!.split(';')[0]!;
+    expect(deps.db.select().from(sessions).all()).toHaveLength(1);
+    expect((await get(app, '/api/me', first)).status).toBe(401);
+    expect((await get(app, '/api/me', second)).status).toBe(200);
   });
 
   it('udane logowanie zeruje licznik', async () => {
@@ -188,6 +219,17 @@ describe('uprawnienia', () => {
 });
 
 describe('zmiana własnego hasła', () => {
+  it('błędne stare hasło liczy się do tego samego limitu co logowanie: 429 po 5', async () => {
+    const { deps, app } = setup();
+    const { login, haslo } = addUser(deps);
+    const cookie = await loginCookie(app, login); // udane, licznik zerowy
+    for (let i = 0; i < 5; i++) expect((await post(app, '/api/me/haslo', { stare: 'zle-haslo', nowe: 'nowe-haslo-1' }, cookie)).status).toBe(400);
+    const r = await post(app, '/api/me/haslo', { stare: haslo, nowe: 'nowe-haslo-1' }, cookie);
+    expect(r.status).toBe(429);
+    expect(await r.json()).toEqual({ error: 'ZA_DUZO_PROB' });
+    expect((await post(app, '/api/login', { login, haslo })).status).toBe(429);
+  });
+
   it('sprawdza stare, ustawia nowe, wylogowuje inne urządzenia, zostawia bieżące', async () => {
     const { deps, app } = setup();
     const { login, haslo } = addUser(deps);

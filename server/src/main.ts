@@ -11,7 +11,7 @@ import { modulesOf } from './core/registry.js';
 import { modules } from './modules/index.js';
 import { kopieCrons } from './scripts/kopie.js';
 import { seedBase } from './modules/slowniki/seed.js';
-import { DEMO_PASSWORD, demoAccounts, seedDemo } from './scripts/seed-demo.js';
+import { demoAccounts, seedDemo } from './scripts/seed-demo.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
 const port = Number(process.env.PORT ?? 3000);
@@ -46,6 +46,6 @@ const stopCron = registerCron(deps, [...modulesOf(app).flatMap((m) => m.cron ?? 
 
 const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`ETNER nasłuchuje na :${port}`);
-  if (demo) for (const a of demoAccounts(db)) console.log(`DEMO ${a.role}${a.ekipa ? ` (${a.ekipa})` : ''} ${a.name}: login ${a.login}, hasło ${DEMO_PASSWORD}`);
+  if (demo) for (const a of demoAccounts(db)) console.log(`DEMO ${a.role}${a.ekipa ? ` (${a.ekipa})` : ''} ${a.name}: login ${a.login}, hasło ${a.haslo}`);
 });
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { stopCron(); server.close(); });

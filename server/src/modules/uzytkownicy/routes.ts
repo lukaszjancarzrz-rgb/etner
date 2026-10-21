@@ -4,6 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
 import { body } from '../../core/body.js';
 import { requireAdmin, requireUser } from '../../core/auth.js';
+import { hashPassword } from '../../core/password.js';
 import { runOp } from '../../core/ops.js';
 import * as svc from './service.js';
 
@@ -18,9 +19,10 @@ export function routes(app: Hono, { db }: AppDeps): void {
   app.get('/api/users', admin, (c) => c.json(svc.list(db)));
 
   app.post('/api/users', admin, async (c) => {
-    const { opId, ...d } = await body(c, userCreateSchema);
+    const { opId, haslo, ...d } = await body(c, userCreateSchema);
+    const passwordHash = await hashPassword(haslo);
     try {
-      return c.json({ user: runOp(db, opId, me(c), () => svc.create(db, me(c), d)).result });
+      return c.json({ user: runOp(db, opId, me(c), () => svc.create(db, me(c), { ...d, passwordHash })).result });
     } catch (e) { return taken(e); }
   });
 
@@ -40,7 +42,8 @@ export function routes(app: Hono, { db }: AppDeps): void {
 
   app.post('/api/users/:id/haslo', admin, async (c) => {
     const { opId, haslo } = await body(c, userPasswordSchema);
-    const { result } = runOp(db, opId, me(c), () => svc.setPassword(db, me(c), c.req.param('id'), haslo));
+    const passwordHash = await hashPassword(haslo);
+    const { result } = runOp(db, opId, me(c), () => svc.setPassword(db, me(c), c.req.param('id'), passwordHash));
     if (!result) throw notFound();
     return c.json({ user: result });
   });

@@ -38,3 +38,13 @@ Plik `render.yaml` opisuje usługę z danymi przykładowymi (tryb demo). Dane le
 5. Otwórz adres usługi. Ekran logowania w wersji demo pokazuje listę „Konta demo” (administratorzy: tomek, anna; pracownicy: bartek, piotr, kamil, marek, adam). Dotknij konta, żeby się zalogować; wspólne hasło wszystkich kont to `demo1234`. Loginy i hasło są też w logu usługi przy starcie.
 
 Darmowa usługa usypia się po kwadransie bez ruchu; pierwsze wejście po przerwie trwa około minuty.
+
+## Pierwszy administrator (baza produkcyjna)
+
+Świeża baza nie ma żadnego konta. Po zbudowaniu (`pnpm -r build`), na serwerze z ustawionym `DATA_DIR`:
+
+```
+ADMIN_PASSWORD='<hasło, min. 8 znaków>' pnpm --filter @etner/server create-admin -- --login <login> --name "<imię i nazwisko>"
+```
+
+Bez `ADMIN_PASSWORD` skrypt zapyta o hasło w terminalu. Odmówi, gdy login już istnieje. Konto jest aktywnym administratorem z uprawnieniem `finanse`; kolejne konta dodaje już administrator w aplikacji.

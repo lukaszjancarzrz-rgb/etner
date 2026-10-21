@@ -18,6 +18,7 @@ export function testDeps(over: Partial<AppDeps> = {}): AppDeps {
 }
 
 export const TEST_PASSWORD = 'haslo-testowe-1';
+const TEST_HASH = await hashPassword(TEST_PASSWORD);
 let seq = 0;
 
 /** Tworzy użytkownika ze znanym loginem i hasłem (TEST_PASSWORD). */
@@ -28,7 +29,7 @@ export function addUser(
   const login = `u${++seq}`;
   const now = new Date().toISOString();
   const user: User = { id: newId(), name: 'Jan', role: 'pracownik', perms: [], ekipa: null, scheduleCol: null, active: true, ...o };
-  deps.db.insert(users).values({ ...user, login, passwordHash: hashPassword(TEST_PASSWORD), createdAt: now, updatedAt: now }).run();
+  deps.db.insert(users).values({ ...user, login, passwordHash: TEST_HASH, createdAt: now, updatedAt: now }).run();
   return { user, login, haslo: TEST_PASSWORD };
 }
 
