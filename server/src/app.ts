@@ -35,6 +35,8 @@ export interface AppDeps {
   webDist?: string;
   /** Czy klient ma nieusunięte zlecenie (dostarcza moduł zleceń); brak = nikt, więc pracownik nie widzi klientów. */
   clientHasJobs?: (clientId: string) => boolean;
+  /** Tryb demo (DEMO=1): lista linków logowania dla podanego adresu; brak = trasa /api/demo/links nie istnieje. */
+  demoLinks?: (origin: string) => { name: string; role: string; ekipa: string | null; link: string }[];
   /** Cookie Secure; domyślnie włączone w produkcji. */
   secureCookie?: boolean;
 }
@@ -51,6 +53,9 @@ export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
   });
 
   app.get('/api/health', (c) => c.json({ ok: true, version: deps.version }));
+
+  const demo = deps.demoLinks;
+  if (demo) app.get('/api/demo/links', (c) => c.json(demo(new URL(c.req.url).origin)));
 
   mountAuth(app, deps);
   mountSync(app, deps);

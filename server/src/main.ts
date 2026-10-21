@@ -11,6 +11,7 @@ import { modulesOf } from './core/registry.js';
 import { modules } from './modules/index.js';
 import { kopieCrons } from './scripts/kopie.js';
 import { seedBase } from './modules/slowniki/seed.js';
+import { demoLinks, seedDemo } from './scripts/seed-demo.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
 const port = Number(process.env.PORT ?? 3000);
@@ -30,11 +31,14 @@ const files = fileStoreFromEnv({ ...process.env, DATA_DIR: dataDir, APP_SECRET: 
 const db = openDb(join(dataDir, 'etner.db'));
 migrate(db);
 seedBase(db);
+const demo = process.env.DEMO === '1';
+if (demo && (await seedDemo(db, files, { secret }))) console.log('Dane demo załadowane.');
 
 const vapid = vapidFromEnv(process.env, dataDir);
 if (!vapid) console.warn('Push wyłączony: brak VAPID_PUBLIC / VAPID_PRIVATE.');
 const deps = {
   version: process.env.APP_VERSION ?? pkg.version, db, files, secret,
+  demoLinks: demo ? (origin: string) => demoLinks(db, secret, process.env.BASE_URL || origin) : undefined,
   push: vapid ? webPushSender(vapid, process.env.VAPID_SUBJECT) : undefined, vapidPublic: vapid?.publicKey,
 };
 const app = createApp(deps, modules);
@@ -42,5 +46,6 @@ const stopCron = registerCron(deps, [...modulesOf(app).flatMap((m) => m.cron ?? 
 
 const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`ETNER nasłuchuje na :${port}`);
+  if (demo) for (const l of demoLinks(db, secret, process.env.BASE_URL || `http://localhost:${port}`)) console.log(`DEMO ${l.role}${l.ekipa ? ` (${l.ekipa})` : ''} ${l.name}: ${l.link}`);
 });
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { stopCron(); server.close(); });
