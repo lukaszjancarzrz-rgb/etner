@@ -83,35 +83,30 @@ export const telHref = (t: string) => `tel:${t.replace(/[^\d+]/g, '')}`;
 
 /** Ostatnia wizyta w zleceniu (licznik „nowe”), per urządzenie. */
 const SEEN0 = 'seen0';
-export function seenAt(jobId: string): string {
+const navKey = (userId: string, screen: string) => `nav-seen:${userId}:${screen}`;
+const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+/** Tylko odczyt (bezpieczne w useMemo). Bez zapisanej bazy: „teraz”, czyli nic nie jest nowe, dopóki ensureSeenBase jej nie zapisze. */
+export const seenAt = (jobId: string): string => read(`seen:${jobId}`) ?? read(SEEN0) ?? new Date().toISOString();
+/** Ostatnie wejście na ekran (liczniki w menu), per użytkownik; tylko odczyt. */
+export const screenSeenAt = (userId: string, screen: string): string => read(navKey(userId, screen)) ?? new Date().toISOString();
+/** Pierwsze uruchomienie: baza „ostatnio widziane” = teraz (stare dane nie są „nowe”). Wołać w efekcie. */
+export function ensureSeenBase(userId: string, screens: string[]): void {
   try {
-    let base = localStorage.getItem(SEEN0);
-    if (!base) { base = new Date().toISOString(); localStorage.setItem(SEEN0, base); }
-    return localStorage.getItem(`seen:${jobId}`) ?? base;
-  } catch { return new Date().toISOString(); }
+    const now = new Date().toISOString();
+    if (!localStorage.getItem(SEEN0)) localStorage.setItem(SEEN0, now);
+    for (const sc of screens) if (!localStorage.getItem(navKey(userId, sc))) localStorage.setItem(navKey(userId, sc), now);
+  } catch { /* prywatne okno */ }
 }
 let seenVer = 0;
 const seenSubs = new Set<() => void>();
+const bump = () => { seenVer++; for (const f of seenSubs) f(); };
 export function markSeen(jobId: string): void {
   try { localStorage.setItem(`seen:${jobId}`, new Date().toISOString()); } catch { /* prywatne okno */ }
-  seenVer++;
-  for (const f of seenSubs) f();
-}
-/** Ostatnie wejście na ekran (liczniki w menu), per użytkownik; brak = od teraz (pierwsze uruchomienie bez starych „nowych”). */
-export function screenSeenAt(userId: string, screen: string): string {
-  const k = `nav-seen:${userId}:${screen}`;
-  try {
-    const v = localStorage.getItem(k);
-    if (v) return v;
-    const now = new Date().toISOString();
-    localStorage.setItem(k, now);
-    return now;
-  } catch { return new Date().toISOString(); }
+  bump();
 }
 export function markScreenSeen(userId: string, screen: string): void {
-  try { localStorage.setItem(`nav-seen:${userId}:${screen}`, new Date().toISOString()); } catch { /* prywatne okno */ }
-  seenVer++;
-  for (const f of seenSubs) f();
+  try { localStorage.setItem(navKey(userId, screen), new Date().toISOString()); } catch { /* prywatne okno */ }
+  bump();
 }
 /** Zmienia się po każdym markSeen (liczniki „nowe” liczone od nowa). */
 export const useSeenVersion = () => useSyncExternalStore((f) => { seenSubs.add(f); return () => seenSubs.delete(f); }, () => seenVer);

@@ -32,9 +32,9 @@ export function update(db: Db, userId: string, id: string, d: Omit<ScopeUpdate, 
   if (!old) return undefined;
   const ups = dziennik.checkUploads(db, userId, d.uploads ?? []);
   let row = old;
-  const set = Object.fromEntries(Object.entries({ tekst: d.tekst, kolejnosc: d.kolejnosc }).filter(([, v]) => v !== undefined));
-  if (Object.keys(set).length) {
-    row = db.update(jobScopeItems).set({ ...set, updatedAt: NOW() }).where(eq(jobScopeItems.id, id)).returning().get();
+  if (d.removePhotos?.length) dziennik.removeAttachmentsOf(db, userId, 'scope', id, d.removePhotos);
+  if (d.tekst !== undefined && d.tekst !== old.tekst) {
+    row = db.update(jobScopeItems).set({ tekst: d.tekst, updatedAt: NOW() }).where(eq(jobScopeItems.id, id)).returning().get();
     recordChange(db, userId, 'job_scope_items', id, 'update', old, row);
   }
   dziennik.attach(db, userId, ups, 'scope', id);

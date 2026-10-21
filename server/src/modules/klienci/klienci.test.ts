@@ -54,8 +54,10 @@ describe('klienci: edycja', () => {
     expect(r.duplicates.map((d: { id: string }) => d.id)).toEqual([a.client.id]);
     const r2 = await (await app.request(`/api/clients/${a.client.id}`, json(admin, 'PUT', { nazwa: 'A2' }))).json();
     expect(r2.duplicates).toEqual([]); // bez telefonów i e-maili w zmianie: bez ostrzeżenia
-    const r3 = await (await app.request(`/api/clients/${a.client.id}`, json(admin, 'PUT', { emaile: [] }))).json();
-    expect(r3.duplicates.map((d: { id: string }) => d.id)).toEqual([b.client.id]);
+    const r3 = await (await app.request(`/api/clients/${a.client.id}`, json(admin, 'PUT', { emaile: [], telefony: ['727728903'] }))).json();
+    expect(r3.duplicates).toEqual([]); // formularz wysyła te same telefony: bez zmian, bez ostrzeżenia
+    const r4 = await (await app.request(`/api/clients/${a.client.id}`, json(admin, 'PUT', { telefony: ['727728903', '500500500'] }))).json();
+    expect(r4.duplicates.map((d: { id: string }) => d.id)).toEqual([b.client.id]);
   });
 });
 

@@ -1,5 +1,5 @@
 import { Plus, Trash } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { dayLong, useDict, useStatusGroup } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { store, useEntities, type Rec } from '../../core/store.js';
@@ -36,6 +36,8 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
   const [wdOnly, setWdOnly] = useState<boolean | null>(null); // null = domyślnie: tak, gdy zakres > 1 dzień
   const [rangeErr, setRangeErr] = useState('');
   const [armed, setArmed] = useState<{ sig: string; n: number } | null>(null); // ostrzeżenie o nadpisaniu: drugie naciśnięcie zapisuje
+  // zmiana wartości lub zaznaczenia gasi ostrzeżenie (zapis ostrzeże od nowa)
+  useEffect(() => setArmed(null), [slots, who, from, to, wdOnly]);
   const codes = useDict('kod_nieobecnosci');
   const off = useDict('dzien_wolny');
   const entries = useEntities('schedule_entries');

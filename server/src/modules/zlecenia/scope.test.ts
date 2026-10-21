@@ -81,4 +81,21 @@ describe('zakres prac', () => {
     await add(s, 'A', [ph]);
     expect((await s.app.request(`/api/attachments/${ph}`, json(s.admin, 'PATCH', { dla_klienta: true }))).status).toBe(200);
   });
+
+  it('edycja usuwa wybrane zdjęcie punktu (miękko, z wpisem w changes); cudze zdjęcie 400', async () => {
+    const s = await setup();
+    const [ph1, ph2, other] = [await up(s, s.admin), await up(s, s.admin), await up(s, s.admin)];
+    const p = await add(s, 'A', [ph1, ph2]);
+    await add(s, 'B', [other]);
+    expect((await s.app.request(`/api/scope/${p.id}`, json(s.admin, 'PUT', { removePhotos: [other] }))).status).toBe(400);
+    expect((await s.app.request(`/api/scope/${p.id}`, json(s.worker, 'PUT', { removePhotos: [ph1] }))).status).toBe(403);
+    expect((await s.app.request(`/api/scope/${p.id}`, json(s.admin, 'PUT', { removePhotos: [ph1] }))).status).toBe(200);
+    expect(atts(s).filter((a) => !a.deleted_at).map((a) => a.id).sort()).toEqual([ph2, other].sort());
+    const last = (await feed(s, s.worker)).filter((c) => c.id === ph1).at(-1)!;
+    expect(last.data.deletedAt).toBeTruthy();
+    expect((await s.app.request(`/api/attachments/${ph1}/file`, json(s.worker, 'GET'))).status).toBe(404);
+    // kolejność nie przez PUT
+    const r = await (await s.app.request(`/api/scope/${p.id}`, json(s.admin, 'PUT', { kolejnosc: 5 }))).json();
+    expect(r.kolejnosc).toBe(1);
+  });
 });

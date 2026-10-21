@@ -35,7 +35,8 @@ const scopeTekst = txt.min(1, 'Wpisz treść punktu').max(5000, 'Tekst jest za d
 const uploads = z.array(z.string().min(1)).max(30);
 export const scopeCreateSchema = z.object({ opId: z.string().min(1).optional(), tekst: scopeTekst, uploads: uploads.default([]) });
 export type ScopeCreate = z.infer<typeof scopeCreateSchema>;
-// Bez default (zod 4: .partial() nad default nadpisałby zapisane pola); uploads = zdjęcia dokładane.
-export const scopeUpdateSchema = z.object({ opId: z.string().min(1).optional(), tekst: scopeTekst, uploads, kolejnosc: z.number().int().min(1) }).partial();
+// Bez default (zod 4: .partial() nad default nadpisałby zapisane pola); uploads = zdjęcia dokładane, removePhotos = usuwane.
+// Kolejność tylko przez POST /api/jobs/:id/scope/order.
+export const scopeUpdateSchema = z.object({ opId: z.string().min(1).optional(), tekst: scopeTekst, uploads, removePhotos: uploads }).partial();
 export type ScopeUpdate = z.infer<typeof scopeUpdateSchema>;
 export const scopeOrderSchema = z.object({ opId: z.string().min(1).optional(), ids: z.array(z.string().min(1)).min(1).max(500) });

@@ -51,10 +51,15 @@ function JobList({ selected }: { selected?: string }) {
   const planned = useMemo(() => new Set(sched.map((e) => e.jobId).filter(Boolean)), [sched]);
   const scope = useEntities('job_scope_items');
   const rawJobs = useEntities('jobs');
-  const fresh = useMemo(() => freshByJob(rawJobs, entries, scope, me?.id, seenAt), [rawJobs, entries, scope, me?.id, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fresh = useMemo(() => freshByJob(rawJobs, entries, scope, me?.id, seenAt, admin), [rawJobs, entries, scope, me?.id, admin, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
+  const scopeText = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const p of scope) m.set(p.jobId, [...(m.get(p.jobId) ?? []), p.tekst]);
+    return m;
+  }, [scope]);
   const list = useMemo(() => [...jobs.values()]
-    .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.status, j.ekipa, ...scope.filter((p) => p.jobId === j.id).map((p) => p.tekst)))
-    .sort((a, b) => String(b.numer ?? '').localeCompare(String(a.numer ?? ''), 'pl', { numeric: true })), [jobs, q, scope]);
+    .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.status, j.ekipa, ...(scopeText.get(j.id) ?? [])))
+    .sort((a, b) => String(b.numer ?? '').localeCompare(String(a.numer ?? ''), 'pl', { numeric: true })), [jobs, q, scopeText]);
 
   if (loading) return <div className="grid gap-3 p-4" aria-busy="true" aria-label="Wczytywanie zleceń">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div>;
 

@@ -16,6 +16,8 @@ describe('liczniki w menu', () => {
     const m = freshByJob(jobs, entries, scope, 'me', () => T1);
     expect(Object.fromEntries(m)).toEqual({ j1: 2, j3: 1 });
     expect(freshByJob(jobs, entries, scope, 'me', () => T2).size).toBe(0);
+    // pracownik: sama zmiana wiersza zlecenia (np. uwagi admina) nie jest nowością
+    expect(Object.fromEntries(freshByJob(jobs, entries, scope, 'me', () => T1, false))).toEqual({ j1: 1, j3: 1 });
   });
 
   it('naJutroCount: dziś i jutro, niezabrane, ekipa pracownika; admin wszystkie', () => {

@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Eye, ListNumbers, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, Eye, ListNumbers, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { useIsAdmin, useMe } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
@@ -90,38 +90,46 @@ export function Scope({ jobId, disabled }: { jobId: string; disabled?: boolean }
           })}
         </ol>
       )}
-      {form && <ScopeForm jobId={jobId} item={form === 'new' ? undefined : form} next={(items.at(-1)?.kolejnosc ?? 0) + 1} photos={form === 'new' ? 0 : (byItem.get(form.id)?.length ?? 0)} onClose={() => setForm(null)} />}
+      {form && <ScopeForm jobId={jobId} item={form === 'new' ? undefined : form} next={(items.at(-1)?.kolejnosc ?? 0) + 1} photos={form === 'new' ? [] : (byItem.get(form.id) ?? []).filter((a) => !a._tmp)} onClose={() => setForm(null)} />}
       {view !== null && photos[view] && <Viewer photos={photos} index={view} onIndex={setView} onClose={() => setView(null)} admin={admin} />}
     </section>
   );
 }
 
-function ScopeForm({ jobId, item, next, photos, onClose }: { jobId: string; item?: Rec; next: number; photos: number; onClose: () => void }) {
+function ScopeForm({ jobId, item, next, photos, onClose }: { jobId: string; item?: Rec; next: number; photos: Rec[]; onClose: () => void }) {
   const me = useMe();
   const [tekst, setTekst] = useState<string>(item?.tekst ?? '');
   const { files, setFiles, busy, previews, buttons } = usePicker({ pdf: false });
   const [err, setErr] = useState('');
   const [confirm, setConfirm] = useState(false);
+  const [gone, setGone] = useState<string[]>([]); // istniejące zdjęcia do usunięcia przy zapisie
+  const kept = photos.filter((a) => !gone.includes(a.id));
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const t = tekst.trim();
     if (!t) return setErr('Wpisz treść punktu');
     if (t.length > 5000) return setErr('Tekst jest za długi (najwyżej 5000 znaków)');
-    if (item && t === item.tekst && !files.length) return onClose();
+    if (item && t === item.tekst && !files.length && !gone.length) return onClose();
     const sent = files;
     const blobs = sent.map((f) => f.file);
     const done = () => { for (const f of sent) URL.revokeObjectURL(f.url); };
+    const failed = (title: string) => (x: Error) => { done(); fail(title)(x); }; // podglądy zwalniamy też po odrzuceniu
     if (!item) {
       const id = tmpId();
       void createVia('job_scope_items', { kind: 'zakres', url: `/api/jobs/${jobId}/scope`, method: 'POST', body: { tekst: t }, files: blobs },
-        { id, jobId, tekst: t, kolejnosc: next, createdBy: me?.id }, tmpAtts(id, sent)).then(done, fail('Punkt nie został zapisany'));
+        { id, jobId, tekst: t, kolejnosc: next, createdBy: me?.id }, tmpAtts(id, sent)).then(done, failed('Punkt nie został zapisany'));
     } else {
       const extra = tmpAtts(item.id, sent);
       void outbox.enqueue({
-        kind: 'zakres', url: `/api/scope/${item.id}`, method: 'PUT', body: t === item.tekst ? {} : { tekst: t }, files: blobs,
-        optimistic: (s) => { const r = s.get('job_scope_items', item.id); if (r) s.put('job_scope_items', { ...r, tekst: t }); for (const x of extra) s.put(x.entity, { ...x.rec, _tmp: true }); },
-      }).then(() => { for (const x of extra) store.remove(x.entity, x.rec.id); done(); }, fail('Zmiana punktu nie została zapisana'));
+        kind: 'zakres', url: `/api/scope/${item.id}`, method: 'PUT', body: { ...(t !== item.tekst && { tekst: t }), ...(gone.length && { removePhotos: gone }) }, files: blobs,
+        optimistic: (s) => {
+          const r = s.get('job_scope_items', item.id);
+          if (r) s.put('job_scope_items', { ...r, tekst: t });
+          for (const id of gone) s.remove('attachments', id);
+          for (const x of extra) s.put(x.entity, { ...x.rec, _tmp: true });
+        },
+      }).then(() => { for (const x of extra) store.remove(x.entity, x.rec.id); done(); }, failed('Zmiana punktu nie została zapisana'));
     }
     setFiles([]); // podglądy żyją dalej w miniaturach tymczasowych
     onClose();
@@ -135,13 +143,25 @@ function ScopeForm({ jobId, item, next, photos, onClose }: { jobId: string; item
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <Sheet title={item ? 'Punkt zakresu prac' : 'Nowy punkt zakresu'} description={item && photos ? `Zdjęcia w punkcie: ${photos}. Nowe zostaną dodane.` : 'Tekst i opcjonalnie zdjęcia.'}>
+      <Sheet title={item ? 'Punkt zakresu prac' : 'Nowy punkt zakresu'} description={item ? 'Popraw tekst, dodaj lub usuń zdjęcia.' : 'Tekst i opcjonalnie zdjęcia.'}>
         <form onSubmit={submit} noValidate className="grid gap-4">
           <div className="grid gap-2">
             <label htmlFor="zakres-tekst" className="text-sm font-semibold">Co do zrobienia</label>
             <Textarea id="zakres-tekst" value={tekst} onChange={(e) => { setTekst(e.target.value); setErr(''); }} placeholder="np. Centrala na poddaszu, kanały 160 mm do sypialni" aria-invalid={!!err} aria-describedby={err ? 'zakres-tekst-e' : undefined} autoFocus />
             {err && <p id="zakres-tekst-e" role="alert" className="text-sm text-danger">{err}</p>}
           </div>
+          {kept.length > 0 && (
+            <ul className="flex flex-wrap gap-2" aria-label="Zdjęcia w punkcie">
+              {kept.map((a, i) => (
+                <li key={a.id} className="relative">
+                  <img src={fileUrl(a, 'thumb')} alt={`Zdjęcie ${i + 1}`} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" />
+                  <button type="button" aria-label={`Usuń zdjęcie ${i + 1}`} onClick={() => setGone((g) => [...g, a.id])}
+                    className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-card"><X className="h-4 w-4" weight="bold" /></button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {gone.length > 0 && <p className="text-sm text-ink-2">Do usunięcia po zapisie: {gone.length}. <button type="button" className="font-semibold text-action" onClick={() => setGone([])}>Przywróć</button></p>}
           {previews}
           <div className="flex flex-wrap gap-2">{buttons}</div>
           <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">

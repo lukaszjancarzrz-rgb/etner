@@ -223,6 +223,17 @@ test('zakres prac: admin dodaje punkt ze zdjęciem, pracownik go widzi bez edycj
   await expect(again.locator('img[src*="/api/attachments/"]')).toHaveCount(1);
   await loaded(page, `[aria-label="Zakres prac"] li:has-text("${tekst}") img`);
 
+  // edycja: usunięcie zdjęcia z punktu
+  await again.getByRole('button', { name: 'Edytuj' }).click();
+  const ed = page.getByRole('dialog', { name: 'Punkt zakresu prac' });
+  await ed.getByRole('button', { name: 'Usuń zdjęcie 1' }).click();
+  await ed.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(ed).toBeHidden();
+  await expect(again.locator('img')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Zakres prac' }).locator('ol > li', { hasText: tekst })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Zakres prac' }).locator('ol > li', { hasText: tekst }).locator('img')).toHaveCount(0);
+
   const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
   const w = await ctx.newPage();
   await w.goto('/');

@@ -54,10 +54,12 @@ export function attach(db: Db, userId: string, ups: AttachmentRow[], ownerType: 
     recordChange(db, userId, 'attachments', a.id, 'create', null, a);
   }
 }
-/** Miękkie usunięcie załączników właściciela (razem z wpisem albo punktem zakresu). */
-export function removeAttachmentsOf(db: Db, userId: string, ownerType: Owner, ownerId: string): void {
+/** Miękkie usunięcie załączników właściciela (razem z wpisem albo punktem zakresu); `ids` = tylko te (każde musi należeć do właściciela, inaczej 400). */
+export function removeAttachmentsOf(db: Db, userId: string, ownerType: Owner, ownerId: string, ids?: string[]): void {
   const now = NOW();
-  for (const a of attachmentsOf(db, ownerType, ownerId)) {
+  const own = attachmentsOf(db, ownerType, ownerId);
+  if (ids?.some((id) => !own.some((a) => a.id === id))) throw bad('Nieprawidłowe zdjęcie do usunięcia');
+  for (const a of ids ? own.filter((x) => ids.includes(x.id)) : own) {
     const row = db.update(attachments).set({ deletedAt: now, updatedAt: now }).where(eq(attachments.id, a.id)).returning().get();
     recordChange(db, userId, 'attachments', a.id, 'delete', a, row);
   }

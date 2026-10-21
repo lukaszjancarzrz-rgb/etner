@@ -2,12 +2,10 @@ import { screens, type Route } from '../../routes.js';
 import { useSession } from '../session.js';
 import { badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
-import { useBadges } from './useBadges.js';
 import { Logo } from './Logo.js';
 
-export function SideNav({ route }: { route: Route }) {
+export function SideNav({ route, badges }: { route: Route; badges: Record<string, number> }) {
   const { me } = useSession();
-  const badges = useBadges();
   return (
     <nav aria-label="Menu" className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-card desk:flex">
       <div className="stripes h-1.5" aria-hidden />

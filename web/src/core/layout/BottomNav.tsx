@@ -1,10 +1,8 @@
 import { screens, type Route } from '../../routes.js';
 import { badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
-import { useBadges } from './useBadges.js';
 
-export function BottomNav({ route }: { route: Route }) {
-  const badges = useBadges();
+export function BottomNav({ route, badges }: { route: Route; badges: Record<string, number> }) {
   return (
     <nav aria-label="Menu" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] desk:hidden">
       <ul className="grid grid-cols-5">
