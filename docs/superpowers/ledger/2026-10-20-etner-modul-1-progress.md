@@ -161,3 +161,7 @@ Tasks 18c/18d/18e: complete (commits 1f6c50e..1e16c87, review clean). Owner chec
 ## Zmiany właściciela 2026-10-21 (5) → Task 18f (plan amended)
 - Week nav fixed arrows + „Dziś” (scroll to today); month view = same cards as week, horizontal arrows; chip colour = job kategoria (elektryka blue, fotowoltaika red, rekuperacja green, klimatyzacja purple, inne yellow); dict kategoria/rodzaj changed (+przygotówka, −gwarancja, −Pompa ciepła, −Serwis kategoria); zakupy: delete only admin/author, admin checkbox instead of status select; „nowe” persists until the changed day / job is actually seen; push enable button + test push (pulled forward from Task 19 so the owner can test push on Render).
 - Ruling R30: user said „rodzaj zlecenia” for colours but the example values are the kategoria list → colour by kategoria — cost: switch the colour source if owner meant rodzaj.
+Task 18f: BASE 77bca35; impl 69c7e7e..b02beb9; review: Important — push subscription owned per browser not per user (stale 'włączone', notifications after logout); fix round 1 dispatched with minors
+Task 18f: fix round 1/5 (all addressed; commit ee32122)
+Task 18f: minor (deferred): iOS <16.4 standalone told to add to home screen; old endpoint row lingers after VAPID key change until 410; push enabled path never run in a browser (needs a real phone); 10 s test cooldown in memory
+Task 18f: complete (commits 77bca35..ee32122, review clean). Owner checkpoint.
