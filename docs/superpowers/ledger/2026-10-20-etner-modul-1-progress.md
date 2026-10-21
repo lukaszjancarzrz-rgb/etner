@@ -147,3 +147,4 @@ Task 18a: complete (commits 8b83f13..d4d4fee, review clean)
 Note: klienci worker-visibility test failed once (1/9 runs) while a reviewer subagent was concurrently running/checking out the repo (it left HEAD detached at d4d4fee — reviewer violated read-only; fixed by cherry-pick); 8 later runs green — watch for flakiness in final review
 ## Zmiany właściciela 2026-10-21 (3): harmonogram → Task 18c
 - Owner: multi-person / multi-day entry in the cell editor; month view on desktop (supersedes R27); admins have no schedule rows at all. Plan amended (Task 18c).
+- Owner: existing clients must be editable → Task 18d (plan amended); dispatched together with 18c.

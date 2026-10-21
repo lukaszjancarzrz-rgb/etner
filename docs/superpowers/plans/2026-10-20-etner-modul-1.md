@@ -606,6 +606,14 @@ Decyzje właściciela 2026-10-21 po klikalnej wersji:
 - [ ] **Step 1: Testy:** jednostkowe dla wyliczenia dni i osób w szkicu zbiorczym; e2e: admin ustawia jedno zlecenie dwóm osobom na 3 dni robocze → szkic → zatwierdzenie → 6 komórek; widok miesiąca pokazuje bieżący miesiąc; admin nie ma wiersza.
 - [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
 
+### Task 18d: Edycja istniejących klientów
+
+Decyzja właściciela 2026-10-21: musi być możliwość edycji istniejących klientów.
+- Karta klienta (admin): „Edytuj” – typ, nazwa, telefony, e-maile, NIP, notatki; obiekty: dodaj i edytuj (nazwa, adres, miejscowość, mapa, opis). Serwer już ma `PUT /api/clients/:id`, `POST /api/clients/:id/sites`, `PUT /api/sites/:id`. Ostrzeżenie o duplikacie telefonu / e-maila jak przy zakładaniu. Pracownik nie widzi „Edytuj”.
+
+- [ ] **Step 1: Testy:** e2e: admin zmienia telefon klienta i adres obiektu, zmiana widoczna na karcie zlecenia; pracownik bez przycisku.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
 ### Task 19: Pozostałe ekrany
 
 **Files:**
