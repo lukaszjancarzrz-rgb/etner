@@ -9,3 +9,5 @@ export type User = {
   scheduleCol: string | null;
   active: boolean;
 };
+
+export type Me = Pick<User, 'id' | 'name' | 'role' | 'perms' | 'ekipa' | 'scheduleCol'>;

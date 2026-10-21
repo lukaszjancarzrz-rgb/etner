@@ -5,6 +5,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { Db } from './core/db.js';
+import { mountAuth } from './core/auth.js';
 import { logError } from './core/errors.js';
 
 export interface AppDeps {
@@ -12,6 +13,8 @@ export interface AppDeps {
   db: Db;
   /** Katalog zbudowanego frontendu; domyślnie web/dist (sprawdzany względem pakietu serwera). */
   webDist?: string;
+  /** Cookie Secure; domyślnie włączone w produkcji. */
+  secureCookie?: boolean;
 }
 
 const defaultWebDist = fileURLToPath(new URL('../../web/dist', import.meta.url));
@@ -26,6 +29,8 @@ export function createApp(deps: AppDeps): Hono {
   });
 
   app.get('/api/health', (c) => c.json({ ok: true, version: deps.version }));
+
+  mountAuth(app, deps);
 
   const webDist = deps.webDist ?? defaultWebDist;
   const hasWeb = existsSync(join(webDist, 'index.html'));
