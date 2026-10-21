@@ -5,6 +5,9 @@ import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { fileStoreFromEnv } from './core/files.js';
 import { migrate, openDb } from './core/db.js';
+import { registerCron } from './core/cron.js';
+import { vapidFromEnv, webPushSender } from './core/notify.js';
+import { modulesOf } from './core/registry.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
 const port = Number(process.env.PORT ?? 3000);
@@ -24,6 +27,15 @@ const files = fileStoreFromEnv({ ...process.env, DATA_DIR: dataDir, APP_SECRET: 
 const db = openDb(join(dataDir, 'etner.db'));
 migrate(db);
 
-serve({ fetch: createApp({ version: process.env.APP_VERSION ?? pkg.version, db, files, secret }).fetch, port }, () => {
+const vapid = vapidFromEnv(process.env, dataDir);
+const deps = {
+  version: process.env.APP_VERSION ?? pkg.version, db, files, secret,
+  push: webPushSender(vapid, process.env.VAPID_SUBJECT), vapidPublic: vapid?.publicKey,
+};
+const app = createApp(deps);
+const stopCron = registerCron(deps, modulesOf(app).flatMap((m) => m.cron ?? []));
+
+const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`ETNER nasłuchuje na :${port}`);
 });
+for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { stopCron(); server.close(); });

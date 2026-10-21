@@ -9,6 +9,7 @@ import { mountAuth } from './core/auth.js';
 import { logError } from './core/errors.js';
 import type { FileStore } from './core/files.js';
 import { mountFiles } from './core/files-route.js';
+import { mountPush, type PushSender } from './core/notify.js';
 import { mountSync } from './core/sync.js';
 
 export interface AppDeps {
@@ -17,6 +18,10 @@ export interface AppDeps {
   files: FileStore;
   /** APP_SECRET – podpisy linków do plików. */
   secret: string;
+  /** Wysyłka web-push (w testach atrapa). */
+  push: PushSender;
+  /** Publiczny klucz VAPID; brak = push wyłączony. */
+  vapidPublic?: string;
   /** Katalog zbudowanego frontendu; domyślnie web/dist (sprawdzany względem pakietu serwera). */
   webDist?: string;
   /** Cookie Secure; domyślnie włączone w produkcji. */
@@ -39,6 +44,7 @@ export function createApp(deps: AppDeps): Hono {
   mountAuth(app, deps);
   mountSync(app, deps);
   mountFiles(app, deps);
+  mountPush(app, deps);
 
   const webDist = deps.webDist ?? defaultWebDist;
   const hasWeb = existsSync(join(webDist, 'index.html'));

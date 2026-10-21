@@ -72,3 +72,10 @@ export const errors = sqliteTable('errors', {
   message: text('message').notNull(),
   userId: text('user_id'),
 });
+
+/** Ustawienia firmy (klucz-wartość), np. `rano_godzina`. */
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

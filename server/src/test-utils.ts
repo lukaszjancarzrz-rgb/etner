@@ -14,7 +14,8 @@ export function testDeps(over: Partial<AppDeps> = {}): AppDeps {
   const db = openDb(':memory:');
   migrate(db);
   const secret = 'test-secret';
-  return { version: 'test', db, secret, files: diskStore(mkdtempSync(join(tmpdir(), 'etner-files-')), secret), ...over };
+  return { version: 'test', db, secret, files: diskStore(mkdtempSync(join(tmpdir(), 'etner-files-')), secret),
+    push: async () => ({ statusCode: 201 }), ...over };
 }
 
 /** Tworzy użytkownika ze znanym tokenem linku logowania. */

@@ -8,6 +8,13 @@
       "when": 1792556233752,
       "tag": "0000_mature_hercules",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792557151701,
+      "tag": "0001_true_black_queen",
+      "breakpoints": true
     }
   ]
 }
