@@ -67,7 +67,7 @@ function findDuplicates(db: Db, c: Pick<ClientRow, 'telefony' | 'emaile'>, excep
 export function addSite(db: Db, userId: string, clientId: string, input: Partial<SiteInput>): SiteRow | undefined {
   if (!get(db, clientId)) return undefined;
   const now = new Date().toISOString();
-  const v = { nazwa: '', adres: '', miejscowosc: '', mapa: '', opis: '', ...input };
+  const v = { nazwa: '', adres: '', miejscowosc: '', mapa: '', opis: '', ...Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) };
   const row = db.insert(sites).values({ id: newId(), clientId, ...v, szukaj: siteText(v), createdAt: now, createdBy: userId, updatedAt: now }).returning().get();
   recordChange(db, userId, 'sites', row.id, 'create', null, row);
   refreshSzukaj(db, clientId);
