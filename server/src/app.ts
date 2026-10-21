@@ -20,6 +20,8 @@ export interface AppDeps {
   /** Zegar; domyślnie `new Date()` (testy podstawiają stały). */
   now?: () => Date;
   diary?: Diary;
+  /** Harmonogram (zadanie 14): osoby przypisane do zlecenia (id użytkowników); brak = nikt. */
+  schedule?: { peopleForJob?(jobId: string): string[] };
   version: string;
   db: Db;
   files: FileStore;

@@ -4,6 +4,7 @@ import { uzytkownicy } from './uzytkownicy/index.js';
 import { klienci } from './klienci/index.js';
 import { zlecenia } from './zlecenia/index.js';
 import { leady } from './leady/index.js';
+import { dziennik } from './dziennik/index.js';
 
 /** Jedyne miejsce rejestracji modułów (createApp w main.ts i w testach). */
-export const modules: ModuleDef[] = [slowniki, uzytkownicy, klienci, zlecenia, leady];
+export const modules: ModuleDef[] = [slowniki, uzytkownicy, klienci, zlecenia, leady, dziennik];

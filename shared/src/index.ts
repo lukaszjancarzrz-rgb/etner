@@ -7,3 +7,4 @@ export * from './schemas/slowniki.js';
 export * from './schemas/klienci.js';
 export * from './schemas/zlecenia.js';
 export * from './schemas/leady.js';
+export * from './schemas/dziennik.js';
