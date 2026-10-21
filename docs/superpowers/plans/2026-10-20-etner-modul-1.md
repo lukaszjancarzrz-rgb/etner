@@ -389,7 +389,7 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
   - `attachments(owner_type:'entry'|'device'|'service', owner_id, rodzaj:'zdjecie'|'plik', key_orig, key_view?, key_thumb?, nazwa, mime, bajty, w?, h?, dla_klienta, author_id)`.
   - `POST /api/uploads` (multipart, max 25 MB, obrazy i PDF) → `{uploadId}` – plik czeka na wpis.
   - `POST /api/diary {opId, owner_type, owner_id, tekst, uploads: string[]}` – wpis i podpięcie plików w jednej transakcji.
-  - `PATCH /api/attachments/:id {dla_klienta}` (admin). (Zmiana 2026-10-21: wpisy bez `dla_klienta`, zadanie 18b.)
+  - `PATCH /api/attachments/:id {dla_klienta}` (admin) i `PATCH /api/diary/:id {dla_klienta}` (admin).
   - `DELETE /api/diary/:id` (autor albo admin, miękko).
   - `dziennik.addSystem(owner, tekst)`.
   - Powiadomienie: tytuł „📝 Nowy wpis w dzienniku: <klient – miejscowość>”, treść „<autor>: <tekst do 200 zn.> 📷 n”, adres `#zl/<id>~<entryId>`. Odbiorcy: admini + `harmonogram.peopleForJob` + ekipa zlecenia, bez autora. Lead: tylko admini.
@@ -595,15 +595,6 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
 
 - [ ] **Step 1: Testy:** dobre i złe hasło, wyłączony użytkownik, blokada po 5 próbach, reset przez admina unieważnia sesje, zmiana własnego hasła, skrót hasła nigdy w zmianach, snapshot ani eksporcie.
 - [ ] **Step 2:** FAIL. **Step 3:** Implementacja. **Step 4:** PASS + e2e. **Step 5:** Commit.
-
-### Task 18b: Poprawki właściciela po klikalnej wersji
-
-Decyzje właściciela 2026-10-21:
-- **Edycja klienta:** na karcie klienta (admin) „Edytuj” – typ, nazwa, telefony, e-maile, NIP, notatki; dodawanie i edycja obiektów (nazwa, adres, miejscowość, mapa, opis). Serwer już ma `PUT /api/clients/:id`, `POST /api/clients/:id/sites`, `PUT /api/sites/:id`.
-- **„Pokaż klientowi” tylko przy załącznikach:** wpisy dziennika nigdy nie są pokazywane klientowi. Usunąć przełącznik z wpisów (ekran), trasę `PATCH /api/diary/:id` i kolumnę `diary_entries.dla_klienta` (migracja).
-
-- [ ] **Step 1: Testy:** edycja klienta i obiektu przez admina (pracownik 403), `PATCH /api/diary/:id` → 404, wpis nie ma pola `dlaKlienta`, przełącznik przy zdjęciu działa jak dotąd. e2e: admin edytuje telefon klienta.
-- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
 
 ### Task 19: Pozostałe ekrany
 

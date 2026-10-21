@@ -71,7 +71,7 @@ firma ─┬─ klient ── obiekt (adres, mapa) ─┬─ zlecenie (rodzaj: m
   - przypięty do wpisu w dzienniku zlecenia; w module 2 także do urządzenia albo wpisu serwisowego,
   - pole **`dla_klienta`** (tak/nie), domyślnie „nie”, zmiana w każdej chwili, każda trafia do dziennika zmian,
   - paszport obiektu pokazuje załączniki z `dla_klienta = tak` ze wszystkich zleceń tego obiektu, także sprzed założenia paszportu,
-  - wpisy (notatki) dziennika nigdy nie są pokazywane klientowi; „pokaż klientowi” jest tylko przy załącznikach (zmiana 2026-10-21).
+  - notatkę w dzienniku też można oznaczyć „pokaż klientowi”.
 - **Ludzie i czas:**
   - użytkownicy, ekipy, osoby w harmonogramie (kolumny),
   - wpis harmonogramu = osoba × dzień × (zlecenie albo kod nieobecności albo tekst) × pełny / pół,

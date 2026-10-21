@@ -136,8 +136,3 @@ STOP: owner checkpoint after Task 18 (deploy via render.yaml Blueprint = owner s
 - Owner decision (not a ruling): replace personal links with login (first name / short name) + password; admin sets the initial password and resets it, worker may change own password; done now as Task 18a, before Task 19. Spec + plan amended (plan section "Zmiana 2026-10-21", new Task 18a).
 - Ruling R28: scrypt from node:crypto (no new dependency), format `scrypt$<salt b64>$<hash b64>` with timingSafeEqual; failed-attempt limit in process memory (5 per login / 15 min → 429), shortcut acceptable for one process; token_hash column dropped; R16/R23 superseded (demo: fixed demo password, GET /api/demo/konta only with DEMO=1, login screen lists demo accounts); Task 22 will not carry old link tokens — cost: owner hands out passwords at go-live.
 Task 18a: BASE 8b83f13; impl a239af4; review dispatched
-Task 18a: review Approved (no Critical/Important)
-- Ruling R29: security minors from the 18a review are fixed now in one hardening round instead of deferring (async scrypt + race-free limiter, capped limiter map, limit on /api/me/haslo, password length cap, revoke incoming session on login, dummy scrypt for null hash, demo password single source, first-admin CLI create-admin for fresh production DB) — the app is a security boundary and each fix is small — cost: one extra fix round.
-Task 18a: minor (deferred): soft-deleted users keep their login in the unique index (cannot be reused); no way back from the login screen to cached data when expired
-Task 18a: hardening round d4d4fee (R29 items 1–9); re-review dispatched
-## Zmiany właściciela 2026-10-21 (2): edycja klienta; „pokaż klientowi” tylko przy załącznikach → Task 18b (spec + plan amended)
