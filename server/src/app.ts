@@ -10,6 +10,7 @@ import { logError } from './core/errors.js';
 import type { FileStore } from './core/files.js';
 import { mountFiles } from './core/files-route.js';
 import { mountPush, type PushSender } from './core/notify.js';
+import { registerModules, type ModuleDef } from './core/registry.js';
 import { mountSync } from './core/sync.js';
 
 export interface AppDeps {
@@ -30,7 +31,7 @@ export interface AppDeps {
 
 const defaultWebDist = fileURLToPath(new URL('../../web/dist', import.meta.url));
 
-export function createApp(deps: AppDeps): Hono {
+export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
   const app = new Hono();
 
   app.onError((err, c) => {
@@ -45,6 +46,7 @@ export function createApp(deps: AppDeps): Hono {
   mountSync(app, deps);
   mountFiles(app, deps);
   mountPush(app, deps);
+  registerModules(app, deps, defs);
 
   const webDist = deps.webDist ?? defaultWebDist;
   const hasWeb = existsSync(join(webDist, 'index.html'));

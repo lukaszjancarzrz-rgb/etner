@@ -1,3 +1,4 @@
+// Wzorzec modułów: service.ts to funkcje z jawnym `db` jako pierwszym argumentem (np. list(db, rodzaj)); routes.ts waliduje zod i woła service; moduł eksportuje ModuleDef, a lista leży w modules/index.ts.
 import type { Hono } from 'hono';
 import type { User } from '@etner/shared';
 import type { AppDeps } from '../app.js';

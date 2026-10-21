@@ -15,6 +15,13 @@
       "when": 1792557151701,
       "tag": "0001_true_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792557455755,
+      "tag": "0002_same_shocker",
+      "breakpoints": true
     }
   ]
 }
