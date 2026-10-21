@@ -77,7 +77,7 @@ function Notifications() {
         : (
           <>
             <p className={cn('text-sm', st === 'wlaczone' ? 'font-semibold text-ok' : st === 'zablokowane' ? 'text-danger' : 'text-ink-2')} role="status">{STAN[st]}</p>
-            {st === 'wylaczone' && <Button onClick={() => void run(enablePush)} disabled={busy}><Bell className="h-5 w-5" />Włącz powiadomienia na tym urządzeniu</Button>}
+            {st === 'wylaczone' && <Button onClick={() => void run(enablePush)} disabled={busy}><Bell className="h-5 w-5 shrink-0" /><span className="whitespace-normal leading-tight">Włącz powiadomienia na tym urządzeniu</span></Button>}
             {st === 'wlaczone' && (
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => void sendTest()} disabled={busy}>Wyślij próbne powiadomienie</Button>
