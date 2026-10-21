@@ -109,6 +109,11 @@ describe('dziennik', () => {
     s.push.mockClear();
     const e = (await (await post(s, s.admin, { owner_type: 'lead', owner_id: s.lead.id, uploads: [id] })).json()) as { id: string };
     expect(s.push).not.toHaveBeenCalled(); // jedyny admin jest autorem
+    const w3 = addUser(s.deps, { role: 'admin', name: 'Admin2' });
+    const t = new Date().toISOString();
+    s.deps.db.insert(pushSubscriptions).values({ id: newId(), userId: w3.user.id, endpoint: 'adm2', p256dh: 'p', auth: 'a', createdAt: t, updatedAt: t }).run();
+    await post(s, s.admin, { owner_type: 'lead', owner_id: s.lead.id });
+    expect(JSON.parse((s.push.mock.calls as any[])[0][1])).toMatchObject({ title: '📝 Nowy wpis w dzienniku: L0001 – Rekuperacja', url: expect.stringMatching(new RegExp(`^#ld/${s.lead.id}~`)) });
     const adm = await s.app.request(`/api/attachments/${id}/file?v=thumb`, json(s.admin, 'GET'));
     expect(adm.status).toBe(302);
     expect(adm.headers.get('location')).toContain('/api/files/att/');
@@ -136,5 +141,30 @@ describe('dziennik', () => {
       { owner_type: 'job', author_id: null, tekst: expect.stringMatching(/^Z leada L0001/) },
       { owner_type: 'lead', author_id: null, tekst: expect.stringMatching(/^Utworzono zlecenie Z/) },
     ]);
+  });
+
+  it('upload ponad 25 MB: 413', async () => {
+    const s = await setup();
+    const big = Buffer.concat([Buffer.from('%PDF-'), Buffer.alloc(26 * 1024 * 1024)]);
+    expect((await upload(s, s.worker, big, 'duzy.pdf')).status).toBe(413);
+  });
+
+  it('odbiorcy: admin, osoby z harmonogramu i ekipa bez autora; mieszane pomija ekipę', async () => {
+    const s = await setup();
+    const p = addUser(s.deps, { name: 'Z harmonogramu' });
+    s.deps.schedule = { peopleForJob: () => [p.user.id, s.w.user.id] };
+    s.push.mockClear();
+    await post(s, s.worker2);
+    const to = () => (s.push.mock.calls as any[]).map((c) => c[0].endpoint).sort();
+    // admin + harmonogram (p bez subskrypcji) + ekipa A (w), deduplikacja
+    expect(to()).toEqual([s.a.user.id, s.w.user.id].sort());
+    zlecenia.save(s.deps.db, s.a.user.id, { id: s.job.id, ekipa: 'mieszane' } as never);
+    s.push.mockClear();
+    await post(s, s.worker2);
+    expect(to()).toEqual([s.a.user.id, s.w.user.id].sort()); // w tylko przez harmonogram
+    s.deps.schedule = undefined;
+    s.push.mockClear();
+    await post(s, s.worker2);
+    expect(to()).toEqual([s.a.user.id]);
   });
 });

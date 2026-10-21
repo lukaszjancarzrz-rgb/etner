@@ -91,3 +91,5 @@ Task 10: complete (commits 1253d86..322e559, review clean)
 Task 11: minor (deferred): untested no-client toJob path, diary-absent, opId replay on contact/to-job, soft-deleted numbering; save uses new Date() not injectable now; toJob needs explicit job.status; cron test doesn't assert worker excluded
 Task 11: complete (commits 52b537e..a369664, review clean)
 - Ruling R19 (Task 12): pending uploads are attachments rows with owner_type/owner_id NULL owned by the uploader (no change recorded until attached); variants made at upload; file bytes reached via GET /api/attachments/:id/file?v=orig|view|thumb (requireUser + owner visibility) → 302 to a signed URL, so <img src> works with the session cookie; attachment visibility follows its entry; lead diary URL '#ld/<leadId>~<entryId>' — cost: small.
+Task 12: BASE a5ec363; impl 1ba8261; review: Important — 25 MB limit applied after buffering whole body
+Task 12: minor (deferred): never-attached pending uploads not cleaned; files.put before DB insert can orphan files; diary entry dla_klienta default untested

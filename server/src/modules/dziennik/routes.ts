@@ -1,5 +1,6 @@
 import { diaryCreateSchema, klientFlagSchema, newId } from '@etner/shared';
 import type { Context, Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import type { ZodType } from 'zod';
 import type { AppDeps } from '../../app.js';
@@ -37,7 +38,9 @@ export function routes(app: Hono, deps: AppDeps): void {
   deps.diary ??= svc.diaryOf(db);
   const admin = (c: Context) => { if (!can(c.get('user'), 'admin')) throw forbidden(); };
 
-  app.post('/api/uploads', auth, async (c) => {
+  // slack: nagłówki multipart; bodyLimit liczy też strumień bez Content-Length
+  const limit = bodyLimit({ maxSize: MAX + 64 * 1024, onError: (c) => c.json({ error: 'Plik jest za duży (max 25 MB).' }, 413) });
+  app.post('/api/uploads', auth, limit, async (c) => {
     const f = ((await c.req.parseBody().catch(() => ({}))) as Record<string, unknown>)['file'];
     if (!(f instanceof File)) throw new HTTPException(400, { message: 'Brak pliku' });
     if (f.size > MAX) throw new HTTPException(413, { message: 'Plik jest za duży (max 25 MB).' });

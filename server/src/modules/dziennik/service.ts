@@ -61,7 +61,8 @@ export function create(db: Db, user: User, input: DiaryCreate, peopleForJob: (jo
   const photos = ups.filter((a) => a.rodzaj === 'zdjecie').length;
   const body = `${user.name}: ${tekst.slice(0, 200)}${photos ? ` 📷 ${photos}` : ''}`;
   if (type === 'lead') {
-    out.push({ userIds: users.admins(db).filter((u) => u !== user.id), n: { title: '📝 Nowy wpis w dzienniku: lead', body, url: `#ld/${ownerId}~${entry.id}`, tag: `dz-${entry.id}` } });
+    const l = leady.get(db, ownerId)!;
+    out.push({ userIds: users.admins(db).filter((u) => u !== user.id), n: { title: `📝 Nowy wpis w dzienniku: ${l.numer} – ${l.temat}`, body, url: `#ld/${ownerId}~${entry.id}`, tag: `dz-${entry.id}` } });
   } else {
     const job = zlecenia.get(db, ownerId)!;
     const site = job.siteId ? klienci.getSite(db, job.siteId) : undefined;
