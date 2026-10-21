@@ -19,9 +19,6 @@ services:
         value: /tmp/etner
       - key: APP_SECRET
         generateValue: true
-      # Adres usługi do linków logowania; pusty = RENDER_EXTERNAL_URL (ustawia Render), potem adres z zapytania.
-      - key: BASE_URL
-        sync: false
       # Testowy bucket R2 (osobny od produkcyjnego); puste = zdjęcia na dysku w DATA_DIR.
       - key: R2_BUCKET
         sync: false

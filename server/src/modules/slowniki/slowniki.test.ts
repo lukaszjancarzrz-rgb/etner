@@ -12,7 +12,7 @@ async function setup() {
   const app = createApp(deps, modules);
   const a = addUser(deps, { role: 'admin' });
   const w = addUser(deps);
-  return { deps, app, admin: await loginCookie(app, a.token), worker: await loginCookie(app, w.token) };
+  return { deps, app, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
 }
 const put = (app: any, rodzaj: string, cookie: string, items: unknown[]) =>
   app.request(`/api/dict/${rodzaj}`, { method: 'PUT', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ items }) });

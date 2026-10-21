@@ -21,7 +21,7 @@ export function tablesForExport(defs: ModuleDef[]): Record<string, SQLiteTable> 
   return out;
 }
 
-const SECRET_COLS = new Set(['token_hash']);
+const SECRET_COLS = new Set(['password_hash']);
 
 /** Wartość komórki: `*_gr` jako zł (liczba), boolean jako TRUE/FALSE, reszta tekst/liczba, NULL jako pusty. */
 function cell(name: string, boolean: boolean, v: unknown): Cell {

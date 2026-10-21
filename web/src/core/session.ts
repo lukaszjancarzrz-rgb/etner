@@ -9,7 +9,8 @@ import { dropTmp } from './write.js';
 
 /** loading – start; in – zalogowany (też offline z zapamiętanym kontem); out – brak sesji; expired – sesja wygasła, dane i kolejka zostają. */
 export type Status = 'loading' | 'in' | 'out' | 'expired';
-let state: { status: Status; me: Me | null; error?: string } = { status: 'loading', me: null };
+/** askLogin – przy `expired` pokazuje ekran logowania (dane i kolejka zostają pod spodem). */
+let state: { status: Status; me: Me | null; askLogin?: boolean } = { status: 'loading', me: null };
 const subs = new Set<() => void>();
 const setState = (s: Partial<typeof state>) => { state = { ...state, ...s }; for (const f of subs) f(); };
 
@@ -25,13 +26,13 @@ async function signedIn(me: Me) {
     await outbox.clear();
   }
   await set('me', me);
-  setState({ status: 'in', me, error: undefined });
+  setState({ status: 'in', me, askLogin: false });
   outbox.resume();
   void outbox.start(); // dopiero po sprawdzeniu konta: cudze zapisy nie pójdą z nowym ciasteczkiem
   void sync.start();
 }
 
-/** Start aplikacji: `/login#<token>` przed routerem, potem /api/me (offline: zapamiętane konto). */
+/** Start aplikacji: /api/me (401 = ekran logowania; offline: zapamiętane konto). */
 export async function startSession(): Promise<void> {
   await store.load();
   dropTmp();
@@ -40,26 +41,34 @@ export async function startSession(): Promise<void> {
     if (document.visibilityState === 'visible') { outbox.kick(); sync.wake(); }
   });
 
-  if (location.pathname === '/login') {
-    const token = decodeURIComponent(location.hash.slice(1));
-    history.replaceState(null, '', '/#harm'); // token nie zostaje w historii
-    try {
-      return await signedIn(await api<Me>('/api/login', { method: 'POST', json: { token } }));
-    } catch (e) {
-      const offline = !(e instanceof ApiError);
-      return setState({ status: 'out', error: offline ? 'Brak połączenia. Otwórz link jeszcze raz, gdy będzie zasięg.' : 'Link logowania jest nieprawidłowy lub wyłączony. Poproś o nowy.' });
-    }
-  }
   try {
     await signedIn(await api<Me>('/api/me'));
   } catch (e) {
     const cached = (await get('me')) as Me | undefined;
     if (e instanceof ApiError && e.status === 401) {
-      setState(cached ? { status: 'expired', me: cached } : { status: 'out' });
+      setState(cached ? { status: 'expired', me: cached, askLogin: true } : { status: 'out' });
       void outbox.refresh(); // licznik zapisów czekających na ponowne zalogowanie
     }
     else if (cached) { setState({ status: 'in', me: cached }); void outbox.start(); void sync.start(); } // offline
-    else setState({ status: 'out', error: 'Brak połączenia z serwerem.' });
+    else setState({ status: 'out' });
+  }
+}
+
+export const askLogin = () => setState({ askLogin: true });
+
+const LOGIN_ERRORS: Record<string, string> = {
+  ZLE_DANE: 'Nieprawidłowy login lub hasło.',
+  ZA_DUZO_PROB: 'Za dużo prób. Spróbuj ponownie za kilkanaście minut.',
+};
+/** Loguje; zwraca komunikat błędu po polsku albo null po sukcesie (kolejka wstrzymana wznawia się w signedIn). */
+export async function login(login: string, haslo: string): Promise<string | null> {
+  try {
+    await signedIn(await api<Me>('/api/login', { method: 'POST', json: { login, haslo } }));
+    return null;
+  } catch (e) {
+    if (!(e instanceof ApiError)) return 'Brak połączenia z serwerem.';
+    const code = (e.body as { error?: string } | null)?.error;
+    return (code && LOGIN_ERRORS[code]) || 'Nie udało się zalogować. Spróbuj ponownie.';
   }
 }
 

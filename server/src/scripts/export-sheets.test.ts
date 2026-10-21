@@ -33,7 +33,7 @@ describe('eksport do arkusza', () => {
     expect(f.calls.cleared.length).toBe(names.length + 1);
   });
 
-  it('liczba wierszy = rekordy z usuniętymi; kwoty w zł; users bez token_hash', async () => {
+  it('liczba wierszy = rekordy z usuniętymi; kwoty w zł; users bez password_hash', async () => {
     const deps = testDeps(); const f = fake();
     addUser(deps, { name: 'Jan' });
     deps.db.insert(attachments).values([att(), att({ deletedAt: '2026-10-02T00:00:00.000Z', dlaKlienta: true })]).run();
@@ -44,7 +44,9 @@ describe('eksport do arkusza', () => {
     expect(h).toContain('deleted_at');
     expect(f.sheet('attachments').map((r) => r[h.indexOf('dla_klienta')])).toEqual(['dla_klienta', 'FALSE', 'TRUE']);
     const uh = f.sheet('users')[0]!;
-    expect(uh).not.toContain('token_hash');
+    expect(uh).not.toContain('password_hash');
+    expect(JSON.stringify(f.sheet('users'))).not.toMatch(/scrypt/);
+    expect(uh).toContain('login');
     expect(uh).toContain('name');
     const inf = f.sheet('_info');
     expect(inf.find((r) => r[0] === 'attachments')![1]).toBe(2);

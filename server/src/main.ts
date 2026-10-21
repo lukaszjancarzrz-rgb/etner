@@ -11,7 +11,7 @@ import { modulesOf } from './core/registry.js';
 import { modules } from './modules/index.js';
 import { kopieCrons } from './scripts/kopie.js';
 import { seedBase } from './modules/slowniki/seed.js';
-import { demoLinks, seedDemo } from './scripts/seed-demo.js';
+import { DEMO_PASSWORD, demoAccounts, seedDemo } from './scripts/seed-demo.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
 const port = Number(process.env.PORT ?? 3000);
@@ -32,15 +32,13 @@ const db = openDb(join(dataDir, 'etner.db'));
 migrate(db);
 seedBase(db);
 const demo = process.env.DEMO === '1';
-// Adres do linków logowania: BASE_URL, na Render jego zewnętrzny adres, inaczej adres zapytania.
-const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL;
-if (demo && (await seedDemo(db, files, { secret }))) console.log('Dane demo załadowane.');
+if (demo && (await seedDemo(db, files))) console.log('Dane demo załadowane.');
 
 const vapid = vapidFromEnv(process.env, dataDir);
 if (!vapid) console.warn('Push wyłączony: brak VAPID_PUBLIC / VAPID_PRIVATE.');
 const deps = {
   version: process.env.APP_VERSION ?? pkg.version, db, files, secret,
-  demoLinks: demo ? (origin: string) => demoLinks(db, secret, baseUrl || origin) : undefined,
+  demoAccounts: demo ? () => demoAccounts(db) : undefined,
   push: vapid ? webPushSender(vapid, process.env.VAPID_SUBJECT) : undefined, vapidPublic: vapid?.publicKey,
 };
 const app = createApp(deps, modules);
@@ -48,6 +46,6 @@ const stopCron = registerCron(deps, [...modulesOf(app).flatMap((m) => m.cron ?? 
 
 const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`ETNER nasłuchuje na :${port}`);
-  if (demo) for (const l of demoLinks(db, secret, baseUrl || `http://localhost:${port}`)) console.log(`DEMO ${l.role}${l.ekipa ? ` (${l.ekipa})` : ''} ${l.name}: ${l.link}`);
+  if (demo) for (const a of demoAccounts(db)) console.log(`DEMO ${a.role}${a.ekipa ? ` (${a.ekipa})` : ''} ${a.name}: login ${a.login}, hasło ${DEMO_PASSWORD}`);
 });
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { stopCron(); server.close(); });

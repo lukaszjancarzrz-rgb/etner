@@ -14,7 +14,7 @@ import { seedBase } from '../modules/slowniki/seed.js';
 import { shopping } from '../modules/zakupy/schema.js';
 import { tasks } from '../modules/zadania/schema.js';
 import { jobs } from '../modules/zlecenia/schema.js';
-import { demoLinks, demoToken, seedDemo } from './seed-demo.js';
+import { DEMO_PASSWORD, demoAccounts, seedDemo } from './seed-demo.js';
 
 const n = (db: ReturnType<typeof testDeps>['db'], t: any) => db.select({ n: count() }).from(t).get()!.n;
 
@@ -22,7 +22,7 @@ async function seeded() {
   const deps = testDeps();
   seedBase(deps.db);
   const now = new Date('2026-10-21T10:00:00Z');
-  const added = await seedDemo(deps.db, deps.files, { now, secret: deps.secret, photo: { w: 160, h: 120 } });
+  const added = await seedDemo(deps.db, deps.files, { now, photo: { w: 160, h: 120 } });
   return { deps, now, added };
 }
 
@@ -57,33 +57,31 @@ describe('seedDemo', () => {
     expect(db.select().from(leads).all().some((l) => l.nastepny && l.nastepny <= now.toISOString().slice(0, 10))).toBe(true);
 
     const before = [clients, jobs, leads, attachments, scheduleEntries, users].map((t) => n(db, t));
-    expect(await seedDemo(db, deps.files, { now, secret: deps.secret, photo: { w: 160, h: 120 } })).toBe(false);
+    expect(await seedDemo(db, deps.files, { now, photo: { w: 160, h: 120 } })).toBe(false);
     expect([clients, jobs, leads, attachments, scheduleEntries, users].map((t) => n(db, t))).toEqual(before);
   });
 
-  it('tokeny demo są deterministyczne i logują', async () => {
+  it('konta demo: loginy i wspólne hasło logują, hasło nie jest w bazie wprost', async () => {
     const { deps } = await seeded();
     const app = createApp(deps, modules);
-    const links = demoLinks(deps.db, deps.secret, 'https://x.test');
-    expect(links).toHaveLength(7);
-    expect(links[0]).toMatchObject({ name: expect.any(String), role: 'admin', link: `https://x.test/login#${demoToken(deps.secret, 'admin1')}` });
-    expect(demoToken(deps.secret, 'prac1')).toBe(demoToken(deps.secret, 'prac1'));
-    expect(demoToken(deps.secret, 'prac1')).not.toBe(demoToken('inny', 'prac1'));
-    for (const l of links) {
-      const cookie = await loginCookie(app, l.link.split('#')[1]!);
-      expect(cookie).toContain('etner_s=');
-    }
+    const konta = demoAccounts(deps.db);
+    expect(konta).toHaveLength(7);
+    expect(konta.map((k) => k.login)).toEqual(['tomek', 'anna', 'bartek', 'piotr', 'kamil', 'marek', 'adam']);
+    expect(konta[0]).toEqual({ name: 'Tomasz Wrona', role: 'admin', ekipa: null, login: 'tomek' });
+    expect(DEMO_PASSWORD).toBe('demo1234');
+    for (const k of konta) expect(await loginCookie(app, k.login, DEMO_PASSWORD)).toContain('etner_s=');
+    expect(JSON.stringify(deps.db.$client.prepare('select * from users').all())).not.toContain(DEMO_PASSWORD);
   });
 
-  it('GET /api/demo/links tylko przy DEMO', async () => {
+  it('GET /api/demo/konta tylko przy DEMO', async () => {
     const { deps } = await seeded();
-    const off = createApp(deps, modules);
-    expect((await off.request('/api/demo/links')).status).toBe(404);
-    const on = createApp({ ...deps, demoLinks: (origin) => demoLinks(deps.db, deps.secret, origin) }, modules);
-    const res = await on.request('http://demo.test/api/demo/links');
+    expect((await createApp(deps, modules).request('/api/demo/konta')).status).toBe(404);
+    expect((await createApp(deps, modules).request('/api/demo/links')).status).toBe(404);
+    const on = createApp({ ...deps, demoAccounts: () => demoAccounts(deps.db) }, modules);
+    const res = await on.request('/api/demo/konta');
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { name: string; role: string; ekipa: string | null; link: string }[];
+    const body = (await res.json()) as Record<string, unknown>[];
     expect(body).toHaveLength(7);
-    expect(body[0]!.link.startsWith('http://demo.test/login#')).toBe(true);
+    expect(Object.keys(body[0]!).sort()).toEqual(['ekipa', 'login', 'name', 'role']);
   });
 });

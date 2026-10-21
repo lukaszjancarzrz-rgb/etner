@@ -16,7 +16,7 @@ async function setup() {
   const w2 = addUser(deps, { name: 'Drugi' });
   const t = new Date().toISOString();
   for (const u of [a, w, w2]) deps.db.insert(pushSubscriptions).values({ id: newId(), userId: u.user.id, endpoint: u.user.name, p256dh: 'p', auth: 'a', createdAt: t, updatedAt: t }).run();
-  return { deps, app, push, a, w, admin: await loginCookie(app, a.token), worker: await loginCookie(app, w.token), worker2: await loginCookie(app, w2.token) };
+  return { deps, app, push, a, w, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login), worker2: await loginCookie(app, w2.login) };
 }
 const req = (cookie: string, method: string, body?: unknown) =>
   ({ method, headers: { cookie, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });

@@ -11,7 +11,7 @@ async function setup(clientHasJobs?: (id: string) => boolean) {
   const app = createApp(deps, modules);
   const a = addUser(deps, { role: 'admin' });
   const w = addUser(deps);
-  return { deps, db: deps.db, app, uid: a.user.id, admin: await loginCookie(app, a.token), worker: await loginCookie(app, w.token) };
+  return { deps, db: deps.db, app, uid: a.user.id, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
 }
 const json = (cookie: string, method: string, body?: unknown) =>
   ({ method, headers: { cookie, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });

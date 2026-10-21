@@ -25,7 +25,7 @@ async function setup() {
   const k = newClient(deps.db, a.user.id, { typ: 'osoba', nazwa: 'Nowak', telefony: [], emaile: [], nip: '', notatki: '', site: { nazwa: '', adres: 'Krótka 1', miejscowosc: 'Zawoja', mapa: '', opis: '' } });
   const job = zlecenia.save(deps.db, a.user.id, { clientId: k.client.id, siteId: k.site!.id, status: 'Nowe', ekipa: 'A' } as never)!;
   const lead = leady.save(deps.db, a.user.id, { clientId: k.client.id, temat: 'Rekuperacja' } as never)!;
-  return { deps, app, push, a, w, w2, job, lead, admin: await loginCookie(app, a.token), worker: await loginCookie(app, w.token), worker2: await loginCookie(app, w2.token) };
+  return { deps, app, push, a, w, w2, job, lead, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login), worker2: await loginCookie(app, w2.login) };
 }
 type S = Awaited<ReturnType<typeof setup>>;
 const json = (cookie: string, method: string, body?: unknown) =>

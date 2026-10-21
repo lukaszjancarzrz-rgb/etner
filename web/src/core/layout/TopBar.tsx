@@ -1,5 +1,5 @@
 import { CloudArrowUp, WifiSlash } from '@phosphor-icons/react';
-import { useSession } from '../session.js';
+import { askLogin, useSession } from '../session.js';
 import { Logo } from './Logo.js';
 import { useOnline, useQueued } from './status.js';
 
@@ -28,8 +28,8 @@ export function TopBar({ title }: { title: string }) {
       </div>
       {status === 'expired' && (
         <div role="alert" className="border-t border-line bg-action/10 px-4 py-3 text-sm desk:px-8">
-          <p className="font-semibold">Zaloguj się ponownie</p>
-          <p className="text-ink-2">Sesja wygasła. Otwórz swój link logowania jeszcze raz.{queued > 0 && ` Zapisy (${queued}) czekają w kolejce i wyślą się po zalogowaniu.`}</p>
+          <p className="font-semibold"><button type="button" onClick={askLogin} className="underline underline-offset-2">Zaloguj się ponownie</button></p>
+          <p className="text-ink-2">Sesja wygasła.{queued > 0 && ` Zapisy (${queued}) czekają w kolejce i wyślą się po zalogowaniu.`}</p>
         </div>
       )}
     </header>

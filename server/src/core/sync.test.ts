@@ -20,7 +20,7 @@ async function setup() {
   }]);
   const a = addUser(deps, { role: 'admin' });
   const w = addUser(deps);
-  return { deps, app, admin: await loginCookie(app, a.token), worker: await loginCookie(app, w.token) };
+  return { deps, app, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
 }
 const get = (app: Awaited<ReturnType<typeof setup>>['app'], url: string, cookie: string) =>
   app.request(url, { headers: { cookie } });
@@ -143,16 +143,16 @@ describe('strumień: błędy i sesja', () => {
     const deps = testDeps();
     const app = createApp(deps);
     registerModules(app, deps, [{ name: 'zly', routes() {}, tables: { firmy }, visibleTo: () => { throw new Error('boom'); } }]);
-    const { token } = addUser(deps, { role: 'admin' });
+    const { login } = addUser(deps, { role: 'admin' });
     recordChange(deps.db, null, 'firmy', 'f1', 'create', null, {});
-    await drained(await get(app, '/api/stream?since=0', await loginCookie(app, token)));
+    await drained(await get(app, '/api/stream?since=0', await loginCookie(app, login)));
     expect(deps.db.select().from(errors).orderBy(desc(errors.id)).get()?.message).toContain('boom');
   });
 
   it('unieważniona sesja: session-expired i koniec strumienia', async () => {
     const { deps, app } = await setup();
     const w = addUser(deps);
-    const cookie = await loginCookie(app, w.token);
+    const cookie = await loginCookie(app, w.login);
     const res = await get(app, '/api/stream?since=0', cookie);
     revokeUser(deps.db, w.user.id);
     recordChange(deps.db, null, 'users', 'u1', 'update', null, { a: 1 });
@@ -178,8 +178,8 @@ describe('strumień: błędy i sesja', () => {
     const app = createApp(deps);
     registerModules(app, deps, [{ name: 'gol', routes() {}, tables: { firmy } }]);
     recordChange(deps.db, null, 'firmy', 'f1', 'create', null, {});
-    const a = await loginCookie(app, addUser(deps, { role: 'admin' }).token);
-    const w = await loginCookie(app, addUser(deps).token);
+    const a = await loginCookie(app, addUser(deps, { role: 'admin' }).login);
+    const w = await loginCookie(app, addUser(deps).login);
     expect(((await (await get(app, '/api/changes?since=0', a)).json()) as any).changes).toHaveLength(1);
     expect(((await (await get(app, '/api/changes?since=0', w)).json()) as any).changes).toHaveLength(0);
   });

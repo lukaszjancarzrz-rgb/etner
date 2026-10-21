@@ -1,14 +1,51 @@
 import { CaretRight, Desktop, Moon, SignOut, Sun, UsersThree } from '@phosphor-icons/react';
+import { useState, type FormEvent } from 'react';
+import { ApiError, api } from '../core/api.js';
 import { logout, useSession } from '../core/session.js';
 import { setTheme, useTheme, type Theme } from '../core/theme.js';
 import { Button } from '../core/ui/button.js';
 import { cn } from '../core/ui/cn.js';
+import { Field, Input } from '../core/ui/input.js';
+import { toast } from '../core/ui/toast.js';
 
 const opts: { v: Theme; label: string; icon: typeof Sun }[] = [
   { v: 'system', label: 'Auto', icon: Desktop },
   { v: 'light', label: 'Jasny', icon: Sun },
   { v: 'dark', label: 'Ciemny', icon: Moon },
 ];
+
+function ChangePassword() {
+  const [stare, setStare] = useState('');
+  const [nowe, setNowe] = useState('');
+  const [powt, setPowt] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (nowe.length < 8) return setError('Nowe hasło musi mieć co najmniej 8 znaków.');
+    if (nowe !== powt) return setError('Powtórzone hasło jest inne niż nowe.');
+    setBusy(true);
+    try {
+      await api('/api/me/haslo', { method: 'POST', json: { stare, nowe } });
+      setStare(''); setNowe(''); setPowt(''); setError(null);
+      toast('Hasło zostało zmienione', { body: 'Na pozostałych urządzeniach zalogujesz się ponownie.', tone: 'ok' });
+    } catch (err) {
+      const code = err instanceof ApiError ? (err.body as { error?: string } | null)?.error : undefined;
+      setError(code === 'ZLE_HASLO' ? 'Obecne hasło jest nieprawidłowe.' : err instanceof ApiError ? err.message : 'Brak połączenia z serwerem.');
+    }
+    setBusy(false);
+  }
+  return (
+    <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-line bg-card p-5">
+      <h2 className="font-wide text-lg font-extrabold">Zmień hasło</h2>
+      <Field label="Obecne hasło">{(id) => <Input id={id} type="password" autoComplete="current-password" value={stare} onChange={(e) => setStare(e.target.value)} required />}</Field>
+      <Field label="Nowe hasło" hint="Co najmniej 8 znaków.">{(id, d) => <Input id={id} aria-describedby={d} type="password" autoComplete="new-password" minLength={8} value={nowe} onChange={(e) => setNowe(e.target.value)} required />}</Field>
+      <Field label="Powtórz nowe hasło">{(id) => <Input id={id} type="password" autoComplete="new-password" value={powt} onChange={(e) => setPowt(e.target.value)} required />}</Field>
+      {error && <p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
+      <Button type="submit" variant="secondary" disabled={busy}>Zmień hasło</Button>
+    </form>
+  );
+}
 
 /** Więcej: Klienci (admin), Ustawienia (motyw), wylogowanie. */
 export function More() {
@@ -36,6 +73,7 @@ export function More() {
           ))}
         </div>
       </div>
+      <ChangePassword />
       <div className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-card p-5">
         <div className="min-w-0">
           <p className="truncate font-semibold">{me?.name}</p>

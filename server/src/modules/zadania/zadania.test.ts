@@ -10,7 +10,7 @@ async function setup() {
   const app = createApp(deps, modules);
   const a = addUser(deps, { role: 'admin', name: 'Admin' });
   const w = addUser(deps);
-  return { app, admin: await loginCookie(app, a.token), worker: await loginCookie(app, w.token) };
+  return { app, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
 }
 const req = (cookie: string, method: string, body?: unknown) =>
   ({ method, headers: { cookie, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });

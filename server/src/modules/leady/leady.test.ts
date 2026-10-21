@@ -19,7 +19,7 @@ async function setup() {
   const t = new Date().toISOString();
   deps.db.insert(pushSubscriptions).values({ id: newId(), userId: a.user.id, endpoint: 'adm', p256dh: 'p', auth: 'a', createdAt: t, updatedAt: t }).run();
   const k = newClient(deps.db, a.user.id, { typ: 'osoba', nazwa: 'Nowak', telefony: [], emaile: [], nip: '', notatki: '', site: { nazwa: '', adres: 'Krótka 1', miejscowosc: 'Zawoja', mapa: '', opis: '' } });
-  return { deps, app, push, diary, a, k, admin: await loginCookie(app, a.token), worker: await loginCookie(app, w.token) };
+  return { deps, app, push, diary, a, k, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
 }
 const req = (cookie: string, method: string, body?: unknown) =>
   ({ method, headers: { cookie, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });

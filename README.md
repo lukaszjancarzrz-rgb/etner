@@ -32,9 +32,9 @@ Plik `render.yaml` opisuje usługę z danymi przykładowymi (tryb demo). Dane le
 
 1. Na [dashboard.render.com](https://dashboard.render.com) wybierz **New → Blueprint**.
 2. Wskaż repozytorium ETNER (gałąź `modul-1`).
-3. Render pokaże usługę `etner-demo` i zapyta o zmienne oznaczone jako sekrety. `BASE_URL` i `R2_*` można zostawić puste (zdjęcia zapiszą się wtedy na dysku usługi). Kliknij **Apply**.
+3. Render pokaże usługę `etner-demo` i zapyta o zmienne oznaczone jako sekrety. `R2_*` można zostawić puste (zdjęcia zapiszą się wtedy na dysku usługi). Kliknij **Apply**.
    Jeśli budowanie zatrzyma się na `corepack enable`, w ustawieniach usługi (Settings → Build Command) wpisz: `npx pnpm@10.28.0 install --frozen-lockfile && npx pnpm@10.28.0 build` i wdroż ponownie.
 4. Po zakończeniu budowania otwórz adres usługi (np. `https://etner-demo.onrender.com`).
-5. Linki logowania dla osób przykładowych są pod adresem `<adres usługi>/api/demo/links`. Otwórz link administratora albo pracownika na telefonie lub komputerze.
+5. Otwórz adres usługi. Ekran logowania w wersji demo pokazuje listę „Konta demo” (administratorzy: tomek, anna; pracownicy: bartek, piotr, kamil, marek, adam). Dotknij konta, żeby się zalogować; wspólne hasło wszystkich kont to `demo1234`. Loginy i hasło są też w logu usługi przy starcie.
 
 Darmowa usługa usypia się po kwadransie bez ruchu; pierwsze wejście po przerwie trwa około minuty.

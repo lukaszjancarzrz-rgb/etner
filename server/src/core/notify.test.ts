@@ -69,14 +69,14 @@ describe('trasy push', () => {
   it('subscribe wymaga logowania i waliduje', async () => {
     const deps = testDeps(); const app = createApp(deps);
     expect((await post(app, '/api/push/subscribe', '', body)).status).toBe(401);
-    const { token } = addUser(deps); const cookie = await loginCookie(app, token);
+    const { login } = addUser(deps); const cookie = await loginCookie(app, login);
     expect((await post(app, '/api/push/subscribe', cookie, { endpoint: 'x' })).status).toBe(400);
     expect((await post(app, '/api/push/unsubscribe', cookie, {})).status).toBe(400);
   });
   it('subscribe robi upsert po endpoint i przepisuje na bieżącego użytkownika; unsubscribe usuwa miękko', async () => {
     const deps = testDeps(); const app = createApp(deps);
     const u1 = addUser(deps), u2 = addUser(deps);
-    const c1 = await loginCookie(app, u1.token), c2 = await loginCookie(app, u2.token);
+    const c1 = await loginCookie(app, u1.login), c2 = await loginCookie(app, u2.login);
     expect((await post(app, '/api/push/subscribe', c1, body)).status).toBe(200);
     expect((await post(app, '/api/push/subscribe', c2, { ...body, keys: { p256dh: 'k2', auth: 'a2' } })).status).toBe(200);
     const rows = deps.db.select().from(pushSubscriptions).all();

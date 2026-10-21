@@ -3,7 +3,7 @@ import { routes } from './routes.js';
 import { schedulePeople, users } from './schema.js';
 import { strip } from './service.js';
 
-/** Admin widzi wszystkich, pozostali tylko siebie; token_hash jest wycinany także tutaj (druga bariera). */
+/** Admin widzi wszystkich, pozostali tylko siebie; password_hash jest wycinany także tutaj (druga bariera). */
 export const uzytkownicy: ModuleDef = {
   name: 'uzytkownicy',
   routes,

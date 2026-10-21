@@ -1,29 +1,10 @@
 import { useEffect } from 'react';
 import { bus } from './core/api.js';
 import { Shell } from './core/layout/Shell.js';
-import { Logo } from './core/layout/Logo.js';
+import { Login } from './screens/Login.js';
 import { useSession } from './core/session.js';
 import { Skeleton } from './core/ui/skeleton.js';
 import { Toaster, toast } from './core/ui/toast.js';
-
-function Login({ error }: { error?: string }) {
-  return (
-    <main className="grid min-h-[100dvh] grid-rows-[auto_1fr]">
-      <div className="stripes h-3" aria-hidden />
-      <div className="mx-auto flex w-full max-w-md flex-col justify-center gap-6 px-6 py-12">
-        <div className="flex items-center gap-3">
-          <Logo className="h-12 w-12" />
-          <span className="font-wide text-3xl font-black tracking-tight">ETNER</span>
-        </div>
-        <div className="border-l-4 border-action pl-4">
-          <h1 className="font-wide text-2xl font-extrabold">Zaloguj się</h1>
-          <p className="mt-2 text-ink-2">Otwórz link logowania, który dostałeś od biura. Link działa tylko na Twoim telefonie.</p>
-        </div>
-        {error && <p role="alert" className="rounded-2xl border border-danger/40 bg-card p-4 text-sm font-semibold text-danger">{error}</p>}
-      </div>
-    </main>
-  );
-}
 
 function Loading() {
   return (
@@ -40,7 +21,7 @@ function Loading() {
 }
 
 export function App() {
-  const { status, error } = useSession();
+  const { status, askLogin } = useSession();
   useEffect(() => {
     // odrzucony zapis, którego formularz już nie istnieje (np. po restarcie)
     const f = (e: Event) => {
@@ -52,7 +33,7 @@ export function App() {
   }, []);
   return (
     <>
-      {status === 'loading' ? <Loading /> : status === 'out' ? <Login error={error} /> : <Shell />}
+      {status === 'loading' ? <Loading /> : status === 'out' || (status === 'expired' && askLogin) ? <Login /> : <Shell />}
       <Toaster />
     </>
   );

@@ -1,8 +1,6 @@
-import { createHmac } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import { addDays, dayOf, isWorkday, mondayOf, newId, type ScheduleProposal } from '@etner/shared';
-import { hashToken } from '../core/auth.js';
 import { tx, type Db } from '../core/db.js';
 import { makeVariants, type FileStore } from '../core/files.js';
 import { users } from '../core/schema-base.js';
@@ -20,24 +18,23 @@ import * as zlecenia from '../modules/zlecenia/service.js';
 const BARTEK = 'ekipa Bartek', MAREK = 'ekipa Marek';
 /** Wymyślone osoby; kolejność = kolejność kolumn w harmonogramie (ekipy, potem biuro). */
 const DEMO_USERS = [
-  { login: 'prac1', name: 'Bartek Gawlik', role: 'pracownik', ekipa: BARTEK },
-  { login: 'prac2', name: 'Piotr Kuchta', role: 'pracownik', ekipa: BARTEK },
-  { login: 'prac3', name: 'Kamil Zięba', role: 'pracownik', ekipa: BARTEK },
-  { login: 'prac4', name: 'Marek Pilch', role: 'pracownik', ekipa: MAREK },
-  { login: 'prac5', name: 'Adam Pająk', role: 'pracownik', ekipa: MAREK },
-  { login: 'admin1', name: 'Tomasz Wrona', role: 'admin', ekipa: null },
-  { login: 'admin2', name: 'Anna Syrek', role: 'admin', ekipa: null },
+  { login: 'bartek', name: 'Bartek Gawlik', role: 'pracownik', ekipa: BARTEK },
+  { login: 'piotr', name: 'Piotr Kuchta', role: 'pracownik', ekipa: BARTEK },
+  { login: 'kamil', name: 'Kamil Zięba', role: 'pracownik', ekipa: BARTEK },
+  { login: 'marek', name: 'Marek Pilch', role: 'pracownik', ekipa: MAREK },
+  { login: 'adam', name: 'Adam Pająk', role: 'pracownik', ekipa: MAREK },
+  { login: 'tomek', name: 'Tomasz Wrona', role: 'admin', ekipa: null },
+  { login: 'anna', name: 'Anna Syrek', role: 'admin', ekipa: null },
 ] as const;
 
-/** R23: token = base64url(HMAC-SHA256(APP_SECRET, 'demo:<login>')). */
-export const demoToken = (secret: string, login: string): string => createHmac('sha256', secret).update(`demo:${login}`).digest('base64url');
+/** Jedno hasło wszystkich kont demo (dane wymyślone, wersja testowa). */
+export const DEMO_PASSWORD = 'demo1234';
 
-export type DemoLink = { name: string; role: string; ekipa: string | null; link: string };
-export function demoLinks(db: Db, secret: string, origin: string): DemoLink[] {
+export type DemoAccount = { name: string; role: string; ekipa: string | null; login: string };
+export function demoAccounts(db: Db): DemoAccount[] {
   const byName = new Map(uzytkownicy.list(db).map((u) => [u.name, u]));
-  return [...DEMO_USERS].sort((a, b) => Number(b.role === 'admin') - Number(a.role === 'admin')).filter((d) => byName.has(d.name)).map((d) => ({
-    name: d.name, role: d.role, ekipa: d.ekipa, link: `${origin.replace(/\/$/, '')}/login#${demoToken(secret, d.login)}`,
-  }));
+  return [...DEMO_USERS].sort((a, b) => Number(b.role === 'admin') - Number(a.role === 'admin')).filter((d) => byName.has(d.name))
+    .map(({ name, role, ekipa, login }) => ({ name, role, ekipa, login }));
 }
 
 const CLIENTS = [
@@ -76,7 +73,7 @@ const LEADS: [number | null, string, string, string, string, number | null, stri
   [11, 'Na kiedyś', 'Pompa ciepła do garażu', 'Inne', 'Pompa ciepła', 60, 'Wróci do tematu na wiosnę.'],
 ];
 
-export interface DemoOpts { now?: Date; secret: string; photo?: { w: number; h: number } }
+export interface DemoOpts { now?: Date; photo?: { w: number; h: number } }
 
 const CAPTIONS = ['Centrala rekuperacji', 'Kanały na poddaszu', 'Jednostka zewnętrzna', 'Skrzynka rozdzielcza', 'Przejście przez ścianę',
   'Skraplacz po montażu', 'Pompa ciepła', 'Zawór i zasilanie', 'Pokój gościnny', 'Odbiór instalacji'];
@@ -91,7 +88,7 @@ async function photo(i: number, w: number, h: number): Promise<Buffer> {
 }
 
 /** Zakłada dane demo tylko w bazie bez użytkowników (po migrate + seedBase). Zwraca false, gdy nic nie dodano. */
-export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts): Promise<boolean> {
+export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): Promise<boolean> {
   if (db.select({ id: users.id }).from(users).limit(1).get()) return false;
   const now = opts.now ?? new Date();
   const today = dayOf(now);
@@ -108,16 +105,15 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts): Promis
   }));
 
   tx(db, () => {
-    // Użytkownicy z deterministycznym tokenem (R23).
-    const u: Record<string, ReturnType<typeof uzytkownicy.create>['user']> = {};
+    // Użytkownicy ze wspólnym hasłem demo.
+    const u: Record<string, ReturnType<typeof uzytkownicy.create>> = {};
     let by = 'demo';
     for (const d of [...DEMO_USERS].sort((a, b) => Number(b.role === 'admin') - Number(a.role === 'admin'))) {
-      const { user } = uzytkownicy.create(db, by, { name: d.name, role: d.role, perms: [], ekipa: d.ekipa });
-      db.update(users).set({ tokenHash: hashToken(demoToken(opts.secret, d.login)) }).where(eq(users.id, user.id)).run();
+      const user = uzytkownicy.create(db, by, { login: d.login, haslo: DEMO_PASSWORD, name: d.name, role: d.role, perms: [], ekipa: d.ekipa });
       u[d.login] = user;
       if (by === 'demo') by = user.id;
     }
-    const a1 = u.admin1!.id, a2 = u.admin2!.id;
+    const a1 = u.tomek!.id, a2 = u.anna!.id;
     const people: Record<string, string> = {};
     for (const d of DEMO_USERS) people[d.login] = uzytkownicy.createPerson(db, a1, { nazwa: d.name, userId: u[d.login]!.id }).id;
 
@@ -146,12 +142,12 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts): Promis
     const first = mondayOf(today);
     const cell = (login: string, k: number, i: number, wk: number, dow: number): ScheduleProposal => {
       const d = DEMO_USERS.find((x) => x.login === login)!;
-      if (d.role === 'admin') return dow === 0 ? [{ rodzaj: 'tekst', tekst: 'Biuro', polDnia: false }] : wk === 3 && dow === 4 && login === 'admin2' ? [{ rodzaj: 'kod', kod: 'szkolenie', polDnia: false }] : [];
-      if (login === 'prac3' && wk === 1 && dow < 2) return [{ rodzaj: 'kod', kod: 'urlop', polDnia: false }];
-      if (login === 'prac5' && wk === 2 && dow === 4) return [{ rodzaj: 'kod', kod: 'szkolenie', polDnia: false }];
+      if (d.role === 'admin') return dow === 0 ? [{ rodzaj: 'tekst', tekst: 'Biuro', polDnia: false }] : wk === 3 && dow === 4 && login === 'anna' ? [{ rodzaj: 'kod', kod: 'szkolenie', polDnia: false }] : [];
+      if (login === 'kamil' && wk === 1 && dow < 2) return [{ rodzaj: 'kod', kod: 'urlop', polDnia: false }];
+      if (login === 'adam' && wk === 2 && dow === 4) return [{ rodzaj: 'kod', kod: 'szkolenie', polDnia: false }];
       const js = crewJobs(d.ekipa!);
       if (!js.length) return [];
-      if (login === 'prac2' && dow === 3) return [{ rodzaj: 'zlecenie', jobId: js[0]!.id, polDnia: true }, { rodzaj: 'zlecenie', jobId: js[(i + 1) % js.length]!.id, polDnia: true }];
+      if (login === 'piotr' && dow === 3) return [{ rodzaj: 'zlecenie', jobId: js[0]!.id, polDnia: true }, { rodzaj: 'zlecenie', jobId: js[(i + 1) % js.length]!.id, polDnia: true }];
       return [{ rodzaj: 'zlecenie', jobId: js[Math.floor((wk * 5 + dow + k) / 3) % js.length]!.id, polDnia: false }];
     };
     for (let i = 0; i < 28; i++) {
@@ -165,16 +161,16 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts): Promis
     harmonogram.approve(db, a1, undefined, now);
     let next = addDays(today, 1);
     while (isWorkday(next, []) !== 1) next = addDays(next, 1);
-    harmonogram.setDraft(db, a2, { from: next, to: next, people: [people.prac1!], value: [{ rodzaj: 'kod', kod: 'urlop', polDnia: false }], workdaysOnly: false });
+    harmonogram.setDraft(db, a2, { from: next, to: next, people: [people.bartek!], value: [{ rodzaj: 'kod', kod: 'urlop', polDnia: false }], workdaysOnly: false });
     harmonogram.setDraft(db, a2, { from: next, to: next, people: ['uwagi'], value: { tekst: 'Przegląd samochodów dostawczych' }, workdaysOnly: false });
 
     // Dzienniki ze zdjęciami (10): wpisy zlecenia przez serwis dziennika.
     const now0 = now.toISOString();
     const entries: [number, string, string, number][] = [
-      [0, 'prac1', 'Rozpoczęty montaż centrali, kanały główne gotowe.', 3], [0, 'prac2', 'Przejścia przez ściany zakończone.', 2],
-      [1, 'prac4', 'Jednostki wewnętrzne powieszone.', 2], [9, 'prac1', 'Sprawdzony stan jednostki, dokręcone mocowania.', 2],
-      [5, 'prac3', 'Brakujące regulacje do dokończenia.', 1], [2, 'prac1', 'Wizja lokalna przed montażem pompy, miejsce na zewnątrz wybrane.', 0],
-      [3, 'prac4', 'Klient poprosił o termin po godz. 10.', 0],
+      [0, 'bartek', 'Rozpoczęty montaż centrali, kanały główne gotowe.', 3], [0, 'piotr', 'Przejścia przez ściany zakończone.', 2],
+      [1, 'marek', 'Jednostki wewnętrzne powieszone.', 2], [9, 'bartek', 'Sprawdzony stan jednostki, dokręcone mocowania.', 2],
+      [5, 'kamil', 'Brakujące regulacje do dokończenia.', 1], [2, 'bartek', 'Wizja lokalna przed montażem pompy, miejsce na zewnątrz wybrane.', 0],
+      [3, 'marek', 'Klient poprosił o termin po godz. 10.', 0],
     ];
     let p = 0;
     for (const [ji, login, tekst, nPhotos] of entries) {
@@ -190,11 +186,11 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts): Promis
       dziennik.create(db, me, { owner_type: 'job', owner_id: jobs[ji]!.id, tekst, uploads: ids }, () => [], []);
     }
     const lead = leady.list(db)[0]!;
-    dziennik.create(db, u.admin1!, { owner_type: 'lead', owner_id: lead.id, tekst: 'Zadzwonić we wtorek, klient chce wycenę z montażem.', uploads: [] }, () => [], []);
+    dziennik.create(db, u.tomek!, { owner_type: 'lead', owner_id: lead.id, tekst: 'Zadzwonić we wtorek, klient chce wycenę z montażem.', uploads: [] }, () => [], []);
 
     // Zakupy.
     const buy = (co: string, sklep: string, grupa: string, status?: string, kwotaGr?: number) => {
-      const r = zakupy.create(db, u.prac1!.id, { co, sklep, grupa, uwagi: '' });
+      const r = zakupy.create(db, u.bartek!.id, { co, sklep, grupa, uwagi: '' });
       if (status) zakupy.update(db, a1, r.id, { status, ...(kwotaGr && { kwotaGr }) });
     };
     buy('Kolanka 160 mm, 10 szt.', 'Hurtownia Wentylacja', 'Materiały');
@@ -206,8 +202,8 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts): Promis
     // Listy „na jutro”.
     const tomorrow = addDays(today, 1);
     for (const [ekipa, who, items] of [
-      [BARTEK, u.prac1!, ['Centrala rekuperacji', 'Kanały 160 mm', 'Taśma aluminiowa', 'Wkrętarka i wiertła']],
-      [MAREK, u.prac4!, ['Jednostki wewnętrzne x3', 'Rury miedziane', 'Pompa skroplin', 'Drabina']],
+      [BARTEK, u.bartek!, ['Centrala rekuperacji', 'Kanały 160 mm', 'Taśma aluminiowa', 'Wkrętarka i wiertła']],
+      [MAREK, u.marek!, ['Jednostki wewnętrzne x3', 'Rury miedziane', 'Pompa skroplin', 'Drabina']],
     ] as const) {
       items.forEach((tekst, i) => {
         const dzien = i < 2 ? today : tomorrow;

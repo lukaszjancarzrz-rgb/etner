@@ -1,4 +1,4 @@
-import { schedulePersonSchema, schedulePersonUpdateSchema, userCreateSchema, userUpdateSchema } from '@etner/shared';
+import { schedulePersonSchema, schedulePersonUpdateSchema, userCreateSchema, userPasswordSchema, userUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -9,8 +9,7 @@ import * as svc from './service.js';
 
 const bad = (message: string) => new HTTPException(400, { message });
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
-/** Link logowania: BASE_URL, na Render RENDER_EXTERNAL_URL, a bez nich adres, z którego przyszło zapytanie. */
-const linkOf = (c: Context, token: string) => `${process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || new URL(c.req.url).origin}/login#${token}`;
+const taken = (e: unknown) => { throw e instanceof svc.LoginTakenError ? new HTTPException(409, { message: 'LOGIN_ZAJETY' }) : e; };
 
 export function routes(app: Hono, { db }: AppDeps): void {
   const admin = requireAdmin(db);
@@ -19,15 +18,10 @@ export function routes(app: Hono, { db }: AppDeps): void {
   app.get('/api/users', admin, (c) => c.json(svc.list(db)));
 
   app.post('/api/users', admin, async (c) => {
-    const d = await body(c, userCreateSchema);
-    let token: string | undefined;
-    // Token zostaje poza runOp: op_ids trzyma tylko {user}, powtórka nie dostaje linku.
-    const { result } = runOp(db, d.opId, me(c), () => {
-      const r = svc.create(db, me(c), d);
-      token = r.token;
-      return { user: r.user };
-    });
-    return c.json({ user: result.user, link: token ? linkOf(c, token) : null });
+    const { opId, ...d } = await body(c, userCreateSchema);
+    try {
+      return c.json({ user: runOp(db, opId, me(c), () => svc.create(db, me(c), d)).result });
+    } catch (e) { return taken(e); }
   });
 
   app.put('/api/users/:id', admin, async (c) => {
@@ -36,21 +30,19 @@ export function routes(app: Hono, { db }: AppDeps): void {
     if (id === me(c) && d.role && d.role !== 'admin') throw bad('Nie możesz odebrać sobie roli administratora.');
     if (id === me(c) && d.active === false) throw bad('Nie możesz wyłączyć własnego konta.');
     const { opId, ...rest } = d;
-    const { result } = runOp(db, opId, me(c), () => svc.update(db, me(c), id, rest));
+    let result;
+    try {
+      result = runOp(db, opId, me(c), () => svc.update(db, me(c), id, rest)).result;
+    } catch (e) { return taken(e); }
     if (!result) throw notFound();
     return c.json(result);
   });
 
-  app.post('/api/users/:id/new-link', admin, async (c) => {
-    const { opId } = await c.req.json().catch(() => ({}));
-    let token: string | undefined;
-    const { result } = runOp(db, typeof opId === 'string' ? opId : undefined, me(c), () => {
-      const r = svc.newLink(db, me(c), c.req.param('id'));
-      token = r?.token;
-      return r && { user: r.user };
-    });
+  app.post('/api/users/:id/haslo', admin, async (c) => {
+    const { opId, haslo } = await body(c, userPasswordSchema);
+    const { result } = runOp(db, opId, me(c), () => svc.setPassword(db, me(c), c.req.param('id'), haslo));
     if (!result) throw notFound();
-    return c.json({ user: result.user, link: token ? linkOf(c, token) : null });
+    return c.json({ user: result });
   });
 
   app.get('/api/schedule-people', requireUser(db), (c) => c.json(svc.listPeople(db)));

@@ -19,7 +19,7 @@ async function setup() {
   const w2 = addUser(deps, { name: 'Marek', ekipa: 'ekipa B' });
   const t = new Date().toISOString();
   for (const u of [a, w1, w1b, w2]) deps.db.insert(pushSubscriptions).values({ id: newId(), userId: u.user.id, endpoint: u.user.name, p256dh: 'p', auth: 'a', createdAt: t, updatedAt: t }).run();
-  const c = async (u: { token: string }) => loginCookie(app, u.token);
+  const c = async (u: { login: string }) => loginCookie(app, u.login);
   return { deps, app, push, a, w1, w1b, w2, admin: await c(a), c1: await c(w1), c1b: await c(w1b), c2: await c(w2) };
 }
 const req = (cookie: string, method: string, body?: unknown) =>
@@ -100,7 +100,7 @@ describe('na jutro', () => {
   it('przeniesienie do innej ekipy nie wycieka nowej treści do starej', async () => {
     const { app, c1, c2, admin, deps } = await setup();
     const w3 = addUser(deps, { name: 'Trzeci', ekipa: 'ekipa C' });
-    const c3 = await loginCookie(app, w3.token);
+    const c3 = await loginCookie(app, w3.login);
     const row = await (await app.request('/api/checklists', req(c1, 'POST', { ekipa: 'ekipa A', dzien: '2026-03-11', tekst: 'Drabina' }))).json();
     const r = await app.request(`/api/checklists/${row.id}`, req(admin, 'PUT', { ekipa: 'ekipa B', tekst: 'Nowy' }));
     expect(r.status).toBe(200);

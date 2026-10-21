@@ -21,7 +21,7 @@ async function setup() {
   for (const u of [a, b1, b2]) // jedna subskrypcja na osobę; endpoint = id użytkownika
     deps.db.insert(pushSubscriptions).values({ id: newId(), userId: u.user.id, endpoint: u.user.id, p256dh: 'p', auth: 'a', createdAt: now, updatedAt: now }).run();
   const k = newClient(deps.db, a.user.id, { typ: 'osoba', nazwa: 'Kowalski', telefony: [], emaile: [], nip: '', notatki: '', site: { nazwa: '', adres: 'Długa 5', miejscowosc: 'Zawoja', mapa: '', opis: '' } });
-  return { deps, app, push, a, b1, b2, k, admin: await loginCookie(app, a.token), worker: await loginCookie(app, w.token) };
+  return { deps, app, push, a, b1, b2, k, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
 }
 const req = (cookie: string, method: string, body?: unknown) =>
   ({ method, headers: { cookie, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });

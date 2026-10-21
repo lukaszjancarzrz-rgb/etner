@@ -4,9 +4,14 @@ import { expect, test, type Page } from '@playwright/test';
 const photo = fileURLToPath(new URL('./fixtures/zdjecie.jpg', import.meta.url));
 
 async function loginAdmin(page: Page) {
-  const links = (await (await page.request.get('/api/demo/links')).json()) as { role: string; link: string }[];
-  const admin = links.find((l) => l.role === 'admin')!;
-  await page.goto(admin.link);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Zaloguj się' })).toBeVisible();
+  // zły login, potem konto demo z listy (ekran logowania wypełnia login i hasło)
+  await page.getByLabel('Login').fill('tomek');
+  await page.getByLabel('Hasło', { exact: true }).fill('zle-haslo');
+  await page.getByRole('button', { name: 'Zaloguj się' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Nieprawidłowy login lub hasło.');
+  await page.getByRole('button', { name: /Tomasz Wrona/ }).click();
   await expect(page.getByRole('heading', { name: 'Harmonogram', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
 }

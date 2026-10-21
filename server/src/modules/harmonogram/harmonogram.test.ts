@@ -28,7 +28,7 @@ async function setup(now = new Date('2026-10-21T22:30:00Z')) {
   const k = newClient(deps.db, a.user.id, { typ: 'osoba', nazwa: 'Nowak', telefony: [], emaile: [], nip: '', notatki: '', site: { nazwa: '', adres: 'Krótka 1', miejscowosc: 'Zawoja', mapa: '', opis: '' } });
   const job = zlecenia.save(deps.db, a.user.id, { clientId: k.client.id, siteId: k.site!.id, status: 'Nowe' } as never)!;
   const job2 = zlecenia.save(deps.db, a.user.id, { clientId: k.client.id, status: 'Nowe' } as never)!;
-  return { deps, app, push, a, b, w, pw, pa, px, job, job2, admin: await loginCookie(app, a.token), admin2: await loginCookie(app, b.token), worker: await loginCookie(app, w.token) };
+  return { deps, app, push, a, b, w, pw, pa, px, job, job2, admin: await loginCookie(app, a.login), admin2: await loginCookie(app, b.login), worker: await loginCookie(app, w.login) };
 }
 type S = Awaited<ReturnType<typeof setup>>;
 const req = (cookie: string, method: string, body?: unknown) =>

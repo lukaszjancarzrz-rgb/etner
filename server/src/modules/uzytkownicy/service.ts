@@ -1,22 +1,25 @@
-import { randomBytes } from 'node:crypto';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { newId } from '@etner/shared';
-import { hashToken, revokeUser } from '../../core/auth.js';
+import { revokeUser } from '../../core/auth.js';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
+import { hashPassword } from '../../core/password.js';
 import { users } from '../../core/schema-base.js';
 import { schedulePeople } from './schema.js';
 
 export type UserRow = typeof users.$inferSelect;
-export type PublicUser = Omit<UserRow, 'tokenHash'>;
+export type PublicUser = Omit<UserRow, 'passwordHash'>;
 export type SchedulePerson = typeof schedulePeople.$inferSelect;
 
-/** token_hash nigdy nie opuszcza modułu: ani w odpowiedziach, ani w changes. */
-export const strip = <T extends { tokenHash?: unknown }>(r: T): Omit<T, 'tokenHash'> => {
-  const { tokenHash: _, ...rest } = r;
+/** password_hash nigdy nie opuszcza modułu: ani w odpowiedziach, ani w changes. */
+export const strip = <T extends { passwordHash?: unknown }>(r: T): Omit<T, 'passwordHash'> => {
+  const { passwordHash: _, ...rest } = r;
   return rest;
 };
-const newToken = () => randomBytes(32).toString('base64url');
+const loginTaken = (db: Db, login: string, except?: string) => {
+  const o = db.select({ id: users.id }).from(users).where(eq(users.login, login)).get();
+  return !!o && o.id !== except;
+};
 const active = and(isNull(users.deletedAt), eq(users.active, true));
 
 export const list = (db: Db): PublicUser[] =>
@@ -33,33 +36,36 @@ export const crewMembers = (db: Db, ekipa: string): string[] =>
 export const admins = (db: Db): string[] =>
   db.select({ id: users.id }).from(users).where(and(active, eq(users.role, 'admin'))).all().map((r) => r.id);
 
-type NewUser = { name: string; role: 'pracownik' | 'admin'; perms: string[]; ekipa?: string | null; scheduleCol?: string | null };
-export function create(db: Db, by: string, d: NewUser): { user: PublicUser; token: string } {
-  const token = newToken();
+export class LoginTakenError extends Error {}
+
+type NewUser = { login: string; name: string; role: 'pracownik' | 'admin'; perms: string[]; ekipa?: string | null; scheduleCol?: string | null };
+export function create(db: Db, by: string, d: NewUser & { haslo: string }): PublicUser {
+  if (loginTaken(db, d.login)) throw new LoginTakenError();
+  const { haslo, ...rest } = d;
   const now = new Date().toISOString();
-  const row = db.insert(users).values({ id: newId(), ...d, ekipa: d.ekipa ?? null, scheduleCol: d.scheduleCol ?? null, tokenHash: hashToken(token), createdAt: now, createdBy: by, updatedAt: now }).returning().get();
+  const row = db.insert(users).values({ id: newId(), ...rest, ekipa: d.ekipa ?? null, scheduleCol: d.scheduleCol ?? null, passwordHash: hashPassword(haslo), createdAt: now, createdBy: by, updatedAt: now }).returning().get();
   recordChange(db, by, 'users', row.id, 'create', null, strip(row));
-  return { user: strip(row), token };
+  return strip(row);
 }
 
 export function update(db: Db, by: string, id: string, d: Partial<NewUser> & { active?: boolean }): PublicUser | null {
   const old = get(db, id);
   if (!old || old.deletedAt) return null;
+  if (d.login && loginTaken(db, d.login, id)) throw new LoginTakenError();
   const row = db.update(users).set({ ...d, updatedAt: new Date().toISOString() }).where(eq(users.id, id)).returning().get();
   if (d.active === false) revokeUser(db, id);
   recordChange(db, by, 'users', id, 'update', strip(old), strip(row));
   return strip(row);
 }
 
-/** Nowy token zastępuje stary, wszystkie sesje użytkownika kończą się. */
-export function newLink(db: Db, by: string, id: string): { user: PublicUser; token: string } | null {
+/** Nowe hasło (reset przez admina), wszystkie sesje użytkownika kończą się. */
+export function setPassword(db: Db, by: string, id: string, haslo: string): PublicUser | null {
   const old = get(db, id);
   if (!old || old.deletedAt) return null;
-  const token = newToken();
-  const row = db.update(users).set({ tokenHash: hashToken(token), updatedAt: new Date().toISOString() }).where(eq(users.id, id)).returning().get();
+  const row = db.update(users).set({ passwordHash: hashPassword(haslo), updatedAt: new Date().toISOString() }).where(eq(users.id, id)).returning().get();
   revokeUser(db, id);
   recordChange(db, by, 'users', id, 'update', strip(old), strip(row));
-  return { user: strip(row), token };
+  return strip(row);
 }
 
 export const listPeople = (db: Db): SchedulePerson[] =>
