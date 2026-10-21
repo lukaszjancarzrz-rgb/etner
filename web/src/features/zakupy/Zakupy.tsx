@@ -1,4 +1,4 @@
-import { Plus, ShoppingCart, Trash } from '@phosphor-icons/react';
+import { Check, Plus, ShoppingCart, Trash } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { fmtWhen, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
@@ -7,7 +7,7 @@ import { Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
 import { Field, Input } from '../../core/ui/input.js';
-import { Select } from '../../core/ui/select.js';
+import { Checkbox } from '../../core/ui/checkbox.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
@@ -101,22 +101,30 @@ function Item({ i, statusy, flash }: { i: Rec; statusy: Rec[]; flash: boolean })
   const put = (patch: Record<string, unknown>) => updateVia('shopping', i.id, patch, { kind: 'zakupy', url: `/api/shopping/${i.id}`, method: 'PUT', body: patch }).catch(fail('Zmiana nie została zapisana'));
   const remove = () => void outbox.enqueue({ kind: 'zakupy', url: `/api/shopping/${i.id}`, method: 'DELETE', optimistic: (s) => s.remove('shopping', i.id) }).catch(fail('Nie usunięto pozycji'));
 
+  const first = statusy[0]?.wartosc, last = statusy.at(-1)?.wartosc;
+  const done = i.status === last;
+  const canTick = admin && !i._tmp && first && last;
   return (
-    <li id={`z-${i.id}`} className={cn('grid gap-3 rounded-2xl border bg-card p-4 transition-[box-shadow,border-color] duration-300 min-[560px]:grid-cols-[minmax(0,1fr)_auto] min-[560px]:items-center', flash ? 'border-ok ring-4 ring-ok/25' : 'border-line')}>
+    <li id={`z-${i.id}`} className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card py-3 pr-3 pl-2 transition-[box-shadow,border-color] duration-300', flash ? 'border-ok ring-4 ring-ok/25' : 'border-line')}>
+      {canTick ? (
+        // ptaszek admina: zaznaczone = ostatni status (Kupione), odznaczone = pierwszy (Do kupienia)
+        <label className="grid h-11 w-11 cursor-pointer place-items-center rounded-xl hover:bg-ok/10">
+          <Checkbox checked={done} aria-label={`Kupione: ${i.co}`} onCheckedChange={(v) => void put({ status: v === true ? last : first })} className="h-8 w-8" />
+        </label>
+      ) : (
+        <span className="grid h-11 w-11 place-items-center" role="img" aria-label={done ? 'Kupione' : 'Do kupienia'}>
+          <span className={cn('grid h-7 w-7 place-items-center rounded-lg border-2', done ? 'border-ok bg-ok text-bg' : 'border-line')}>{done && <Check weight="bold" className="h-4 w-4" />}</span>
+        </span>
+      )}
       <div className="min-w-0">
-        <p className="font-semibold leading-snug">{i.co}</p>
+        <p className={cn('font-semibold leading-snug', done && 'text-ink-2')}>{i.co}</p>
         <p className="mt-0.5 text-sm text-ink-2">
           {[i.uwagi, `${names(i.by)}, ${i._tmp ? 'wysyłanie…' : fmtWhen(i.createdAt)}`].filter(Boolean).join(', ')}
         </p>
       </div>
-      <div className={cn('grid items-start gap-2', admin && !i._tmp ? 'grid-cols-[minmax(0,1fr)_2.5rem] min-[560px]:grid-cols-[10rem_2.5rem]' : 'grid-cols-[2.5rem]')}>
-        {admin && !i._tmp && (
-          <Select value={i.status} aria-label={`Status: ${i.co}`} onValueChange={(status) => void put({ status })} options={statusy.map((s) => ({ value: s.wartosc, label: s.wartosc }))} className="h-10 text-sm" />
-        )}
-        {(i.by === me?.id || admin) && !i._tmp && (
-          <Button variant="ghost" size="sm" aria-label={`Usuń: ${i.co}`} onClick={remove} className="w-10 px-0 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>
-        )}
-      </div>
+      {(i.by === me?.id || admin) && !i._tmp ? (
+        <Button variant="ghost" size="sm" aria-label={`Usuń: ${i.co}`} onClick={remove} className="w-10 px-0 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>
+      ) : <span className="w-10" aria-hidden />}
     </li>
   );
 }

@@ -9,7 +9,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<t
     className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-lg border-2 border-line bg-card data-[state=checked]:border-ok data-[state=checked]:bg-ok', className)}
     {...p}
   >
-    <C.Indicator><Check weight="bold" className="h-4 w-4 text-white" /></C.Indicator>
+    <C.Indicator><Check weight="bold" className="h-[60%] w-[60%] text-bg" /></C.Indicator>
   </C.Root>
 ));
 Checkbox.displayName = 'Checkbox';
