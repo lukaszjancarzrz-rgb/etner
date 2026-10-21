@@ -3,9 +3,13 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
+import type { Db } from './core/db.js';
+import { logError } from './core/errors.js';
 
 export interface AppDeps {
   version: string;
+  db: Db;
   /** Katalog zbudowanego frontendu; domyślnie web/dist (sprawdzany względem pakietu serwera). */
   webDist?: string;
 }
@@ -14,6 +18,12 @@ const defaultWebDist = fileURLToPath(new URL('../../web/dist', import.meta.url))
 
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
+
+  app.onError((err, c) => {
+    if (err instanceof HTTPException && err.status < 500) return c.json({ error: err.message }, err.status);
+    logError(deps.db, `${c.req.method} ${c.req.path}`, err);
+    return c.json({ error: 'Błąd serwera – spróbuj ponownie.' }, 500);
+  });
 
   app.get('/api/health', (c) => c.json({ ok: true, version: deps.version }));
 
