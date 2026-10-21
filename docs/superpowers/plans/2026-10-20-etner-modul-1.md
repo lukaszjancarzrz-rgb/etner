@@ -596,6 +596,16 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
 - [ ] **Step 1: Testy:** dobre i złe hasło, wyłączony użytkownik, blokada po 5 próbach, reset przez admina unieważnia sesje, zmiana własnego hasła, skrót hasła nigdy w zmianach, snapshot ani eksporcie.
 - [ ] **Step 2:** FAIL. **Step 3:** Implementacja. **Step 4:** PASS + e2e. **Step 5:** Commit.
 
+### Task 18c: Harmonogram – kilka osób i dni naraz, widok miesiąca, bez wierszy adminów
+
+Decyzje właściciela 2026-10-21 po klikalnej wersji:
+- **Kilka osób i dni naraz:** edytor komórki (admin) pozwala wybrać kilka osób i zakres dni od–do (z „tylko dni robocze”) i zapisuje jeden szkic przez istniejące `POST /api/schedule/drafts` (`from`, `to`, `people`, `workdaysOnly`).
+- **Widok miesiąca na komputerze:** przełącznik Tydzień / Miesiąc; miesiąc jako zwarta tabela osoba × dzień z poprzedni / następny / bieżący miesiąc; komórka w miesiącu otwiera ten sam edytor.
+- **Bez harmonogramu dla adminów:** admini nie mają własnych kolumn (wierszy) harmonogramu – dane demo bez kolumn adminów; admin bez kolumny nie widzi „Gdzie jedziesz” ani „Ty”, ale nadal edytuje i zatwierdza harmonogram innych.
+
+- [ ] **Step 1: Testy:** jednostkowe dla wyliczenia dni i osób w szkicu zbiorczym; e2e: admin ustawia jedno zlecenie dwóm osobom na 3 dni robocze → szkic → zatwierdzenie → 6 komórek; widok miesiąca pokazuje bieżący miesiąc; admin nie ma wiersza.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
 ### Task 19: Pozostałe ekrany
 
 **Files:**
