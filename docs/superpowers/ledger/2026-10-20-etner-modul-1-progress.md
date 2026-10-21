@@ -106,3 +106,9 @@ Task 14: minor (deferred, worth fixing before T18 review): cellLabel ignores pol
 Task 14: plan-mandated note: peopleForJob counts past entries (R21 literal) — owner may want only current crew
 Task 14: complete (commits 7181209..0b3da51, review clean)
 - Ruling R22 (Task 15): TABLES_FOR_EXPORT = every registered module's tables + core firmy + users (token_hash column dropped); excluded sessions, op_ids, push_subscriptions, changes, errors, settings; columns ending `_gr` exported as zł number (2 decimals); SheetsClient injected (googleapis impl from GOOGLE_SA_JSON + SHEETS_ID); kopia-zdjec copies keys of attachments created since the last run (settings key) from R2_BUCKET to R2_BACKUP_BUCKET via S3 CopyObject, skipped (logged) without R2 — cost: small.
+Task 15: BASE 9ddc052; impl b746829; review: Important — non-atomic clear+single huge batchUpdate; missing failed-copy cursor test
+Task 15: minor (deferred): CopyObject uses one R2 key for both buckets (owner must grant it both); litestream config untested against real version
+Task 15: fix round 1/5 (4 addressed, 0 open; commits b746829..8a1e6b1)
+Task 15: minor (deferred): chunking by rows only (request size); ~2 requests/table vs 60/min write quota, no backoff; silent 50k truncation; failed-copy test starts without cursor
+Task 15: complete (commits 9ddc052..8a1e6b1, review clean)
+- Ruling R23 (Task 16): DEMO tokens are deterministic (HMAC(APP_SECRET, 'demo:<login>')) so links survive restarts on Render (/tmp is wiped → reseed); links printed in the log at start AND listed by GET /api/demo/links (only when DEMO=1) so the owner can pick a user on a phone — data is invented, so the public list is acceptable for the demo; never enabled without DEMO=1 — cost: remove route before production (DEMO off).
