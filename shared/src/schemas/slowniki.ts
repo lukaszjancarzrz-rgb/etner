@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const DICT_RODZAJE = [
   'status_zlecenia', 'status_leada', 'kategoria', 'ekipa', 'zrodlo', 'kod_nieobecnosci',
-  'grupa_zadan', 'status_zadania', 'rodzaj_zlecenia', 'status_zakupu', 'grupa_zakupow', 'dzien_wolny',
+  'grupa_zadan', 'status_zadania', 'rodzaj_zlecenia', 'status_zakupu', 'dzien_wolny',
 ] as const;
 export type DictRodzaj = (typeof DICT_RODZAJE)[number];
 

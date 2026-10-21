@@ -28,8 +28,7 @@ export const SEED: Record<DictRodzaj, Item[]> = {
   kod_nieobecnosci: [kod('urlop', true, '#00736b'), kod('L4', true, '#c0392b'), kod('szkolenie', true, '#0070ab'), kod('wolne', false, '#8896a5'), kod('UŻ', true, '#b9770e')],
   status_zadania: ['Do zrobienia', 'W toku', 'Zrobione'],
   grupa_zadan: ['Firma', 'Klienci', 'Sprzęt'],
-  status_zakupu: ['Do kupienia', 'Zamówione', 'Kupione'],
-  grupa_zakupow: ['Materiały', 'Narzędzia'],
+  status_zakupu: ['Do kupienia', 'Kupione'],
   dzien_wolny: [],
 };
 

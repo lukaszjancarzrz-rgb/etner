@@ -25,21 +25,20 @@ const pushed = (push: ReturnType<typeof vi.fn>) => push.mock.calls.map((c) => ({
 describe('zakupy', () => {
   it('pracownik dodaje, admin dostaje push; wszyscy widzą', async () => {
     const { app, worker, worker2, push } = await setup();
-    const row = await (await app.request('/api/shopping', req(worker, 'POST', { co: 'Taśma', sklep: 'OBI' }))).json();
+    const row = await (await app.request('/api/shopping', req(worker, 'POST', { co: 'Taśma', uwagi: 'OBI' }))).json();
     expect(row).toMatchObject({ co: 'Taśma', status: 'Do kupienia' });
     expect(pushed(push)).toEqual([expect.objectContaining({ endpoint: 'Admin', title: '🛒 Do kupienia: Taśma', url: `#zakupy~${row.id}` })]);
     expect(await (await app.request('/api/shopping', req(worker2, 'GET'))).json()).toHaveLength(1);
   });
 
-  it('status i kwota: pracownik 403; admin Kupione -> push do autora', async () => {
+  it('status: pracownik 403; admin Kupione -> push do autora', async () => {
     const { app, worker, admin, push, w } = await setup();
     const row = await (await app.request('/api/shopping', req(worker, 'POST', { co: 'Taśma' }))).json();
     expect((await app.request(`/api/shopping/${row.id}`, req(worker, 'PUT', { status: 'Kupione' }))).status).toBe(403);
-    expect((await app.request(`/api/shopping/${row.id}`, req(worker, 'PUT', { kwotaGr: 100 }))).status).toBe(403);
     push.mockClear();
-    const r = await app.request(`/api/shopping/${row.id}`, req(admin, 'PUT', { status: 'Kupione', kwotaGr: 1250 }));
+    const r = await app.request(`/api/shopping/${row.id}`, req(admin, 'PUT', { status: 'Kupione' }));
     expect(r.status).toBe(200);
-    expect(await r.json()).toMatchObject({ status: 'Kupione', kwotaGr: 1250 });
+    expect(await r.json()).toMatchObject({ status: 'Kupione' });
     const p = pushed(push);
     expect(p).toHaveLength(1);
     expect(p[0]).toMatchObject({ endpoint: 'Pracownik', title: '🛒 Kupione: Taśma' });
@@ -56,5 +55,16 @@ describe('zakupy', () => {
     const id2 = await mk();
     expect((await app.request(`/api/shopping/${id2}`, req(admin, 'DELETE'))).status).toBe(200);
     expect(await (await app.request('/api/shopping', req(admin, 'GET'))).json()).toEqual([]);
+  });
+
+  it('pozycja to co + uwagi; dwa statusy, inne odrzucone', async () => {
+    const { app, admin, deps } = await setup();
+    const row = await (await app.request('/api/shopping', req(admin, 'POST', { co: 'Kołki', uwagi: '8 mm', sklep: 'OBI', kwotaGr: 5 }))).json();
+    for (const k of ['sklep', 'grupa', 'kwotaGr']) expect(row).not.toHaveProperty(k);
+    expect(row).toMatchObject({ co: 'Kołki', uwagi: '8 mm' });
+    const st = deps.db.$client.prepare("select wartosc from dict where rodzaj = 'status_zakupu' and deleted_at is null order by kolejnosc").all();
+    expect(st).toEqual([{ wartosc: 'Do kupienia' }, { wartosc: 'Kupione' }]);
+    expect(deps.db.$client.prepare("select count(*) n from dict where rodzaj = 'grupa_zakupow'").get()).toEqual({ n: 0 });
+    expect((await app.request(`/api/shopping/${row.id}`, req(admin, 'PUT', { status: 'Zamówione' }))).status).toBe(400);
   });
 });

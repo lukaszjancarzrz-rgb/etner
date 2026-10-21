@@ -192,15 +192,15 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     dziennik.create(db, u.tomek!, { owner_type: 'lead', owner_id: lead.id, tekst: 'Zadzwonić we wtorek, klient chce wycenę z montażem.', uploads: [] }, () => [], []);
 
     // Zakupy.
-    const buy = (co: string, sklep: string, grupa: string, status?: string, kwotaGr?: number) => {
-      const r = zakupy.create(db, u.bartek!.id, { co, sklep, grupa, uwagi: '' });
-      if (status) zakupy.update(db, a1, r.id, { status, ...(kwotaGr && { kwotaGr }) });
+    const buy = (co: string, uwagi = '', status?: string) => {
+      const r = zakupy.create(db, u.bartek!.id, { co, uwagi });
+      if (status) zakupy.update(db, a1, r.id, { status });
     };
-    buy('Kolanka 160 mm, 10 szt.', 'Hurtownia Wentylacja', 'Materiały');
-    buy('Taśma aluminiowa 50 m', 'Castorama Sucha', 'Materiały');
-    buy('Wkrętarka akumulatorowa', 'Elektronarzędzia Maków', 'Narzędzia', 'Zamówione');
-    buy('Filtry G4 do centrali', 'Hurtownia Wentylacja', 'Materiały', 'Zamówione');
-    buy('Rolka papieru do plotera', 'Biuro Plus', 'Materiały', 'Kupione', 4_500);
+    buy('Kolanka 160 mm, 10 szt.', 'Hurtownia Wentylacja');
+    buy('Taśma aluminiowa 50 m');
+    buy('Wkrętarka akumulatorowa');
+    buy('Filtry G4 do centrali', 'do centrali w Zawoi');
+    buy('Rolka papieru do plotera', '', 'Kupione');
 
     // Listy „na jutro”.
     const tomorrow = addDays(today, 1);

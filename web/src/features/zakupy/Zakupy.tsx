@@ -1,6 +1,5 @@
-import { fmtZl, toGr } from '@etner/shared';
 import { Plus, ShoppingCart, Trash } from '@phosphor-icons/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fmtWhen, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { useEntities, type Rec } from '../../core/store.js';
@@ -64,12 +63,10 @@ export function Zakupy({ route }: { route: Route }) {
 }
 
 function AddForm() {
-  const grupy = useDict('grupa_zakupow');
   const first = useDict('status_zakupu')[0]?.wartosc;
   const me = useMe();
   const [co, setCo] = useState('');
-  const [sklep, setSklep] = useState('');
-  const [grupa, setGrupa] = useState('');
+  const [uwagi, setUwagi] = useState('');
   const [err, setErr] = useState('');
 
   function submit(e: React.FormEvent) {
@@ -77,10 +74,11 @@ function AddForm() {
     const c = co.trim();
     if (!c) return setErr('Wpisz, co kupić');
     if (c.length > 300) return setErr('Tekst jest za długi');
-    const body = { co: c, sklep: sklep.trim(), grupa };
-    void createVia('shopping', { kind: 'zakupy', url: '/api/shopping', method: 'POST', body }, { ...body, uwagi: '', status: first, by: me?.id, kwotaGr: null })
-      .catch((x: Error) => { setCo((cur) => cur || c); setErr(x.message); });
-    setCo(''); setSklep(''); setErr('');
+    const u = uwagi.trim();
+    const body = { co: c, uwagi: u };
+    void createVia('shopping', { kind: 'zakupy', url: '/api/shopping', method: 'POST', body }, { ...body, status: first, by: me?.id })
+      .catch((x: Error) => { setCo((cur) => cur || c); setUwagi((cur) => cur || u); setErr(x.message); });
+    setCo(''); setUwagi(''); setErr('');
   }
 
   return (
@@ -88,9 +86,8 @@ function AddForm() {
       <Field label="Co kupić" error={err}>
         {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err} value={co} onChange={(e) => setCo(e.target.value)} placeholder="np. Kolanka 160 mm, 10 szt." enterKeyHint="send" />}
       </Field>
-      <div className="grid gap-3 min-[560px]:grid-cols-[1fr_1fr_auto] min-[560px]:items-end">
-        <Field label="Sklep">{(id) => <Input id={id} value={sklep} onChange={(e) => setSklep(e.target.value)} placeholder="opcjonalnie" />}</Field>
-        <Field label="Grupa">{(id) => <Select id={id} value={grupa || undefined} onValueChange={setGrupa} options={grupy.map((g) => ({ value: g.wartosc, label: g.wartosc }))} placeholder="Bez grupy" />}</Field>
+      <div className="grid gap-3 min-[560px]:grid-cols-[1fr_auto] min-[560px]:items-end">
+        <Field label="Uwagi">{(id) => <Input id={id} value={uwagi} onChange={(e) => setUwagi(e.target.value)} placeholder="opcjonalnie, np. sklep albo rozmiar" />}</Field>
         <Button type="submit"><Plus className="h-5 w-5" weight="bold" />Dodaj</Button>
       </div>
     </form>
@@ -101,20 +98,7 @@ function Item({ i, statusy, flash }: { i: Rec; statusy: Rec[]; flash: boolean })
   const admin = useIsAdmin();
   const me = useMe();
   const names = useNames();
-  const fmt = (gr: number | null | undefined) => (gr != null ? (gr / 100).toFixed(2).replace('.', ',') : '');
-  const [kwota, setKwota] = useState(fmt(i.kwotaGr));
-  const [kErr, setKErr] = useState('');
-  const kRef = useRef<HTMLInputElement>(null);
-  // zmiana z innego urządzenia (SSE) nadpisuje pole, chyba że ktoś właśnie w nim pisze
-  useEffect(() => { if (document.activeElement !== kRef.current) { setKwota(fmt(i.kwotaGr)); setKErr(''); } }, [i.kwotaGr]);
   const put = (patch: Record<string, unknown>) => updateVia('shopping', i.id, patch, { kind: 'zakupy', url: `/api/shopping/${i.id}`, method: 'PUT', body: patch }).catch(fail('Zmiana nie została zapisana'));
-  const saveKwota = () => {
-    const t = kwota.trim();
-    let gr: number | null = null;
-    try { gr = t ? toGr(t) : null; } catch { return setKErr('Kwota, np. 45,90'); }
-    setKErr('');
-    if (gr !== (i.kwotaGr ?? null)) void put({ kwotaGr: gr });
-  };
   const remove = () => void outbox.enqueue({ kind: 'zakupy', url: `/api/shopping/${i.id}`, method: 'DELETE', optimistic: (s) => s.remove('shopping', i.id) }).catch(fail('Nie usunięto pozycji'));
 
   return (
@@ -122,20 +106,12 @@ function Item({ i, statusy, flash }: { i: Rec; statusy: Rec[]; flash: boolean })
       <div className="min-w-0">
         <p className="font-semibold leading-snug">{i.co}</p>
         <p className="mt-0.5 text-sm text-ink-2">
-          {[i.sklep, i.grupa, `${names(i.by)}, ${i._tmp ? 'wysyłanie…' : fmtWhen(i.createdAt)}`].filter(Boolean).join(', ')}
-          {!admin && i.kwotaGr != null && <span className="font-semibold text-ink">, {fmtZl(i.kwotaGr)}</span>}
+          {[i.uwagi, `${names(i.by)}, ${i._tmp ? 'wysyłanie…' : fmtWhen(i.createdAt)}`].filter(Boolean).join(', ')}
         </p>
       </div>
-      <div className={cn('grid items-start gap-2', admin && !i._tmp ? 'grid-cols-[minmax(0,1fr)_7rem_2.5rem] min-[560px]:grid-cols-[10rem_7rem_2.5rem]' : 'grid-cols-[2.5rem]')}>
+      <div className={cn('grid items-start gap-2', admin && !i._tmp ? 'grid-cols-[minmax(0,1fr)_2.5rem] min-[560px]:grid-cols-[10rem_2.5rem]' : 'grid-cols-[2.5rem]')}>
         {admin && !i._tmp && (
-          <>
-            <Select value={i.status} onValueChange={(status) => void put({ status })} options={statusy.map((s) => ({ value: s.wartosc, label: s.wartosc }))} className="h-10 text-sm" />
-            <div className="grid gap-1">
-              <Input ref={kRef} aria-label={`Kwota: ${i.co}`} aria-invalid={!!kErr} inputMode="decimal" value={kwota} onChange={(e) => setKwota(e.target.value)} onBlur={saveKwota}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), saveKwota())} placeholder="kwota zł" className="h-10 px-3 text-sm" />
-              {kErr && <p className="text-xs text-danger">{kErr}</p>}
-            </div>
-          </>
+          <Select value={i.status} aria-label={`Status: ${i.co}`} onValueChange={(status) => void put({ status })} options={statusy.map((s) => ({ value: s.wartosc, label: s.wartosc }))} className="h-10 text-sm" />
         )}
         {(i.by === me?.id || admin) && !i._tmp && (
           <Button variant="ghost" size="sm" aria-label={`Usuń: ${i.co}`} onClick={remove} className="w-10 px-0 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>

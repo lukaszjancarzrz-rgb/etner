@@ -73,6 +73,10 @@ test('demo: zlecenie, dziennik ze zdjęciem, harmonogram, zakupy', async ({ page
 
   // Zakupy: dodanie pozycji
   await page.goto('/#zakupy');
+  const form = page.locator('form', { has: page.getByLabel('Co kupić') });
+  await expect(form.getByLabel('Sklep')).toHaveCount(0);
+  await expect(form.getByLabel('Grupa')).toHaveCount(0);
+  await expect(form.getByPlaceholder(/kwota/)).toHaveCount(0);
   await page.getByLabel('Co kupić').fill(`${tag} taśma`);
   await page.getByRole('button', { name: 'Dodaj', exact: true }).click();
   const item = page.locator('li[id^="z-"]', { hasText: `${tag} taśma` });
