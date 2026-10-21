@@ -7,8 +7,22 @@ import * as schema from './schema-base.js';
 
 export type Db = BetterSQLite3Database<typeof schema> & { $client: Database.Database };
 
-/** Emituje `seq` każdej zmiany dopiero po COMMIT (SSE w zadaniu 5). */
-export const changeBus = new EventEmitter();
+const buses = new WeakMap<Db, EventEmitter>();
+
+/** Szyna zmian danej bazy: emituje `seq` dopiero po COMMIT (SSE w zadaniu 5). */
+export function changeBusOf(db: Db): EventEmitter {
+  let b = buses.get(db);
+  if (!b) buses.set(db, (b = new EventEmitter().setMaxListeners(0)));
+  return b;
+}
+
+export function emitChange(db: Db, seq: number): void {
+  try {
+    changeBusOf(db).emit('change', seq);
+  } catch (e) {
+    console.error('Błąd odbiorcy zmian (zapis już zatwierdzony)', e);
+  }
+}
 
 export function openDb(file: string): Db {
   const client = new Database(file);
@@ -37,15 +51,16 @@ export function tx<T>(db: Db, fn: (t: Db) => T): T {
   const seqs: number[] = [];
   pending.set(db, seqs);
   db.$client.exec('BEGIN IMMEDIATE');
+  let out: T;
   try {
-    const out = fn(db);
+    out = fn(db);
     db.$client.exec('COMMIT');
-    pending.delete(db);
-    for (const s of seqs) changeBus.emit('change', s);
-    return out;
   } catch (e) {
-    db.$client.exec('ROLLBACK');
     pending.delete(db);
+    if (db.$client.inTransaction) db.$client.exec('ROLLBACK');
     throw e;
   }
+  pending.delete(db);
+  for (const s of seqs) emitChange(db, s);
+  return out;
 }

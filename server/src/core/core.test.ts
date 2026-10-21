@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { testDeps } from '../test-utils.js';
-import { changeBus, changesSince, recordChange } from './changes.js';
+import { changeBusOf, changesSince, recordChange } from './changes.js';
 import { openDb, migrate, tx } from './db.js';
 import { runOp } from './ops.js';
-import { registerModules } from './registry.js';
+import { modulesOf, registerModules } from './registry.js';
 import { HTTPException } from 'hono/http-exception';
 import { changes, errors, opIds } from './schema-base.js';
 
@@ -29,7 +29,7 @@ describe('dziennik zmian', () => {
     const db = fresh();
     const seen: number[] = [];
     const on = (s: number) => seen.push(s);
-    changeBus.on('change', on);
+    changeBusOf(db).on('change', on);
     tx(db, (t) => {
       const s = recordChange(t, 'u', 'e', '1', 'create', null, {});
       expect(seen).toEqual([]);
@@ -39,7 +39,18 @@ describe('dziennik zmian', () => {
     expect(() => tx(db, (t) => { recordChange(t, 'u', 'e', '2', 'create', null, {}); throw new Error('x'); })).toThrow();
     expect(seen).toHaveLength(1);
     expect(db.select().from(changes).all()).toHaveLength(1);
-    changeBus.off('change', on);
+    const other = fresh();
+    recordChange(other, 'u', 'e', '9', 'create', null, {});
+    expect(seen).toHaveLength(1);
+  });
+
+  it('wyjątek odbiorcy nie psuje zatwierdzonego zapisu', () => {
+    const db = fresh();
+    changeBusOf(db).on('change', () => { throw new Error('listener'); });
+    const err = console.error;
+    console.error = () => {};
+    try { tx(db, (t) => recordChange(t, 'u', 'e', '1', 'create', null, {})); } finally { console.error = err; }
+    expect(db.select().from(changes).all()).toHaveLength(1);
   });
 
   it('tx jest re-entrantna', () => {
@@ -58,6 +69,12 @@ describe('runOp', () => {
     expect(a).toEqual({ result: { n: 1 }, dup: false });
     expect(b).toEqual({ result: { n: 1 }, dup: true });
     expect(n).toBe(1);
+  });
+
+  it('opId innego użytkownika to błąd', () => {
+    const db = fresh();
+    runOp(db, 'op3', 'u1', () => 1);
+    expect(() => runOp(db, 'op3', 'u2', () => 2)).toThrow('innego użytkownika');
   });
 
   it('wyjątek: brak op_ids i brak zmian', () => {
@@ -96,5 +113,15 @@ describe('onError i rejestr', () => {
     expect(h.status).toBe(403);
     expect(await h.json()).toEqual({ error: 'Brak uprawnień' });
     expect(deps.db.select().from(errors).all()).toHaveLength(1);
+  });
+});
+
+describe('rejestr per aplikacja', () => {
+  it('dwie aplikacje mają niezależne listy modułów', () => {
+    const a = createApp(testDeps()), b = createApp(testDeps());
+    registerModules(a, testDeps(), [{ name: 'a', routes() {} }]);
+    registerModules(b, testDeps(), [{ name: 'b', routes() {} }]);
+    expect(modulesOf(a).map((m) => m.name)).toEqual(['a']);
+    expect(modulesOf(b).map((m) => m.name)).toEqual(['b']);
   });
 });

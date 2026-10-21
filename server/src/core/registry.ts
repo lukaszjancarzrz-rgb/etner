@@ -16,11 +16,12 @@ export type ModuleDef = {
   tables?: Record<string, SQLiteTable>;
 };
 
-export const modules: ModuleDef[] = [];
+const registered = new WeakMap<Hono, ModuleDef[]>();
+
+/** Moduły zarejestrowane w danej aplikacji (niezależnie od innych instancji). */
+export const modulesOf = (app: Hono): ModuleDef[] => registered.get(app) ?? [];
 
 export function registerModules(app: Hono, deps: AppDeps, defs: ModuleDef[]): void {
-  for (const d of defs) {
-    d.routes(app, deps);
-    modules.push(d);
-  }
+  for (const d of defs) d.routes(app, deps);
+  registered.set(app, [...modulesOf(app), ...defs]);
 }

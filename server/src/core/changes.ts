@@ -1,8 +1,8 @@
 import { gt, asc } from 'drizzle-orm';
-import { changeBus, deferEmit, type Db } from './db.js';
+import { changeBusOf, deferEmit, emitChange, type Db } from './db.js';
 import { changes } from './schema-base.js';
 
-export { changeBus };
+export { changeBusOf };
 
 export type ChangeRow = {
   seq: number;
@@ -29,7 +29,7 @@ export function recordChange(
     .values({ at: new Date().toISOString(), userId, entity, entityId: id, action, before: before ?? null, after: after ?? null })
     .returning({ seq: changes.seq })
     .get();
-  if (!deferEmit(t, row.seq)) changeBus.emit('change', row.seq);
+  if (!deferEmit(t, row.seq)) emitChange(t, row.seq);
   return row.seq;
 }
 

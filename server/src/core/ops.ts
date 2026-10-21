@@ -7,6 +7,7 @@ export function runOp<T>(db: Db, opId: string | undefined, userId: string, fn: (
   return tx(db, (t) => {
     if (opId) {
       const prev = t.select().from(opIds).where(eq(opIds.opId, opId)).get();
+      if (prev && prev.userId !== userId) throw new Error('opId należy do innego użytkownika');
       if (prev) return { result: prev.result as T, dup: true };
     }
     const result = fn();
