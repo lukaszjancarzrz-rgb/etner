@@ -152,3 +152,5 @@ Note: klienci worker-visibility test failed once (1/9 runs) while a reviewer sub
 Tasks 18c/18d + 'Biuro': implemented (581955d, b720240, 13778cb; container restarted after the agent finished — report in task-18cd-report.md); review dispatched
 ## Zmiany właściciela 2026-10-21 (4) → Task 18e (plan amended)
 - Shopping: only co + uwagi; no kwota/sklep/grupa; statuses Do kupienia / Kupione only. Job scope: list of points (text + photos), admin-edited (owner picked this over Pumble-style threads). Nav badges with counts (na jutro untaken, schedule changes, jobs with news, shopping to buy for admin).
+Tasks 18c/18d: review Approved; Important — multi-person/day save silently overwrites others' different entries (drafts, reviewable) → fix queued as a separate commit after 18e (overwrite warning + confirm); minor: PUT clients returns duplicates on every save (queued too)
+Tasks 18c/18d: minor (deferred): client form "Zapisywanie…" waits for queued retry when server unreachable; server doesn't validate e-mail format; plHolidays per month cell; week→month shows Monday's month; no unit test for optimistic multi-cell; existing DBs keep 'Biuro' (edit in Ustawienia)
