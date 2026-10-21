@@ -18,7 +18,10 @@ class FakeES {
 }
 
 it('pierwszy raz snapshot, SSE zerwane: ponowne łączenie z since=last', async () => {
-  server.use(http.get(`${B}/api/snapshot`, () => HttpResponse.json({ records: [{ entity: 'jobs', id: 'j1', data: { id: 'j1', nazwa: 'A' } }], last: 5 })));
+  server.use(
+    http.get(`${B}/api/snapshot`, () => HttpResponse.json({ records: [{ entity: 'jobs', id: 'j1', data: { id: 'j1', nazwa: 'A' } }], last: 5 })),
+    http.get(`${B}/api/changes`, () => HttpResponse.json({ changes: [], last: 8, more: false })),
+  );
   const store = createStore();
   const sync = createSync({ store, EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
   await sync.start();
@@ -71,5 +74,41 @@ it('kolejny start: changes?since=last w pętli, potem SSE; session-expired wstrz
   await new Promise((r) => setTimeout(r, 30));
   expect(FakeES.all).toHaveLength(1); // bez ponownego łączenia do zalogowania
   bus.removeEventListener('session-expired', f);
+  sync.stop();
+});
+
+it('401 przy ponownym łączeniu (catch-up przed strumieniem) = sesja wygasła, bez dalszych prób', async () => {
+  let deny = false;
+  server.use(
+    http.get(`${B}/api/snapshot`, () => HttpResponse.json({ records: [], last: 3 })),
+    http.get(`${B}/api/changes`, () => (deny ? HttpResponse.json({ error: 'SESJA' }, { status: 401 }) : HttpResponse.json({ changes: [], last: 3 }))),
+  );
+  FakeES.all = [];
+  const sync = createSync({ store: createStore(), EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
+  await sync.start();
+  let expired = 0;
+  const f = () => expired++;
+  bus.addEventListener('session-expired', f);
+  deny = true;
+  FakeES.all[0]!.readyState = 2;
+  FakeES.all[0]!.onerror?.();
+  await until(() => expired === 1);
+  await new Promise((r) => setTimeout(r, 30));
+  expect(FakeES.all).toHaveLength(1);
+  expect(expired).toBe(1);
+  bus.removeEventListener('session-expired', f);
+  sync.stop();
+});
+
+it('nieudany pierwszy snapshot: ponawiany snapshot, nie strumień od zera', async () => {
+  let n = 0;
+  server.use(http.get(`${B}/api/snapshot`, () => (++n < 3 ? HttpResponse.error() : HttpResponse.json({ records: [], last: 4 }))));
+  FakeES.all = [];
+  const sync = createSync({ store: createStore(), EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
+  await sync.start();
+  expect(FakeES.all).toHaveLength(0);
+  await until(() => FakeES.all.length === 1);
+  expect(n).toBe(3);
+  expect(FakeES.all[0]!.url).toBe(`${B}/api/stream?since=4`);
   sync.stop();
 });

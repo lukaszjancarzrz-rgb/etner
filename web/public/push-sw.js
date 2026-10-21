@@ -13,7 +13,7 @@ self.addEventListener('notificationclick', (e) => {
   const target = new URL('/' + (u && !u.startsWith('#') ? '#' + u : u), self.location.origin).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ws) => {
     const w = ws.find((c) => new URL(c.url).origin === self.location.origin);
-    if (w) return w.focus().then((f) => (f || w).navigate(target));
+    if (w) return w.focus().then((f) => (f || w).navigate(target)).catch(() => self.clients.openWindow(target));
     return self.clients.openWindow(target);
   }));
 });

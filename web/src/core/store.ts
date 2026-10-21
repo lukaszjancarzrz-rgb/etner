@@ -3,8 +3,8 @@ import { useMemo, useSyncExternalStore } from 'react';
 
 export type Rec = { id: string } & Record<string, any>;
 export type Change = { seq: number; entity: string; id: string; action: string; data: Record<string, any> | null };
-/** Stan rekordu sprzed zmiany optymistycznej (brak prev = rekordu nie było). */
-export type Undo = { entity: string; id: string; prev?: Rec };
+/** Zmiana optymistyczna: stan przed (`prev`) i po (`next`); brak = rekordu nie ma. */
+export type Undo = { entity: string; id: string; prev?: Rec; next?: Rec };
 
 const KEY = (e: string) => `e:${e}`;
 
@@ -90,10 +90,15 @@ export function createStore(): Store {
     /** Uruchamia fn i zwraca, jak cofnąć jego zmiany. */
     record(fn) {
       recording = [];
-      try { fn(s); return recording; } finally { recording = null; }
+      try {
+        fn(s);
+        return recording.map((u) => ({ ...u, next: map(u.entity).get(u.id) }));
+      } finally { recording = null; }
     },
+    /** Cofa tylko rekordy, które nadal mają wartość optymistyczną (nowszej wersji z serwera nie ruszamy). */
     undo(us: Undo[]) {
       for (const u of [...us].reverse()) {
+        if (JSON.stringify(map(u.entity).get(u.id)) !== JSON.stringify(u.next)) continue;
         if (u.prev) map(u.entity).set(u.id, u.prev); else map(u.entity).delete(u.id);
         touched(u.entity);
       }

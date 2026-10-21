@@ -27,10 +27,25 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
     }
   }
 
+  /** Nadrabianie (snapshot albo changes?since), potem strumień. 401 = sesja wygasła; brak sieci = ponów później. */
+  async function cycle() {
+    clearTimeout(timer);
+    if (!on || paused || es) return;
+    try {
+      await catchUp();
+    } catch (err) {
+      if ((err as { status?: number }).status === 401) return expired();
+      if (on && !paused) timer = setTimeout(() => void cycle(), backoff(attempt++));
+      return;
+    }
+    connect();
+  }
+
+  // EventSource nie podaje kodu odpowiedzi (401 = zwykły błąd), więc przed ponownym łączeniem idzie catch-up.
   function retry() {
     es?.close();
     es = null;
-    if (on && !paused) timer = setTimeout(connect, backoff(attempt++));
+    if (on && !paused) timer = setTimeout(() => void cycle(), backoff(attempt++));
   }
 
   function expired() {
@@ -41,7 +56,6 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
   }
 
   function connect() {
-    clearTimeout(timer);
     if (!on || paused || es) return;
     const e = new ES(`${cfg.base}/api/stream?since=${store.last}`, { withCredentials: true });
     es = e;
@@ -56,16 +70,12 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
   }
 
   return {
+    /** Promise kończy się po pierwszej próbie nadrobienia (offline: dane z IndexedDB, ponowienie w tle). */
     async start() {
       on = true;
       paused = false;
-      try {
-        await catchUp();
-      } catch (err) {
-        if ((err as { status?: number }).status === 401) return expired();
-        // offline: dane z IndexedDB, SSE spróbuje później
-      }
-      connect();
+      attempt = 0;
+      await cycle();
     },
     stop() {
       on = false;
@@ -73,14 +83,14 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
       es?.close();
       es = null;
     },
-    /** Powrót z tła / sieć wróciła: łączymy od razu (strumień nadrobi od since=last). */
+    /** Powrót z tła / sieć wróciła: od razu catch-up i strumień. */
     wake() {
       if (!on || paused) return;
       if (es && es.readyState !== 2) return;
       es?.close();
       es = null;
       attempt = 0;
-      connect();
+      void cycle();
     },
   };
 }

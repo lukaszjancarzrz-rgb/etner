@@ -52,7 +52,10 @@ export async function startSession(): Promise<void> {
     await signedIn(await api<Me>('/api/me'));
   } catch (e) {
     const cached = (await get('me')) as Me | undefined;
-    if (e instanceof ApiError && e.status === 401) setState(cached ? { status: 'expired', me: cached } : { status: 'out' });
+    if (e instanceof ApiError && e.status === 401) {
+      setState(cached ? { status: 'expired', me: cached } : { status: 'out' });
+      void outbox.refresh(); // licznik zapisów czekających na ponowne zalogowanie
+    }
     else if (cached) { setState({ status: 'in', me: cached }); void outbox.start(); void sync.start(); } // offline
     else setState({ status: 'out', error: 'Brak połączenia z serwerem.' });
   }
