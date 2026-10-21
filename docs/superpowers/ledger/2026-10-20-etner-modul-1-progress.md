@@ -97,3 +97,8 @@ Task 12: fix round 1/5 (3 addressed, 0 open; commits 1ba8261..e521af2)
 Task 12: minor (deferred): 413 shapes differ ({error} from bodyLimit vs HTTPException message) — final review: check API error shape consistency app-wide
 Task 12: complete (commits a5ec363..e521af2, review clean)
 - Ruling R20 (Task 13): checklist text edits are admin-only (crew members only toggle `zabrane`; author or admin deletes); crew = users with user.ekipa === checklist.ekipa; add allowed for crew members and admins; add → push to crew minus author — cost: small permission tweak.
+Task 13: BASE 906a5c1; impl 03d7e3b; review: Important — checklist move leaks to old crew; core/body.ts 6th verbatim copy
+Task 13: minor (deferred): author who changed crew can't delete own item; PUT ekipa not validated; pending() filters in JS; missing tests (admin-author Kupione no push, non-author co edit 403, cron skip without subs)
+Task 13: fix round 1/5 (4 addressed, 0 open; commits 03d7e3b..4fe01f2) — core/sync toOut now honours the action returned by visibleTo
+Task 13: complete (commits 906a5c1..4fe01f2, review clean)
+- Ruling R21 (Task 14): draft key = `<dzien>|<personId>` or `<dzien>|uwagi`; proposal = full desired cell (array of 0–2 slot values {rodzaj, jobId?, kod?, tekst?, polDnia}) or {tekst} for notes; proposalHash = sha256 of canonical JSON of proposal; approve applies only drafts whose current hash matches; schedule entries unique (dzien, person_id, slot) as a partial unique index WHERE deleted_at IS NULL (soft delete kept); peopleForJob = users of schedule_people having any non-deleted entry for the job; module sets deps.schedule = {peopleForJob} — cost: moderate if owner wants other draft semantics.
