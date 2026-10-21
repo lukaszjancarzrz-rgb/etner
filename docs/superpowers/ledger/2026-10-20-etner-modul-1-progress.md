@@ -60,3 +60,9 @@ Task 5: minor (deferred): clients list write-only; tests lack since>0 SSE, hidde
 Task 5: fix round 1/5 (4 addressed, 0 open; commits ac6dc6e..57e85ad)
 Task 5: minor (deferred): ping-path .catch(stop) unlogged; client-abort during drain logs a noise error row; ping-path session check untested
 Task 5: complete (commits 5820237..57e85ad, review clean)
+Task 6: BASE a87ca96; impl ec5fef0; review: Important — empty APP_SECRET fallback (forgeable links)
+Task 6: minor (deferred): makeVariants decodes image 3x (perf); disk content-type from extension only
+Task 6: fix round 1/5 (4 addressed, 0 open; commits ec5fef0..6c56d9c)
+Task 6: minor (deferred): serve() checks KEY_RE but not ./.. segments — validly signed bad key → 500 (needs APP_SECRET)
+Task 6: complete (commits a87ca96..6c56d9c, review clean)
+- Ruling R14: notify is `notify(deps, userIds, n)`; push sender injected as AppDeps.push; morning job: core `settings` key-value table (key `rano_godzina`, default '07:00'); CronDef.schedule may be the literal 'rano' — registerCron checks every minute (Europe/Warsaw) and runs 'rano' defs when HH:MM matches; VAPID missing outside demo → push disabled with a warning (notify returns 0) — cost: small.
