@@ -62,12 +62,49 @@ describe('eksport do arkusza', () => {
   });
 });
 
+describe('odporność eksportu', () => {
+  it('błąd zapisu jednej karty nie dotyka pozostałych, porcje po chunk wierszy', async () => {
+    const deps = testDeps(); const f = fake();
+    deps.db.insert(attachments).values([att(), att(), att()]).run();
+    const tables = tablesForExport(modules);
+    const names = Object.keys(tables);
+    const failing: SheetsClient = { ...f.client, async batchUpdate(id, d) { if (d[0]!.range.startsWith("'jobs'")) throw new Error('limit'); return f.client.batchUpdate(id, d); } };
+    await expect(exportToSheets(deps.db, failing, 'sid', tables)).rejects.toThrow('limit');
+    const written = f.calls.data.map((d) => d.range.split('!')[0]);
+    expect(written).toContain("'clients'"); // przed jobs
+    expect(f.calls.cleared).not.toContain("'_info'");
+    expect(names).toContain('jobs');
+    const g = fake();
+    await exportToSheets(deps.db, g.client, 'sid', { attachments: tables.attachments! }, new Date(), 2);
+    expect(g.calls.data.filter((d) => d.range.startsWith("'attachments'")).map((d) => [d.range, d.values.length])).toEqual([["'attachments'!A1", 2], ["'attachments'!A3", 2]]);
+  });
+});
+
 describe('zadania kopii', () => {
   it('brak konfiguracji Sheets: pomija i zapisuje ostrzeżenie', async () => {
     const deps = testDeps();
     await kopieCrons({}, modules).find((c) => c.name === 'eksport')!.run(deps);
     expect(deps.db.select().from(errors).where(eq(errors.where, 'eksport')).all().length).toBe(1);
     expect(deps.db.select().from(settings).where(eq(settings.key, 'kopia_eksport_at')).all()).toHaveLength(0);
+  });
+
+  it('kopia-zdjec: brak konfiguracji R2 pomija i nie przesuwa kursora', async () => {
+    const deps = testDeps();
+    await kopieCrons({}, modules).find((c) => c.name === 'kopia-zdjec')!.run(deps);
+    expect(deps.db.select().from(errors).where(eq(errors.where, 'kopia-zdjec')).all()).toHaveLength(1);
+    expect(deps.db.select().from(settings).where(eq(settings.key, 'kopia_zdjec_at')).all()).toHaveLength(0);
+  });
+
+  it('kopia-zdjec: błąd kopiowania nie przesuwa kursora, NoSuchKey jest pomijane', async () => {
+    const deps = testDeps();
+    deps.db.insert(attachments).values([att(), att({ keyOrig: 'o2', keyView: null, keyThumb: null })]).run();
+    const at = () => deps.db.select().from(settings).where(eq(settings.key, 'kopia_zdjec_at')).all();
+    let n = 0;
+    await expect(copyPhotos(deps.db, async () => { if (++n === 2) throw new Error('sieć'); }, '')).rejects.toThrow('sieć');
+    expect(at()).toHaveLength(0);
+    await copyPhotos(deps.db, async (k) => { if (k === 'o2') throw Object.assign(new Error('x'), { name: 'NoSuchKey' }); }, '');
+    expect(at()).toHaveLength(1);
+    expect(deps.db.select().from(errors).where(eq(errors.where, 'kopia-zdjec')).all()).toHaveLength(1);
   });
 
   it('kopia-zdjec: wybiera klucze załączników nowszych niż kopia_zdjec_at', async () => {

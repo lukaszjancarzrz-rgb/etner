@@ -28,26 +28,32 @@ function cell(name: string, boolean: boolean, v: unknown): Cell {
   if (v === null || v === undefined) return '';
   if (boolean) return v ? 'TRUE' : 'FALSE';
   if (name.endsWith('_gr') && typeof v === 'number') return Math.round(v) / 100;
-  return typeof v === 'number' ? v : String(v);
+  return typeof v === 'number' ? v : String(v).slice(0, MAX_CELL);
 }
 
-/** Czyści i zapisuje od nowa każdą kartę + `_info`; zwraca liczbę wierszy per tabela. */
+const MAX_CELL = 50000; // limit komórki w Arkuszach Google
+const CHUNK = 2000;
+
+/** Czyści i zapisuje od nowa każdą kartę osobno (porcjami), `_info` na końcu. Błąd jednej karty nie opróżnia pozostałych; zwraca liczbę wierszy per tabela. */
 export async function exportToSheets(
-  db: Db, sheets: SheetsClient, spreadsheetId: string, tables: Record<string, SQLiteTable>, now = new Date(),
+  db: Db, sheets: SheetsClient, spreadsheetId: string, tables: Record<string, SQLiteTable>, now = new Date(), chunk = CHUNK,
 ): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
-  const data: { range: string; values: Cell[][] }[] = [];
+  const all: { title: string; values: Cell[][] }[] = [];
   for (const [name, t] of Object.entries(tables)) {
     const cols = getTableConfig(t).columns.filter((c) => !SECRET_COLS.has(c.name));
     const rows = db.$client.prepare(`SELECT ${cols.map((c) => `"${c.name}"`).join(',')} FROM "${name}"`).all() as Record<string, unknown>[];
     counts[name] = rows.length;
-    data.push({ range: `'${name}'!A1`, values: [cols.map((c) => c.name), ...rows.map((r) => cols.map((c) => cell(c.name, c.dataType === 'boolean', r[c.name])))] });
+    all.push({ title: name, values: [cols.map((c) => c.name), ...rows.map((r) => cols.map((c) => cell(c.name, c.dataType === 'boolean', r[c.name])))] });
   }
-  data.push({ range: `'_info'!A1`, values: [['eksport', now.toISOString()], ...Object.entries(counts).map(([k, n]): Cell[] => [k, n])] });
-  const titles = data.map((d) => d.range.slice(1, d.range.indexOf("'!")));
-  await sheets.ensureSheets(spreadsheetId, titles);
-  await sheets.clear(spreadsheetId, titles.map((t) => `'${t}'`));
-  await sheets.batchUpdate(spreadsheetId, data);
+  all.push({ title: '_info', values: [['eksport', now.toISOString()], ...Object.entries(counts).map(([k, n]): Cell[] => [k, n])] });
+  await sheets.ensureSheets(spreadsheetId, all.map((x) => x.title));
+  for (const { title, values } of all) {
+    await sheets.clear(spreadsheetId, [`'${title}'`]);
+    for (let i = 0; i < values.length; i += chunk) {
+      await sheets.batchUpdate(spreadsheetId, [{ range: `'${title}'!A${i + 1}`, values: values.slice(i, i + chunk) }]);
+    }
+  }
   return counts;
 }
 

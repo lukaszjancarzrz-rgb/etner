@@ -1,5 +1,5 @@
 import { CopyObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { gt } from 'drizzle-orm';
+import { eq, gt } from 'drizzle-orm';
 import type { AppDeps } from '../app.js';
 import type { Db } from '../core/db.js';
 import { logError } from '../core/errors.js';
@@ -13,7 +13,7 @@ type Env = Record<string, string | undefined>;
 function stamp(db: Db, key: string, at = new Date().toISOString()) {
   db.insert(settings).values({ key, value: at, updatedAt: at }).onConflictDoUpdate({ target: settings.key, set: { value: at, updatedAt: at } }).run();
 }
-const stamped = (db: Db, key: string) => db.select().from(settings).all().find((s) => s.key === key)?.value ?? '';
+const stamped = (db: Db, key: string) => db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? '';
 
 /** Klucze (oryginał, podgląd, miniatura) załączników utworzonych po `since` (ISO). */
 export function keysToCopy(db: Db, since: string): string[] {
@@ -25,7 +25,13 @@ export function keysToCopy(db: Db, since: string): string[] {
 export async function copyPhotos(db: Db, copy: (key: string) => Promise<void>, since: string): Promise<number> {
   const started = new Date().toISOString();
   const keys = keysToCopy(db, since);
-  for (const k of keys) await copy(k);
+  for (const k of keys) {
+    try { await copy(k); } catch (e) {
+      // brak pliku źródłowego nie może blokować kopii na zawsze; inne błędy przerywają (kursor stoi)
+      if ((e as { name?: string })?.name !== 'NoSuchKey') throw e;
+      logError(db, 'kopia-zdjec', new Error(`Brak pliku źródłowego: ${k}`));
+    }
+  }
   stamp(db, 'kopia_zdjec_at', started);
   return keys.length;
 }
