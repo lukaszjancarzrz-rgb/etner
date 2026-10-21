@@ -5,7 +5,7 @@ import { routes } from './routes.js';
 import { attachments, diaryEntries } from './schema.js';
 import { getEntry } from './service.js';
 
-/** Wpis zlecenia widzi każdy, wpis leada tylko `leady`; załącznik idzie za wpisem, niepodpięte nigdy. */
+/** Wpis zlecenia i zdjęcie zakresu prac widzi każdy, wpis leada tylko `leady`; załącznik idzie za wpisem, niepodpięte nigdy. */
 export const dziennik: ModuleDef = {
   name: 'dziennik',
   routes,
@@ -13,7 +13,7 @@ export const dziennik: ModuleDef = {
   visibleTo(user, ch, deps) {
     const r = (ch.after ?? ch.before) as { ownerType?: string | null; ownerId?: string | null } | null;
     if (!r?.ownerType) return false;
-    if (r.ownerType === 'job') return true;
+    if (r.ownerType === 'job' || r.ownerType === 'scope') return true; // scope: zdjęcie punktu zakresu, widoczne jak zlecenie
     if (r.ownerType === 'lead') return can(user, 'leady');
     if (r.ownerType === 'entry') {
       const e = r.ownerId ? (getEntry(deps.db, r.ownerId) ?? deps.db.select().from(diaryEntries).where(eq(diaryEntries.id, r.ownerId)).get()) : undefined;

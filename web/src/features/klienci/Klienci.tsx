@@ -139,7 +139,7 @@ function ClientCard({ id }: { id: string }) {
               <li key={j.id}>
                 <a href={`#zl/${j.id}`} className="grid gap-0.5 rounded-2xl border border-line bg-card px-4 py-3 hover:border-ink-2">
                   <span className="flex items-center gap-2 text-sm text-ink-2"><span className="font-semibold tabular-nums">{j.numer}</span><Badge tone="action">{j.status}</Badge><span className="ml-auto capitalize">{fmtTermin(j.termin)}</span></span>
-                  <span className="line-clamp-2">{j.zakres || [j.rodzaj, j.kategoria].filter(Boolean).join(', ')}</span>
+                  <span className="line-clamp-2">{[j.rodzaj, j.kategoria].filter(Boolean).join(', ')}</span>
                 </a>
               </li>
             ))}

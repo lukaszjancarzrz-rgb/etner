@@ -12,6 +12,7 @@ import { checklists } from '../modules/na-jutro/schema.js';
 import { schedulePeople } from '../modules/uzytkownicy/schema.js';
 import { seedBase } from '../modules/slowniki/seed.js';
 import { shopping } from '../modules/zakupy/schema.js';
+import { jobScopeItems } from '../modules/zlecenia/schema.js';
 import { tasks } from '../modules/zadania/schema.js';
 import { jobs } from '../modules/zlecenia/schema.js';
 import { DEMO_PASSWORD, demoAccounts, seedDemo } from './seed-demo.js';
@@ -46,7 +47,9 @@ describe('seedDemo', () => {
     expect(new Set(js.map((j) => j.status)).size).toBeGreaterThanOrEqual(6);
     expect(js.some((j) => j.ekipa)).toBe(true);
     expect(db.select().from(attachments).all().filter((a) => a.rodzaj === 'zdjecie' && a.ownerType === 'entry')).toHaveLength(10);
-    expect(n(db, attachments)).toBe(10);
+    expect(n(db, attachments)).toBe(12);
+    expect(db.select().from(attachments).all().filter((a) => a.ownerType === 'scope')).toHaveLength(2);
+    expect(n(db, jobScopeItems)).toBeGreaterThanOrEqual(15);
     expect(n(db, diaryEntries)).toBeGreaterThan(0);
     expect(n(db, scheduleEntries)).toBeGreaterThan(40);
     const d = db.select().from(scheduleDrafts).where(isNull(scheduleDrafts.deletedAt)).all();

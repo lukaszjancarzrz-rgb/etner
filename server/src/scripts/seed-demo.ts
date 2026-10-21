@@ -14,6 +14,7 @@ import * as naJutro from '../modules/na-jutro/service.js';
 import * as uzytkownicy from '../modules/uzytkownicy/service.js';
 import * as zadania from '../modules/zadania/service.js';
 import * as zakupy from '../modules/zakupy/service.js';
+import * as zakres from '../modules/zlecenia/scope.js';
 import * as zlecenia from '../modules/zlecenia/service.js';
 
 const BARTEK = 'ekipa Bartek', MAREK = 'ekipa Marek';
@@ -98,7 +99,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
   const passwordHash = await hashPassword(DEMO_PASSWORD); // jeden skrót dla wszystkich kont demo
 
   // Pliki najpierw (async), potem jedna transakcja na wszystkie zapisy.
-  const ph = await Promise.all(Array.from({ length: 10 }, async (_, i) => {
+  const ph = await Promise.all(Array.from({ length: 12 }, async (_, i) => { // 10 do dziennika, 2 do zakresu prac
     const id = newId();
     const buf = await photo(i, w, h);
     const v = await makeVariants(buf);
@@ -138,7 +139,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     // Zlecenia.
     const month = (off: number) => addDays(`${today.slice(0, 7)}-15`, off * 30).slice(0, 7);
     const jobs = JOBS.map(([ci, status, ekipa, rodzaj, kategoria, off, zakres]) =>
-      zlecenia.save(db, a1, { clientId: cl[ci]!.id, siteId: cl[ci]!.siteId, status, ekipa, rodzaj, kategoria, termin: month(off), zakres, uwagiAdmin: 'Uwaga wewnętrzna (demo).' } as never)!);
+      zlecenia.save(db, a1, { clientId: cl[ci]!.id, siteId: cl[ci]!.siteId, status, ekipa, rodzaj, kategoria, termin: month(off), uwagiAdmin: 'Uwaga wewnętrzna (demo).' } as never)!);
 
     // Harmonogram: bieżący tydzień + 3 kolejne, zatwierdzony; potem dwa szkice.
     const crewJobs = (ekipa: string) => jobs.filter((j) => j.ekipa === ekipa && ['W realizacji', 'Zaplanowane', 'Do dokończenia'].includes(j.status));
@@ -166,6 +167,19 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     while (isWorkday(next, []) !== 1) next = addDays(next, 1);
     harmonogram.setDraft(db, a2, { from: next, to: next, people: [people.bartek!], value: [{ rodzaj: 'kod', kod: 'urlop', polDnia: false }], workdaysOnly: false });
     harmonogram.setDraft(db, a2, { from: next, to: next, people: ['uwagi'], value: { tekst: 'Przegląd samochodów dostawczych' }, workdaysOnly: false });
+
+    // Zakres prac: tekst z listy jako pierwszy punkt; pierwsze zlecenie ma trzy punkty i zdjęcia.
+    const t0 = now.toISOString();
+    const scopePh = ph.slice(10).map((x) => {
+      db.insert(attachments).values({
+        id: x.id, rodzaj: 'zdjecie', keyOrig: `${x.k}/orig.jpg`, keyView: `${x.k}/view.webp`, keyThumb: `${x.k}/thumb.webp`,
+        nazwa: `zakres-${x.i - 9}.jpg`, mime: 'image/jpeg', bajty: x.buf.length, w: x.v.w, h: x.v.h, authorId: a1, createdAt: t0, createdBy: a1, updatedAt: t0,
+      }).run();
+      return x.id;
+    });
+    JOBS.forEach(([, , , , , , tekst], i) => zakres.create(db, a1, jobs[i]!.id, { tekst, uploads: i === 0 ? scopePh : [] }));
+    zakres.create(db, a1, jobs[0]!.id, { tekst: 'Anemostaty w sypialniach i łazience, kratki w kuchni.', uploads: [] });
+    zakres.create(db, a1, jobs[0]!.id, { tekst: 'Regulacja przepływów i protokół dla klienta.', uploads: [] });
 
     // Dzienniki ze zdjęciami (10): wpisy zlecenia przez serwis dziennika.
     const now0 = now.toISOString();

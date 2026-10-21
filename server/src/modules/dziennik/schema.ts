@@ -14,7 +14,7 @@ export const diaryEntries = sqliteTable('diary_entries', {
 /** owner_type NULL = plik wgrany, ale jeszcze niepodpięty do wpisu. */
 export const attachments = sqliteTable('attachments', {
   ...baseCols(),
-  ownerType: text('owner_type', { enum: ['entry', 'device', 'service'] }),
+  ownerType: text('owner_type', { enum: ['entry', 'scope', 'device', 'service'] }),
   ownerId: text('owner_id'),
   rodzaj: text('rodzaj', { enum: ['zdjecie', 'plik'] }).notNull(),
   keyOrig: text('key_orig').notNull(),

@@ -1,4 +1,4 @@
-import { jobCreateSchema, jobUpdateSchema } from '@etner/shared';
+import { jobCreateSchema, jobUpdateSchema, scopeCreateSchema, scopeOrderSchema, scopeUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -8,6 +8,7 @@ import { logError } from '../../core/errors.js';
 import { notify } from '../../core/notify.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
+import * as scope from './scope.js';
 import * as svc from './service.js';
 
 export function routes(app: Hono, deps: AppDeps): void {
@@ -36,4 +37,24 @@ export function routes(app: Hono, deps: AppDeps): void {
   };
   app.post('/api/jobs', admin, async (c) => write(c, await body(c, jobCreateSchema)));
   app.put('/api/jobs/:id', admin, async (c) => write(c, await body(c, jobUpdateSchema), c.req.param('id')));
+
+  // Zakres prac: zapisuje tylko admin, widzą wszyscy (przez synchronizację).
+  const nf = <T>(r: T | undefined): T => { if (!r) throw new HTTPException(404, { message: 'Nie znaleziono' }); return r; };
+  const op = <T>(c: Context, opId: string | undefined, fn: () => T) => runOp(db, opId, c.get('user').id, fn).result;
+  app.post('/api/jobs/:id/scope', admin, async (c) => {
+    const { opId, ...d } = await body(c, scopeCreateSchema);
+    return c.json(nf(op(c, opId, () => scope.create(db, c.get('user').id, c.req.param('id'), d))));
+  });
+  app.post('/api/jobs/:id/scope/order', admin, async (c) => {
+    const { opId, ids } = await body(c, scopeOrderSchema);
+    return c.json(nf(op(c, opId, () => scope.reorder(db, c.get('user').id, c.req.param('id'), ids))));
+  });
+  app.put('/api/scope/:id', admin, async (c) => {
+    const { opId, ...d } = await body(c, scopeUpdateSchema);
+    return c.json(nf(op(c, opId, () => scope.update(db, c.get('user').id, c.req.param('id'), d))));
+  });
+  app.delete('/api/scope/:id', admin, (c) => {
+    nf(scope.remove(db, c.get('user').id, c.req.param('id')) || undefined);
+    return c.json({ ok: true });
+  });
 }

@@ -96,21 +96,18 @@ export function KlientToggle({ on, onChange, dark }: { on: boolean; onChange: (v
   );
 }
 
-type Picked = { file: Blob; name: string; url: string; img: boolean };
+export type Picked = { file: Blob; name: string; url: string; img: boolean };
 
-function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId: string }) {
-  const [tekst, setTekst] = useState('');
+/** Wybór zdjęć (aparat / galeria): zmniejszone przed wysłaniem, podglądy zwalniane przy wyjściu. Też w zakresie prac. */
+export function usePicker(opts: { pdf?: boolean } = {}) {
   const [files, setFiles] = useState<Picked[]>([]);
-  const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const cam = useRef<HTMLInputElement>(null);
   const gal = useRef<HTMLInputElement>(null);
-  const alive = useRef(true);
-  const me = useMe();
   const current = useRef<Picked[]>([]);
   current.current = files;
   // podglądy niewysłanych plików zwalniamy przy wyjściu z karty
-  useEffect(() => () => { alive.current = false; for (const f of current.current) URL.revokeObjectURL(f.url); }, []);
+  useEffect(() => () => { for (const f of current.current) URL.revokeObjectURL(f.url); }, []);
 
   async function add(list: FileList | null) {
     if (!list?.length) return;
@@ -122,9 +119,40 @@ function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId:
         out.push({ file: b, name: f.name, url: URL.createObjectURL(b), img: b.type.startsWith('image/') });
       }
       setFiles((x) => [...x, ...out].slice(0, 30));
-      setErr('');
     } finally { setBusy(false); }
   }
+
+  const previews = files.length > 0 && (
+    <ul className="flex flex-wrap gap-2" aria-label="Wybrane pliki">
+      {files.map((f, i) => (
+        <li key={f.url} className="relative">
+          {f.img ? <img src={f.url} alt={f.name} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" />
+            : <span className="grid h-18 w-18 place-items-center rounded-xl border border-line text-xs"><FilePdf className="h-6 w-6" /></span>}
+          <button type="button" aria-label={`Usuń ${f.name}`} onClick={() => { URL.revokeObjectURL(f.url); setFiles((x) => x.filter((_, k) => k !== i)); }}
+            className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-card"><X className="h-4 w-4" weight="bold" /></button>
+        </li>
+      ))}
+    </ul>
+  );
+  const buttons = (
+    <>
+      <input ref={cam} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-hidden data-camera onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
+      <input ref={gal} type="file" accept={opts.pdf === false ? 'image/*' : 'image/*,application/pdf'} multiple className="sr-only" tabIndex={-1} aria-hidden data-gallery onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
+      <Button variant="secondary" size="sm" onClick={() => cam.current?.click()}><Camera className="h-5 w-5" />Aparat</Button>
+      <Button variant="secondary" size="sm" onClick={() => gal.current?.click()}><ImageSquare className="h-5 w-5" />Galeria</Button>
+    </>
+  );
+  return { files, setFiles, busy, previews, buttons };
+}
+
+function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId: string }) {
+  const [tekst, setTekst] = useState('');
+  const { files, setFiles, busy, previews, buttons } = usePicker();
+  const [err, setErr] = useState('');
+  const alive = useRef(true);
+  const me = useMe();
+  useEffect(() => () => { alive.current = false; }, []);
+  useEffect(() => { if (files.length) setErr(''); }, [files.length]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -151,24 +179,10 @@ function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId:
     <form onSubmit={submit} className="grid gap-3 rounded-2xl border border-line bg-card p-4" noValidate>
       <label htmlFor={`dz-${ownerId}`} className="sr-only">Nowy wpis</label>
       <Textarea id={`dz-${ownerId}`} value={tekst} onChange={(e) => setTekst(e.target.value)} placeholder="Co zrobiono, czego brakuje, uwagi z budowy" aria-invalid={!!err} aria-describedby={err ? `dz-${ownerId}-e` : undefined} className="min-h-20" />
-      {files.length > 0 && (
-        <ul className="flex flex-wrap gap-2" aria-label="Wybrane pliki">
-          {files.map((f, i) => (
-            <li key={f.url} className="relative">
-              {f.img ? <img src={f.url} alt={f.name} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" />
-                : <span className="grid h-18 w-18 place-items-center rounded-xl border border-line text-xs"><FilePdf className="h-6 w-6" /></span>}
-              <button type="button" aria-label={`Usuń ${f.name}`} onClick={() => { URL.revokeObjectURL(f.url); setFiles((x) => x.filter((_, k) => k !== i)); }}
-                className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-card"><X className="h-4 w-4" weight="bold" /></button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {previews}
       {err && <p id={`dz-${ownerId}-e`} role="alert" className="text-sm text-danger">{err}</p>}
       <div className="flex flex-wrap items-center gap-2">
-        <input ref={cam} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-hidden data-camera onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
-        <input ref={gal} type="file" accept="image/*,application/pdf" multiple className="sr-only" tabIndex={-1} aria-hidden data-gallery onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
-        <Button variant="secondary" size="sm" onClick={() => cam.current?.click()}><Camera className="h-5 w-5" />Aparat</Button>
-        <Button variant="secondary" size="sm" onClick={() => gal.current?.click()}><ImageSquare className="h-5 w-5" />Galeria</Button>
+        {buttons}
         <Button type="submit" size="sm" className="ml-auto" disabled={busy}><PaperPlaneRight className="h-5 w-5" weight="fill" />Dodaj wpis</Button>
       </div>
     </form>

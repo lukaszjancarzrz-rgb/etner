@@ -1,4 +1,4 @@
-import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { baseCols, firmy } from '../../core/schema-base.js';
 import { clients, sites } from '../klienci/schema.js';
 
@@ -19,4 +19,12 @@ export const jobs = sqliteTable('jobs', {
   zakres: text('zakres').notNull().default(''),
   uwagiAdmin: text('uwagi_admin').notNull().default(''),
   zamknieteAt: text('zamkniete_at'),
+});
+
+/** Punkt zakresu prac zlecenia; zdjęcia w `attachments` (owner_type 'scope', owner_id = id punktu). */
+export const jobScopeItems = sqliteTable('job_scope_items', {
+  ...baseCols(),
+  jobId: text('job_id').notNull().references(() => jobs.id),
+  kolejnosc: integer('kolejnosc').notNull(),
+  tekst: text('tekst').notNull(),
 });

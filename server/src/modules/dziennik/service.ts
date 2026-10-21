@@ -23,8 +23,8 @@ export const getEntry = (db: Db, id: string): EntryRow | undefined =>
   db.select().from(diaryEntries).where(and(eq(diaryEntries.id, id), isNull(diaryEntries.deletedAt))).get();
 export const getAttachment = (db: Db, id: string): AttachmentRow | undefined =>
   db.select().from(attachments).where(and(eq(attachments.id, id), isNull(attachments.deletedAt))).get();
-const attachmentsOf = (db: Db, entryId: string): AttachmentRow[] =>
-  db.select().from(attachments).where(and(eq(attachments.ownerType, 'entry'), eq(attachments.ownerId, entryId), isNull(attachments.deletedAt))).all();
+const attachmentsOf = (db: Db, ownerType: 'entry' | 'scope', ownerId: string): AttachmentRow[] =>
+  db.select().from(attachments).where(and(eq(attachments.ownerType, ownerType), eq(attachments.ownerId, ownerId), isNull(attachments.deletedAt))).all();
 
 /** Wpis leada widzi tylko osoba z uprawnieniem `leady`; wpis zlecenia każdy. */
 export const canSee = (user: Pick<User, 'role' | 'perms'>, e: Pick<EntryRow, 'ownerType'>): boolean =>
@@ -38,6 +38,31 @@ export function addSystem(db: Db, owner: { type: 'job' | 'lead'; id: string }, t
 }
 export const diaryOf = (db: Db): Diary => ({ addSystem: (owner, tekst) => addSystem(db, owner, tekst) });
 
+type Owner = 'entry' | 'scope';
+/** Pliki z POST /api/uploads: wszystkie istnieją, są niepodpięte i wgrał je ten użytkownik (inaczej 400). */
+export function checkUploads(db: Db, userId: string, uploads: string[]): AttachmentRow[] {
+  const ids = [...new Set(uploads)];
+  const ups = ids.length ? db.select().from(attachments).where(inArray(attachments.id, ids)).all() : [];
+  if (ups.length !== ids.length || ups.some((a) => a.ownerType !== null || a.authorId !== userId || a.deletedAt)) throw bad('Nieprawidłowy plik do podpięcia');
+  return ups;
+}
+/** Podpina sprawdzone pliki (checkUploads) do właściciela; dopiero wtedy trafiają do synchronizacji. */
+export function attach(db: Db, userId: string, ups: AttachmentRow[], ownerType: Owner, ownerId: string): void {
+  const now = NOW();
+  for (const u of ups) {
+    const a = db.update(attachments).set({ ownerType, ownerId, updatedAt: now }).where(eq(attachments.id, u.id)).returning().get();
+    recordChange(db, userId, 'attachments', a.id, 'create', null, a);
+  }
+}
+/** Miękkie usunięcie załączników właściciela (razem z wpisem albo punktem zakresu). */
+export function removeAttachmentsOf(db: Db, userId: string, ownerType: Owner, ownerId: string): void {
+  const now = NOW();
+  for (const a of attachmentsOf(db, ownerType, ownerId)) {
+    const row = db.update(attachments).set({ deletedAt: now, updatedAt: now }).where(eq(attachments.id, a.id)).returning().get();
+    recordChange(db, userId, 'attachments', a.id, 'delete', a, row);
+  }
+}
+
 /** Wywołuj w runOp. Zakłada, że pliki są już w magazynie (POST /api/uploads). */
 export function create(db: Db, user: User, input: DiaryCreate, peopleForJob: (jobId: string) => string[], out: Outbox): EntryRow {
   const { owner_type: type, owner_id: ownerId, tekst } = input;
@@ -46,17 +71,11 @@ export function create(db: Db, user: User, input: DiaryCreate, peopleForJob: (jo
     if (!leady.get(db, ownerId)) throw new HTTPException(404, { message: 'Nie znaleziono' });
   } else if (!zlecenia.get(db, ownerId)) throw new HTTPException(404, { message: 'Nie znaleziono' });
 
-  const ids = [...new Set(input.uploads)];
-  const ups = ids.length ? db.select().from(attachments).where(inArray(attachments.id, ids)).all() : [];
-  if (ups.length !== ids.length || ups.some((a) => a.ownerType !== null || a.authorId !== user.id || a.deletedAt)) throw bad('Nieprawidłowy plik do podpięcia');
-
+  const ups = checkUploads(db, user.id, input.uploads);
   const now = NOW();
   const entry = db.insert(diaryEntries).values({ id: newId(), ownerType: type, ownerId, authorId: user.id, tekst, createdAt: now, createdBy: user.id, updatedAt: now }).returning().get();
   recordChange(db, user.id, 'diary_entries', entry.id, 'create', null, entry);
-  for (const id of ids) {
-    const a = db.update(attachments).set({ ownerType: 'entry', ownerId: entry.id, updatedAt: now }).where(eq(attachments.id, id)).returning().get();
-    recordChange(db, user.id, 'attachments', a.id, 'create', null, a);
-  }
+  attach(db, user.id, ups, 'entry', entry.id);
 
   const photos = ups.filter((a) => a.rodzaj === 'zdjecie').length;
   const body = `${user.name}: ${tekst.slice(0, 200)}${photos ? ` 📷 ${photos}` : ''}`;
@@ -78,11 +97,8 @@ export function remove(db: Db, user: User, id: string): boolean {
   const e = getEntry(db, id);
   if (!e || !canSee(user, e)) return false;
   if (!can(user, 'admin') && e.authorId !== user.id) throw new HTTPException(403, { message: 'BRAK_UPRAWNIEN' });
+  removeAttachmentsOf(db, user.id, 'entry', id);
   const now = NOW();
-  for (const a of attachmentsOf(db, id)) {
-    const row = db.update(attachments).set({ deletedAt: now, updatedAt: now }).where(eq(attachments.id, a.id)).returning().get();
-    recordChange(db, user.id, 'attachments', a.id, 'delete', a, row);
-  }
   const row = db.update(diaryEntries).set({ deletedAt: now, updatedAt: now }).where(eq(diaryEntries.id, id)).returning().get();
   recordChange(db, user.id, 'diary_entries', id, 'delete', e, row);
   return true;
@@ -98,7 +114,7 @@ export function setKlient(db: Db, userId: string, kind: 'entry' | 'attachment', 
     return row;
   }
   const old = getAttachment(db, id);
-  if (!old || old.ownerType !== 'entry') return undefined;
+  if (!old || (old.ownerType !== 'entry' && old.ownerType !== 'scope')) return undefined;
   const row = db.update(attachments).set({ dlaKlienta: v, updatedAt: now }).where(eq(attachments.id, id)).returning().get();
   recordChange(db, userId, 'attachments', id, 'update', old, row);
   return row;

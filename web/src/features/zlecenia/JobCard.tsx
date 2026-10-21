@@ -7,6 +7,7 @@ import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { Diary } from '../dziennik/Diary.js';
 import { JobForm } from './JobForm.js';
+import { Scope } from './Scope.js';
 import { fmtDni, jobDays } from './jobs.js';
 
 const MON = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
@@ -70,12 +71,12 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
               {days.od && <span className="block text-xs text-ink-2">{days.od === days.do ? fmtDay(days.od) : `${fmtDay(days.od)} - ${fmtDay(days.do!)}`}</span>}
             </Info>
           </dl>
-          {job.zakres && <div className="grid gap-1"><p className="text-sm font-semibold text-ink-2">Zakres</p><p className="max-w-[70ch] whitespace-pre-wrap">{job.zakres}</p></div>}
           {admin && job.uwagiAdmin && (
             <div className="grid gap-1 rounded-xl bg-bg/70 p-3"><p className="flex items-center gap-1.5 text-sm font-semibold text-ink-2"><User className="h-4 w-4" />Uwagi admina (pracownicy nie widzą)</p><p className="whitespace-pre-wrap">{job.uwagiAdmin}</p></div>
           )}
         </div>
       </div>
+      <Scope jobId={id} disabled={!!job._tmp} />
       <Diary ownerType="job" ownerId={id} highlight={highlight} disabled={!!job._tmp} />
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}
     </article>

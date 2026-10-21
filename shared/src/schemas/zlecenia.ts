@@ -29,3 +29,13 @@ export type JobUpdate = z.infer<typeof jobUpdateSchema>;
 
 /** Wejście zapisu: tworzenie (bez id) lub zmiana (z id). */
 export type JobSaveInput = Partial<JobCreate> & { id?: string };
+
+/** Punkt zakresu prac: tekst + zdjęcia (wgrane wcześniej przez POST /api/uploads). */
+const scopeTekst = txt.min(1, 'Wpisz treść punktu').max(5000, 'Tekst jest za długi');
+const uploads = z.array(z.string().min(1)).max(30);
+export const scopeCreateSchema = z.object({ opId: z.string().min(1).optional(), tekst: scopeTekst, uploads: uploads.default([]) });
+export type ScopeCreate = z.infer<typeof scopeCreateSchema>;
+// Bez default (zod 4: .partial() nad default nadpisałby zapisane pola); uploads = zdjęcia dokładane.
+export const scopeUpdateSchema = z.object({ opId: z.string().min(1).optional(), tekst: scopeTekst, uploads, kolejnosc: z.number().int().min(1) }).partial();
+export type ScopeUpdate = z.infer<typeof scopeUpdateSchema>;
+export const scopeOrderSchema = z.object({ opId: z.string().min(1).optional(), ids: z.array(z.string().min(1)).min(1).max(500) });

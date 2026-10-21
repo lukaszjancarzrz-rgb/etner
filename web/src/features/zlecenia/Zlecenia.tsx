@@ -60,9 +60,10 @@ function JobList({ selected }: { selected?: string }) {
     return m;
   }, [entries, me?.id, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const scope = useEntities('job_scope_items');
   const list = useMemo(() => [...jobs.values()]
-    .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.zakres, j.status, j.ekipa))
-    .sort((a, b) => String(b.numer ?? '').localeCompare(String(a.numer ?? ''), 'pl', { numeric: true })), [jobs, q]);
+    .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.status, j.ekipa, ...scope.filter((p) => p.jobId === j.id).map((p) => p.tekst)))
+    .sort((a, b) => String(b.numer ?? '').localeCompare(String(a.numer ?? ''), 'pl', { numeric: true })), [jobs, q, scope]);
 
   if (loading) return <div className="grid gap-3 p-4" aria-busy="true" aria-label="Wczytywanie zleceń">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div>;
 

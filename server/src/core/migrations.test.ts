@@ -40,4 +40,19 @@ describe('migracje z danymi', () => {
     expect(ch.map((x) => `${x.entity}:${x.entity_id}:${x.action}`).sort()).toEqual(['dict:d2:delete', 'dict:d4:delete', 'shopping:s1:update']);
     expect(JSON.parse(ch.find((x) => x.entity === 'shopping')!.after)).toMatchObject({ id: 's1', status: 'Do kupienia', co: 'Taśma', deletedAt: null });
   });
+
+  it('0011: niepusty zakres zlecenia staje się punktem 1 (z wpisem w changes)', () => {
+    const db = dbUpTo('0010_good_ted_forrester');
+    const c = db.$client;
+    c.prepare('insert into firmy (id, created_at, updated_at, nazwa, skrot) values (?, ?, ?, ?, ?)').run('f', T, T, 'F', 'F');
+    c.prepare('insert into clients (id, created_at, updated_at, firma_id, typ, nazwa) values (?, ?, ?, ?, ?, ?)').run('k', T, T, 'f', 'osoba', 'K');
+    const job = c.prepare('insert into jobs (id, created_at, updated_at, firma_id, numer, client_id, status, zakres) values (?, ?, ?, ?, ?, ?, ?, ?)');
+    job.run('j1', T, T, 'f', 'Z0001', 'k', 'Nowe', ' Montaż centrali ');
+    job.run('j2', T, T, 'f', 'Z0002', 'k', 'Nowe', '  ');
+    migrate(db);
+    const items = c.prepare('select id, job_id, kolejnosc, tekst from job_scope_items').all() as any[];
+    expect(items).toEqual([{ id: expect.stringMatching(/^[0-9A-Z]{26}$/), job_id: 'j1', kolejnosc: 1, tekst: 'Montaż centrali' }]);
+    const ch = c.prepare("select entity_id, after from changes where entity = 'job_scope_items'").all() as any[];
+    expect(ch.map((x) => ({ id: x.entity_id, ...JSON.parse(x.after) }))).toEqual([expect.objectContaining({ id: items[0].id, jobId: 'j1', kolejnosc: 1, tekst: 'Montaż centrali' })]);
+  });
 });

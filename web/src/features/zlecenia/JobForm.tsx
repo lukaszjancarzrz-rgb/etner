@@ -27,7 +27,7 @@ export function JobForm({ job, onClose }: { job?: Rec; onClose: () => void }) {
   const [f, setF] = useState({
     clientId: job?.clientId ?? '', siteId: job?.siteId ?? '', status: job?.status ?? statusy[0]?.wartosc ?? '',
     ekipa: job?.ekipa ?? NONE, termin: job?.termin ?? '', rodzaj: job?.rodzaj || rodzaje[0]?.wartosc || '', kategoria: job?.kategoria || '',
-    zakres: job?.zakres ?? '', uwagiAdmin: job?.uwagiAdmin ?? '',
+    uwagiAdmin: job?.uwagiAdmin ?? '',
   });
   const [nowy, setNowy] = useState<null | { nazwa: string; telefon: string; adres: string; miejscowosc: string }>(null);
   const [err, setErr] = useState<Record<string, string>>({});
@@ -50,7 +50,7 @@ export function JobForm({ job, onClose }: { job?: Rec; onClose: () => void }) {
 
     const body: Record<string, unknown> = {
       status: f.status, ekipa: f.ekipa === NONE ? null : f.ekipa, termin: f.termin || null, rodzaj: f.rodzaj, kategoria: f.kategoria,
-      zakres: f.zakres.trim(), uwagiAdmin: f.uwagiAdmin.trim(),
+      uwagiAdmin: f.uwagiAdmin.trim(),
     };
     if (nowy) {
       body.newClient = { typ: 'osoba', nazwa: nowy.nazwa.trim(), telefony: nowy.telefon.trim() ? [nowy.telefon.trim()] : [], emaile: [], nip: '', notatki: '' };
@@ -113,7 +113,6 @@ export function JobForm({ job, onClose }: { job?: Rec; onClose: () => void }) {
             <Field label="Rodzaj">{(id) => <Select id={id} value={f.rodzaj || undefined} onValueChange={(rodzaj) => set({ rodzaj })} options={opts(rodzaje)} placeholder="Wybierz" />}</Field>
             <Field label="Kategoria">{(id) => <Select id={id} value={f.kategoria || undefined} onValueChange={(kategoria) => set({ kategoria })} options={opts(kategorie)} placeholder="Wybierz" />}</Field>
           </div>
-          <Field label="Zakres prac">{(id) => <Textarea id={id} value={f.zakres} onChange={(e) => set({ zakres: e.target.value })} />}</Field>
           <Field label="Uwagi admina" hint="Widzą je tylko administratorzy.">{(id, d) => <Textarea id={id} aria-describedby={d} value={f.uwagiAdmin} onChange={(e) => set({ uwagiAdmin: e.target.value })} />}</Field>
           <div className="flex justify-end gap-3 border-t border-line pt-4">
             <Button variant="secondary" onClick={onClose}>Anuluj</Button>

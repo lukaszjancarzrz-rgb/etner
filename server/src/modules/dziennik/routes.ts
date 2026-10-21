@@ -93,7 +93,8 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.get('/api/attachments/:id/file', auth, async (c) => {
     const a = svc.getAttachment(db, c.req.param('id'));
     const e = a?.ownerType === 'entry' && a.ownerId ? svc.getEntry(db, a.ownerId) : undefined;
-    if (!a || !e || !svc.canSee(c.get('user'), e)) throw notFound();
+    // zdjęcie punktu zakresu widzi każdy, jak zlecenie (usunięty punkt usuwa też swoje zdjęcia)
+    if (!a || !(a.ownerType === 'scope' || (e && svc.canSee(c.get('user'), e)))) throw notFound();
     const v = c.req.query('v');
     const key = (v === 'thumb' ? a.keyThumb : v === 'view' ? a.keyView : null) ?? a.keyOrig;
     return c.redirect(await files.url(key), 302);

@@ -199,3 +199,38 @@ test('klienci: admin zmienia telefon i adres obiektu, zmiana na karcie zlecenia;
   await expect(w.getByRole('button', { name: 'Dodaj obiekt' })).toHaveCount(0);
   await ctx.close();
 });
+
+test('zakres prac: admin dodaje punkt ze zdjęciem, pracownik go widzi bez edycji', async ({ page, browser }, info) => {
+  const tekst = `E2E ${info.project.name}: kratki w kuchni`;
+  await loginAdmin(page);
+  await page.goto('/#zl');
+  await page.getByRole('link', { name: /Józef Bukowski/ }).first().click();
+  const scope = page.getByRole('region', { name: 'Zakres prac' });
+  await expect(scope.getByRole('listitem').first()).toBeVisible();
+  await scope.getByRole('button', { name: 'Dodaj punkt' }).click();
+  const form = page.getByRole('dialog', { name: 'Nowy punkt zakresu' });
+  await form.getByLabel('Co do zrobienia').fill(tekst);
+  await form.locator('input[data-gallery]').setInputFiles(photo);
+  await expect(form.getByRole('img', { name: 'zdjecie.jpg' })).toBeVisible();
+  await form.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(form).toBeHidden();
+  const item = scope.locator('ol > li', { hasText: tekst });
+  await expect(item).not.toContainText('wysyłanie');
+  await expect(item.locator('img[src*="/api/attachments/"]')).toHaveCount(1);
+  const jobUrl = new URL(page.url()).hash;
+  await page.reload();
+  const again = page.getByRole('region', { name: 'Zakres prac' }).locator('ol > li', { hasText: tekst });
+  await expect(again.locator('img[src*="/api/attachments/"]')).toHaveCount(1);
+  await loaded(page, `[aria-label="Zakres prac"] li:has-text("${tekst}") img`);
+
+  const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
+  const w = await ctx.newPage();
+  await w.goto('/');
+  await w.getByRole('button', { name: /Bartek Gawlik/ }).click();
+  await expect(w.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
+  await w.goto(`/${jobUrl}`);
+  const ws = w.getByRole('region', { name: 'Zakres prac' });
+  await expect(ws.locator('ol > li', { hasText: tekst })).toBeVisible();
+  await expect(ws.getByRole('button', { name: /Dodaj punkt|Edytuj|Przesuń/ })).toHaveCount(0);
+  await ctx.close();
+});
