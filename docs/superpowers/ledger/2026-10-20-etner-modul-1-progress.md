@@ -85,3 +85,6 @@ Task 9: minor → carried into Task 10: addSite spreads Partial input (explicit 
 Task 9: complete (commits f86fca0..12653e4, review clean)
 Task 10: BASE 1253d86; impl 241e714; review: Important — zod4 .partial() keeps defaults → partial PUT wipes fields (check all modules)
 Task 10: minor (deferred): newClient silently ignores clientId; no invalid-status PUT test; next numer scans all jobs (shortcut); notify title tail = job number
+Task 10: fix round 1/5 (3 addressed, 0 open; commits 241e714..322e559)
+Task 10: minor (deferred): push-failure test doesn't exercise the route-level .catch (notify already absorbs sender errors)
+Task 10: complete (commits 1253d86..322e559, review clean)
