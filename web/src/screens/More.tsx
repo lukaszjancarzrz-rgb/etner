@@ -55,9 +55,9 @@ const STAN: Partial<Record<PushState, string>> = {
 };
 
 function Notifications() {
-  const [st, setSt] = useState<PushState | null>(null);
+  const [st, setSt] = useState<PushState | 'blad' | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { pushState().then(setSt, () => setSt('wylaczone')); }, []);
+  useEffect(() => { pushState().then(setSt, () => setSt('blad')); }, []);
   const run = async (f: () => Promise<PushState | void>, ok?: string) => {
     setBusy(true);
     try { const r = await f(); if (r) setSt(r); if (ok) toast(ok, { tone: 'ok' }); }
@@ -72,7 +72,9 @@ function Notifications() {
     <div className="grid gap-3 rounded-2xl border border-line bg-card p-5" aria-busy={st === null}>
       <h2 className="flex items-center gap-2 font-wide text-lg font-extrabold"><Bell className="h-5 w-5 text-action" weight="duotone" />Powiadomienia</h2>
       {st === null ? <p className="text-sm text-ink-2">Sprawdzanie…</p>
-        : st === 'ios' || st === 'brak' ? <p className="text-sm">Na iPhonie: Udostępnij → Do ekranu początkowego, potem otwórz aplikację z ikony.</p>
+        : st === 'ios' ? <p className="text-sm">Na iPhonie: Udostępnij → Do ekranu początkowego, potem otwórz aplikację z ikony.</p>
+        : st === 'brak' ? <p className="text-sm text-ink-2">Ta przeglądarka nie obsługuje powiadomień. Otwórz aplikację w Chrome lub Safari na telefonie.</p>
+        : st === 'blad' ? <p className="text-sm text-ink-2">Nie udało się sprawdzić powiadomień. Sprawdź połączenie i otwórz ten ekran ponownie.</p>
         : st === 'serwer' ? <p className="text-sm text-ink-2">Serwer nie ma włączonych powiadomień.</p>
         : (
           <>

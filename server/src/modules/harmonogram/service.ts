@@ -136,7 +136,9 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
     const key = keyOf(d.dzien, d.personId);
     if (seen && !seen.has(key)) continue;
     if (seen && seen.get(key) !== proposalHash(d.proposal)) { skipped.push(key); continue; }
-    if (d.personId) {
+    if (d.personId && proposalHash(current(db, d.dzien, d.personId)) === proposalHash(d.proposal)) {
+      // szkic równy komórce (np. zmieniona w międzyczasie na tę samą wartość): bez nowych wierszy i zmian („nowe” u pracownika)
+    } else if (d.personId) {
       const old = cellRows(db, d.dzien, d.personId);
       for (const e of old) {
         const row = db.update(scheduleEntries).set({ deletedAt: ts, updatedAt: ts }).where(eq(scheduleEntries.id, e.id)).returning().get();

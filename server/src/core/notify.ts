@@ -92,8 +92,13 @@ export function mountPush(app: Hono, deps: AppDeps): void {
     return c.json({ ok: true });
   });
 
+  // shortcut: limit w pamięci procesu (jedna instancja); przy kilku instancjach przenieść do bazy
+  const lastTest = new Map<string, number>();
   app.post('/api/push/test', requireUser(db), async (c) => {
-    const sent = await notify(deps, [c.get('user').id], { title: '🔔 Próbne powiadomienie', body: 'Powiadomienia działają na tym urządzeniu.', url: '#wiecej', tag: 'test' });
+    const id = c.get('user').id, t = (deps.now ?? (() => new Date()))().getTime();
+    if (t - (lastTest.get(id) ?? -Infinity) < 10_000) return c.json({ error: 'Poczekaj chwilę przed kolejną próbą.' }, 429);
+    lastTest.set(id, t);
+    const sent = await notify(deps, [id], { title: '🔔 Próbne powiadomienie', body: 'Powiadomienia działają na tym urządzeniu.', url: '#wiecej', tag: 'test' });
     return c.json({ sent });
   });
 }

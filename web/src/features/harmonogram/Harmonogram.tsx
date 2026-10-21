@@ -117,16 +117,23 @@ function useSeenRef(dzien: string, p: ViewProps) {
   useEffect(() => {
     if (!on || !el || typeof IntersectionObserver === 'undefined') return;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let visible = false;
+    // czas liczy się tylko przy widocznej karcie przeglądarki (aplikacja w tle to nie obejrzenie)
+    const tick = () => {
+      const ok = visible && !document.hidden;
+      if (ok && !timer) timer = setTimeout(() => seen!(dzien), 1000);
+      if (!ok && timer) { clearTimeout(timer); timer = undefined; }
+    };
     const io = new IntersectionObserver(([e]) => {
       if (!e) return;
       const vh = e.rootBounds?.height ?? innerHeight;
       // mała kolumna: większa część widoczna; wysoka karta dnia: co najmniej pół ekranu
-      const ok = e.isIntersecting && (e.intersectionRatio >= 0.6 || e.intersectionRect.height >= vh * 0.5);
-      if (ok && !timer) timer = setTimeout(() => seen!(dzien), 1000);
-      if (!ok && timer) { clearTimeout(timer); timer = undefined; }
+      visible = e.isIntersecting && (e.intersectionRatio >= 0.6 || e.intersectionRect.height >= vh * 0.5);
+      tick();
     }, { threshold: [0, 0.25, 0.5, 0.6, 0.75, 1] });
     io.observe(el);
-    return () => { io.disconnect(); clearTimeout(timer); };
+    document.addEventListener('visibilitychange', tick);
+    return () => { io.disconnect(); clearTimeout(timer); document.removeEventListener('visibilitychange', tick); };
   }, [on, el, dzien, seen]);
   return setEl;
 }
@@ -233,21 +240,22 @@ function WhereSlot({ slot, ctx }: { slot: Slot; ctx: Ctx }) {
 }
 
 /** Wartość komórki: zlecenia w kolorze kategorii (z `link`: odnośnik do karty zlecenia), kody w kolorze słownika, tekst. */
-export function CellView({ slots, ctx, compact, link }: { slots: Slot[]; ctx: Ctx; compact?: boolean; link?: boolean }) {
+export function CellView({ slots, ctx, compact, link, reserve }: { slots: Slot[]; ctx: Ctx; compact?: boolean; link?: boolean; reserve?: boolean }) {
   if (!slots.length) return <span className="text-sm text-ink-2/60"><span aria-hidden>·</span><span className="sr-only">pusto</span></span>;
   return (
     <span className="grid min-w-0 gap-1">
-      {slots.map((s, i) => s.rodzaj === 'zlecenie' ? <JobChip key={i} slot={s} ctx={ctx} compact={compact} link={link} /> : <CodeChip key={i} slot={s} ctx={ctx} />)}
+      {slots.map((s, i) => s.rodzaj === 'zlecenie' ? <JobChip key={i} slot={s} ctx={ctx} compact={compact} link={link} reserve={reserve && i === 0} /> : <CodeChip key={i} slot={s} ctx={ctx} />)}
     </span>
   );
 }
 
-function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx; compact?: boolean; link?: boolean }) {
+/** `reserve`: miejsce na ✎ w rogu (tabela admina, tylko pierwsza karta komórki). */
+function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx; compact?: boolean; link?: boolean; reserve?: boolean }) {
   const j = ctx.jobs.get(slot.jobId);
   const c = ctx.cat(j?.kategoria);
   const body = (
     <span className="min-w-0 pl-2.5">
-      <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-ink-2', link && compact && 'pr-6')}>
+      <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
         <span className="shrink-0 font-semibold tabular-nums">{j?.numer ?? 'zlecenie'}</span>{slot.polDnia && <span className="shrink-0 font-bold" aria-label="pół dnia">½</span>}
         {j?.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
       </span>
@@ -286,7 +294,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   const shown = draft && Array.isArray(draft.proposal) ? (draft.proposal as Slot[]) : cur;
   const label = `${person.nazwa}, ${dayShort(dzien)}: ${cellText(shown, p.ctx.jobs)}${draft ? ' (szkic)' : ''}`;
   const hasJob = shown.some((s) => s.rodzaj === 'zlecenie');
-  const szkic = draft && <span className={cn('pointer-events-none absolute top-1 rounded-full', p.open && hasJob && compact ? 'right-8' : 'right-1', ' bg-action px-1.5 text-xs font-bold leading-4 text-action-ink')}>szkic</span>;
+  const szkic = draft && <span className={cn('pointer-events-none absolute top-1 rounded-full', p.open && hasJob ? (compact ? 'right-8' : 'right-11') : 'right-1', ' bg-action px-1.5 text-xs font-bold leading-4 text-action-ink')}>szkic</span>;
   const cls = cn('relative block h-full w-full min-w-0 rounded-xl p-1.5 text-left', draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5');
   if (p.open && !hasJob) {
     return (
@@ -301,7 +309,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
       // kliknięcie obok odnośnika (myszą) też otwiera edytor; z klawiatury i czytnika: przycisk ✎
       onClick={p.open ? (e) => { if (!(e.target as Element).closest('a,button')) p.open!(dzien, person); } : undefined}
       className={cn(cls, p.open && 'min-h-12 cursor-pointer transition-colors duration-200 hover:bg-action/8', p.open && !compact && 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1')}>
-      <CellView slots={shown} ctx={p.ctx} compact={compact} link />
+      <CellView slots={shown} ctx={p.ctx} compact={compact} link reserve={!!p.open && compact} />
       {p.open && (
         <button type="button" aria-label={`Edytuj komórkę ${person.nazwa} ${dayShort(dzien)}`} onClick={() => p.open!(dzien, person)}
           // tabela (komputer): w rogu nad paskiem numeru, żeby karta zlecenia miała całą szerokość

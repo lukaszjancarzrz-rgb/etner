@@ -102,6 +102,26 @@ describe('trasy push', () => {
     expect(push.mock.calls.map((x) => x[0].endpoint)).toEqual(['e1']);
     expect(JSON.parse(push.mock.calls[0]![1] as string)).toMatchObject({ url: '#wiecej', tag: 'test' });
   });
+  it('POST /api/push/test: najwyżej raz na 10 s na osobę (429)', async () => {
+    let now = new Date('2026-10-21T10:00:00Z');
+    const deps = testDeps({ push: async () => ({ statusCode: 201 }), now: () => now }); const app = createApp(deps);
+    const u1 = addUser(deps), u2 = addUser(deps);
+    const c1 = await loginCookie(app, u1.login), c2 = await loginCookie(app, u2.login);
+    expect((await post(app, '/api/push/test', c1, {})).status).toBe(200);
+    expect((await post(app, '/api/push/test', c1, {})).status).toBe(429);
+    expect((await post(app, '/api/push/test', c2, {})).status).toBe(200);
+    now = new Date('2026-10-21T10:00:10Z');
+    expect((await post(app, '/api/push/test', c1, {})).status).toBe(200);
+  });
+  it('to samo urządzenie zapisane przez drugą osobę: powiadomienia pierwszej już tam nie trafiają', async () => {
+    const push = vi.fn<PushSender>(async () => ({ statusCode: 201 }));
+    const deps = testDeps({ push }); const app = createApp(deps);
+    const u1 = addUser(deps), u2 = addUser(deps);
+    await post(app, '/api/push/subscribe', await loginCookie(app, u1.login), body);
+    await post(app, '/api/push/subscribe', await loginCookie(app, u2.login), body);
+    expect(await notify(deps, [u1.user.id], n)).toBe(0);
+    expect(await notify(deps, [u2.user.id], n)).toBe(1);
+  });
   it('GET /api/push/key', async () => {
     const off = await createApp(testDeps()).request('/api/push/key');
     expect(await off.json()).toEqual({ key: null });

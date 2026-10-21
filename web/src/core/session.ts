@@ -3,6 +3,7 @@ import { del, get, set } from 'idb-keyval';
 import { useSyncExternalStore } from 'react';
 import { ApiError, api, bus } from './api.js';
 import { outbox } from './outbox.js';
+import { forgetPushOnServer, pushState } from './push.js';
 import { store } from './store.js';
 import { sync } from './sync.js';
 import { dropTmp } from './write.js';
@@ -30,6 +31,7 @@ async function signedIn(me: Me) {
   outbox.resume();
   void outbox.start(); // dopiero po sprawdzeniu konta: cudze zapisy nie pójdą z nowym ciasteczkiem
   void sync.start();
+  void pushState().catch(() => {}); // istniejąca subskrypcja tego urządzenia przechodzi na zalogowaną osobę
 }
 
 /** Start aplikacji: /api/me (401 = ekran logowania; offline: zapamiętane konto). */
@@ -73,6 +75,7 @@ export async function login(login: string, haslo: string): Promise<string | null
 }
 
 export async function logout(): Promise<void> {
+  await forgetPushOnServer().catch(() => {}); // powiadomienia tej osoby nie trafiają już na urządzenie, które opuściła
   await api('/api/logout', { method: 'POST' }).catch(() => {});
   sync.stop();
   await store.clear();

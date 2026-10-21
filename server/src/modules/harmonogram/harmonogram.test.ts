@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { newId } from '@etner/shared';
 import { createApp } from '../../app.js';
-import { pushSubscriptions } from '../../core/schema-base.js';
+import { changes, pushSubscriptions } from '../../core/schema-base.js';
+import { scheduleDrafts, scheduleEntries } from './schema.js';
 import { addUser, loginCookie, testDeps } from '../../test-utils.js';
 import { modules } from '../index.js';
 import { create as newClient } from '../klienci/service.js';
@@ -71,6 +72,24 @@ describe('harmonogram', () => {
     const p = pushed(s.push);
     expect(p).toHaveLength(1);
     expect(p[0]).toMatchObject({ endpoint: 'Bartek', title: '📅 Zmiana w Twoim harmonogramie', body: `jutro: — → ${s.job.numer}`, url: '#harm/2026-10-23', tag: 'harm' });
+  });
+
+  it('szkic równy komórce: zatwierdzenie nie tworzy wpisów od nowa (brak fałszywego „nowe”)', async () => {
+    const s = await setup();
+    await draft(s, s.admin, { from: '2026-10-23', to: '2026-10-23', people: [s.pw.id], value: [zl(s.job.id)] });
+    await s.app.request('/api/schedule/approve', req(s.admin, 'POST', {}));
+    const before = s.deps.db.select().from(scheduleEntries).all();
+    const t = new Date().toISOString();
+    // szkic z tą samą wartością (np. zapisany zanim komórka się zmieniła)
+    s.deps.db.insert(scheduleDrafts).values({ id: newId(), dzien: '2026-10-23', personId: s.pw.id, proposal: [zl(s.job.id)], by: s.a.user.id, at: t, createdAt: t, updatedAt: t }).run();
+    const n = s.deps.db.select().from(changes).all().length;
+    s.push.mockClear();
+    expect((await s.app.request('/api/schedule/approve', req(s.admin, 'POST', {}))).status).toBe(200);
+    expect(s.deps.db.select().from(scheduleEntries).all()).toEqual(before);
+    expect(s.deps.db.select().from(changes).all().filter((c) => c.entity === 'schedule_entries')).toHaveLength(before.length);
+    expect(s.deps.db.select().from(changes).all().length).toBe(n + 1); // tylko usunięcie szkicu
+    expect(svc.drafts(s.deps.db)).toEqual([]);
+    expect(s.push).not.toHaveBeenCalled();
   });
 
   it('kilka zmian: tytuł z liczbą, etykiety dziś/jutro/dzień, pół dnia przez " / "', async () => {

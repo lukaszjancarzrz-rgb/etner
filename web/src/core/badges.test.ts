@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { badgeText, changedDays, freshByJob, naJutroCount, unseenDays, zakupyCount } from './badges.js';
+import { badgeText, changedDays, freshByJob, naJutroCount, staleDayKeys, unseenDays, zakupyCount } from './badges.js';
 
 const T0 = '2026-10-21T08:00:00.000Z', T1 = '2026-10-21T09:00:00.000Z', T2 = '2026-10-21T10:00:00.000Z';
 const r = (o: Record<string, unknown>) => ({ id: Math.random().toString(36), createdAt: T0, updatedAt: T0, ...o }) as any;
@@ -44,12 +44,17 @@ describe('liczniki w menu', () => {
     const w = changedDays(entries, people, { id: 'me', role: 'pracownik' });
     expect(Object.fromEntries(w)).toEqual({ '2026-10-22': T2, '2026-10-23': T2, '2026-10-24': T0 });
     expect(changedDays(entries, people, { id: 'x2', role: 'pracownik' }).size).toBe(0);
+    expect([...changedDays(entries, people, { id: 'me', role: 'pracownik' }, '2026-10-23').keys()]).toEqual(['2026-10-23', '2026-10-24']);
     // admin bez wiersza: zmiany wszystkich oprócz własnych
     expect([...changedDays(entries, people, { id: 'adm', role: 'admin' }).keys()].sort()).toEqual(['2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25']);
     const seen: Record<string, string> = { '2026-10-22': T1 };
     expect(unseenDays(w, (d) => seen[d] ?? T1)).toEqual(['2026-10-22', '2026-10-23']);
     seen['2026-10-22'] = T2; // dzień obejrzany po zmianie
     expect(unseenDays(w, (d) => seen[d] ?? T1)).toEqual(['2026-10-23']);
+  });
+
+  it('staleDayKeys: tylko obejrzane dni sprzed granicy', () => {
+    expect(staleDayKeys(['harm-day:u:2026-08-01', 'harm-day:u:2026-08-22', 'seen:j1', 'nav-seen:u:harm'], '2026-08-22')).toEqual(['harm-day:u:2026-08-01']);
   });
 
   it('zakupyCount i badgeText', () => {

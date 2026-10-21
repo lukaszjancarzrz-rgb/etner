@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { changedDays, freshByJob, naJutroCount, unseenDays, zakupyCount } from '../badges.js';
-import { daySeenAt, ensureSeenBase, seenAt, today, useDict, useMe, useSeenVersion } from '../data.js';
+import { addDays } from '@etner/shared';
+import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenAt, today, useDict, useMe, useSeenVersion } from '../data.js';
 import { useEntities } from '../store.js';
 
 /** Dni harmonogramu ze zmianą, której użytkownik jeszcze nie widział na ekranie (posortowane). */
@@ -9,7 +10,7 @@ export function useUnseenDays(): string[] {
   const ver = useSeenVersion();
   const sched = useEntities('schedule_entries');
   const people = useEntities('schedule_people');
-  return useMemo(() => (me ? unseenDays(changedDays(sched, people, me), (d) => daySeenAt(me.id, d)) : []),
+  return useMemo(() => (me ? unseenDays(changedDays(sched, people, me, addDays(today(), -DAY_SEEN_KEEP)), (d) => daySeenAt(me.id, d)) : []),
     [me, ver, sched, people]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 

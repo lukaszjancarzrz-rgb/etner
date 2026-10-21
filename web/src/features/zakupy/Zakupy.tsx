@@ -101,6 +101,7 @@ function Item({ i, statusy, flash }: { i: Rec; statusy: Rec[]; flash: boolean })
   const put = (patch: Record<string, unknown>) => updateVia('shopping', i.id, patch, { kind: 'zakupy', url: `/api/shopping/${i.id}`, method: 'PUT', body: patch }).catch(fail('Zmiana nie została zapisana'));
   const remove = () => void outbox.enqueue({ kind: 'zakupy', url: `/api/shopping/${i.id}`, method: 'DELETE', optimistic: (s) => s.remove('shopping', i.id) }).catch(fail('Nie usunięto pozycji'));
 
+  // słownik status_zakupu ma dwie wartości (seed i migracja 0010): pierwsza = Do kupienia, ostatnia = Kupione; ptaszek przełącza między nimi
   const first = statusy[0]?.wartosc, last = statusy.at(-1)?.wartosc;
   const done = i.status === last;
   const canTick = admin && !i._tmp && first && last;

@@ -1,4 +1,5 @@
-import { dayOf } from '@etner/shared';
+import { addDays, dayOf } from '@etner/shared';
+import { staleDayKeys } from './badges.js';
 import { useMemo, useSyncExternalStore } from 'react';
 import { useSession } from './session.js';
 import { useEntities, type Rec } from './store.js';
@@ -95,6 +96,9 @@ export function ensureSeenBase(userId: string, screens: string[]): void {
     const now = new Date().toISOString();
     if (!localStorage.getItem(SEEN0)) localStorage.setItem(SEEN0, now);
     for (const sc of screens) if (!localStorage.getItem(navKey(userId, sc))) localStorage.setItem(navKey(userId, sc), now);
+    // obejrzane dni starsze niż DAY_SEEN_KEEP: usuwamy (licznik i tak ich nie liczy)
+    const cut = addDays(today(), -DAY_SEEN_KEEP);
+    for (const k of staleDayKeys(Object.keys(localStorage), cut)) localStorage.removeItem(k);
   } catch { /* prywatne okno */ }
 }
 let seenVer = 0;
@@ -104,6 +108,8 @@ export function markSeen(jobId: string): void {
   try { localStorage.setItem(`seen:${jobId}`, new Date().toISOString()); } catch { /* prywatne okno */ }
   bump();
 }
+/** Ile dni wstecz liczą się zmiany harmonogramu („nowe”) i zapamiętane obejrzenia. */
+export const DAY_SEEN_KEEP = 60;
 /** Ostatnie obejrzenie dnia harmonogramu (karta / kolumna widoczna na ekranie); bez wpisu: baza z pierwszego uruchomienia. */
 export const daySeenAt = (userId: string, dzien: string): string => read(`harm-day:${userId}:${dzien}`) ?? screenSeenAt(userId, 'harm');
 export function markDaySeen(userId: string, dzien: string): void {
