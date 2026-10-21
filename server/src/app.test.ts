@@ -31,6 +31,10 @@ describe('serwowanie web/dist', () => {
     expect(await res.text()).toContain('ETNER');
   });
 
+  it('brakujący plik z rozszerzeniem to 404', async () => {
+    expect((await app.request('/brak.js')).status).toBe(404);
+  });
+
   it('nieznana ścieżka /api to 404 JSON, nie index.html', async () => {
     const res = await app.request('/api/nieznane');
     expect(res.status).toBe(404);

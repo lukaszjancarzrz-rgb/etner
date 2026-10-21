@@ -23,10 +23,11 @@ export function createApp(deps: AppDeps): Hono {
     // serveStatic przyjmuje root względem cwd
     const root = relative(process.cwd(), webDist) || '.';
     const index = readFileSync(join(webDist, 'index.html'), 'utf8');
-    app.use('/*', async (c, next) => (c.req.path.startsWith('/api/') ? next() : serveStatic({ root })(c, next)));
-    // Fallback SPA tylko dla GET/HEAD poza /api
+    const files = serveStatic({ root });
+    app.use('/*', (c, next) => (c.req.path.startsWith('/api/') ? next() : files(c, next)));
+    // Fallback SPA tylko dla GET/HEAD poza /api i bez rozszerzenia (brakujący plik to 404)
     app.notFound((c) =>
-      c.req.path.startsWith('/api/') || !['GET', 'HEAD'].includes(c.req.method)
+      c.req.path.startsWith('/api/') || !['GET', 'HEAD'].includes(c.req.method) || /\.[^/]+$/.test(c.req.path)
         ? c.json({ error: 'Nie znaleziono' }, 404)
         : c.html(index),
     );
