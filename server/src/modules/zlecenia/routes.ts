@@ -1,4 +1,4 @@
-import { jobCreateSchema, jobUpdateSchema, scopeCreateSchema, scopeOrderSchema, scopeUpdateSchema } from '@etner/shared';
+import { jobCreateSchema, jobUpdateSchema, pumbleSendSchema, scopeCreateSchema, scopeOrderSchema, scopeUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -8,7 +8,12 @@ import { logError } from '../../core/errors.js';
 import { notify } from '../../core/notify.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
+import { PumbleError } from '../../core/pumble.js';
+import { opIds } from '../../core/schema-base.js';
+import { eq } from 'drizzle-orm';
+import * as pumble from './pumble.js';
 import * as scope from './scope.js';
+import * as users from '../uzytkownicy/service.js';
 import * as svc from './service.js';
 
 export function routes(app: Hono, deps: AppDeps): void {
@@ -29,10 +34,20 @@ export function routes(app: Hono, deps: AppDeps): void {
     const { opId, ...d } = input;
     const uid = c.get('user').id;
     const out: svc.Outbox = [];
+    const prev = id ? svc.get(db, id) : undefined;
     const { result, dup } = runOp(db, opId, uid, () => svc.save(db, uid, { ...d, id }, out));
     if (!result) throw new HTTPException(404, { message: 'Nie znaleziono' });
     // Po commit; błąd wysyłki nie może zamienić zapisanego zlecenia w 500.
     if (!dup) for (const o of out) await notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, uid));
+    if (deps.pumble && !dup) {
+      const log = (e: unknown) => logError(db, 'pumble', e, uid);
+      if (!id) {
+        const r = await pumble.ensureChannel(deps, result.id).catch(log);
+        if (r) return c.json(r); // z id kanału
+      } else if (prev && prev.ekipa !== result.ekipa && result.ekipa && result.ekipa !== 'mieszane') {
+        await pumble.addPeople(deps, result.id, users.crewMembers(db, result.ekipa)).catch(log);
+      }
+    }
     return c.json(result);
   };
   app.post('/api/jobs', admin, async (c) => write(c, await body(c, jobCreateSchema)));
@@ -57,4 +72,30 @@ export function routes(app: Hono, deps: AppDeps): void {
     nf(scope.remove(db, c.get('user').id, c.req.param('id')) || undefined);
     return c.json({ ok: true });
   });
+
+  // Pumble (zadanie 18g): bez klucza tylko status, reszta tras nie istnieje.
+  app.get('/api/pumble/status', requireUser(db), (c) => c.json({ enabled: !!deps.pumble }));
+  if (!deps.pumble) return;
+  const pumbleFail = (e: unknown, c: Context) => {
+    if (!(e instanceof PumbleError)) throw e;
+    logError(db, `${c.req.method} ${c.req.path}`, e, c.get('user').id);
+    return c.json({ error: 'PUMBLE' }, 502);
+  };
+  app.post('/api/jobs/:id/pumble', requireUser(db), async (c) => {
+    const { opId, text } = await body(c, pumbleSendSchema);
+    const uid = c.get('user').id;
+    const prev = opId ? db.select().from(opIds).where(eq(opIds.opId, opId)).get() : undefined;
+    if (prev && prev.userId === uid) return c.json(prev.result); // powtórzone kliknięcie: nie wysyłamy drugi raz
+    try {
+      const row = await pumble.send(deps, c.get('user'), c.req.param('id'), text);
+      if (opId) runOp(db, opId, uid, () => row);
+      return c.json(row);
+    } catch (e) { return pumbleFail(e, c); }
+  });
+  app.post('/api/jobs/:id/pumble/channel', admin, async (c) => {
+    try {
+      return c.json(view(c, nf(await pumble.ensureChannel(deps, c.req.param('id'), true))));
+    } catch (e) { return pumbleFail(e, c); }
+  });
+  app.get('/api/pumble/link/:jobId', requireUser(db), async (c) => c.json({ url: await pumble.link(deps, c.req.param('jobId')) }));
 }

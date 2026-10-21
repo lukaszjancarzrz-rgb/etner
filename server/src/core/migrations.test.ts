@@ -97,7 +97,8 @@ describe('migracje z danymi', () => {
     expect(ch.map(key).sort()).toEqual(['dict:k3:delete', 'dict:k4:delete', 'dict:r3:delete', 'jobs:j1:update', 'jobs:j2:update', 'leads:l1:update', ...ids].sort());
     // pełny wiersz w kształcie Drizzle (telefon podmienia cały rekord)
     const after = (id: string) => JSON.parse(ch.find((x) => x.entity_id === id && x.action === 'update')!.after);
-    expect(Object.keys(after('j1')).sort()).toEqual(Object.keys(getTableColumns(jobs)).sort());
+    // kolumny dodane po 0012 (0013: pumbleChannelId) nie mogły być w tym wierszu
+    expect(Object.keys(after('j1')).sort()).toEqual(Object.keys(getTableColumns(jobs)).filter((k) => k !== 'pumbleChannelId').sort());
     expect(after('j1')).toMatchObject({ kategoria: 'Inne', rodzaj: 'montaż', uwagiAdmin: 'tajne', updatedAt: T });
     expect(after('j2')).toMatchObject({ rodzaj: 'inne' });
     expect(Object.keys(after('l1')).sort()).toEqual(Object.keys(getTableColumns(leads)).sort());

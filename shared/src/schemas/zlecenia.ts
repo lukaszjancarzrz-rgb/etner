@@ -40,3 +40,6 @@ export type ScopeCreate = z.infer<typeof scopeCreateSchema>;
 export const scopeUpdateSchema = z.object({ opId: z.string().min(1).optional(), tekst: scopeTekst, uploads, removePhotos: uploads }).partial();
 export type ScopeUpdate = z.infer<typeof scopeUpdateSchema>;
 export const scopeOrderSchema = z.object({ opId: z.string().min(1).optional(), ids: z.array(z.string().min(1)).min(1).max(500) });
+
+/** Wiadomość do kanału Pumble zlecenia (wysyła serwer jako bot, z imieniem autora). */
+export const pumbleSendSchema = z.object({ opId: z.string().min(1).optional(), text: txt.min(1, 'Wpisz wiadomość').max(4000, 'Wiadomość jest za długa') });

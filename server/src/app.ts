@@ -8,6 +8,7 @@ import type { Db } from './core/db.js';
 import { mountAuth } from './core/auth.js';
 import { logError } from './core/errors.js';
 import type { FileStore } from './core/files.js';
+import type { PumbleClient } from './core/pumble.js';
 import { mountFiles } from './core/files-route.js';
 import { mountPush, type PushSender } from './core/notify.js';
 import { registerModules, type ModuleDef } from './core/registry.js';
@@ -37,6 +38,8 @@ export interface AppDeps {
   clientHasJobs?: (clientId: string) => boolean;
   /** Tryb demo (DEMO=1): konta do wyboru na ekranie logowania; brak = trasa /api/demo/konta nie istnieje. */
   demoAccounts?: () => { name: string; role: string; ekipa: string | null; login: string; haslo: string }[];
+  /** Pumble (PUMBLE_API_KEY); brak = kanały zleceń wyłączone. */
+  pumble?: PumbleClient;
   /** Cookie Secure; domyślnie włączone w produkcji. */
   secureCookie?: boolean;
 }

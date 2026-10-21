@@ -8,7 +8,7 @@ import { logError } from '../../core/errors.js';
 import { notify } from '../../core/notify.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
-import type { Outbox } from '../zlecenia/service.js';
+import { pumbleAddPeople, type Outbox } from '../zlecenia/service.js';
 import * as svc from './service.js';
 
 export function routes(app: Hono, deps: AppDeps): void {
@@ -36,9 +36,12 @@ export function routes(app: Hono, deps: AppDeps): void {
     szkice(c);
     const b = await body(c, scheduleApproveSchema);
     const out: Outbox = [];
-    const { result, dup } = runOp(db, b.opId, me(c).id, () => svc.approve(db, me(c).id, b.items, now(), out));
+    const touched = new Set<string>();
+    const { result, dup } = runOp(db, b.opId, me(c).id, () => svc.approve(db, me(c).id, b.items, now(), out, touched));
     // Po commit; błąd wysyłki nie cofa zatwierdzenia.
     if (!dup) for (const o of out) await notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, me(c).id));
+    // nowe osoby zlecenia → jego kanał Pumble (już dodane są pomijane)
+    if (!dup && deps.pumble) for (const j of touched) await pumbleAddPeople(deps, j, svc.peopleForJob(db, j)).catch((e) => logError(db, 'pumble', e, me(c).id));
     return c.json(result);
   });
   app.post('/api/schedule/discard', auth, async (c) => {

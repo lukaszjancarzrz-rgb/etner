@@ -37,7 +37,7 @@ export const admins = (db: Db): string[] =>
 
 export class LoginTakenError extends Error {}
 
-type NewUser = { login: string; name: string; role: 'pracownik' | 'admin'; perms: string[]; ekipa?: string | null; scheduleCol?: string | null };
+type NewUser = { login: string; name: string; role: 'pracownik' | 'admin'; perms: string[]; ekipa?: string | null; scheduleCol?: string | null; email?: string | null };
 export function create(db: Db, by: string, d: NewUser & { passwordHash: string }): PublicUser {
   if (loginTaken(db, d.login)) throw new LoginTakenError();
   const { passwordHash, ...rest } = d;

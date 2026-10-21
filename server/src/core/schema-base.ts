@@ -27,6 +27,8 @@ export const users = sqliteTable('users', {
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   ekipa: text('ekipa'),
   scheduleCol: text('schedule_col'),
+  /** Małymi literami; po nim szukamy konta w Pumble. */
+  email: text('email'),
 });
 
 export const sessions = sqliteTable('sessions', {

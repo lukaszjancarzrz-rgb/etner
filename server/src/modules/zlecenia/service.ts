@@ -12,6 +12,8 @@ import * as users from '../uzytkownicy/service.js';
 import { jobs } from './schema.js';
 
 export type JobRow = typeof jobs.$inferSelect;
+/** Dla harmonogramu: nowe osoby zlecenia trafiają do jego kanału Pumble. */
+export { addPeople as pumbleAddPeople } from './pumble.js';
 export type JobRef = { id: string; numer: string; klient: string; miejscowosc: string; status: string };
 /** Powiadomienie do wysłania dopiero po zatwierdzeniu transakcji. */
 export type Outbox = { userIds: string[]; n: Notification }[];

@@ -125,7 +125,7 @@ const dayLabel = (dzien: string, today: string): string =>
  * Wywołuj w runOp. Zatwierdza szkice o zgodnym hashu (bez `items` – wszystkie bieżące).
  * Szkic zmieniony w międzyczasie przez innego admina zostaje. Powiadomienia trafiają do `out`.
  */
-export function approve(db: Db, by: string, items: { key: string; proposalHash: string }[] | undefined, now: Date, out: Outbox = []): { applied: string[]; skipped: string[] } {
+export function approve(db: Db, by: string, items: { key: string; proposalHash: string }[] | undefined, now: Date, out: Outbox = [], jobsTouched = new Set<string>()): { applied: string[]; skipped: string[] } {
   const seen = items && new Map(items.map((i) => [i.key, i.proposalHash]));
   const applied: string[] = [], skipped: string[] = [];
   const people = new Map(users.listPeople(db).map((p) => [p.id, p]));
@@ -146,6 +146,7 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
       }
       const slots = d.proposal as ScheduleSlot[];
       slots.forEach((s, slot) => {
+        if (s.rodzaj === 'zlecenie') jobsTouched.add(s.jobId);
         const row = db.insert(scheduleEntries).values({ id: newId(), dzien: d.dzien, personId: d.personId!, rodzaj: s.rodzaj,
           jobId: s.rodzaj === 'zlecenie' ? s.jobId : null, kod: s.rodzaj === 'kod' ? s.kod : null, tekst: s.rodzaj === 'tekst' ? s.tekst : null,
           polDnia: s.polDnia, slot, createdAt: ts, createdBy: by, updatedAt: ts }).returning().get();

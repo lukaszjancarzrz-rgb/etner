@@ -39,6 +39,16 @@ Plik `render.yaml` opisuje usługę z danymi przykładowymi (tryb demo). Dane le
 
 Darmowa usługa usypia się po kwadransie bez ruchu; pierwsze wejście po przerwie trwa około minuty.
 
+## Pumble (kanał przy każdym zleceniu)
+
+Przy nowym zleceniu serwer zakłada prywatny kanał Pumble (np. `z0012-kowalski-zawoja`) i dodaje do niego administratorów, ekipę zlecenia i osoby z harmonogramu. Na karcie zlecenia widać ostatnie wiadomości kanału, można napisać do kanału i przejść do Pumble.
+
+1. W Pumble (konto właściciela) otwórz **Apps**, znajdź i zainstaluj dodatek **„API Keys”**.
+2. W dodatku wygeneruj nowy klucz i skopiuj go.
+3. Na Render w ustawieniach usługi (Environment) wklej klucz jako sekret `PUMBLE_API_KEY` i wdroż ponownie.
+
+Bez klucza funkcja jest wyłączona, a sekcji „Pumble” na karcie nie ma. Osoby łączymy po adresie e-mail: e-mail konta w ETNER musi być taki sam jak e-mail tej osoby w Pumble. Kogo nie da się dopasować, ten nie zostanie dodany do kanału (lista trafia do dziennika błędów serwera). Wiadomości wysłane z ETNER idą jako bot z imieniem autora („Bartek Gawlik: …”). Nowe wiadomości z Pumble pojawiają się na karcie po około 20 sekundach.
+
 ## Pierwszy administrator (baza produkcyjna)
 
 Świeża baza nie ma żadnego konta. Po zbudowaniu (`pnpm -r build`), na serwerze z ustawionym `DATA_DIR`:

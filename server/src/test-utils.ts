@@ -24,7 +24,7 @@ let seq = 0;
 /** Tworzy użytkownika ze znanym loginem i hasłem (TEST_PASSWORD). */
 export function addUser(
   deps: AppDeps,
-  o: Partial<Pick<User, 'name' | 'role' | 'perms' | 'ekipa' | 'scheduleCol' | 'active'>> = {},
+  o: Partial<Pick<User, 'name' | 'role' | 'perms' | 'ekipa' | 'scheduleCol' | 'active' | 'email'>> = {},
 ): { user: User; login: string; haslo: string } {
   const login = `u${++seq}`;
   const now = new Date().toISOString();
