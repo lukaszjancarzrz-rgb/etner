@@ -1,0 +1,32 @@
+# Render Blueprint: wersja testowa (demo) do sprawdzenia przez właściciela.
+# Dane w /tmp/etner znikają przy każdym wdrożeniu lub uśpieniu (plan free) i wracają jako dane demo.
+services:
+  - type: web
+    name: etner-demo
+    runtime: node
+    plan: free
+    branch: modul-1
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    startCommand: node server/dist/main.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DEMO
+        value: "1"
+      - key: DATA_DIR
+        value: /tmp/etner
+      - key: APP_SECRET
+        generateValue: true
+      # Adres usługi, np. https://etner-demo.onrender.com (linki logowania); pusty = adres z zapytania.
+      - key: BASE_URL
+        sync: false
+      # Testowy bucket R2 (osobny od produkcyjnego); puste = zdjęcia na dysku w DATA_DIR.
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_KEY
+        sync: false
+      - key: R2_SECRET
+        sync: false
