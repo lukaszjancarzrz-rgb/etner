@@ -8,6 +8,7 @@ import { dziennik } from './dziennik/index.js';
 import { naJutro } from './na-jutro/index.js';
 import { zakupy } from './zakupy/index.js';
 import { zadania } from './zadania/index.js';
+import { harmonogram } from './harmonogram/index.js';
 
 /** Jedyne miejsce rejestracji modułów (createApp w main.ts i w testach). */
-export const modules: ModuleDef[] = [slowniki, uzytkownicy, klienci, zlecenia, leady, dziennik, naJutro, zakupy, zadania];
+export const modules: ModuleDef[] = [slowniki, uzytkownicy, klienci, zlecenia, leady, dziennik, naJutro, zakupy, zadania, harmonogram];
