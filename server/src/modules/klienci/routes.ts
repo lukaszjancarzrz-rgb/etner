@@ -37,7 +37,8 @@ export function routes(app: Hono, deps: AppDeps): void {
     const { opId, ...d } = await body(c, clientUpdateSchema);
     const { result } = runOp(db, opId, me(c), () => svc.update(db, me(c), c.req.param('id'), d));
     if (!result) throw notFound();
-    return c.json(result);
+    // ostrzeżenie (nie blokada), jak przy zakładaniu
+    return c.json({ ...result, duplicates: svc.findDuplicates(db, result, result.id) });
   });
 
   app.post('/api/clients/:id/sites', admin, async (c) => {

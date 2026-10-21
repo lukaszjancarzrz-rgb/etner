@@ -1,13 +1,16 @@
 import { fmtZl } from '@etner/shared';
-import { ArrowLeft, Briefcase, EnvelopeSimple, MagnifyingGlass, MapPin, NavigationArrow, Phone, UsersThree } from '@phosphor-icons/react';
+import { ArrowLeft, Briefcase, EnvelopeSimple, MagnifyingGlass, MapPin, NavigationArrow, PencilSimple, Phone, Plus, UsersThree } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { fmtDay, mapsUrl, matches, telHref, useIsAdmin, useLoading } from '../../core/data.js';
-import { useEntities, useEntity } from '../../core/store.js';
+import { useEntities, useEntity, type Rec } from '../../core/store.js';
 import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
+import { Button } from '../../core/ui/button.js';
 import { Input } from '../../core/ui/input.js';
+import { withoutEchoes } from '../../core/write.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import type { Route } from '../../routes.js';
 import { fmtTermin } from '../zlecenia/JobCard.js';
+import { ClientForm, SiteForm } from './ClientForms.js';
 
 export function Klienci({ route }: { route: Route }) {
   return route.param ? <ClientCard id={route.param} /> : <ClientList />;
@@ -58,7 +61,8 @@ function ClientCard({ id }: { id: string }) {
   const allSites = useEntities('sites');
   const allJobs = useEntities('jobs');
   const allLeads = useEntities('leads');
-  const sites = useMemo(() => allSites.filter((s) => s.clientId === id), [allSites, id]);
+  const sites = useMemo(() => withoutEchoes(allSites.filter((s) => s.clientId === id), ['nazwa', 'adres', 'miejscowosc']), [allSites, id]);
+  const [form, setForm] = useState<null | { kind: 'client' } | { kind: 'site'; site?: Rec }>(null);
   const jobs = useMemo(() => allJobs.filter((j) => j.clientId === id).sort((a, b) => String(b.numer).localeCompare(String(a.numer), 'pl', { numeric: true })), [allJobs, id]);
   const leads = useMemo(() => allLeads.filter((l) => l.clientId === id), [allLeads, id]);
 
@@ -71,7 +75,10 @@ function ClientCard({ id }: { id: string }) {
       <div className="grid gap-4 rounded-2xl border border-line bg-card p-5 shadow-card">
         <div>
           {c.typ && <p className="text-sm text-ink-2">{c.typ === 'firma' ? 'Firma' : 'Osoba prywatna'}{c.nip ? `, NIP ${c.nip}` : ''}</p>}
-          <h2 className="font-wide text-2xl font-extrabold leading-tight">{c.nazwa}</h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-wide text-2xl font-extrabold leading-tight">{c.nazwa}</h2>
+            {admin && <Button variant="secondary" size="sm" aria-label="Edytuj klienta" onClick={() => setForm({ kind: 'client' })}><PencilSimple className="h-4 w-4" />Edytuj</Button>}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {(c.telefony ?? []).map((t: string) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-full bg-action px-5 font-semibold text-action-ink"><Phone className="h-5 w-5" weight="fill" />{t}</a>)}
@@ -83,22 +90,29 @@ function ClientCard({ id }: { id: string }) {
 
       <div className="grid gap-2">
         <SectionTitle count={sites.length}>Obiekty</SectionTitle>
-        {!sites.length ? <p className="text-sm text-ink-2">Brak obiektów. Adres dodaje się przy zleceniu.</p> : (
+        {!sites.length ? <p className="text-sm text-ink-2">Brak obiektów.{admin ? '' : ' Adres dodaje się przy zleceniu.'}</p> : (
           <ul className="grid gap-2">
             {sites.map((s) => {
               const nav = mapsUrl(s);
               return (
-                <li key={s.id} className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3">
+                <li key={s.id} className="grid gap-3 rounded-2xl border border-line bg-card px-4 py-3 min-[560px]:flex min-[560px]:items-center min-[560px]:justify-between">
                   <span className="flex min-w-0 items-start gap-2"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-ink-2" />
                     <span className="min-w-0"><span className="block font-semibold">{s.nazwa || s.miejscowosc || 'Obiekt'}</span><span className="block text-sm text-ink-2">{[s.adres, s.miejscowosc].filter(Boolean).join(', ')}</span>{s.opis && <span className="block text-sm">{s.opis}</span>}</span>
                   </span>
-                  {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><NavigationArrow className="h-4 w-4" />Nawiguj</a>}
+                  <span className="flex shrink-0 flex-wrap gap-2 pl-7 min-[560px]:pl-0">
+                    {admin && <Button variant="ghost" size="sm" className="h-11" aria-label={`Edytuj obiekt ${s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ')}`} onClick={() => setForm({ kind: 'site', site: s })}><PencilSimple className="h-4 w-4" />Edytuj</Button>}
+                    {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><NavigationArrow className="h-4 w-4" />Nawiguj</a>}
+                  </span>
                 </li>
               );
             })}
           </ul>
         )}
+        {admin && <Button variant="ghost" size="sm" className="justify-self-start text-action" onClick={() => setForm({ kind: 'site' })}><Plus className="h-4 w-4" weight="bold" />Dodaj obiekt</Button>}
       </div>
+
+      {form?.kind === 'client' && <ClientForm client={c} onClose={() => setForm(null)} />}
+      {form?.kind === 'site' && <SiteForm clientId={id} site={form.site} onClose={() => setForm(null)} />}
 
       {admin && (
         <div className="grid gap-2">

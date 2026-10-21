@@ -145,3 +145,53 @@ test('harmonogram: widok miesiąca na komputerze', async ({ page }, info) => {
   await page.locator(`[data-cell="${t}|Bartek Gawlik"]`).click();
   await expect(page.getByRole('dialog', { name: 'Bartek Gawlik' })).toBeVisible();
 });
+
+test('klienci: admin zmienia telefon i adres obiektu, zmiana na karcie zlecenia; pracownik bez edycji', async ({ page, browser }, info) => {
+  const phone = info.project.name.startsWith('iPhone');
+  const [who, tel, adres] = phone ? ['Maria Cholewa', '601 202 303', 'ul. Kościuszki 14'] : ['Stanisław Mrówka', '602 303 404', 'Stryszawa 541'];
+  await loginAdmin(page);
+  await page.goto('/#kl');
+  await page.getByRole('link', { name: new RegExp(who) }).click();
+  await expect(page.getByRole('heading', { name: who, level: 2 })).toBeVisible();
+  const clientUrl = new URL(page.url()).hash;
+
+  await page.getByRole('button', { name: 'Edytuj klienta' }).click();
+  const form = page.getByRole('dialog', { name: 'Edycja klienta' });
+  await form.getByLabel('Telefon 1', { exact: true }).fill(tel);
+  await form.getByRole('button', { name: 'Dodaj e-mail' }).click();
+  await form.getByLabel('E-mail 1', { exact: true }).fill('zly-adres');
+  await form.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(form.getByText('Niepoprawny adres e-mail')).toBeVisible();
+  await expect(form.getByLabel('Telefon 1', { exact: true })).toHaveValue(tel); // wartości zostają
+  await form.getByRole('button', { name: 'Usuń: e-mail 1' }).click();
+  await form.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(form).toBeHidden();
+  await expect(page.getByRole('link', { name: tel })).toBeVisible();
+
+  await page.getByRole('button', { name: /^Edytuj obiekt/ }).first().click();
+  const sf = page.getByRole('dialog', { name: 'Edycja obiektu' });
+  await sf.getByLabel('Adres', { exact: true }).fill(adres);
+  await sf.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(sf).toBeHidden();
+  await expect(page.getByText(adres)).toBeVisible();
+
+  await page.getByRole('link', { name: /Z\d+/ }).first().click();
+  await expect(page.getByRole('link', { name: who, exact: true })).toBeVisible();
+  await expect(page.getByText(adres).first()).toBeVisible();
+  await expect(page.locator(`a[href^="tel:"]`, { hasText: tel })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(adres).first()).toBeVisible();
+
+  // pracownik: karta klienta bez „Edytuj”
+  const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
+  const w = await ctx.newPage();
+  await w.goto('/');
+  await w.getByRole('button', { name: /Bartek Gawlik/ }).click();
+  await expect(w.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
+  await w.goto(`/${clientUrl}`);
+  await expect(w.getByRole('heading', { name: who, level: 2 })).toBeVisible();
+  await expect(w.getByRole('link', { name: tel })).toBeVisible();
+  await expect(w.getByRole('button', { name: /Edytuj/ })).toHaveCount(0);
+  await expect(w.getByRole('button', { name: 'Dodaj obiekt' })).toHaveCount(0);
+  await ctx.close();
+});

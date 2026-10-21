@@ -55,7 +55,7 @@ export function search(db: Db, q: string): ClientHit[] {
 }
 
 /** Inni klienci z tym samym telefonem lub e-mailem (ostrzeżenie, nie blokada). */
-function findDuplicates(db: Db, c: Pick<ClientRow, 'telefony' | 'emaile'>, exceptId?: string): ClientHit[] {
+export function findDuplicates(db: Db, c: Pick<ClientRow, 'telefony' | 'emaile'>, exceptId?: string): ClientHit[] {
   const ph = new Set(c.telefony.map(phoneDigits).filter(Boolean));
   const em = new Set(c.emaile.map((e) => e.toLowerCase()));
   // shortcut: skan wszystkich klientów, przy tysiącach rekordów przejść na tabelę kontaktów z indeksem

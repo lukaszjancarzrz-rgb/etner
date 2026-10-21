@@ -44,6 +44,19 @@ describe('klienci: wyszukiwanie', () => {
   });
 });
 
+describe('klienci: edycja', () => {
+  it('PUT /api/clients/:id zwraca innych klientów z tym samym telefonem (bez samego siebie)', async () => {
+    const { app, admin, db, uid } = await setup();
+    const a = create(db, uid, { ...base, nazwa: 'A', telefony: ['727728903'] });
+    const b = create(db, uid, { ...base, nazwa: 'B', telefony: ['600100100'] });
+    const r = await (await app.request(`/api/clients/${b.client.id}`, json(admin, 'PUT', { telefony: ['600100100', '+48 727 728 903'] }))).json();
+    expect(r).toMatchObject({ id: b.client.id, telefony: ['600100100', '+48 727 728 903'] });
+    expect(r.duplicates.map((d: { id: string }) => d.id)).toEqual([a.client.id]);
+    const r2 = await (await app.request(`/api/clients/${a.client.id}`, json(admin, 'PUT', { nazwa: 'A2' }))).json();
+    expect(r2.duplicates.map((d: { id: string }) => d.id)).toEqual([b.client.id]);
+  });
+});
+
 describe('klienci: częściowa zmiana obiektu', () => {
   it('PUT /api/sites bez pól nie kasuje pozostałych', async () => {
     const { app, admin, db, uid } = await setup();

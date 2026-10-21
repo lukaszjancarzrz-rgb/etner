@@ -3,7 +3,7 @@ import { outbox, type Write } from './outbox.js';
 import { store, type Rec } from './store.js';
 
 /** Encje, w których powstają rekordy tymczasowe (`_tmp`) do czasu odpowiedzi serwera. */
-const TMP_ENTITIES = ['jobs', 'diary_entries', 'attachments', 'shopping', 'schedule_drafts'];
+const TMP_ENTITIES = ['jobs', 'diary_entries', 'attachments', 'shopping', 'schedule_drafts', 'sites'];
 export const tmpId = () => `tmp-${newId()}`;
 
 /**
