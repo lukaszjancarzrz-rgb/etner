@@ -3,7 +3,8 @@ import type { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import type { User } from '@etner/shared';
 import type { AppDeps } from '../app.js';
-import { requireUser } from './auth.js';
+import { requireUser, sessionAlive } from './auth.js';
+import { logError } from './errors.js';
 import { changeBusOf, changesSince, type ChangeRow } from './changes.js';
 import { can } from './permissions.js';
 import { modulesOf } from './registry.js';
@@ -17,7 +18,7 @@ const PING_MS = 25_000;
 
 /** Jedyny filtr widoczności (changes, strumień, snapshot). Domyślnie: tylko admin. `before` nigdy nie wychodzi. */
 function toOut(app: Hono, deps: AppDeps, user: User, ch: ChangeRow): ChangeOut | null {
-  const owner = modulesOf(app).find((m) => m.tables && ch.entity in m.tables);
+  const owner = modulesOf(app).find((m) => m.tables && Object.hasOwn(m.tables, ch.entity));
   const r = owner?.visibleTo ? owner.visibleTo(user, ch, deps) : can(user, 'admin');
   if (!r) return null;
   const v = r === true ? ch : r;
@@ -65,26 +66,42 @@ export function mountSync(app: Hono, deps: AppDeps): void {
 
   app.get('/api/stream', auth, (c) => {
     const user = c.get('user');
-    let cursor = sinceOf(c.req.query('since'));
+    const sid = c.get('sessionId');
+    let cursor = Math.max(sinceOf(c.req.query('since')), sinceOf(c.req.header('last-event-id')));
     return streamSSE(c, async (stream) => {
       const client = { user };
       clients.add(client);
+      let stop!: () => void;
+      const closed = new Promise<void>((res) => (stop = res));
+      stream.onAbort(stop);
+      // Sesja unieważniona lub użytkownik wyłączony: kończymy, klient zaloguje się ponownie.
+      const alive = async () => {
+        if (sessionAlive(db, sid)) return true;
+        await stream.writeSSE({ event: 'session-expired', data: '' }).catch(() => {});
+        stop();
+        return false;
+      };
       // Jedna kolejka: backlog i zmiany na żywo idą po kolei, bez dubli i dziur.
       let q: Promise<void> = Promise.resolve();
       const drain = () => {
         q = q.then(async () => {
+          if (!(await alive())) return;
           for (;;) {
             const p = page(user, cursor);
             for (const o of p.out) await stream.writeSSE({ event: 'change', id: String(o.seq), data: JSON.stringify(o) });
             cursor = p.last;
             if (!p.more) return;
           }
-        }).catch(() => {});
+        }).catch((e) => {
+          logError(db, 'GET /api/stream', e);
+          stop(); // klient połączy się ponownie
+        });
       };
       const bus = changeBusOf(db);
       bus.on('change', drain);
-      const ping = setInterval(() => void stream.writeSSE({ event: 'ping', data: '' }).catch(() => {}), PING_MS);
-      const closed = new Promise<void>((res) => stream.onAbort(res));
+      const ping = setInterval(() => {
+        q = q.then(async () => { if (await alive()) await stream.writeSSE({ event: 'ping', data: '' }); }).catch(stop);
+      }, PING_MS);
       drain();
       await closed;
       clearInterval(ping);

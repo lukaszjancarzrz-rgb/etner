@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
+import { desc } from 'drizzle-orm';
 import { addUser, loginCookie, testDeps } from '../test-utils.js';
 import { recordChange } from './changes.js';
+import { revokeUser } from './auth.js';
 import { registerModules } from './registry.js';
-import { firmy, users } from './schema-base.js';
+import { errors, firmy, users } from './schema-base.js';
 
 // 'firmy': tylko admin; 'users': widoczne dla wszystkich, bez pola `tajne`. Encja 'nikt' nie ma właściciela.
 async function setup() {
@@ -127,5 +129,58 @@ describe('GET /api/stream', () => {
     expect(JSON.stringify(w)).not.toContain('tajne');
     await sa.close();
     await sw.close();
+  });
+});
+
+describe('strumień: błędy i sesja', () => {
+  const drained = async (res: Response) => {
+    const r = res.body!.getReader();
+    let s = '';
+    for (;;) { const { value, done } = await r.read(); if (done) return s; s += new TextDecoder().decode(value); }
+  };
+
+  it('błąd visibleTo jest logowany, a strumień się kończy', async () => {
+    const deps = testDeps();
+    const app = createApp(deps);
+    registerModules(app, deps, [{ name: 'zly', routes() {}, tables: { firmy }, visibleTo: () => { throw new Error('boom'); } }]);
+    const { token } = addUser(deps, { role: 'admin' });
+    recordChange(deps.db, null, 'firmy', 'f1', 'create', null, {});
+    await drained(await get(app, '/api/stream?since=0', await loginCookie(app, token)));
+    expect(deps.db.select().from(errors).orderBy(desc(errors.id)).get()?.message).toContain('boom');
+  });
+
+  it('unieważniona sesja: session-expired i koniec strumienia', async () => {
+    const { deps, app } = await setup();
+    const w = addUser(deps);
+    const cookie = await loginCookie(app, w.token);
+    const res = await get(app, '/api/stream?since=0', cookie);
+    revokeUser(deps.db, w.user.id);
+    recordChange(deps.db, null, 'users', 'u1', 'update', null, { a: 1 });
+    const body = await drained(res);
+    expect(body).toContain('event: session-expired');
+    expect(body).not.toContain('event: change');
+  });
+
+  it('Last-Event-ID wyprzedza since', async () => {
+    const { deps, app, admin } = await setup();
+    for (let i = 0; i < 3; i++) recordChange(deps.db, null, 'firmy', `f${i}`, 'create', null, {});
+    const res = await app.request('/api/stream?since=0', { headers: { cookie: admin, 'last-event-id': '2' } });
+    const reader = res.body!.getReader();
+    const { value } = await reader.read();
+    const txt = new TextDecoder().decode(value);
+    await reader.cancel();
+    expect(txt).toContain('id: 3');
+    expect(txt).not.toContain('id: 2');
+  });
+
+  it('moduł z tables bez visibleTo: tylko admin', async () => {
+    const deps = testDeps();
+    const app = createApp(deps);
+    registerModules(app, deps, [{ name: 'gol', routes() {}, tables: { firmy } }]);
+    recordChange(deps.db, null, 'firmy', 'f1', 'create', null, {});
+    const a = await loginCookie(app, addUser(deps, { role: 'admin' }).token);
+    const w = await loginCookie(app, addUser(deps).token);
+    expect(((await (await get(app, '/api/changes?since=0', a)).json()) as any).changes).toHaveLength(1);
+    expect(((await (await get(app, '/api/changes?since=0', w)).json()) as any).changes).toHaveLength(0);
   });
 });

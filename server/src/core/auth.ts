@@ -31,6 +31,16 @@ export function revokeUser(db: Db, userId: string): void {
   db.delete(sessions).where(eq(sessions.userId, userId)).run();
 }
 
+const live = (r: { s: typeof sessions.$inferSelect; u: typeof users.$inferSelect }, now: Date) =>
+  r.s.expiresAt > now.toISOString() && r.u.active && !r.u.deletedAt;
+
+/** Czy sesja nadal istnieje, nie wygasła, a użytkownik jest aktywny (długie połączenia SSE). */
+export function sessionAlive(db: Db, sessionId: string): boolean {
+  const row = db.select({ s: sessions, u: users }).from(sessions).innerJoin(users, eq(users.id, sessions.userId))
+    .where(eq(sessions.id, sessionId)).get();
+  return !!row && live(row, new Date());
+}
+
 export function requireUser(db: Db): MiddlewareHandler {
   return async (c, next) => {
     const tok = getCookie(c, COOKIE);
@@ -39,7 +49,7 @@ export function requireUser(db: Db): MiddlewareHandler {
           .where(eq(sessions.tokenHash, hashToken(tok))).get()
       : undefined;
     const now = new Date();
-    if (!row || row.s.expiresAt <= now.toISOString() || !row.u.active || row.u.deletedAt) {
+    if (!row || !live(row, now)) {
       return c.json({ error: 'SESJA' }, 401);
     }
     // przesuwamy last_seen najwyżej raz na godzinę
