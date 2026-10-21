@@ -1,15 +1,20 @@
 import { randomBytes } from 'node:crypto';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { Hono } from 'hono';
 import { newId, type User } from '@etner/shared';
 import type { AppDeps } from './app.js';
 import { hashToken } from './core/auth.js';
+import { diskStore } from './core/files.js';
 import { migrate, openDb } from './core/db.js';
 import { users } from './core/schema-base.js';
 
 export function testDeps(over: Partial<AppDeps> = {}): AppDeps {
   const db = openDb(':memory:');
   migrate(db);
-  return { version: 'test', db, ...over };
+  const secret = 'test-secret';
+  return { version: 'test', db, secret, files: diskStore(mkdtempSync(join(tmpdir(), 'etner-files-')), secret), ...over };
 }
 
 /** Tworzy użytkownika ze znanym tokenem linku logowania. */

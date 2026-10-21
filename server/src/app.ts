@@ -7,11 +7,16 @@ import { HTTPException } from 'hono/http-exception';
 import type { Db } from './core/db.js';
 import { mountAuth } from './core/auth.js';
 import { logError } from './core/errors.js';
+import type { FileStore } from './core/files.js';
+import { mountFiles } from './core/files-route.js';
 import { mountSync } from './core/sync.js';
 
 export interface AppDeps {
   version: string;
   db: Db;
+  files: FileStore;
+  /** APP_SECRET – podpisy linków do plików. */
+  secret: string;
   /** Katalog zbudowanego frontendu; domyślnie web/dist (sprawdzany względem pakietu serwera). */
   webDist?: string;
   /** Cookie Secure; domyślnie włączone w produkcji. */
@@ -33,6 +38,7 @@ export function createApp(deps: AppDeps): Hono {
 
   mountAuth(app, deps);
   mountSync(app, deps);
+  mountFiles(app, deps);
 
   const webDist = deps.webDist ?? defaultWebDist;
   const hasWeb = existsSync(join(webDist, 'index.html'));
