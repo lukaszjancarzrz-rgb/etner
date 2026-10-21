@@ -158,3 +158,6 @@ Task 18e: BASE bce12dd; impl f4fbfff..13bda48 (+18c overwrite warning e97ac49); 
 Task 18e: fix round 1/5 (all addressed; commit 1e16c87) — controller verified: unit 12/31/148, build clean, e2e 11 passed 1 skipped
 Task 18e: minor (deferred): migrations 0010/0011 edited in place before any deploy (local DBs need fresh DATA_DIR); client PUT replay returns duplicates []
 Tasks 18c/18d/18e: complete (commits 1f6c50e..1e16c87, review clean). Owner checkpoint again.
+## Zmiany właściciela 2026-10-21 (5) → Task 18f (plan amended)
+- Week nav fixed arrows + „Dziś” (scroll to today); month view = same cards as week, horizontal arrows; chip colour = job kategoria (elektryka blue, fotowoltaika red, rekuperacja green, klimatyzacja purple, inne yellow); dict kategoria/rodzaj changed (+przygotówka, −gwarancja, −Pompa ciepła, −Serwis kategoria); zakupy: delete only admin/author, admin checkbox instead of status select; „nowe” persists until the changed day / job is actually seen; push enable button + test push (pulled forward from Task 19 so the owner can test push on Render).
+- Ruling R30: user said „rodzaj zlecenia” for colours but the example values are the kategoria list → colour by kategoria — cost: switch the colour source if owner meant rodzaj.

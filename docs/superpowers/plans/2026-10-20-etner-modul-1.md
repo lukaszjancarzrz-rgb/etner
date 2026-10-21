@@ -624,6 +624,20 @@ Decyzje właściciela 2026-10-21:
 - [ ] **Step 1: Testy:** serwer – zakupy bez usuniętych pól i z dwoma statusami, punkty zakresu (admin zapisuje, pracownik 403, zdjęcia podpięte do punktu, widoczność jak zlecenia); web – wyliczenie liczników; e2e – admin dodaje punkt zakresu ze zdjęciem; licznik „Na jutro” pokazuje liczbę.
 - [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
 
+### Task 18f: Poprawki harmonogramu, zakupów, słowników; „nowe” do obejrzenia; włączanie push
+
+Decyzje właściciela 2026-10-21:
+- **Nawigacja tygodnia (telefon i komputer):** strzałki zawsze w tym samym miejscu; gdy pokazany jest inny tydzień niż bieżący, po lewej od strzałek pojawia się „Dziś”, które wraca do bieżącego tygodnia i przewija do dzisiejszego dnia.
+- **Widok miesiąca:** te same karty (rozmiar i treść jak w tygodniu: numer, miejscowość, klient, ½), przewijany w poziomie strzałkami lewo / prawo; bez skróconych etykiet.
+- **Kolor przy zleceniu w harmonogramie = kategoria zlecenia:** elektryka niebieski, fotowoltaika czerwony, rekuperacja zielony, klimatyzacja fioletowy, inne żółty (kolor w słowniku `kategoria`). Zastępuje kolor ekipy na kartach zleceń.
+- **Słowniki:** `kategoria` = Elektryka, Fotowoltaika, Rekuperacja, Klimatyzacja, Inne (Pompa ciepła i Serwis usunięte; istniejące zlecenia: Pompa ciepła → Inne, Serwis → Inne). `rodzaj_zlecenia` = montaż, przygotówka, serwis, inne (gwarancja usunięta; istniejące → inne).
+- **Zakupy:** usuwa tylko admin i autor pozycji. Zamiast listy statusów admin ma „ptaszek” (zaznaczone = Kupione, odznaczone = Do kupienia).
+- **„Nowe” zostaje do obejrzenia zmiany:** wejście na ekran nie kasuje znacznika. Harmonogram: zmieniony dzień ma znacznik „nowe”, który znika dopiero, gdy ten dzień był widoczny na ekranie; licznik w menu = liczba nieobejrzanych zmienionych dni. Zlecenia: znacznik przy zleceniu do czasu otwarcia jego karty; licznik w menu = liczba takich zleceń.
+- **Push:** w „Więcej” przycisk „Włącz powiadomienia na tym urządzeniu” (z instrukcją dla iPhone: najpierw „Do ekranu początkowego”), stan włączone / wyłączone, „Wyłącz”, oraz „Wyślij próbne powiadomienie” (`POST /api/push/test` do samego siebie).
+
+- [ ] **Step 1: Testy:** serwer – migracja słowników i zleceń, zakupy (usuwa autor / admin, inny pracownik 403), `/api/push/test`; web – licznik i znaczniki dni / zleceń jako czyste funkcje; e2e – „Dziś” wraca do bieżącego tygodnia, znacznik dnia znika po obejrzeniu, ptaszek kupione.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
 ### Task 19: Pozostałe ekrany
 
 **Files:**
