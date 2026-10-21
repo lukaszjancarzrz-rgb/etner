@@ -234,3 +234,12 @@ test('zakres prac: admin dodaje punkt ze zdjęciem, pracownik go widzi bez edycj
   await expect(ws.getByRole('button', { name: /Dodaj punkt|Edytuj|Przesuń/ })).toHaveCount(0);
   await ctx.close();
 });
+
+test('licznik „Na jutro” w menu pokazuje niezabrane rzeczy pracownika', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Bartek Gawlik/ }).click();
+  await expect(page.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
+  // demo: ekipa Bartka ma 4 rzeczy na dziś i jutro, jedna zabrana
+  await expect(page.getByRole('link', { name: 'Na jutro, 3 nowe' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Zakupy', exact: true })).toBeVisible(); // pracownik: bez licznika zakupów
+});

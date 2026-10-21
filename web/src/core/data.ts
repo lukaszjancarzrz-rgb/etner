@@ -97,6 +97,22 @@ export function markSeen(jobId: string): void {
   seenVer++;
   for (const f of seenSubs) f();
 }
+/** Ostatnie wejście na ekran (liczniki w menu), per użytkownik; brak = od teraz (pierwsze uruchomienie bez starych „nowych”). */
+export function screenSeenAt(userId: string, screen: string): string {
+  const k = `nav-seen:${userId}:${screen}`;
+  try {
+    const v = localStorage.getItem(k);
+    if (v) return v;
+    const now = new Date().toISOString();
+    localStorage.setItem(k, now);
+    return now;
+  } catch { return new Date().toISOString(); }
+}
+export function markScreenSeen(userId: string, screen: string): void {
+  try { localStorage.setItem(`nav-seen:${userId}:${screen}`, new Date().toISOString()); } catch { /* prywatne okno */ }
+  seenVer++;
+  for (const f of seenSubs) f();
+}
 /** Zmienia się po każdym markSeen (liczniki „nowe” liczone od nowa). */
 export const useSeenVersion = () => useSyncExternalStore((f) => { seenSubs.add(f); return () => seenSubs.delete(f); }, () => seenVer);
 

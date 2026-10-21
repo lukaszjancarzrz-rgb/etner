@@ -1,6 +1,7 @@
 import { Briefcase, MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { matches, seenAt, useCrewColor, useIsAdmin, useLoading, useMe, useSeenVersion, useStatusGroup } from '../../core/data.js';
+import { freshByJob } from '../../core/badges.js';
 import { useEntities } from '../../core/store.js';
 import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
@@ -48,19 +49,9 @@ function JobList({ selected }: { selected?: string }) {
 
   const seenVer = useSeenVersion();
   const planned = useMemo(() => new Set(sched.map((e) => e.jobId).filter(Boolean)), [sched]);
-  const fresh = useMemo(() => {
-    const m = new Map<string, number>();
-    const seen = new Map<string, string>();
-    for (const e of entries) {
-      if (e.ownerType !== 'job' || e.authorId === me?.id) continue;
-      let s = seen.get(e.ownerId);
-      if (!s) seen.set(e.ownerId, (s = seenAt(e.ownerId)));
-      if (e.createdAt > s) m.set(e.ownerId, (m.get(e.ownerId) ?? 0) + 1);
-    }
-    return m;
-  }, [entries, me?.id, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const scope = useEntities('job_scope_items');
+  const rawJobs = useEntities('jobs');
+  const fresh = useMemo(() => freshByJob(rawJobs, entries, scope, me?.id, seenAt), [rawJobs, entries, scope, me?.id, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
   const list = useMemo(() => [...jobs.values()]
     .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.status, j.ekipa, ...scope.filter((p) => p.jobId === j.id).map((p) => p.tekst)))
     .sort((a, b) => String(b.numer ?? '').localeCompare(String(a.numer ?? ''), 'pl', { numeric: true })), [jobs, q, scope]);

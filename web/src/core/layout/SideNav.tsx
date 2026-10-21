@@ -1,10 +1,13 @@
 import { screens, type Route } from '../../routes.js';
 import { useSession } from '../session.js';
+import { badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
+import { useBadges } from './useBadges.js';
 import { Logo } from './Logo.js';
 
 export function SideNav({ route }: { route: Route }) {
   const { me } = useSession();
+  const badges = useBadges();
   return (
     <nav aria-label="Menu" className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-card desk:flex">
       <div className="stripes h-1.5" aria-hidden />
@@ -16,11 +19,13 @@ export function SideNav({ route }: { route: Route }) {
         {Object.entries(screens).filter(([, s]) => s.nav !== false).map(([k, s]) => {
           const on = route.screen === k || (k === 'wiecej' && route.screen === 'kl');
           const I = s.icon;
+          const n = badges[k] ?? 0;
           return (
             <li key={k}>
-              <a href={`#${k}`} aria-current={on ? 'page' : undefined}
+              <a href={`#${k}`} aria-current={on ? 'page' : undefined} aria-label={n ? `${s.title}, ${n} nowe` : undefined}
                 className={cn('flex h-12 items-center gap-3 rounded-full px-4 font-semibold transition-colors duration-200', on ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/5 hover:text-ink')}>
                 <I className="h-5 w-5" weight={on ? 'fill' : 'regular'} />{s.title}
+                {n > 0 && <span aria-hidden className="ml-auto min-w-6 rounded-full bg-danger px-2 py-0.5 text-center text-xs font-bold tabular-nums text-bg">{badgeText(n)}</span>}
               </a>
             </li>
           );
