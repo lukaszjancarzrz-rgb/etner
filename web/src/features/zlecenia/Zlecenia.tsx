@@ -5,6 +5,7 @@ import { freshByJob } from '../../core/badges.js';
 import { useEntities } from '../../core/store.js';
 import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
+import { CategoryPill, useCatColor } from '../../core/ui/category.js';
 import { cn } from '../../core/ui/cn.js';
 import { Input } from '../../core/ui/input.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
@@ -98,6 +99,7 @@ function JobList({ selected }: { selected?: string }) {
 }
 
 function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe: number; missing: boolean; color?: string }) {
+  const cat = useCatColor();
   return (
     <li>
       <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined}
@@ -113,7 +115,9 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
         <span className="truncate font-wide text-lg font-extrabold leading-tight">{j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient'}</span>
         <span className="flex items-center gap-2 text-sm text-ink-2">
           {j.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
-          {j.ekipa && <span className="ml-auto inline-flex shrink-0 items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />{j.ekipa}</span>}
+          <span className="ml-auto" />
+          {j.kategoria && <CategoryPill name={j.kategoria} color={cat(j.kategoria)} className="shrink-0" />}
+          {j.ekipa && <span className="inline-flex shrink-0 items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />{j.ekipa}</span>}
         </span>
       </a>
     </li>

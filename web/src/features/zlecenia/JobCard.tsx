@@ -5,6 +5,7 @@ import { useEntities, useEntity } from '../../core/store.js';
 import { Badge, Empty } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
+import { CategoryPill, useCatColor } from '../../core/ui/category.js';
 import { Diary } from '../dziennik/Diary.js';
 import { JobForm } from './JobForm.js';
 import { Scope } from './Scope.js';
@@ -21,6 +22,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const admin = useIsAdmin();
   const loading = useLoading();
   const crew = useCrewColor();
+  const cat = useCatColor();
   const [editing, setEditing] = useState(false);
   const days = useMemo(() => jobDays(sched, id), [sched, id]);
 
@@ -48,6 +50,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
                 <span className="font-semibold tabular-nums">{job._tmp ? 'zapisywanie' : job.numer}</span><Badge tone="action">{job.status}</Badge>
+                {job.kategoria && <CategoryPill name={job.kategoria} color={cat(job.kategoria)} />}
               </p>
               <h2 className="mt-1 font-wide text-2xl font-extrabold leading-tight">
                 {client ? <a href={`#kl/${client.id}`} className="hover:text-action">{client.nazwa}</a> : 'Klient'}
