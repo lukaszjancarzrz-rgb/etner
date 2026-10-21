@@ -17,7 +17,7 @@ Projekt całości (ustalenia, fundament danych, usługi wspólne, technika, wygl
 |---|---|
 | `uzytkownicy` | osoby, role, ekipy, kolumny harmonogramu, login i hasło (reset przez admina), wyłączenie |
 | `slowniki` | statusy z grupą, kategorie, ekipy, źródła, kody nieobecności (z polem „płatne”), grupy zadań, rodzaje zleceń |
-| `klienci` | karta klienta i obiekty (adresy); wybór albo utworzenie w locie z leada i zlecenia; lista z wyszukiwaniem |
+| `klienci` | karta klienta i obiekty (adresy) z edycją danych klienta i obiektów; wybór albo utworzenie w locie z leada i zlecenia; lista z wyszukiwaniem |
 | `leady` | lead (klient, opcjonalnie obiekt), kontakty z klientem, przypomnienie o następnym kontakcie, zamiana w zlecenie |
 | `zlecenia` | zlecenie (klient, obiekt, rodzaj, status, ekipa, termin, zakres, uwagi admina); listy wg grup statusów; dni z harmonogramu; znacznik „brak w harmonogramie” |
 | `dziennik` | wpisy przy zleceniu lub leadzie, załączniki (zdjęcia, pliki), przełączka „pokaż klientowi” (użyje jej moduł 2), liczniki „nowe” |
@@ -41,7 +41,7 @@ Wspólne pola wszystkich tabel:
 | `sites` | klient, nazwa obiektu, adres, miejscowość, mapa (link / współrzędne), opis |
 | `leads`, `lead_contacts` | numer L…, klient, obiekt, status, kategoria, temat, źródło, opis, wartość (grosze), następny / ostatni kontakt, uwagi; kontakty: data, plan, notatka, następny, status, kto |
 | `jobs` | numer Z…, klient, obiekt, lead, rodzaj, status, kategoria, termin (miesiąc), ekipa, zakres, uwagi admina, zamknięto |
-| `diary_entries` | zlecenie albo lead, autor, treść, `dla_klienta` |
+| `diary_entries` | zlecenie albo lead, autor, treść (nigdy nie pokazywana klientowi) |
 | `attachments` | właściciel (wpis dziennika; w przyszłości urządzenie / wpis serwisowy), rodzaj (zdjęcie / plik), klucze R2 (oryginał, podgląd, miniatura), nazwa, rozmiar, `dla_klienta`, autor |
 | `schedule_people` | kolejność, nazwa kolumny, użytkownik |
 | `schedule_entries` | dzień, osoba, rodzaj (zlecenie / kod / tekst), zlecenie, kod, tekst, `pol_dnia` |
