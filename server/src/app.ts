@@ -18,8 +18,8 @@ export interface AppDeps {
   files: FileStore;
   /** APP_SECRET – podpisy linków do plików. */
   secret: string;
-  /** Wysyłka web-push (w testach atrapa). */
-  push: PushSender;
+  /** Wysyłka web-push (w testach atrapa); brak = push wyłączony. */
+  push?: PushSender;
   /** Publiczny klucz VAPID; brak = push wyłączony. */
   vapidPublic?: string;
   /** Katalog zbudowanego frontendu; domyślnie web/dist (sprawdzany względem pakietu serwera). */

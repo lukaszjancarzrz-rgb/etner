@@ -3,9 +3,9 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { newId } from '@etner/shared';
 import { createApp } from '../app.js';
 import { addUser, loginCookie, testDeps } from '../test-utils.js';
-import { registerCron, rankoTeraz } from './cron.js';
+import { rankoGodzina, rankoTick, registerCron, rankoTeraz } from './cron.js';
 import { notify, type PushSender } from './notify.js';
-import { pushSubscriptions } from './schema-base.js';
+import { errors, pushSubscriptions, settings } from './schema-base.js';
 
 const n = { title: 'T', body: 'B', url: '/x', tag: 't' };
 function sub(deps: ReturnType<typeof testDeps>, userId: string, endpoint: string) {
@@ -41,6 +41,18 @@ describe('notify', () => {
     sub(deps, a.id, 'e1'); sub(deps, a.id, 'e2');
     expect(await notify(deps, [a.id], n)).toBe(1);
     expect(alive(deps)).toEqual(['e1', 'e2']);
+  });
+  it('nieudana wysyłka zapisuje wiersz w errors', async () => {
+    const deps = testDeps({ push: async () => { throw new Error('sieć'); } });
+    const a = addUser(deps).user; sub(deps, a.id, 'e1');
+    await notify(deps, [a.id], n);
+    expect(deps.db.select().from(errors).all()).toHaveLength(1);
+  });
+  it('wyłączony push (brak nadawcy) → 0 i brak błędów', async () => {
+    const deps = testDeps({ push: undefined });
+    const a = addUser(deps).user; sub(deps, a.id, 'e1');
+    expect(await notify(deps, [a.id], n)).toBe(0);
+    expect(deps.db.select().from(errors).all()).toHaveLength(0);
   });
   it('pusta lista → 0 bez wywołań', async () => {
     const push = vi.fn<PushSender>();
@@ -99,6 +111,24 @@ describe('zadanie rano', () => {
     expect(rankoTeraz(at('2026-10-25T06:00:00Z'), '07:00')).toBe(true);
     expect(rankoTeraz(at('2026-10-25T05:00:00Z'), '07:00')).toBe(false);
     expect(rankoTeraz(at('2026-03-29T05:00:00Z'), '07:00')).toBe(true); // 07:00 CEST
+  });
+  it('tik rano: błąd zadania jest łapany i zapisany; poza godziną nic nie robi', async () => {
+    const deps = testDeps(); const run = vi.fn(() => { throw new Error('boom'); });
+    const defs = [{ name: 'r', schedule: 'rano', run }];
+    await rankoTick(deps, defs, at('2026-01-15T05:00:00Z'));
+    expect(run).not.toHaveBeenCalled();
+    await rankoTick(deps, defs, at('2026-01-15T06:00:00Z'));
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(deps.db.select().from(errors).all()[0]!.where).toBe('cron:r');
+  });
+  it('rano_godzina: zły format → 07:00', () => {
+    const deps = testDeps();
+    expect(rankoGodzina(deps)).toBe('07:00');
+    const put = (value: string) => deps.db.insert(settings).values({ key: 'rano_godzina', value, updatedAt: 'x' })
+      .onConflictDoUpdate({ target: settings.key, set: { value } }).run();
+    put('8:30'); expect(rankoGodzina(deps)).toBe('07:00');
+    put('25:00'); expect(rankoGodzina(deps)).toBe('07:00');
+    put('06:45'); expect(rankoGodzina(deps)).toBe('06:45');
   });
   it('registerCron zwraca stop() i nie zostawia timerów', () => {
     const stop = registerCron(testDeps(), [

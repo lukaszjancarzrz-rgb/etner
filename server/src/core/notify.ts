@@ -23,16 +23,11 @@ export function vapidFromEnv(env: NodeJS.ProcessEnv, dataDir: string): { publicK
   return JSON.parse(readFileSync(file, 'utf8')) as { publicKey: string; privateKey: string };
 }
 
-/** Domyślny nadawca (web-push). Bez kluczy nic nie wysyła i zwraca 0. */
-export function webPushSender(vapid: { publicKey: string; privateKey: string } | null, subject = 'mailto:admin@etner.local'): PushSender {
-  if (!vapid) {
-    console.warn('Push wyłączony: brak VAPID_PUBLIC / VAPID_PRIVATE.');
-    return async () => ({ statusCode: 0 });
-  }
-  const details = { subject, ...vapid };
+/** Domyślny nadawca (web-push) dla podanych kluczy VAPID. */
+export function webPushSender(vapid: { publicKey: string; privateKey: string }, subject = 'mailto:admin@etner.local'): PushSender {
   return async (sub, payload, opts) => {
     try {
-      const r = await webpush.sendNotification(sub, payload, { ...opts, vapidDetails: { subject: details.subject, publicKey: details.publicKey, privateKey: details.privateKey } });
+      const r = await webpush.sendNotification(sub, payload, { ...opts, vapidDetails: { subject, ...vapid } });
       return { statusCode: r.statusCode };
     } catch (e) {
       if (e instanceof webpush.WebPushError) return { statusCode: e.statusCode };
@@ -43,15 +38,16 @@ export function webPushSender(vapid: { publicKey: string; privateKey: string } |
 
 /** Wysyła powiadomienie do wszystkich urządzeń podanych osób; zwraca liczbę udanych wysyłek. */
 export async function notify(deps: AppDeps, userIds: string[], n: Notification): Promise<number> {
+  const { push } = deps;
   const ids = [...new Set(userIds)];
-  if (!ids.length) return 0;
+  if (!push || !ids.length) return 0; // push wyłączony (brak VAPID)
   const subs = deps.db.select().from(pushSubscriptions)
     .where(and(inArray(pushSubscriptions.userId, ids), isNull(pushSubscriptions.deletedAt))).all();
   const payload = JSON.stringify(n);
   let ok = 0;
   for (const s of subs) {
     try {
-      const { statusCode } = await deps.push({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 86400 });
+      const { statusCode } = await push({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 86400 });
       if (statusCode === 404 || statusCode === 410) {
         const now = new Date().toISOString();
         deps.db.update(pushSubscriptions).set({ deletedAt: now, updatedAt: now }).where(eq(pushSubscriptions.id, s.id)).run();

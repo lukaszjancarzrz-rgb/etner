@@ -28,9 +28,10 @@ const db = openDb(join(dataDir, 'etner.db'));
 migrate(db);
 
 const vapid = vapidFromEnv(process.env, dataDir);
+if (!vapid) console.warn('Push wyłączony: brak VAPID_PUBLIC / VAPID_PRIVATE.');
 const deps = {
   version: process.env.APP_VERSION ?? pkg.version, db, files, secret,
-  push: webPushSender(vapid, process.env.VAPID_SUBJECT), vapidPublic: vapid?.publicKey,
+  push: vapid ? webPushSender(vapid, process.env.VAPID_SUBJECT) : undefined, vapidPublic: vapid?.publicKey,
 };
 const app = createApp(deps);
 const stopCron = registerCron(deps, modulesOf(app).flatMap((m) => m.cron ?? []));
