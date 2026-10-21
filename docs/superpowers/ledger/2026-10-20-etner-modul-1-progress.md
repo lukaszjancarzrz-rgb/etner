@@ -148,3 +148,7 @@ Note: klienci worker-visibility test failed once (1/9 runs) while a reviewer sub
 ## Zmiany właściciela 2026-10-21 (3): harmonogram → Task 18c
 - Owner: multi-person / multi-day entry in the cell editor; month view on desktop (supersedes R27); admins have no schedule rows at all. Plan amended (Task 18c).
 - Owner: existing clients must be editable → Task 18d (plan amended); dispatched together with 18c.
+- Owner: remove shopping group 'Biuro' (R15 seed correction) — added to the 18c/18d implementer as a separate commit.
+Tasks 18c/18d + 'Biuro': implemented (581955d, b720240, 13778cb; container restarted after the agent finished — report in task-18cd-report.md); review dispatched
+## Zmiany właściciela 2026-10-21 (4) → Task 18e (plan amended)
+- Shopping: only co + uwagi; no kwota/sklep/grupa; statuses Do kupienia / Kupione only. Job scope: list of points (text + photos), admin-edited (owner picked this over Pumble-style threads). Nav badges with counts (na jutro untaken, schedule changes, jobs with news, shopping to buy for admin).

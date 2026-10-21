@@ -614,6 +614,16 @@ Decyzja właściciela 2026-10-21: musi być możliwość edycji istniejących kl
 - [ ] **Step 1: Testy:** e2e: admin zmienia telefon klienta i adres obiektu, zmiana widoczna na karcie zlecenia; pracownik bez przycisku.
 - [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
 
+### Task 18e: Zakupy uproszczone, zakres prac ze zdjęciami, liczniki w menu
+
+Decyzje właściciela 2026-10-21:
+- **Zakupy:** pozycja = co + uwagi. Bez kwoty, sklepu i grupy (pola usunięte z ekranu, API i tabeli; słownik `grupa_zakupow` usunięty). Statusy tylko „Do kupienia” i „Kupione” (bez „Zamówione”); istniejące „Zamówione” → „Do kupienia” w migracji.
+- **Zakres prac w zleceniu:** lista punktów; punkt = tekst + zdjęcia (0..n), kolejność, dodaj / edytuj / usuń / przesuń. Edytuje tylko admin; pracownik widzi. Zdjęcia jak w dzienniku (zmniejszanie, kolejka offline, podgląd, „Pokaż klientowi”). Dotychczasowy tekst `zakres` zostaje jako pierwszy punkt (migracja).
+- **Liczniki w menu (dolny pasek i boczne menu):** Na jutro – liczba niezabranych rzeczy mojej ekipy na dziś i jutro (admin: wszystkich ekip); Harmonogram – liczba zmian w moim harmonogramie od ostatniego wejścia na ekran; Zlecenia – liczba zleceń z nowymi wpisami lub zmianami od ostatniego otwarcia; Zakupy – admin: liczba „Do kupienia”. Liczniki liczone na urządzeniu z danych zsynchronizowanych; „ostatnio widziane” w pamięci urządzenia.
+
+- [ ] **Step 1: Testy:** serwer – zakupy bez usuniętych pól i z dwoma statusami, punkty zakresu (admin zapisuje, pracownik 403, zdjęcia podpięte do punktu, widoczność jak zlecenia); web – wyliczenie liczników; e2e – admin dodaje punkt zakresu ze zdjęciem; licznik „Na jutro” pokazuje liczbę.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
 ### Task 19: Pozostałe ekrany
 
 **Files:**
