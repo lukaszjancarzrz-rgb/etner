@@ -34,6 +34,19 @@ const ref = (db: Db, j: JobRow): JobRef => ({
   klient: klienci.get(db, j.clientId)?.nazwa ?? '',
   miejscowosc: (j.siteId && klienci.getSite(db, j.siteId)?.miejscowosc) || '',
 });
+/** Krótko o kliencie: osoba – nazwisko (ostatnie słowo), firma – cała nazwa. */
+export const clientShort = (c: { typ: string; nazwa: string } | undefined): string =>
+  !c ? '' : c.typ === 'osoba' ? c.nazwa.trim().split(/\s+/).at(-1) ?? '' : c.nazwa.trim();
+
+/** Nazwa zlecenia w powiadomieniach: „Kowalski – Zawoja (Z0012)”; numer tylko gdy się mieści (≤ 40 znaków), bez klienta sam numer. */
+export function jobLabel(db: Db, j: Pick<JobRow, 'numer' | 'clientId' | 'siteId'>, max = 40): string {
+  const site = j.siteId ? klienci.getSite(db, j.siteId) : undefined;
+  const base = [clientShort(klienci.get(db, j.clientId)), site?.miejscowosc].filter(Boolean).join(' – ');
+  if (!base) return j.numer;
+  const full = `${base} (${j.numer})`;
+  return full.length <= max ? full : base;
+}
+
 /** Niezamknięte zlecenia (do wyboru w harmonogramie). */
 export const active = (db: Db): JobRef[] =>
   list(db).filter((j) => slowniki.groupOf(db, 'status_zlecenia', j.status) !== 'zamkniete').map((j) => ref(db, j));
@@ -90,11 +103,12 @@ export function save(db: Db, userId: string, input: JobSaveInput, out: Outbox = 
   if (row.ekipa && row.ekipa !== 'mieszane' && row.ekipa !== old?.ekipa) {
     const to = users.crewMembers(db, row.ekipa).filter((u) => u !== userId);
     const r = ref(db, row);
+    const site = row.siteId ? klienci.getSite(db, row.siteId) : undefined;
     out.push({
       userIds: to,
       n: {
-        title: `${old ? '🛠️ Zlecenie dla Twojej ekipy' : '🆕 Nowe zlecenie'}: ${row.numer}`,
-        body: [r.klient, r.miejscowosc].filter(Boolean).join(' – '),
+        title: `${old ? '🛠️ Zlecenie dla Twojej ekipy' : '🆕 Nowe zlecenie'}: ${jobLabel(db, row)}`,
+        body: [r.klient, [site?.adres, r.miejscowosc].filter(Boolean).join(' ')].filter(Boolean).join(', '),
         url: `#zl/${row.id}`, tag: `zl-${row.id}`,
       },
     });

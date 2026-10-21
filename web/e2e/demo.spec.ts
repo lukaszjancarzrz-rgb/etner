@@ -354,3 +354,16 @@ test('Pumble (atrapa): sekcja na karcie zlecenia, wysłanie dodaje wiadomość',
   await expect(sec.getByText(text)).toBeVisible();
   await expect(sec.getByPlaceholder('Napisz do kanału…')).toHaveValue('');
 });
+
+test('harmonogram: link z powiadomienia `#harm/<dzień>~<osoba>` otwiera tamten tydzień i podświetla komórkę', async ({ page }) => {
+  await loginAdmin(page);
+  const people = (await (await page.request.get('/api/schedule-people')).json()) as { id: string; nazwa: string }[];
+  const p = people[1]!;
+  const day = addDays(mondayOf(dayOf(new Date())), 16); // środa za dwa tygodnie
+  await page.goto(`/#harm/${day}~${p.id}`);
+  const cell = page.locator(`[data-key="${day}|${p.id}"]`);
+  await expect(cell).toHaveAttribute('data-flash', 'true');
+  await expect(cell).toBeInViewport();
+  await expect(page.locator(`[data-day="${addDays(day, -2)}"]`)).toHaveCount(1); // poniedziałek tamtego tygodnia
+  await expect(cell).not.toHaveAttribute('data-flash', 'true', { timeout: 5000 });
+});

@@ -6,7 +6,7 @@ import { newId } from '@etner/shared';
 import { seedBase } from '../slowniki/seed.js';
 import { modules } from '../index.js';
 import { addSite, create as newClient } from '../klienci/service.js';
-import { active, forSite, get } from './service.js';
+import { active, forSite, get, jobLabel } from './service.js';
 
 async function setup() {
   const push = vi.fn(async () => ({ statusCode: 201 }));
@@ -28,6 +28,15 @@ const req = (cookie: string, method: string, body?: unknown) =>
 const feed = async (app: any, cookie: string) => (await (await app.request('/api/changes?since=0', req(cookie, 'GET'))).json()).changes as any[];
 
 describe('zlecenia', () => {
+  it('jobLabel: nazwisko osoby lub nazwa firmy – miejscowość, numer gdy się mieści, bez klienta sam numer', async () => {
+    const { deps, a, k } = await setup();
+    const f = newClient(deps.db, a.user.id, { typ: 'firma', nazwa: 'Pensjonat Pod Babią Górą Sp. z o.o.', telefony: [], emaile: [], nip: '', notatki: '', site: { nazwa: '', adres: '', miejscowosc: 'Zawoja Markowa', mapa: '', opis: '' } });
+    expect(jobLabel(deps.db, { numer: 'Z0012', clientId: k.client.id, siteId: k.site!.id })).toBe('Kowalski – Zawoja (Z0012)');
+    expect(jobLabel(deps.db, { numer: 'Z0012', clientId: k.client.id, siteId: null })).toBe('Kowalski (Z0012)');
+    expect(jobLabel(deps.db, { numer: 'Z0012', clientId: f.client.id, siteId: f.site!.id })).toBe('Pensjonat Pod Babią Górą Sp. z o.o. – Zawoja Markowa');
+    expect(jobLabel(deps.db, { numer: 'Z0012', clientId: 'nie-ma', siteId: null })).toBe('Z0012');
+  });
+
   it('numeracja Z0001, Z0002; zamkniete_at wg grupy statusu', async () => {
     const { app, admin, k } = await setup();
     const post = async (b: object) => (await app.request('/api/jobs', req(admin, 'POST', { clientId: k.client.id, status: 'Nowe', ...b }))).json();
@@ -49,14 +58,14 @@ describe('zlecenia', () => {
     expect(eps).toEqual([b1.user.id, b2.user.id].sort());
     expect(eps).not.toContain(a.user.id);
     const n = JSON.parse((push.mock.calls[0] as any)[1]);
-    expect(n).toMatchObject({ title: '🆕 Nowe zlecenie: Z0001', url: `#zl/${j.id}`, body: 'Kowalski – Zawoja' });
+    expect(n).toMatchObject({ title: '🆕 Nowe zlecenie: Kowalski – Zawoja (Z0001)', url: `#zl/${j.id}`, body: 'Kowalski, Długa 5 Zawoja' });
     push.mockClear();
     await post({ ekipa: 'mieszane' });
     await app.request(`/api/jobs/${j.id}`, req(admin, 'PUT', { ekipa: 'ekipa Bartek', zakres: 'x' }));
     expect(push).not.toHaveBeenCalled();
     await app.request(`/api/jobs/${j.id}`, req(admin, 'PUT', { ekipa: 'ekipa Marek' })); // nikt w ekipie Marek
     await app.request(`/api/jobs/${j.id}`, req(admin, 'PUT', { ekipa: 'ekipa Bartek' }));
-    expect(JSON.parse((push.mock.calls[0] as any)[1]).title).toBe('🛠️ Zlecenie dla Twojej ekipy: Z0001');
+    expect(JSON.parse((push.mock.calls[0] as any)[1]).title).toBe('🛠️ Zlecenie dla Twojej ekipy: Kowalski – Zawoja (Z0001)');
   });
 
   it('brak pusha dla wycofanego zapisu', async () => {

@@ -71,7 +71,7 @@ describe('harmonogram', () => {
     expect(svc.drafts(s.deps.db)).toEqual([]);
     const p = pushed(s.push);
     expect(p).toHaveLength(1);
-    expect(p[0]).toMatchObject({ endpoint: 'Bartek', title: '📅 Zmiana w Twoim harmonogramie', body: `jutro: — → ${s.job.numer}`, url: '#harm/2026-10-23', tag: 'harm' });
+    expect(p[0]).toMatchObject({ endpoint: 'Bartek', title: '📅 Zmiana w Twoim harmonogramie', body: `jutro: — → Nowak – Zawoja (${s.job.numer})`, url: `#harm/2026-10-23~${s.pw.id}`, tag: 'harm' });
   });
 
   it('szkic równy komórce: zatwierdzenie nie tworzy wpisów od nowa (brak fałszywego „nowe”)', async () => {
@@ -100,14 +100,14 @@ describe('harmonogram', () => {
     s.push.mockClear();
     await draft(s, s.admin, { from: '2026-10-23', to: '2026-10-23', people: [s.pw.id], value: [{ rodzaj: 'tekst', tekst: 'magazyn', polDnia: false }] });
     await s.app.request('/api/schedule/approve', req(s.admin, 'POST', {}));
-    expect(pushed(s.push)[0]).toMatchObject({ title: '📅 Zmiana w Twoim harmonogramie', body: `jutro: ${s.job.numer} → magazyn` });
+    expect(pushed(s.push)[0]).toMatchObject({ title: '📅 Zmiana w Twoim harmonogramie', body: `jutro: Nowak – Zawoja (${s.job.numer}) → magazyn` });
     s.push.mockClear();
     await draft(s, s.admin2, { from: '2026-10-22', to: '2026-10-22', people: [s.pw.id], value: [] });
     await draft(s, s.admin2, { from: '2026-11-03', to: '2026-11-03', people: [s.pw.id], value: [{ rodzaj: 'kod', kod: 'L4', polDnia: false }] });
     await s.app.request('/api/schedule/approve', req(s.admin2, 'POST', {}));
     const p = pushed(s.push);
     expect(p).toHaveLength(1);
-    expect(p[0]).toMatchObject({ title: '📅 Zmiany w Twoim harmonogramie (2)', body: `dziś: ${s.job.numer} → —\nwto 03.11: ${s.job.numer} / urlop → L4`, url: '#harm/2026-10-22' });
+    expect(p[0]).toMatchObject({ title: '📅 Zmiany w Twoim harmonogramie (2)', body: `dziś: Nowak – Zawoja (${s.job.numer}) → —\nwto 03.11: Nowak – Zawoja (${s.job.numer}) / urlop → L4`, url: `#harm/2026-10-22~${s.pw.id}` });
   });
 
   it('dwóch adminów: szkic zmieniony po wczytaniu zostaje, reszta zatwierdzona', async () => {

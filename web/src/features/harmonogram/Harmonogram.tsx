@@ -80,8 +80,20 @@ export function Harmonogram({ route }: { route: Route }) {
     requestAnimationFrame(() => document.querySelector(`[data-day="${t}"]`)?.scrollIntoView({ behavior: smooth(), block: desk ? 'nearest' : 'start', inline: 'start' }));
   }, [anchor, month, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Z powiadomienia `#harm/<dzień>~<osoba>`: przewiń do komórki, podświetl ją na chwilę, dzień obejrzany.
+  const target = validDay(route.param) && route.highlight ? cellKey(route.param!, route.highlight) : undefined;
+  const [flash, setFlash] = useState<string>();
+  useEffect(() => {
+    if (!target || loading) return;
+    setFlash(target);
+    if (me) markDaySeen(me.id, route.param!);
+    requestAnimationFrame(() => document.querySelector(`[data-key="${CSS.escape(target)}"]`)?.scrollIntoView({ behavior: smooth(), block: 'center', inline: 'center' }));
+    const tm = setTimeout(() => setFlash(undefined), 2500);
+    return () => clearTimeout(tm);
+  }, [target, loading, month]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) return <HarmSkeleton />;
-  const props = { days, people: sorted, cells, draftMap, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t, fresh, seen };
+  const props = { days, people: sorted, cells, draftMap, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t, fresh, seen, flash };
 
   return (
     <section className="mx-auto grid max-w-[1400px] gap-4 px-4 py-4 desk:px-8 desk:py-6">
@@ -107,6 +119,8 @@ type ViewProps = {
   ekipaOf: Map<string, string | null>; today: string;
   /** Dni ze zmianą jeszcze nie obejrzaną („nowe”) i zapis obejrzenia dnia. */
   fresh: Set<string>; seen?: (dzien: string) => void;
+  /** Komórka podświetlona po wejściu z powiadomienia (cellKey). */
+  flash?: string;
 };
 
 /** Dzień widoczny na ekranie ≥1 s (IntersectionObserver) → obejrzany. Obserwujemy tylko dni z „nowe”. */
@@ -295,17 +309,18 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   const label = `${person.nazwa}, ${dayShort(dzien)}: ${cellText(shown, p.ctx.jobs)}${draft ? ' (szkic)' : ''}`;
   const hasJob = shown.some((s) => s.rodzaj === 'zlecenie');
   const szkic = draft && <span className={cn('pointer-events-none absolute top-1 rounded-full', p.open && hasJob ? (compact ? 'right-8' : 'right-11') : 'right-1', ' bg-action px-1.5 text-xs font-bold leading-4 text-action-ink')}>szkic</span>;
-  const cls = cn('relative block h-full w-full min-w-0 rounded-xl p-1.5 text-left', draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5');
+  const cls = cn('relative block h-full w-full min-w-0 scroll-m-24 rounded-xl p-1.5 text-left transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none',
+    draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5', p.flash === key && 'bg-ok/10 ring-4 ring-ok/40');
   if (p.open && !hasJob) {
     return (
-      <button type="button" data-cell={`${dzien}|${person.nazwa}`} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
+      <button type="button" data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
         onClick={() => p.open!(dzien, person)} className={cn(cls, 'min-h-12 transition-colors duration-200 hover:bg-action/8')}>
         <CellView slots={shown} ctx={p.ctx} compact={compact} />{szkic}
       </button>
     );
   }
   return (
-    <div data-cell={`${dzien}|${person.nazwa}`} role="group" aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
+    <div data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} role="group" aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
       // kliknięcie obok odnośnika (myszą) też otwiera edytor; z klawiatury i czytnika: przycisk ✎
       onClick={p.open ? (e) => { if (!(e.target as Element).closest('a,button')) p.open!(dzien, person); } : undefined}
       className={cn(cls, p.open && 'min-h-12 cursor-pointer transition-colors duration-200 hover:bg-action/8', p.open && !compact && 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1')}>

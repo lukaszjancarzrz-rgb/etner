@@ -99,7 +99,7 @@ describe('dziennik', () => {
     const calls = s.push.mock.calls as any[];
     expect(calls.map((c) => c[0].endpoint).sort()).toEqual([s.w.user.id]); // admin = autor, ekipa A = Pracownik
     const p = JSON.parse(calls[0][1]);
-    expect(p).toMatchObject({ title: '📝 Nowy wpis w dzienniku: Nowak – Zawoja', body: 'Admin: Zrobione 📷 2', url: `#zl/${s.job.id}~${e.id}` });
+    expect(p).toMatchObject({ title: '📝 Nowy wpis w dzienniku: Nowak – Zawoja (Z0001)', body: 'Admin: Zrobione 📷 2', url: `#zl/${s.job.id}~${e.id}` });
   });
 
   it('wpis leada: niewidoczny dla pracownika (zapis, plik, sync), admin dostaje powiadomienie z #ld', async () => {

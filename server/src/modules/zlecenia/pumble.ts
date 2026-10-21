@@ -38,7 +38,7 @@ function channelInfo(deps: AppDeps, j: svc.JobRow): { name: string; description:
   const c = klienci.get(deps.db, j.clientId);
   const site = j.siteId ? klienci.getSite(deps.db, j.siteId) : undefined;
   const nazwa = c?.nazwa ?? '';
-  const who = c?.typ === 'osoba' ? nazwa.trim().split(/\s+/).at(-1) ?? '' : nazwa;
+  const who = svc.clientShort(c);
   const where = [site?.adres, site?.miejscowosc].filter(Boolean).join(' ');
   return { name: channelSlug(j.numer, who, site?.miejscowosc ?? ''), description: `Zlecenie ${j.numer} – ${nazwa}${where ? `, ${where}` : ''}` };
 }

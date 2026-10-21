@@ -6,7 +6,6 @@ import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import type { Notification } from '../../core/notify.js';
 import { can } from '../../core/permissions.js';
-import * as klienci from '../klienci/service.js';
 import * as leady from '../leady/service.js';
 import * as users from '../uzytkownicy/service.js';
 import * as zlecenia from '../zlecenia/service.js';
@@ -86,8 +85,7 @@ export function create(db: Db, user: User, input: DiaryCreate, peopleForJob: (jo
     out.push({ userIds: users.admins(db).filter((u) => u !== user.id), n: { title: `📝 Nowy wpis w dzienniku: ${l.numer} – ${l.temat}`, body, url: `#ld/${ownerId}~${entry.id}`, tag: `dz-${entry.id}` } });
   } else {
     const job = zlecenia.get(db, ownerId)!;
-    const site = job.siteId ? klienci.getSite(db, job.siteId) : undefined;
-    const label = [klienci.get(db, job.clientId)?.nazwa, site?.miejscowosc].filter(Boolean).join(' – ');
+    const label = zlecenia.jobLabel(db, job);
     const crew = job.ekipa && job.ekipa !== 'mieszane' ? users.crewMembers(db, job.ekipa) : [];
     const to = [...new Set([...users.admins(db), ...peopleForJob(job.id), ...crew])].filter((u) => u !== user.id);
     out.push({ userIds: to, n: { title: `📝 Nowy wpis w dzienniku: ${label}`, body, url: `#zl/${job.id}~${entry.id}`, tag: `dz-${entry.id}` } });

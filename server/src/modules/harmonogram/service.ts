@@ -115,7 +115,7 @@ export function discard(db: Db, by: string, keys?: string[]): number {
 }
 
 const cellLabel = (db: Db, slots: ScheduleSlot[]): string =>
-  slots.map((s) => (s.rodzaj === 'zlecenie' ? zlecenia.get(db, s.jobId)?.numer ?? '?' : s.rodzaj === 'kod' ? s.kod : s.tekst)).join(' / ') || '—';
+  slots.map((s) => (s.rodzaj === 'zlecenie' ? ((j) => (j ? zlecenia.jobLabel(db, j) : '?'))(zlecenia.get(db, s.jobId)) : s.rodzaj === 'kod' ? s.kod : s.tekst)).join(' / ') || '—';
 const WD = ['ndz', 'pon', 'wto', 'śro', 'czw', 'pią', 'sob'];
 const dayLabel = (dzien: string, today: string): string =>
   dzien === today ? 'dziś' : dzien === addDays(today, 1) ? 'jutro'
@@ -129,7 +129,7 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
   const seen = items && new Map(items.map((i) => [i.key, i.proposalHash]));
   const applied: string[] = [], skipped: string[] = [];
   const people = new Map(users.listPeople(db).map((p) => [p.id, p]));
-  const changed = new Map<string, { dzien: string; line: string }[]>();
+  const changed = new Map<string, { dzien: string; personId: string; line: string }[]>();
   const ts = new Date().toISOString();
   const today = dayOf(now);
   for (const d of db.select().from(scheduleDrafts).where(isNull(scheduleDrafts.deletedAt)).orderBy(asc(scheduleDrafts.dzien)).all()) {
@@ -154,7 +154,7 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
       });
       const [a, b] = [cellLabel(db, old.map(toSlot)), cellLabel(db, slots)];
       const uid = people.get(d.personId)?.userId;
-      if (uid && uid !== by && a !== b) changed.set(uid, [...(changed.get(uid) ?? []), { dzien: d.dzien, line: `${dayLabel(d.dzien, today)}: ${a} → ${b}` }]);
+      if (uid && uid !== by && a !== b) changed.set(uid, [...(changed.get(uid) ?? []), { dzien: d.dzien, personId: d.personId, line: `${dayLabel(d.dzien, today)}: ${a} → ${b}` }]);
     } else {
       const tekst = (d.proposal as Note).tekst;
       const old = noteRow(db, d.dzien);
@@ -172,7 +172,7 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
   for (const [uid, list] of changed) {
     out.push({ userIds: [uid], n: {
       title: list.length === 1 ? '📅 Zmiana w Twoim harmonogramie' : `📅 Zmiany w Twoim harmonogramie (${list.length})`,
-      body: list.slice(0, 6).map((l) => l.line).join('\n'), url: `#harm/${list[0]!.dzien}`, tag: 'harm' } });
+      body: list.slice(0, 6).map((l) => l.line).join('\n'), url: `#harm/${list[0]!.dzien}~${list[0]!.personId}`, tag: 'harm' } });
   }
   return { applied, skipped };
 }
