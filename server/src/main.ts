@@ -9,6 +9,7 @@ import { registerCron } from './core/cron.js';
 import { vapidFromEnv, webPushSender } from './core/notify.js';
 import { modulesOf } from './core/registry.js';
 import { modules } from './modules/index.js';
+import { kopieCrons } from './scripts/kopie.js';
 import { seedBase } from './modules/slowniki/seed.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
@@ -37,7 +38,7 @@ const deps = {
   push: vapid ? webPushSender(vapid, process.env.VAPID_SUBJECT) : undefined, vapidPublic: vapid?.publicKey,
 };
 const app = createApp(deps, modules);
-const stopCron = registerCron(deps, modulesOf(app).flatMap((m) => m.cron ?? []));
+const stopCron = registerCron(deps, [...modulesOf(app).flatMap((m) => m.cron ?? []), ...kopieCrons(process.env, modules)]);
 
 const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`ETNER nasłuchuje na :${port}`);
