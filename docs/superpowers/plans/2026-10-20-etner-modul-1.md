@@ -638,6 +638,17 @@ Decyzje właściciela 2026-10-21:
 - [ ] **Step 1: Testy:** serwer – migracja słowników i zleceń, zakupy (usuwa autor / admin, inny pracownik 403), `/api/push/test`; web – licznik i znaczniki dni / zleceń jako czyste funkcje; e2e – „Dziś” wraca do bieżącego tygodnia, znacznik dnia znika po obejrzeniu, ptaszek kupione.
 - [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
 
+### Task 18g: Kanał Pumble przy zleceniu
+
+Decyzja właściciela 2026-10-21 (zmienia „bez Pumble” z projektu całości):
+- Przy utworzeniu zlecenia serwer zakłada **prywatny** kanał Pumble (nazwa z numeru, klienta i miejscowości, np. `z0012-kowalski-zawoja`), dodaje adminów i ekipę zlecenia (później także osoby z harmonogramu tego zlecenia i nową ekipę po zmianie). Id kanału w `jobs.pumble_channel_id`.
+- Karta zlecenia: sekcja „Pumble” z kilkoma ostatnimi wiadomościami, aktualizowanymi bez klikania (serwer odpytuje Pumble i rozsyła nowe wiadomości przez zmiany / SSE), pole „Napisz” (wiadomość idzie jako bot ETNER z imieniem autora) i przycisk „Przejdź do Pumble”.
+- API: dodatek Pumble „API Keys” (`https://pumble-api-keys.addons.marketplace.cake.com`, nagłówek `ApiKey`; `createChannel`, `addUsersToChannel`, `listMessages`, `sendMessage`, `listUsers`, `myInfo`). Klucz w sekrecie `PUMBLE_API_KEY` (wkleja właściciel). Brak klucza → funkcja wyłączona, sekcja ukryta. Pumble nie wysyła zdarzeń, więc nowe wiadomości są pobierane cyklicznie.
+- Dziennik zostaje bez zmian obok Pumble.
+
+- [ ] **Step 1: Testy (atrapa Pumble):** nowe zlecenie zakłada kanał i dodaje właściwe osoby; błąd Pumble nie psuje zapisu zlecenia (ponowienie później); odpytywanie zapisuje tylko nowe wiadomości i rozsyła je; pracownik widzi wiadomości zleceń jak zlecenia; wysyłka idzie jako bot z imieniem; bez klucza nic się nie dzieje.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
 ### Task 19: Pozostałe ekrany
 
 **Files:**

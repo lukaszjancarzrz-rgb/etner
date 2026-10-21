@@ -165,3 +165,7 @@ Task 18f: BASE 77bca35; impl 69c7e7e..b02beb9; review: Important — push subscr
 Task 18f: fix round 1/5 (all addressed; commit ee32122)
 Task 18f: minor (deferred): iOS <16.4 standalone told to add to home screen; old endpoint row lingers after VAPID key change until 410; push enabled path never run in a browser (needs a real phone); 10 s test cooldown in memory
 Task 18f: complete (commits 77bca35..ee32122, review clean). Owner checkpoint.
+Owner tweaks (direct, controller commit f7e2703): Galeria input image/* only + separate „Plik PDF” button (Android opened files instead of gallery); kategoria pill above ekipa on job list.
+## Zmiana właściciela 2026-10-21 (6): Pumble channel per job → Task 18g (spec + plan amended)
+- Owner: preview + write (as bot with author name), diary stays, private channel with admins + crew, now before Task 19.
+- Ruling R31: Pumble "API Keys" add-on has no events → server polls listMessages for channels of non-closed jobs (interval ~20 s, cap per tick), stores recent messages in a module table and emits them as changes (SSE), so phones update without refresh; Pumble user mapping by e-mail (users get optional `email`, matched against Pumble listUsers); deep link built from myInfo workspace id with app.pumble.com fallback — cost: ~20 s delay, polling cost grows with active jobs.
