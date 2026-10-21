@@ -66,3 +66,11 @@ Task 6: fix round 1/5 (4 addressed, 0 open; commits ec5fef0..6c56d9c)
 Task 6: minor (deferred): serve() checks KEY_RE but not ./.. segments — validly signed bad key → 500 (needs APP_SECRET)
 Task 6: complete (commits a87ca96..6c56d9c, review clean)
 - Ruling R14: notify is `notify(deps, userIds, n)`; push sender injected as AppDeps.push; morning job: core `settings` key-value table (key `rano_godzina`, default '07:00'); CronDef.schedule may be the literal 'rano' — registerCron checks every minute (Europe/Warsaw) and runs 'rano' defs when HH:MM matches; VAPID missing outside demo → push disabled with a warning (notify returns 0) — cost: small.
+Task 7: BASE eefa69a; impl b184987; review: Important — disabled push logs error per subscription
+Task 7: minor (deferred): rano tick no overlap / once-per-day guard; corrupt vapid.json throws at start; real web-push sender untested
+Task 7: fix round 1/5 (4 addressed, 0 open; commits b184987..6824695)
+Task 7: minor (deferred): rankoGodzina DB read outside try/catch in minute tick
+Task 7: complete (commits eefa69a..6824695, review clean)
+- Ruling R15: real Parametry lists are not in the repo (O3 not delivered) — Task 8 seeds best-guess dictionaries matching every value later tasks/tests name ('Rozliczone'→zamkniete, 'Na później'→pozniej, lead 4th value 'Przyjęta', 'ekipa Bartek', 'mieszane', 'Do zrobienia'/'Zrobione'); owner edits in app, Task 22 imports real lists — cost: owner corrects values.
+- Ruling R16: personal link format `<origin>/login#<token>` (token in hash, never sent to server logs); origin from env BASE_URL or request — cost: trivial.
+- Ruling R17: Task 8 also seeds one firma 'ETNER' when none exists (needed by firm-scoped tables) — cost: none.
