@@ -53,3 +53,5 @@ Task 3: minor (deferred): nested tx has no SAVEPOINT; undefined result stored as
 Task 3: fix round 1/5 (4 addressed, 0 open; commits e1f057f..d7ea7bf)
 Task 3: minor (deferred): foreign-user opId throws plain Error → 500; map to 409 when routes use runOp
 Task 3: complete (commits 2900590..d7ea7bf, review clean)
+Task 4: minor (deferred): requireAdmin wraps requireUser with custom next; old session not deleted on re-login, expired sessions never purged; cookie Path / limit / forged-cookie tests missing; deleteCookie without flags
+Task 4: complete (commits e605ed1..f213c91, review clean)
