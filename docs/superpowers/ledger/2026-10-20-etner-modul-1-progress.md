@@ -40,3 +40,7 @@ Task 1: BLOCKED — registry.npmjs.org denied by session egress proxy (403 CONNE
 Task 1: BASE 6da7c8c; impl 8a50857; review: Important — deps majors (TS7/React19) vs plan
 - Ruling R11: pin typescript ^5, react ^18 (plan stack); vite/vitest majors chosen by peerDeps of vite-plugin-pwa and @tailwindcss/vite — cost if wrong: one version bump later.
 Task 1: minor (deferred): index.html read once at startup (needs restart after web rebuild) — fine for deploy model
+Task 1: fix round 1/5 (4 addressed, 0 open; commits 8a50857..87a3a70)
+Task 1: minor (deferred): two vite majors in lockfile (vitest optional peer resolves vite 8 in server/shared) — collapse when web plugins are added
+Task 1: minor (deferred): SPA fallback 404s client routes whose last segment has a dot (e.g. /x/1.5)
+Task 1: complete (commits 6da7c8c..87a3a70, review clean)
