@@ -169,3 +169,4 @@ Owner tweaks (direct, controller commit f7e2703): Galeria input image/* only + s
 ## Zmiana właściciela 2026-10-21 (6): Pumble channel per job → Task 18g (spec + plan amended)
 - Owner: preview + write (as bot with author name), diary stays, private channel with admins + crew, now before Task 19.
 - Ruling R31: Pumble "API Keys" add-on has no events → server polls listMessages for channels of non-closed jobs (interval ~20 s, cap per tick), stores recent messages in a module table and emits them as changes (SSE), so phones update without refresh; Pumble user mapping by e-mail (users get optional `email`, matched against Pumble listUsers); deep link built from myInfo workspace id with app.pumble.com fallback — cost: ~20 s delay, polling cost grows with active jobs.
+- Owner: push texts name the job by client surname – miejscowość (not numer); schedule push opens #harm/<day>~<personId> scrolled + highlighted → queued to the 18g implementer as a follow-up commit.
