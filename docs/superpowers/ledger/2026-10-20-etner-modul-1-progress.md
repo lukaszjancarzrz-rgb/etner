@@ -50,3 +50,6 @@ Task 2: complete (commits d8e45e4..ba408a3, review clean)
 - Ruling R13: logError takes db first: logError(db, where, err, userId?) (no global db); recentErrors(db) helper for Task 4 — cost: none.
 Task 3: BASE 2900590; impl e1f057f; review: Important — global modules list; controller adds per-db changeBus, emit outside try, opId user check
 Task 3: minor (deferred): nested tx has no SAVEPOINT; undefined result stored as null; runOp accepts Promise fn; no index changes(entity,entity_id); recentErrors unused until T4
+Task 3: fix round 1/5 (4 addressed, 0 open; commits e1f057f..d7ea7bf)
+Task 3: minor (deferred): foreign-user opId throws plain Error → 500; map to 409 when routes use runOp
+Task 3: complete (commits 2900590..d7ea7bf, review clean)
