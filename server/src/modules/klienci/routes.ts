@@ -37,8 +37,9 @@ export function routes(app: Hono, deps: AppDeps): void {
     const { opId, ...d } = await body(c, clientUpdateSchema);
     const { result } = runOp(db, opId, me(c), () => svc.update(db, me(c), c.req.param('id'), d));
     if (!result) throw notFound();
-    // ostrzeżenie (nie blokada), jak przy zakładaniu
-    return c.json({ ...result, duplicates: svc.findDuplicates(db, result, result.id) });
+    // ostrzeżenie (nie blokada), jak przy zakładaniu; tylko gdy zmiana dotyczy telefonów lub e-maili
+    const contact = d.telefony !== undefined || d.emaile !== undefined;
+    return c.json({ ...result, duplicates: contact ? svc.findDuplicates(db, result, result.id) : [] });
   });
 
   app.post('/api/clients/:id/sites', admin, async (c) => {

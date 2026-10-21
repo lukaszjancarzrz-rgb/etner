@@ -62,3 +62,22 @@ export function monthDays(day: string): string[] {
   for (let d = `${day.slice(0, 7)}-01`; d.startsWith(day.slice(0, 7)); d = addDays(d, 1)) out.push(d);
   return out;
 }
+
+/**
+ * Ile zaznaczonych komórek ma już inną, niepustą wartość (szkic, a bez szkicu zatwierdzoną), którą zapis by nadpisał.
+ * Komórka otwarta w edytorze (`skip`) się nie liczy: jej wartość widać w edytorze.
+ */
+export function overwriteCount(days: string[], people: string[], value: Slot[], cells: Map<string, Slot[]>, drafts: Map<string, Rec>, skip?: string): number {
+  let n = 0;
+  for (const d of days) for (const p of people) {
+    const k = cellKey(d, p);
+    if (k === skip) continue;
+    const dr = drafts.get(k)?.proposal;
+    const cur = Array.isArray(dr) ? (dr as Slot[]) : cells.get(k) ?? [];
+    if (cur.length && !sameCell(cur, value)) n++;
+  }
+  return n;
+}
+
+/** „1 komórkę”, „3 komórki”, „5 komórek”. */
+export const komorek = (n: number) => `${n} ${n === 1 ? 'komórkę' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'komórki' : 'komórek'}`;

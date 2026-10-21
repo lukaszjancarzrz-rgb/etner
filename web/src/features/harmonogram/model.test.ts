@@ -1,6 +1,6 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../core/api.js';
-import { cellsOf, errText, monthDays, rangeDays, sameCell } from './model.js';
+import { cellKey, cellsOf, errText, komorek, monthDays, overwriteCount, rangeDays, sameCell } from './model.js';
 
 it('cellsOf: sloty po kolei w komórce dzień|osoba, sameCell bez względu na kolejność kluczy', () => {
   const m = cellsOf([
@@ -35,4 +35,26 @@ it('monthDays: pełny miesiąc, także z przestawieniem zegara i w lutym', () =>
   expect(new Set(oct).size).toBe(31);
   expect(monthDays('2026-03-29')).toHaveLength(31);
   expect(monthDays('2028-02-10').at(-1)).toBe('2028-02-29');
+});
+
+describe('overwriteCount', () => {
+  const z = (jobId: string, polDnia = false) => ({ rodzaj: 'zlecenie' as const, jobId, polDnia });
+  const cells = new Map([
+    [cellKey('2026-10-26', 'a'), [z('J1')]],
+    [cellKey('2026-10-26', 'b'), [z('J2', true), z('J3', true)]],
+    [cellKey('2026-10-27', 'a'), [z('J9')]],
+    [cellKey('2026-10-27', 'b'), [z('J9')]],
+  ]);
+  const drafts = new Map([[cellKey('2026-10-27', 'a'), { proposal: [] }], [cellKey('2026-10-27', 'b'), { proposal: [z('J5')] }]] as [string, any][]);
+  const days = ['2026-10-26', '2026-10-27'];
+  it('liczy niepuste inne wartości (szkic ma pierwszeństwo), bez komórki z edytora', () => {
+    // 26|a J1, 26|b dwie połówki, 27|b szkic J5: inne; 27|a: szkic pusty (wyczyszczona), więc nie liczy się
+    expect(overwriteCount(days, ['a', 'b'], [z('J9')], cells, drafts)).toBe(3);
+    expect(overwriteCount(days, ['a', 'b'], [z('J9')], cells, drafts, cellKey('2026-10-26', 'a'))).toBe(2);
+    expect(overwriteCount(days, ['b'], [z('J5')], cells, drafts)).toBe(1);
+    expect(overwriteCount(days, ['a', 'b'], [], cells, drafts)).toBe(3); // czyszczenie też nadpisuje
+  });
+  it('komorek: polska odmiana', () => {
+    expect([1, 2, 4, 5, 12, 22, 25].map(komorek)).toEqual(['1 komórkę', '2 komórki', '4 komórki', '5 komórek', '12 komórek', '22 komórki', '25 komórek']);
+  });
 });

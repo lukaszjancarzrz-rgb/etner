@@ -53,7 +53,9 @@ describe('klienci: edycja', () => {
     expect(r).toMatchObject({ id: b.client.id, telefony: ['600100100', '+48 727 728 903'] });
     expect(r.duplicates.map((d: { id: string }) => d.id)).toEqual([a.client.id]);
     const r2 = await (await app.request(`/api/clients/${a.client.id}`, json(admin, 'PUT', { nazwa: 'A2' }))).json();
-    expect(r2.duplicates.map((d: { id: string }) => d.id)).toEqual([b.client.id]);
+    expect(r2.duplicates).toEqual([]); // bez telefonów i e-maili w zmianie: bez ostrzeżenia
+    const r3 = await (await app.request(`/api/clients/${a.client.id}`, json(admin, 'PUT', { emaile: [] }))).json();
+    expect(r3.duplicates.map((d: { id: string }) => d.id)).toEqual([b.client.id]);
   });
 });
 

@@ -13,7 +13,7 @@ import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
 import { tmpId } from '../../core/write.js';
 import type { Ctx } from './Harmonogram.js';
-import { cellKey, cellsOf, cellText, rangeDays, sameCell, type Slot } from './model.js';
+import { cellKey, cellsOf, cellText, komorek, overwriteCount, rangeDays, sameCell, type Slot } from './model.js';
 
 type Rodzaj = Slot['rodzaj'];
 type Draft = { rodzaj: Rodzaj; jobId: string; kod: string; tekst: string; polDnia: boolean };
@@ -35,6 +35,7 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
   const [to, setTo] = useState(dzien);
   const [wdOnly, setWdOnly] = useState<boolean | null>(null); // null = domyślnie: tak, gdy zakres > 1 dzień
   const [rangeErr, setRangeErr] = useState('');
+  const [armed, setArmed] = useState<{ sig: string; n: number } | null>(null); // ostrzeżenie o nadpisaniu: drugie naciśnięcie zapisuje
   const codes = useDict('kod_nieobecnosci');
   const off = useDict('dzien_wolny');
   const entries = useEntities('schedule_entries');
@@ -61,6 +62,9 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
     const v = value.length === 2 ? value.map((s) => ({ ...s, polDnia: true })) : value;
     const cells = cellsOf(entries);
     const draftOf = new Map(drafts.map((d) => [cellKey(d.dzien, d.personId), d]));
+    const n = overwriteCount(days, who, v, cells, draftOf, cellKey(dzien, person.id));
+    const sig = JSON.stringify([v, who, days]);
+    if (n > 0 && armed?.sig !== sig) return setArmed({ sig, n });
     const tmp: string[] = [];
     outbox.enqueue({
       kind: 'harmonogram', url: '/api/schedule/drafts', method: 'POST',
@@ -156,6 +160,11 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
             </label>
             {rangeErr && <p className="text-sm text-danger">{rangeErr}</p>}
           </fieldset>
+          {armed && (
+            <p role="alert" className="rounded-xl border border-danger/50 px-4 py-3 text-sm font-semibold text-danger">
+              Nadpisze {komorek(armed.n)} z innymi wpisami. Naciśnij ponownie, żeby zapisać.
+            </p>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <Button variant="ghost" onClick={() => save([])} disabled={single && !current.length && !draft}>{single ? 'Wyczyść dzień' : 'Wyczyść zaznaczone'}</Button>
             <Button onClick={() => save(slots.map(toSlot))}>Zapisz szkic</Button>
