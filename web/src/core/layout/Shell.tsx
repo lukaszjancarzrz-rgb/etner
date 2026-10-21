@@ -1,4 +1,6 @@
+import { Suspense } from 'react';
 import { screens } from '../../routes.js';
+import { Skeleton } from '../ui/skeleton.js';
 import { useRoute } from '../../routes.js';
 import { BottomNav } from './BottomNav.js';
 import { SideNav } from './SideNav.js';
@@ -13,7 +15,9 @@ export function Shell() {
       <SideNav route={route} />
       <TopBar title={s.title} />
       <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] desk:pb-8">
-        <Screen route={route} />
+        <Suspense fallback={<div className="mx-auto grid max-w-2xl gap-3 p-4" aria-busy="true"><Skeleton className="h-24" /><Skeleton className="h-48" /></div>}>
+          <Screen route={route} />
+        </Suspense>
       </main>
       <BottomNav route={route} />
     </div>

@@ -1,4 +1,4 @@
-import { Desktop, Moon, SignOut, Sun } from '@phosphor-icons/react';
+import { CaretRight, Desktop, Moon, SignOut, Sun, UsersThree } from '@phosphor-icons/react';
 import { logout, useSession } from '../core/session.js';
 import { setTheme, useTheme, type Theme } from '../core/theme.js';
 import { Button } from '../core/ui/button.js';
@@ -10,12 +10,19 @@ const opts: { v: Theme; label: string; icon: typeof Sun }[] = [
   { v: 'dark', label: 'Ciemny', icon: Moon },
 ];
 
-/** Więcej: na razie Ustawienia (motyw) i wylogowanie; zadanie 18 dokłada resztę. */
+/** Więcej: Klienci (admin), Ustawienia (motyw), wylogowanie. */
 export function More() {
   const theme = useTheme();
   const { me } = useSession();
   return (
     <section className="mx-auto grid max-w-2xl gap-6 px-4 py-6">
+      {me?.role === 'admin' && (
+        <a href="#kl" className="flex min-h-16 items-center gap-4 rounded-2xl border border-line bg-card px-5 py-4 hover:border-ink-2">
+          <UsersThree className="h-7 w-7 text-action" weight="duotone" />
+          <span className="min-w-0 flex-1"><span className="block font-wide text-lg font-extrabold">Klienci</span><span className="block text-sm text-ink-2">Kontakty, obiekty, leady i zlecenia klienta</span></span>
+          <CaretRight className="h-5 w-5 text-ink-2" />
+        </a>
+      )}
       <div className="rounded-2xl border border-line bg-card p-5">
         <h2 className="mb-1 font-wide text-lg font-extrabold">Ustawienia</h2>
         <p className="mb-4 text-sm text-ink-2">Wygląd aplikacji na tym urządzeniu.</p>

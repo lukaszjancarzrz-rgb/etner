@@ -13,8 +13,8 @@ export function SideNav({ route }: { route: Route }) {
         <span className="font-wide text-xl font-black tracking-tight">ETNER</span>
       </div>
       <ul className="grid gap-1 px-3 py-2">
-        {Object.entries(screens).map(([k, s]) => {
-          const on = route.screen === k;
+        {Object.entries(screens).filter(([, s]) => s.nav !== false).map(([k, s]) => {
+          const on = route.screen === k || (k === 'wiecej' && route.screen === 'kl');
           const I = s.icon;
           return (
             <li key={k}>

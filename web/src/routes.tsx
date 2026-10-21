@@ -1,5 +1,5 @@
-import { Briefcase, CalendarDots, DotsThreeCircle, ShoppingCart, SunHorizon, type Icon } from '@phosphor-icons/react';
-import { useSyncExternalStore, type ComponentType } from 'react';
+import { Briefcase, CalendarDots, DotsThreeCircle, ShoppingCart, SunHorizon, UsersThree, type Icon } from '@phosphor-icons/react';
+import { lazy, useSyncExternalStore, type ComponentType } from 'react';
 import { Placeholder } from './screens/Placeholder.js';
 import { More } from './screens/More.js';
 
@@ -14,15 +14,22 @@ export function parseHash(hash: string): Route {
   return { screen: screen && screens[screen] ? screen : 'harm', ...(param && { param }), ...(highlight && { highlight }) };
 }
 
-export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }> };
+export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false };
 
-/** Ekrany w kolejności menu (zadanie 18 podmienia komponenty). */
+// Ekrany ładowane osobno (mniejszy pierwszy pakiet JS).
+const Harmonogram = lazy(() => import('./features/harmonogram/Harmonogram.js').then((m) => ({ default: m.Harmonogram })));
+const Zlecenia = lazy(() => import('./features/zlecenia/Zlecenia.js').then((m) => ({ default: m.Zlecenia })));
+const Zakupy = lazy(() => import('./features/zakupy/Zakupy.js').then((m) => ({ default: m.Zakupy })));
+const Klienci = lazy(() => import('./features/klienci/Klienci.js').then((m) => ({ default: m.Klienci })));
+
+/** Ekrany w kolejności menu; `nav: false` = poza menu. */
 export const screens: Record<string, Screen> = {
-  harm: { title: 'Harmonogram', icon: CalendarDots, component: Placeholder },
+  harm: { title: 'Harmonogram', icon: CalendarDots, component: Harmonogram },
   jutro: { title: 'Na jutro', icon: SunHorizon, component: Placeholder },
-  zl: { title: 'Zlecenia', icon: Briefcase, component: Placeholder },
-  zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Placeholder },
+  zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
+  zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
   wiecej: { title: 'Więcej', icon: DotsThreeCircle, component: More },
+  kl: { title: 'Klienci', icon: UsersThree, component: Klienci, nav: false },
 };
 
 let cached: { hash: string; route: Route } = { hash: '\0', route: { screen: 'harm' } };

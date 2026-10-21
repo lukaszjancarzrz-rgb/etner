@@ -52,5 +52,5 @@ export default defineConfig({
     },
   },
   server: { proxy: { '/api': 'http://localhost:3000' } },
-  test: { environment: 'node' },
+  test: { environment: 'node', include: ['src/**/*.test.ts'] }, // e2e (Playwright) osobno: pnpm test:e2e
 });

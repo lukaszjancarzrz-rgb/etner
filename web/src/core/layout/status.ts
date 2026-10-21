@@ -7,3 +7,8 @@ export const useOnline = () =>
 
 export const useQueued = () =>
   useSyncExternalStore((f) => { bus.addEventListener('outbox', f); return () => bus.removeEventListener('outbox', f); }, () => outbox.pending());
+
+const desk = typeof matchMedia === 'function' ? matchMedia('(min-width: 1100px)') : undefined;
+/** Komputer (≥1100 px, jak breakpoint `desk`). */
+export const useDesk = () =>
+  useSyncExternalStore((f) => { desk?.addEventListener('change', f); return () => desk?.removeEventListener('change', f); }, () => !!desk?.matches);

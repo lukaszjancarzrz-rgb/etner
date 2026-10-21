@@ -5,6 +5,7 @@ import { ApiError, api, bus } from './api.js';
 import { outbox } from './outbox.js';
 import { store } from './store.js';
 import { sync } from './sync.js';
+import { dropTmp } from './write.js';
 
 /** loading – start; in – zalogowany (też offline z zapamiętanym kontem); out – brak sesji; expired – sesja wygasła, dane i kolejka zostają. */
 export type Status = 'loading' | 'in' | 'out' | 'expired';
@@ -33,6 +34,7 @@ async function signedIn(me: Me) {
 /** Start aplikacji: `/login#<token>` przed routerem, potem /api/me (offline: zapamiętane konto). */
 export async function startSession(): Promise<void> {
   await store.load();
+  dropTmp();
   addEventListener('online', () => { outbox.kick(); sync.wake(); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { outbox.kick(); sync.wake(); }
