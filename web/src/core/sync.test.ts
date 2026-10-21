@@ -1,0 +1,75 @@
+import { get } from 'idb-keyval';
+import { http, HttpResponse } from 'msw';
+import { expect, it } from 'vitest';
+import { bus } from './api.js';
+import { createStore } from './store.js';
+import { createSync } from './sync.js';
+import { B, server, until } from './test-setup.js';
+
+class FakeES {
+  static all: FakeES[] = [];
+  readyState = 1;
+  onerror: (() => void) | null = null;
+  private ls = new Map<string, (e: MessageEvent) => void>();
+  constructor(public url: string) { FakeES.all.push(this); }
+  addEventListener(t: string, f: (e: MessageEvent) => void) { this.ls.set(t, f); }
+  close() { this.readyState = 2; }
+  emit(t: string, data: unknown, id = '') { this.ls.get(t)?.({ data: JSON.stringify(data), lastEventId: id } as MessageEvent); }
+}
+
+it('pierwszy raz snapshot, SSE zerwane: ponowne łączenie z since=last', async () => {
+  server.use(http.get(`${B}/api/snapshot`, () => HttpResponse.json({ records: [{ entity: 'jobs', id: 'j1', data: { id: 'j1', nazwa: 'A' } }], last: 5 })));
+  const store = createStore();
+  const sync = createSync({ store, EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
+  await sync.start();
+  expect(store.get('jobs', 'j1')?.nazwa).toBe('A');
+  expect(FakeES.all[0]!.url).toBe(`${B}/api/stream?since=5`);
+
+  FakeES.all[0]!.emit('change', { seq: 7, entity: 'jobs', id: 'j2', action: 'create', data: { id: 'j2' } }, '7');
+  FakeES.all[0]!.emit('change', { seq: 8, entity: 'jobs', id: 'j1', action: 'delete', data: null }, '8');
+  expect(store.get('jobs', 'j2')).toBeTruthy();
+  expect(store.get('jobs', 'j1')).toBeUndefined();
+
+  FakeES.all[0]!.readyState = 2;
+  FakeES.all[0]!.onerror?.();
+  await until(() => FakeES.all.length === 2);
+  expect(FakeES.all[1]!.url).toBe(`${B}/api/stream?since=8`);
+  await store.flush();
+  expect(await get('last')).toBe(8);
+  sync.stop();
+});
+
+it('kolejny start: changes?since=last w pętli, potem SSE; session-expired wstrzymuje', async () => {
+  const calls: string[] = [];
+  server.use(http.get(`${B}/api/changes`, ({ request }) => {
+    const since = new URL(request.url).searchParams.get('since')!;
+    calls.push(since);
+    return since === '5'
+      ? HttpResponse.json({ changes: [{ seq: 6, entity: 'jobs', id: 'j3', action: 'create', data: { id: 'j3' } }], last: 6, more: true })
+      : HttpResponse.json({ changes: [{ seq: 9, entity: 'jobs', id: 'j3', action: 'update', data: { id: 'j3', deletedAt: '2026-10-21T10:00:00Z' } }], last: 9, more: false });
+  }));
+  const s1 = createStore();
+  s1.put('jobs', { id: 'j0' });
+  s1.setLast(5);
+  await s1.flush();
+  const store = createStore();
+  await store.load();
+  FakeES.all = [];
+  const sync = createSync({ store, EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
+  await sync.start();
+  expect(calls).toEqual(['5', '6']);
+  expect(store.get('jobs', 'j0')).toBeTruthy();
+  expect(store.get('jobs', 'j3')).toBeUndefined();
+  expect(FakeES.all[0]!.url).toBe(`${B}/api/stream?since=9`);
+
+  let expired = 0;
+  const f = () => expired++;
+  bus.addEventListener('session-expired', f);
+  FakeES.all[0]!.emit('session-expired', '');
+  expect(expired).toBe(1);
+  expect(FakeES.all[0]!.readyState).toBe(2);
+  await new Promise((r) => setTimeout(r, 30));
+  expect(FakeES.all).toHaveLength(1); // bez ponownego łączenia do zalogowania
+  bus.removeEventListener('session-expired', f);
+  sync.stop();
+});
