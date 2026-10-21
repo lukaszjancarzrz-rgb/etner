@@ -25,11 +25,14 @@ export function routes(app: Hono, { db }: AppDeps): void {
 
   app.post('/api/users', admin, async (c) => {
     const d = await body(c, userCreateSchema);
+    let token: string | undefined;
+    // Token zostaje poza runOp: op_ids trzyma tylko {user}, powtórka nie dostaje linku.
     const { result } = runOp(db, d.opId, me(c), () => {
       const r = svc.create(db, me(c), d);
-      return { user: r.user, link: linkOf(c, r.token) };
+      token = r.token;
+      return { user: r.user };
     });
-    return c.json(result);
+    return c.json({ user: result.user, link: token ? linkOf(c, token) : null });
   });
 
   app.put('/api/users/:id', admin, async (c) => {
@@ -45,23 +48,31 @@ export function routes(app: Hono, { db }: AppDeps): void {
 
   app.post('/api/users/:id/new-link', admin, async (c) => {
     const { opId } = await c.req.json().catch(() => ({}));
+    let token: string | undefined;
     const { result } = runOp(db, typeof opId === 'string' ? opId : undefined, me(c), () => {
       const r = svc.newLink(db, me(c), c.req.param('id'));
-      return r && { user: r.user, link: linkOf(c, r.token) };
+      token = r?.token;
+      return r && { user: r.user };
     });
     if (!result) throw notFound();
-    return c.json(result);
+    return c.json({ user: result.user, link: token ? linkOf(c, token) : null });
   });
 
   app.get('/api/schedule-people', requireUser(db), (c) => c.json(svc.listPeople(db)));
 
+  const checkUser = (id?: string | null) => {
+    if (id && !svc.get(db, id)) throw bad('Nie ma takiego użytkownika');
+  };
+
   app.post('/api/schedule-people', admin, async (c) => {
     const { opId, ...d } = await body(c, schedulePersonSchema);
+    checkUser(d.userId);
     return c.json(runOp(db, opId, me(c), () => svc.createPerson(db, me(c), d)).result);
   });
 
   app.put('/api/schedule-people/:id', admin, async (c) => {
     const { opId, ...d } = await body(c, schedulePersonUpdateSchema);
+    checkUser(d.userId);
     const { result } = runOp(db, opId, me(c), () => svc.updatePerson(db, me(c), c.req.param('id'), d));
     if (!result) throw notFound();
     return c.json(result);

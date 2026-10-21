@@ -27,14 +27,21 @@ describe('użytkownicy', () => {
   it('POST tworzy użytkownika i zwraca link raz; token działa, w bazie tylko hash', async () => {
     const { deps, app, admin } = await setup();
     process.env.BASE_URL = 'https://etner.test';
-    const res = await send(app, 'POST', '/api/users', admin, { name: 'Nowy', ekipa: 'ekipa Marek' });
+    let res: Response;
+    try {
+      res = await send(app, 'POST', '/api/users', admin, { name: 'Nowy', ekipa: 'ekipa Marek', opId: 'op-1' });
+    } finally {
+      delete process.env.BASE_URL;
+    }
     expect(res.status).toBe(200);
-    delete process.env.BASE_URL;
     const { user, link } = (await res.json()) as any;
     expect(JSON.stringify(user)).not.toMatch(/token/i);
     const m = /^https:\/\/etner\.test\/login#(.+)$/.exec(link)!;
     expect(m).toBeTruthy();
     expect((await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: m[1] }) })).status).toBe(200);
+    expect(JSON.stringify(deps.db.$client.prepare('select * from op_ids').all())).not.toContain('/login#');
+    const replay = (await (await send(app, 'POST', '/api/users', admin, { name: 'Nowy', opId: 'op-1' })).json()) as any;
+    expect(replay.link).toBeNull();
     const row = deps.db.$client.prepare('select token_hash h from users where id = ?').get(user.id) as any;
     expect(row.h).toBe(hashToken(m[1]!));
     const list = (await (await get(app, '/api/users', admin)).json()) as any[];
@@ -42,9 +49,10 @@ describe('użytkownicy', () => {
   });
 
   it('nowy link unieważnia stare sesje i stary token', async () => {
-    const { app, w, admin, worker } = await setup();
+    const { deps, app, w, admin, worker } = await setup();
     expect((await get(app, '/api/me', worker)).status).toBe(200);
-    const { link } = (await (await send(app, 'POST', `/api/users/${w.user.id}/new-link`, admin)).json()) as any;
+    const { link } = (await (await send(app, 'POST', `/api/users/${w.user.id}/new-link`, admin, { opId: 'op-2' })).json()) as any;
+    expect(JSON.stringify(deps.db.$client.prepare('select * from op_ids').all())).not.toContain('/login#');
     expect((await get(app, '/api/me', worker)).status).toBe(401);
     expect(await loginCookie(app, w.token)).toBe('');
     const c = await loginCookie(app, link.split('#')[1]);
@@ -70,10 +78,9 @@ describe('użytkownicy', () => {
   });
 
   it('zmiany użytkowników widzi tylko admin, pracownik tylko własny rekord; token_hash nigdzie nie wychodzi', async () => {
-    const { app, a, w, admin, worker } = await setup();
+    const { app, a, w, admin } = await setup();
     await send(app, 'PUT', `/api/users/${w.user.id}`, admin, { name: 'Jan K.' });
     await send(app, 'PUT', `/api/users/${a.user.id}`, admin, { name: 'Szef 2' });
-    await send(app, 'POST', `/api/users/${w.user.id}/new-link`, admin);
     const worker2 = await loginCookie(app, ((await (await send(app, 'POST', `/api/users/${w.user.id}/new-link`, admin)).json()) as any).link.split('#')[1]);
     for (const [cookie, who] of [[admin, 'admin'], [worker2, 'worker']] as const) {
       const ch = (await (await get(app, '/api/changes?since=0', cookie)).json()) as any;
@@ -82,12 +89,12 @@ describe('użytkownicy', () => {
       const ids = new Set([...ch.changes, ...snap.records].filter((c: any) => c.entity === 'users').map((c: any) => c.id));
       expect([...ids].sort()).toEqual(who === 'admin' ? [a.user.id, w.user.id].sort() : [w.user.id]);
     }
-    void worker;
   });
 
   it('schedule_people: pracownik czyta, admin zapisuje', async () => {
     const { app, admin, worker } = await setup();
     expect((await send(app, 'POST', '/api/schedule-people', worker, { nazwa: 'X' })).status).toBe(403);
+    expect((await send(app, 'POST', '/api/schedule-people', admin, { nazwa: 'Y', userId: 'nie-ma' })).status).toBe(400);
     const r = await send(app, 'POST', '/api/schedule-people', admin, { nazwa: 'Bartek', kolejnosc: 1 });
     const p = (await r.json()) as any;
     expect(p.nazwa).toBe('Bartek');

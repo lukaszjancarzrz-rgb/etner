@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type Role = 'pracownik' | 'admin';
 
 export type User = {
@@ -11,8 +13,6 @@ export type User = {
 };
 
 export type Me = Pick<User, 'id' | 'name' | 'role' | 'perms' | 'ekipa' | 'scheduleCol'>;
-
-import { z } from 'zod';
 
 const opId = z.string().min(1).optional();
 const nazwa = z.string().trim().min(1, 'Podaj nazwę');
