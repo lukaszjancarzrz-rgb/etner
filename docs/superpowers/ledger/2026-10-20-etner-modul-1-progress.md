@@ -135,3 +135,4 @@ STOP: owner checkpoint after Task 18 (deploy via render.yaml Blueprint = owner s
 ## Zmiana właściciela 2026-10-21: login i hasło zamiast linków
 - Owner decision (not a ruling): replace personal links with login (first name / short name) + password; admin sets the initial password and resets it, worker may change own password; done now as Task 18a, before Task 19. Spec + plan amended (plan section "Zmiana 2026-10-21", new Task 18a).
 - Ruling R28: scrypt from node:crypto (no new dependency), format `scrypt$<salt b64>$<hash b64>` with timingSafeEqual; failed-attempt limit in process memory (5 per login / 15 min → 429), shortcut acceptable for one process; token_hash column dropped; R16/R23 superseded (demo: fixed demo password, GET /api/demo/konta only with DEMO=1, login screen lists demo accounts); Task 22 will not carry old link tokens — cost: owner hands out passwords at go-live.
+Task 18a: BASE 8b83f13; impl a239af4; review dispatched
