@@ -16,6 +16,12 @@ async function loginAdmin(page: Page) {
   await expect(page.getByRole('heading', { name: 'Harmonogram', level: 1 })).toBeVisible();
 }
 
+/** Edytor komórki: komórka ze zleceniem ma przycisk ✎ (samo zlecenie prowadzi do karty), pozostałe otwiera kliknięcie. */
+async function editCell(cell: ReturnType<Page['locator']>) {
+  const pen = cell.getByRole('button', { name: /^Edytuj komórkę/ });
+  if (await pen.count()) await pen.click(); else await cell.click();
+}
+
 /** Obraz faktycznie wczytany (302 → podpisany link → plik). */
 const loaded = (page: Page, sel: string) =>
   expect.poll(() => page.locator(sel).first().evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0).catch(() => false), { timeout: 15_000 }).toBe(true);
@@ -55,7 +61,7 @@ test('demo: zlecenie, dziennik ze zdjęciem, harmonogram, zakupy', async ({ page
   await expect(page.getByText('Następny tydzień', { exact: true })).toBeVisible();
   const who = info.project.name.startsWith('iPhone') ? 'Kamil Zięba' : 'Adam Pająk';
   const cell = page.locator(`[data-cell$="|${who}"]`).first();
-  await cell.click();
+  await editCell(cell);
   await page.getByRole('radio', { name: 'Tekst' }).click();
   await page.getByLabel('Tekst').fill(tag);
   await page.getByRole('button', { name: 'Zapisz szkic' }).click();
@@ -84,6 +90,16 @@ test('demo: zlecenie, dziennik ze zdjęciem, harmonogram, zakupy', async ({ page
   await expect(item).not.toContainText('wysyłanie');
   await page.reload();
   await expect(page.locator('li[id^="z-"]', { hasText: `${tag} taśma` })).toBeVisible();
+
+  // Admin: ptaszek przenosi pozycję do „Kupione”
+  await expect(page.getByRole('combobox', { name: /^Status:/ })).toHaveCount(0);
+  await page.getByRole('checkbox', { name: `Kupione: ${tag} taśma` }).click();
+  await expect(page.locator('li[id^="z-"]', { hasText: `${tag} taśma` })).toBeHidden(); // Kupione zwinięte
+  await page.getByRole('button', { name: /^Kupione/ }).click();
+  await expect(page.getByRole('checkbox', { name: `Kupione: ${tag} taśma` })).toHaveAttribute('aria-checked', 'true');
+  await page.reload();
+  await page.getByRole('button', { name: /^Kupione/ }).click();
+  await expect(page.getByRole('checkbox', { name: `Kupione: ${tag} taśma` })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiersza', async ({ page }, info) => {
@@ -100,7 +116,7 @@ test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiers
   await expect(page.locator('[data-cell$="|Tomasz Wrona"]')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Gdzie jedziesz' })).toHaveCount(0);
 
-  await cellOf(start, a).click();
+  await editCell(cellOf(start, a));
   const ed = page.getByRole('dialog');
   await ed.getByLabel('Zlecenie').click();
   await page.getByPlaceholder('Numer, klient lub miejscowość').fill('Bukowski');
@@ -127,6 +143,68 @@ test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiers
     await expect(cellOf(d, w)).toContainText(numer);
     await expect(cellOf(d, w)).not.toHaveAttribute('aria-label', /\(szkic\)$/);
   }
+  // zlecenie w komórce prowadzi do karty zlecenia
+  await cellOf(work[0]!, a).getByRole('link', { name: new RegExp(`^Zlecenie ${numer}, Józef Bukowski`) }).click();
+  await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
+});
+
+test('harmonogram: strzałki w miejscu, „Dziś” wraca do bieżącego tygodnia', async ({ page }) => {
+  const t = dayOf(new Date());
+  await loginAdmin(page);
+  await expect(page.getByText('Ten tydzień', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Dziś', exact: true })).toHaveCount(0);
+  const next = page.getByRole('link', { name: 'Następny tydzień' });
+  const before = await next.boundingBox();
+  await next.click();
+  await page.getByRole('link', { name: 'Następny tydzień' }).click();
+  await expect(page).toHaveURL(new RegExp(`#harm/${addDays(mondayOf(t), 14)}$`));
+  const dzis = page.getByRole('link', { name: 'Dziś', exact: true });
+  await expect(dzis).toBeVisible();
+  expect(await page.getByRole('link', { name: 'Następny tydzień' }).boundingBox()).toEqual(before); // strzałki nie skaczą
+  await page.mouse.wheel(0, 2000);
+  await dzis.click();
+  await expect(page.getByText('Ten tydzień', { exact: true })).toBeVisible();
+  await expect(page.locator(`[data-day="${t}"]`)).toBeInViewport();
+  await expect(page.getByRole('link', { name: 'Dziś', exact: true })).toHaveCount(0);
+});
+
+test('harmonogram: zmieniony dzień ma „nowe”, licznik spada po obejrzeniu dnia', async ({ page, browser }, info) => {
+  const phone = info.project.name.startsWith('iPhone');
+  const base = addDays(mondayOf(dayOf(new Date())), phone ? 35 : 49); // tygodnie bez danych demo, inne dla każdego projektu
+  const [d1, d2] = [addDays(base, 2), addDays(base, 9)];
+  // pracownik loguje się pierwszy (baza „widziane”)
+  const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
+  const w = await ctx.newPage();
+  await w.goto('/');
+  await w.getByRole('button', { name: /Bartek Gawlik/ }).click();
+  await expect(w.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
+  await expect(w.getByRole('link', { name: /^Harmonogram, \d+ nowe$/ })).toHaveCount(0);
+
+  await loginAdmin(page);
+  for (const d of [d1, d2]) {
+    await page.goto(`/#harm/${d}`);
+    await editCell(page.locator(`[data-cell="${d}|Bartek Gawlik"]`));
+    await page.getByRole('radio', { name: 'Tekst' }).click();
+    await page.getByLabel('Tekst').fill(`Magazyn ${d}`);
+    await page.getByRole('button', { name: 'Zapisz szkic' }).click();
+    await expect(page.locator(`[data-cell="${d}|Bartek Gawlik"]`)).toHaveAttribute('aria-label', /\(szkic\)$/);
+  }
+  await page.getByRole('button', { name: 'Przejrzyj' }).click();
+  const review = page.getByRole('dialog', { name: 'Szkice harmonogramu' });
+  await review.getByRole('button', { name: 'Zatwierdź i powiadom' }).click();
+  await expect(review).toBeHidden();
+
+  // bieżący tydzień: dni zmian nie widać, licznik 2
+  await expect(w.getByRole('link', { name: 'Harmonogram, 2 nowe' })).toBeVisible();
+  await w.goto(`/#harm/${d1}`);
+  const day = w.locator(`[data-day="${d1}"]`);
+  await expect(day.getByText('nowe', { exact: true })).toBeVisible();
+  await day.scrollIntoViewIfNeeded();
+  await expect(w.getByRole('link', { name: 'Harmonogram, 1 nowe' })).toBeVisible();
+  await expect(day.getByText('nowe', { exact: true })).toHaveCount(0);
+  await w.reload(); // obejrzenie zapamiętane
+  await expect(w.getByRole('link', { name: 'Harmonogram, 1 nowe' })).toBeVisible();
+  await ctx.close();
 });
 
 test('harmonogram: widok miesiąca na komputerze', async ({ page }, info) => {
@@ -145,8 +223,15 @@ test('harmonogram: widok miesiąca na komputerze', async ({ page }, info) => {
   await expect(page.getByText(name, { exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: 'Ten miesiąc' }).click();
   await expect(page.getByText(name, { exact: true })).toBeVisible();
+  // te same karty co w tygodniu; strzałki przewijają o tydzień
+  const box = page.locator('[data-cell]').first().locator('xpath=ancestor::div[contains(@class,"overflow-auto")]');
+  await expect(page.locator(`[data-day="${t}"]`)).toBeInViewport(); // na start widać dziś
+  await box.evaluate((e) => { e.scrollLeft = 0; });
+  await page.getByRole('button', { name: 'Przewiń tydzień naprzód' }).click();
+  await expect.poll(() => box.evaluate((e) => e.scrollLeft)).toBeGreaterThan(1000);
+  await expect(page.locator('[data-cell] a[href^="#zl/"]').first()).toBeVisible();
   // komórka miesiąca otwiera ten sam edytor
-  await page.locator(`[data-cell="${t}|Bartek Gawlik"]`).click();
+  await editCell(page.locator(`[data-cell="${t}|Bartek Gawlik"]`));
   await expect(page.getByRole('dialog', { name: 'Bartek Gawlik' })).toBeVisible();
 });
 

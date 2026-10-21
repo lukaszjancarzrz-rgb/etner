@@ -27,14 +27,26 @@ export function naJutroCount(items: Rec[], today: string, me: { role: string; ek
 }
 
 /**
- * Harmonogram: dni mojego wiersza zmienione od ostatniego wejścia na ekran (admin bez wiersza: 0).
+ * Harmonogram: dzień → najpóźniejsza zmiana wpisów mojego wiersza (admin bez wiersza: wszystkich osób).
+ * Własne zmiany (zatwierdzone przeze mnie) pomijamy.
  * shortcut: wyczyszczona komórka znika ze sklepu i nie jest liczona; liczyć usunięcia, gdy synchronizacja zacznie je przechowywać.
  */
-export function harmonogramCount(entries: Rec[], people: Rec[], meId: string | undefined, since: string): number {
-  const mine = new Set(people.filter((p) => meId && p.userId === meId).map((p) => p.id));
-  if (!mine.size) return 0;
-  return new Set(entries.filter((e) => mine.has(e.personId) && e.updatedAt > since).map((e) => `${e.personId}|${e.dzien}`)).size;
+export function changedDays(entries: Rec[], people: Rec[], me: { id: string; role: string } | null | undefined): Map<string, string> {
+  const m = new Map<string, string>();
+  if (!me) return m;
+  const mine = new Set(people.filter((p) => p.userId === me.id).map((p) => p.id));
+  const all = !mine.size && me.role === 'admin';
+  if (!mine.size && !all) return m;
+  for (const e of entries) {
+    if (e._tmp || e.createdBy === me.id || (!all && !mine.has(e.personId))) continue;
+    if (e.updatedAt > (m.get(e.dzien) ?? '')) m.set(e.dzien, e.updatedAt);
+  }
+  return m;
 }
+
+/** Zmienione dni, których po zmianie nie było widać na ekranie (`seen(dzien)`: ostatnie obejrzenie dnia). */
+export const unseenDays = (changed: Map<string, string>, seen: (dzien: string) => string): string[] =>
+  [...changed].filter(([d, at]) => at > seen(d)).map(([d]) => d).sort();
 
 /** Zakupy: admin widzi liczbę „Do kupienia” (pierwszy status słownika), pracownik nic. */
 export const zakupyCount = (items: Rec[], firstStatus: string | undefined, admin: boolean): number =>

@@ -7,6 +7,7 @@ import { Checkbox } from '../../core/ui/checkbox.js';
 import { Segmented } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
+import { CategoryLegend } from '../../core/ui/category.js';
 import { Combobox } from '../../core/ui/combobox.js';
 import { Field, Input } from '../../core/ui/input.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
@@ -113,6 +114,9 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
                   {(id) => <Combobox id={id} value={s.jobId} onValueChange={(jobId) => set(i, { jobId })} options={options}
                     placeholder="Wybierz zlecenie" search="Numer, klient lub miejscowość" empty="Brak aktywnego zlecenia." />}
                 </Field>
+              )}
+              {s.rodzaj === 'zlecenie' && i === slots.length - 1 && (
+                <CategoryLegend />
               )}
               {s.rodzaj === 'kod' && (
                 <div className="grid gap-2">

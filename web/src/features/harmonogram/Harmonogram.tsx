@@ -1,7 +1,9 @@
 import { addDays, isWorkday, mondayOf, plHolidays } from '@etner/shared';
-import { CaretLeft, CaretRight, MapPin, NavigationArrow, Phone, Briefcase, CalendarBlank, NotePencil } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, MapPin, NavigationArrow, Phone, Briefcase, CalendarBlank, NotePencil, PencilSimple } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { dayLong, dayShort, mapsUrl, telHref, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe } from '../../core/data.js';
+import { dayLong, dayShort, mapsUrl, markDaySeen, telHref, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe } from '../../core/data.js';
+import { useUnseenDays } from '../../core/layout/useBadges.js';
+import { CategoryLegend, catStripe, catTint, useCatColor } from '../../core/ui/category.js';
 import { useDesk } from '../../core/layout/status.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Badge, Empty, Segmented } from '../../core/ui/bits.js';
@@ -12,13 +14,19 @@ import type { Route } from '../../routes.js';
 import { useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
-import { cellKey, cellsOf, cellText, monthDays, type Slot } from './model.js';
+import { cellKey, cellsOf, cellText, monthDays, slotLabel, type Slot } from './model.js';
 
 export type Ctx = {
   jobs: Map<string, JobView>;
   codes: Map<string, string | undefined>;
   crew: (e: string | null | undefined) => string | undefined;
+  /** R30: kolor zlecenia na kartach harmonogramu = kolor kategorii. */
+  cat: (k: string | null | undefined) => string | undefined;
 };
+
+/** „Dziś”: po przejściu na bieżący tydzień / miesiąc przewijamy do dzisiejszego dnia. */
+let scrollToday = false;
+const smooth = (): ScrollBehavior => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
 
 const validDay = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined);
 
@@ -48,8 +56,12 @@ export function Harmonogram({ route }: { route: Route }) {
   const codesDict = useDict('kod_nieobecnosci');
   const jobs = useJobs();
   const crew = useCrewColor();
+  const cat = useCatColor();
+  const unseen = useUnseenDays();
+  const fresh = useMemo(() => new Set(unseen), [unseen]);
+  const seen = useMemo(() => (me ? (d: string) => markDaySeen(me.id, d) : undefined), [me]);
 
-  const ctx: Ctx = useMemo(() => ({ jobs, codes: new Map(codesDict.map((d) => [d.wartosc, d.kolor ?? undefined])), crew }), [jobs, codesDict, crew]);
+  const ctx: Ctx = useMemo(() => ({ jobs, codes: new Map(codesDict.map((d) => [d.wartosc, d.kolor ?? undefined])), crew, cat }), [jobs, codesDict, crew, cat]);
   const sorted = useMemo(() => [...people].sort((a, b) => a.kolejnosc - b.kolejnosc || a.nazwa.localeCompare(b.nazwa, 'pl')), [people]);
   const cells = useMemo(() => cellsOf(entries.filter((e) => e.dzien >= days[0]! && e.dzien <= days.at(-1)!)), [entries, days]);
   const draftMap = useMemo(() => new Map(admin ? drafts.map((d) => [cellKey(d.dzien, d.personId), d]) : []), [drafts, admin]);
@@ -62,8 +74,14 @@ export function Harmonogram({ route }: { route: Route }) {
   const [edit, setEdit] = useState<{ dzien: string; person: Rec } | null>(null);
   const open = admin ? (dzien: string, person: Rec) => setEdit({ dzien, person }) : undefined;
 
+  useEffect(() => {
+    if (!scrollToday || loading) return;
+    scrollToday = false;
+    requestAnimationFrame(() => document.querySelector(`[data-day="${t}"]`)?.scrollIntoView({ behavior: smooth(), block: desk ? 'nearest' : 'start', inline: 'start' }));
+  }, [anchor, month, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) return <HarmSkeleton />;
-  const props = { days, people: sorted, cells, draftMap, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t };
+  const props = { days, people: sorted, cells, draftMap, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t, fresh, seen };
 
   return (
     <section className="mx-auto grid max-w-[1400px] gap-4 px-4 py-4 desk:px-8 desk:py-6">
@@ -76,6 +94,7 @@ export function Harmonogram({ route }: { route: Route }) {
       {!sorted.length ? (
         <Empty icon={CalendarBlank} title="Harmonogram nie ma jeszcze osób" hint="Administrator dodaje osoby (kolumny) w ustawieniach użytkowników." />
       ) : month ? <MonthTable {...props} /> : desk ? <WeekTable {...props} /> : <DayCards {...props} />}
+      {!!sorted.length && <CategoryLegend className="px-1" />}
       {edit && <CellEditor dzien={edit.dzien} person={edit.person} people={sorted} current={cells.get(cellKey(edit.dzien, edit.person.id)) ?? []}
         draft={draftMap.get(cellKey(edit.dzien, edit.person.id))} ekipa={ekipaOf.get(edit.person.userId) ?? null} ctx={ctx} onClose={() => setEdit(null)} />}
     </section>
@@ -86,7 +105,33 @@ type ViewProps = {
   days: string[]; people: Rec[]; cells: Map<string, Slot[]>; draftMap: Map<string, Rec>; noteOf: Map<string, string>;
   mine?: Rec; ctx: Ctx; open?: (dzien: string, person: Rec) => void; dayInfo: (d: string) => { wd: 0 | 1 | 2; info?: string };
   ekipaOf: Map<string, string | null>; today: string;
+  /** Dni ze zmianą jeszcze nie obejrzaną („nowe”) i zapis obejrzenia dnia. */
+  fresh: Set<string>; seen?: (dzien: string) => void;
 };
+
+/** Dzień widoczny na ekranie ≥1 s (IntersectionObserver) → obejrzany. Obserwujemy tylko dni z „nowe”. */
+function useSeenRef(dzien: string, p: ViewProps) {
+  const [el, setEl] = useState<Element | null>(null);
+  const on = p.fresh.has(dzien) && !!p.seen;
+  const seen = p.seen;
+  useEffect(() => {
+    if (!on || !el || typeof IntersectionObserver === 'undefined') return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const io = new IntersectionObserver(([e]) => {
+      if (!e) return;
+      const vh = e.rootBounds?.height ?? innerHeight;
+      // mała kolumna: większa część widoczna; wysoka karta dnia: co najmniej pół ekranu
+      const ok = e.isIntersecting && (e.intersectionRatio >= 0.6 || e.intersectionRect.height >= vh * 0.5);
+      if (ok && !timer) timer = setTimeout(() => seen!(dzien), 1000);
+      if (!ok && timer) { clearTimeout(timer); timer = undefined; }
+    }, { threshold: [0, 0.25, 0.5, 0.6, 0.75, 1] });
+    io.observe(el);
+    return () => { io.disconnect(); clearTimeout(timer); };
+  }, [on, el, dzien, seen]);
+  return setEl;
+}
+
+const NewPill = () => <span className="shrink-0 rounded-full bg-danger px-1.5 text-[11px] font-bold leading-5 text-bg">nowe</span>;
 
 function HarmSkeleton() {
   return (
@@ -98,21 +143,31 @@ function HarmSkeleton() {
   );
 }
 
+const navBtn = 'grid h-11 w-11 desk:h-12 desk:w-12 shrink-0 place-items-center rounded-full border border-line bg-card hover:border-ink-2';
+
+/** Stały układ: [miejsce na „Dziś”] ‹ etykieta › (strzałki nie skaczą). */
+function NavRow({ back, slot, prev, next, labels, title, sub }: { back?: string; slot: string; prev: string; next: string; labels: [string, string]; title: string; sub: string }) {
+  return (
+    <div className="flex items-center gap-1.5 desk:gap-2">
+      <span className={cn('flex shrink-0 justify-end', slot)}>
+        {back && <a href="#harm" onClick={() => { scrollToday = true; }} className="inline-flex h-11 items-center rounded-full px-2.5 font-semibold text-action hover:bg-action/10 desk:h-12 desk:px-3">{back}</a>}
+      </span>
+      <a href={prev} aria-label={labels[0]} className={navBtn}><CaretLeft className="h-5 w-5" /></a>
+      <div className="w-48 shrink-0 text-center desk:w-52">
+        <p className="truncate font-wide text-base font-extrabold leading-tight first-letter:uppercase desk:text-lg">{title}</p>
+        <p className="text-sm text-ink-2 tabular-nums">{sub}</p>
+      </div>
+      <a href={next} aria-label={labels[1]} className={navBtn}><CaretRight className="h-5 w-5" /></a>
+    </div>
+  );
+}
+
 function WeekNav({ monday, today: t }: { monday: string; today: string }) {
   const sun = addDays(monday, 6);
   const isNow = mondayOf(t) === monday;
   const range = `${Number(monday.slice(8))}.${monday.slice(5, 7)}-${Number(sun.slice(8))}.${sun.slice(5, 7)}.${sun.slice(0, 4)}`;
-  return (
-    <div className="flex items-center gap-2">
-      <a href={`#harm/${addDays(monday, -7)}`} aria-label="Poprzedni tydzień" className="grid h-12 w-12 place-items-center rounded-full border border-line bg-card hover:border-ink-2"><CaretLeft className="h-5 w-5" /></a>
-      <div className="min-w-0 flex-1 text-center desk:flex-none desk:px-4">
-        <p className="font-wide text-lg font-extrabold leading-tight">{isNow ? 'Ten tydzień' : mondayOf(addDays(t, 7)) === monday ? 'Następny tydzień' : 'Tydzień'}</p>
-        <p className="text-sm text-ink-2">{range}</p>
-      </div>
-      <a href={`#harm/${addDays(monday, 7)}`} aria-label="Następny tydzień" className="grid h-12 w-12 place-items-center rounded-full border border-line bg-card hover:border-ink-2"><CaretRight className="h-5 w-5" /></a>
-      {!isNow && <a href="#harm" className="ml-auto inline-flex h-12 items-center rounded-full px-4 font-semibold text-action hover:bg-action/10">Dziś</a>}
-    </div>
-  );
+  const title = isNow ? 'Ten tydzień' : mondayOf(addDays(t, 7)) === monday ? 'Następny tydzień' : mondayOf(addDays(t, -7)) === monday ? 'Poprzedni tydzień' : 'Tydzień';
+  return <NavRow slot="w-[3.75rem] desk:w-16" back={isNow ? undefined : 'Dziś'} prev={`#harm/${addDays(monday, -7)}`} next={`#harm/${addDays(monday, 7)}`} labels={['Poprzedni tydzień', 'Następny tydzień']} title={title} sub={range} />;
 }
 
 const MONTH = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -123,17 +178,7 @@ function MonthNav({ day, today: t }: { day: string; today: string }) {
   const prev = `${addDays(first, -1).slice(0, 7)}-01`;
   const next = addDays(monthDays(day).at(-1)!, 1);
   const isNow = t.slice(0, 7) === day.slice(0, 7);
-  return (
-    <div className="flex items-center gap-2">
-      <a href={`#harm/${prev}`} aria-label="Poprzedni miesiąc" className="grid h-12 w-12 place-items-center rounded-full border border-line bg-card hover:border-ink-2"><CaretLeft className="h-5 w-5" /></a>
-      <div className="px-4 text-center">
-        <p className="font-wide text-lg font-extrabold leading-tight first-letter:uppercase">{monthName(day)}</p>
-        <p className="text-sm text-ink-2">{isNow ? 'Ten miesiąc' : 'Miesiąc'}</p>
-      </div>
-      <a href={`#harm/${next}`} aria-label="Następny miesiąc" className="grid h-12 w-12 place-items-center rounded-full border border-line bg-card hover:border-ink-2"><CaretRight className="h-5 w-5" /></a>
-      {!isNow && <a href="#harm" className="inline-flex h-12 items-center rounded-full px-4 font-semibold text-action hover:bg-action/10">Ten miesiąc</a>}
-    </div>
-  );
+  return <NavRow slot="w-32" back={isNow ? undefined : 'Ten miesiąc'} prev={`#harm/${prev}`} next={`#harm/${next}`} labels={['Poprzedni miesiąc', 'Następny miesiąc']} title={monthName(day)} sub={isNow ? 'Ten miesiąc' : 'Miesiąc'} />;
 }
 
 /** „Gdzie jedziesz”: pierwszy dzień od dziś z wpisami użytkownika. */
@@ -187,29 +232,34 @@ function WhereSlot({ slot, ctx }: { slot: Slot; ctx: Ctx }) {
   );
 }
 
-/** Wartość komórki: zlecenia z kolorem ekipy, kody w kolorze słownika, tekst. */
-export function CellView({ slots, ctx, compact }: { slots: Slot[]; ctx: Ctx; compact?: boolean }) {
+/** Wartość komórki: zlecenia w kolorze kategorii (z `link`: odnośnik do karty zlecenia), kody w kolorze słownika, tekst. */
+export function CellView({ slots, ctx, compact, link }: { slots: Slot[]; ctx: Ctx; compact?: boolean; link?: boolean }) {
   if (!slots.length) return <span className="text-sm text-ink-2/60"><span aria-hidden>·</span><span className="sr-only">pusto</span></span>;
   return (
-    <span className={cn('grid min-w-0 gap-1', slots.length === 2 && compact && 'grid-cols-1')}>
-      {slots.map((s, i) => s.rodzaj === 'zlecenie' ? <JobChip key={i} slot={s} ctx={ctx} compact={compact} /> : <CodeChip key={i} slot={s} ctx={ctx} />)}
+    <span className="grid min-w-0 gap-1">
+      {slots.map((s, i) => s.rodzaj === 'zlecenie' ? <JobChip key={i} slot={s} ctx={ctx} compact={compact} link={link} /> : <CodeChip key={i} slot={s} ctx={ctx} />)}
     </span>
   );
 }
 
-function JobChip({ slot, ctx, compact }: { slot: Extract<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx; compact?: boolean }) {
+function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx; compact?: boolean; link?: boolean }) {
   const j = ctx.jobs.get(slot.jobId);
-  const c = ctx.crew(j?.ekipa);
-  return (
-    <span className="flex min-w-0 items-stretch gap-2 rounded-lg bg-bg/70 py-1 pr-2 pl-0 text-left" style={{ boxShadow: `inset 3px 0 0 ${c ?? 'var(--line)'}` }}>
-      <span className="min-w-0 pl-2.5">
-        <span className="flex min-w-0 items-center gap-1.5 text-xs text-ink-2">
-          <span className="shrink-0 font-semibold tabular-nums">{j?.numer ?? 'zlecenie'}</span>{slot.polDnia && <span className="shrink-0 font-bold" aria-label="pół dnia">½</span>}
-          {j?.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
-        </span>
-        <span className={cn('block truncate font-semibold leading-tight', compact ? 'text-sm' : 'text-[15px]')}>{j?.client?.nazwa ?? ''}</span>
+  const c = ctx.cat(j?.kategoria);
+  const body = (
+    <span className="min-w-0 pl-2.5">
+      <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-ink-2', link && compact && 'pr-6')}>
+        <span className="shrink-0 font-semibold tabular-nums">{j?.numer ?? 'zlecenie'}</span>{slot.polDnia && <span className="shrink-0 font-bold" aria-label="pół dnia">½</span>}
+        {j?.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
       </span>
+      <span className={cn('block truncate font-semibold leading-tight', compact ? 'text-sm' : 'text-[15px]')}>{j?.client?.nazwa ?? ''}</span>
     </span>
+  );
+  const cls = 'flex min-w-0 items-stretch gap-2 rounded-lg py-1 pr-2 pl-0 text-left text-ink';
+  const style = { background: catTint(c), boxShadow: `inset 4px 0 0 ${catStripe(c)}` };
+  if (!link) return <span className={cls} style={style}>{body}</span>;
+  return (
+    <a href={`#zl/${slot.jobId}`} aria-label={`Zlecenie ${slotLabel(slot, ctx.jobs)}${slot.polDnia ? ', pół dnia' : ''}`} style={style}
+      className={cn(cls, 'decoration-1 underline-offset-2 transition-[outline-color] duration-200 outline-1 outline-transparent hover:underline hover:outline-ink-2/50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action')}>{body}</a>
   );
 }
 
@@ -225,25 +275,43 @@ function CodeChip({ slot, ctx }: { slot: Exclude<Slot, { rodzaj: 'zlecenie' }>; 
   );
 }
 
-/** Komórka do kliknięcia (admin) albo tylko do odczytu. */
+/**
+ * Komórka. Admin: puste miejsce, kod i tekst otwierają edytor; zlecenie prowadzi do karty zlecenia, a edytor otwiera ✎.
+ * Pracownik: tylko odczyt, zlecenie też prowadzi do karty.
+ */
 function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec; p: ViewProps; compact?: boolean }) {
   const key = cellKey(dzien, person.id);
   const cur = p.cells.get(key) ?? [];
   const draft = p.draftMap.get(key);
   const shown = draft && Array.isArray(draft.proposal) ? (draft.proposal as Slot[]) : cur;
   const label = `${person.nazwa}, ${dayShort(dzien)}: ${cellText(shown, p.ctx.jobs)}${draft ? ' (szkic)' : ''}`;
-  const body = (
-    <>
-      <CellView slots={shown} ctx={p.ctx} compact={compact} />
-      {draft && <span className="absolute top-1 right-1 rounded-full bg-action px-1.5 text-xs font-bold leading-4 text-action-ink">szkic</span>}
-    </>
-  );
+  const hasJob = shown.some((s) => s.rodzaj === 'zlecenie');
+  const szkic = draft && <span className={cn('pointer-events-none absolute top-1 rounded-full', p.open && hasJob && compact ? 'right-8' : 'right-1', ' bg-action px-1.5 text-xs font-bold leading-4 text-action-ink')}>szkic</span>;
   const cls = cn('relative block h-full w-full min-w-0 rounded-xl p-1.5 text-left', draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5');
-  return p.open ? (
-    <button type="button" data-cell={`${dzien}|${person.nazwa}`} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
-      onClick={() => p.open!(dzien, person)} className={cn(cls, 'min-h-12 transition-colors duration-200 hover:bg-action/8')}>{body}</button>
-  ) : (
-    <div data-cell={`${dzien}|${person.nazwa}`} role="img" aria-label={label} className={cls}>{body}</div>
+  if (p.open && !hasJob) {
+    return (
+      <button type="button" data-cell={`${dzien}|${person.nazwa}`} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
+        onClick={() => p.open!(dzien, person)} className={cn(cls, 'min-h-12 transition-colors duration-200 hover:bg-action/8')}>
+        <CellView slots={shown} ctx={p.ctx} compact={compact} />{szkic}
+      </button>
+    );
+  }
+  return (
+    <div data-cell={`${dzien}|${person.nazwa}`} role="group" aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
+      // kliknięcie obok odnośnika (myszą) też otwiera edytor; z klawiatury i czytnika: przycisk ✎
+      onClick={p.open ? (e) => { if (!(e.target as Element).closest('a,button')) p.open!(dzien, person); } : undefined}
+      className={cn(cls, p.open && 'min-h-12 cursor-pointer transition-colors duration-200 hover:bg-action/8', p.open && !compact && 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1')}>
+      <CellView slots={shown} ctx={p.ctx} compact={compact} link />
+      {p.open && (
+        <button type="button" aria-label={`Edytuj komórkę ${person.nazwa} ${dayShort(dzien)}`} onClick={() => p.open!(dzien, person)}
+          // tabela (komputer): w rogu nad paskiem numeru, żeby karta zlecenia miała całą szerokość
+          className={cn('grid place-items-center rounded-lg text-ink-2 hover:bg-action/10 hover:text-action focus-visible:outline-2 focus-visible:outline-action',
+            compact ? 'absolute top-1.5 right-1.5 h-6 w-6 rounded-md bg-card/90' : 'h-8 w-8')}>
+          <PencilSimple className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+        </button>
+      )}
+      {szkic}
+    </div>
   );
 }
 
@@ -259,42 +327,60 @@ function NameCell({ person, mine, color }: { person: Rec; mine: boolean; color?:
 
 /** Telefon: karty dni, w każdej osoby po kolei. */
 function DayCards(p: ViewProps) {
+  return <div className="grid gap-3">{p.days.map((d) => <DayCard key={d} d={d} p={p} />)}</div>;
+}
+
+function DayCard({ d, p }: { d: string; p: ViewProps }) {
+  const ref = useSeenRef(d, p);
+  const { wd, info } = p.dayInfo(d);
+  const note = p.noteOf.get(d);
+  const any = p.people.some((x) => p.cells.has(cellKey(d, x.id)) || p.draftMap.has(cellKey(d, x.id)));
+  const isToday = d === p.today;
+  const fresh = p.fresh.has(d);
+  if (wd !== 1 && !any && !note) {
+    return (
+      <p ref={ref} data-day={d} className="flex scroll-mt-20 items-center justify-between gap-2 rounded-2xl border border-line/70 px-4 py-3 text-sm text-ink-2">
+        <span className="flex items-center gap-2 font-semibold">{dayLong(d)}{fresh && <NewPill />}</span><span>{info ?? 'Weekend'}</span>
+      </p>
+    );
+  }
   return (
-    <div className="grid gap-3">
-      {p.days.map((d) => {
-        const { wd, info } = p.dayInfo(d);
-        const note = p.noteOf.get(d);
-        const any = p.people.some((x) => p.cells.has(cellKey(d, x.id)) || p.draftMap.has(cellKey(d, x.id)));
-        const isToday = d === p.today;
-        if (wd !== 1 && !any && !note) {
+    <article ref={ref} id={`d-${d}`} data-day={d} className={cn('scroll-mt-20 overflow-hidden rounded-2xl border bg-card shadow-card', isToday ? 'border-action' : 'border-line')}>
+      <header className={cn('flex items-center justify-between gap-2 px-4 py-2.5', isToday ? 'bg-action/10' : 'border-b border-line')}>
+        <h3 className="font-wide font-extrabold first-letter:uppercase">{dayLong(d)}</h3>
+        <span className="flex items-center gap-1.5">{fresh && <NewPill />}{isToday && <Badge tone="action">dziś</Badge>}{info && <Badge tone="warn">{info}</Badge>}</span>
+      </header>
+      {note && <p className="flex gap-2 border-b border-line bg-bg/60 px-4 py-2 text-sm"><NotePencil className="mt-0.5 h-4 w-4 shrink-0 text-ink-2" />{note}</p>}
+      <ul className="divide-y divide-line/70">
+        {p.people.map((x) => {
+          const me = x.id === p.mine?.id;
           return (
-            <p key={d} className="flex items-center justify-between rounded-2xl border border-line/70 px-4 py-3 text-sm text-ink-2">
-              <span className="font-semibold">{dayLong(d)}</span><span>{info ?? 'Weekend'}</span>
-            </p>
+            <li key={x.id} className={cn('grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] items-center gap-2 px-2 py-0.5', me && 'bg-action/6')}>
+              <span className="pl-2"><NameCell person={x} mine={me} color={p.ctx.crew(p.ekipaOf.get(x.userId))} /></span>
+              <CellButton dzien={d} person={x} p={p} />
+            </li>
           );
-        }
-        return (
-          <article key={d} id={`d-${d}`} className={cn('overflow-hidden rounded-2xl border bg-card shadow-card', isToday ? 'border-action' : 'border-line')}>
-            <header className={cn('flex items-center justify-between gap-2 px-4 py-2.5', isToday ? 'bg-action/10' : 'border-b border-line')}>
-              <h3 className="font-wide font-extrabold first-letter:uppercase">{dayLong(d)}</h3>
-              <span className="flex items-center gap-1.5">{isToday && <Badge tone="action">dziś</Badge>}{info && <Badge tone="warn">{info}</Badge>}</span>
-            </header>
-            {note && <p className="flex gap-2 border-b border-line bg-bg/60 px-4 py-2 text-sm"><NotePencil className="mt-0.5 h-4 w-4 shrink-0 text-ink-2" />{note}</p>}
-            <ul className="divide-y divide-line/70">
-              {p.people.map((x) => {
-                const me = x.id === p.mine?.id;
-                return (
-                  <li key={x.id} className={cn('grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] items-center gap-2 px-2 py-0.5', me && 'bg-action/6')}>
-                    <span className="pl-2"><NameCell person={x} mine={me} color={p.ctx.crew(p.ekipaOf.get(x.userId))} /></span>
-                    <CellButton dzien={d} person={x} p={p} />
-                  </li>
-                );
-              })}
-            </ul>
-          </article>
-        );
-      })}
-    </div>
+        })}
+      </ul>
+    </article>
+  );
+}
+
+/** Nagłówek kolumny dnia (tydzień i miesiąc): dzień, święto, uwaga, „nowe”; obejrzenie liczone, gdy widać nagłówek. */
+function DayHead({ d, p, className }: { d: string; p: ViewProps; className?: string }) {
+  const ref = useSeenRef(d, p);
+  const { wd, info } = p.dayInfo(d);
+  const isToday = d === p.today;
+  const note = p.noteOf.get(d);
+  return (
+    <th ref={ref} data-day={d} data-today={isToday || undefined} scope="col" className={cn('px-2 py-2 align-top', isToday && 'bg-action/10', wd !== 1 && 'bg-bg/60', className)}>
+      <span className="flex items-center justify-between gap-1">
+        <span className={cn('block font-wide text-sm font-extrabold first-letter:uppercase', isToday && 'text-action')}>{dayShort(d)}</span>
+        {p.fresh.has(d) && <NewPill />}
+      </span>
+      {info && <span className="block truncate text-xs font-semibold text-danger" title={info}>{info}</span>}
+      {note && <span className="mt-1 flex gap-1 text-xs font-normal text-ink-2" title={note}><NotePencil className="h-3.5 w-3.5 shrink-0" /><span className="line-clamp-2">{note}</span></span>}
+    </th>
   );
 }
 
@@ -310,17 +396,7 @@ function WeekTable(p: ViewProps) {
         <thead>
           <tr className="border-b border-line">
             <th scope="col" className="px-4 py-3 text-sm font-semibold text-ink-2">Osoba</th>
-            {p.days.map((d) => {
-              const { wd, info } = p.dayInfo(d);
-              const isToday = d === p.today;
-              return (
-                <th key={d} scope="col" className={cn('px-2 py-2 align-top', isToday && 'bg-action/10', wd !== 1 && 'bg-bg/60')}>
-                  <span className={cn('block font-wide text-sm font-extrabold first-letter:uppercase', isToday && 'text-action')}>{dayShort(d)}</span>
-                  {info && <span className="block truncate text-xs font-semibold text-danger" title={info}>{info}</span>}
-                  {p.noteOf.get(d) && <span className="mt-1 flex gap-1 text-xs font-normal text-ink-2" title={p.noteOf.get(d)}><NotePencil className="h-3.5 w-3.5 shrink-0" /><span className="line-clamp-2">{p.noteOf.get(d)}</span></span>}
-                </th>
-              );
-            })}
+            {p.days.map((d) => <DayHead key={d} d={d} p={p} />)}
           </tr>
         </thead>
         <tbody className="divide-y divide-line/70">
@@ -343,84 +419,57 @@ function WeekTable(p: ViewProps) {
   );
 }
 
+const COL = 160; // szerokość kolumny dnia w miesiącu (jak kolumna tygodnia na 1440 px)
+const NAME = 208;
 
-const shortLabel = (s: Slot, ctx: Ctx) => (s.rodzaj === 'zlecenie' ? ctx.jobs.get(s.jobId)?.numer ?? 'zl.' : s.rodzaj === 'kod' ? s.kod : s.tekst);
-const WD2 = ['nd', 'pn', 'wt', 'śr', 'cz', 'pt', 'sb'];
-
-/** Komputer: miesiąc jako zwarta tabela osoba × dzień (przewijana w poziomie wewnątrz ramki). */
+/** Komputer: miesiąc, te same karty co w tygodniu; tabela przewijana w poziomie (strzałki: o tydzień). */
 function MonthTable(p: ViewProps) {
   const box = useRef<HTMLDivElement>(null);
   const month = p.days[0]!.slice(0, 7);
-  // dziś widoczne bez przewijania: tydzień przed dzisiejszym dniem przy lewej krawędzi
   useEffect(() => {
     const el = box.current, th = el?.querySelector<HTMLElement>('th[data-today]');
-    if (el) el.scrollLeft = th ? Math.max(0, th.offsetLeft - 176 - 7 * th.offsetWidth) : 0;
+    // th jest sticky, więc offsetLeft liczy się od innego przodka: pozycja względem ramki
+    if (el) el.scrollLeft = th ? Math.max(0, el.scrollLeft + th.getBoundingClientRect().left - el.getBoundingClientRect().left - NAME) : 0;
   }, [month]);
+  const by = (n: number) => box.current?.scrollBy({ left: n * 7 * COL, behavior: smooth() });
   return (
-    <div ref={box} className="max-h-[calc(100dvh-15rem)] overflow-auto overscroll-x-contain rounded-2xl border border-line bg-card shadow-card">
-      <table className="border-separate border-spacing-0 text-left text-xs">
-        <thead>
-          <tr>
-            <th scope="col" className="sticky top-0 left-0 z-20 w-44 min-w-44 border-r border-b border-line bg-card px-3 py-2 text-sm font-semibold text-ink-2">Osoba</th>
-            {p.days.map((d) => {
-              const { wd, info } = p.dayInfo(d);
-              const isToday = d === p.today;
+    <div className="grid gap-2">
+      <div className="flex items-center justify-end gap-2">
+        <span className="text-sm text-ink-2">Przewiń o tydzień</span>
+        <button type="button" aria-label="Przewiń tydzień wstecz" onClick={() => by(-1)} className={navBtn}><CaretLeft className="h-5 w-5" /></button>
+        <button type="button" aria-label="Przewiń tydzień naprzód" onClick={() => by(1)} className={navBtn}><CaretRight className="h-5 w-5" /></button>
+      </div>
+      <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-x-contain rounded-2xl border border-line bg-card shadow-card">
+        <table className="table-fixed border-separate border-spacing-0 text-left" style={{ width: NAME + COL * p.days.length }}>
+          <colgroup>
+            <col style={{ width: NAME }} />
+            {p.days.map((d) => <col key={d} style={{ width: COL }} />)}
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" className="sticky top-0 left-0 z-20 border-r border-b border-line bg-card px-4 py-3 text-sm font-semibold text-ink-2">Osoba</th>
+              {p.days.map((d) => <DayHead key={d} d={d} p={p} className={cn('sticky top-0 z-10 scroll-ml-[13rem] border-b border-line bg-card', d === p.today ? 'bg-[color-mix(in_srgb,var(--action)_14%,var(--card))]' : p.dayInfo(d).wd !== 1 && 'bg-[color-mix(in_srgb,var(--bg)_70%,var(--card))]')} />)}
+            </tr>
+          </thead>
+          <tbody>
+            {p.people.map((x) => {
+              const me = x.id === p.mine?.id;
               return (
-                <th key={d} scope="col" data-today={isToday || undefined} title={info ?? p.noteOf.get(d)} className={cn('sticky top-0 z-10 min-w-14 border-b border-line bg-card px-1 py-1.5 text-center font-semibold',
-                  wd !== 1 && 'bg-[color-mix(in_srgb,var(--bg)_70%,var(--card))] text-ink-2', isToday && 'bg-[color-mix(in_srgb,var(--action)_14%,var(--card))] text-action')}>
-                  <span className="block text-sm font-extrabold tabular-nums">{Number(d.slice(8))}</span>
-                  <span className={cn('block', info && 'text-danger')}>{WD2[weekdayOf(d)]}</span>
-                  {p.noteOf.get(d) && <NotePencil className="mx-auto h-3.5 w-3.5" aria-label={`Uwaga: ${p.noteOf.get(d)}`} />}
-                </th>
+                <tr key={x.id}>
+                  <th scope="row" className={cn('sticky left-0 z-10 border-r border-b border-line/70 bg-card px-3 py-1.5 text-sm', me && 'bg-[color-mix(in_srgb,var(--action)_6%,var(--card))]')}>
+                    <NameCell person={x} mine={me} color={p.ctx.crew(p.ekipaOf.get(x.userId))} />
+                  </th>
+                  {p.days.map((d) => (
+                    <td key={d} className={cn('h-16 border-b border-line/70 p-1 align-top', p.dayInfo(d).wd !== 1 && 'bg-bg/50', d === p.today && 'bg-action/5', me && 'bg-action/6')}>
+                      <CellButton dzien={d} person={x} p={p} compact />
+                    </td>
+                  ))}
+                </tr>
               );
             })}
-          </tr>
-        </thead>
-        <tbody>
-          {p.people.map((x) => (
-            <tr key={x.id}>
-              <th scope="row" className={cn('sticky left-0 z-10 border-r border-b border-line/70 bg-card px-3 py-1 text-sm', x.id === p.mine?.id && 'bg-[color-mix(in_srgb,var(--action)_6%,var(--card))]')}>
-                <NameCell person={x} mine={x.id === p.mine?.id} color={p.ctx.crew(p.ekipaOf.get(x.userId))} />
-              </th>
-              {p.days.map((d) => (
-                <td key={d} className={cn('h-11 border-b border-line/70 p-0.5', p.dayInfo(d).wd !== 1 && 'bg-bg/60', d === p.today && 'bg-action/8')}>
-                  <MonthCell dzien={d} person={x} p={p} />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
-  );
-}
-
-const weekdayOf = (d: string) => new Date(`${d}T12:00:00Z`).getUTCDay();
-
-function MonthCell({ dzien, person, p }: { dzien: string; person: Rec; p: ViewProps }) {
-  const key = cellKey(dzien, person.id);
-  const cur = p.cells.get(key) ?? [];
-  const draft = p.draftMap.get(key);
-  const shown = draft && Array.isArray(draft.proposal) ? (draft.proposal as Slot[]) : cur;
-  const label = `${person.nazwa}, ${dayShort(dzien)}: ${cellText(shown, p.ctx.jobs)}${draft ? ' (szkic)' : ''}`;
-  const body = (
-    <span className="grid h-full gap-px">
-      {shown.map((s, i) => {
-        const color = s.rodzaj === 'zlecenie' ? p.ctx.crew(p.ctx.jobs.get(s.jobId)?.ekipa) : s.rodzaj === 'kod' ? p.ctx.codes.get(s.kod) ?? '#8896a5' : undefined;
-        return (
-          <span key={i} className="flex min-w-0 items-center truncate rounded-md px-1 font-semibold tabular-nums leading-tight"
-            style={s.rodzaj === 'kod' ? { background: `${color}30`, boxShadow: `inset 0 0 0 1px ${color}80` } : { boxShadow: `inset 3px 0 0 ${color ?? 'var(--line)'}`, background: 'color-mix(in srgb, var(--bg) 70%, transparent)' }}>
-            <span className="truncate pl-0.5">{shortLabel(s, p.ctx)}</span>
-          </span>
-        );
-      })}
-    </span>
-  );
-  const cls = cn('block h-full w-full min-w-0 rounded-lg p-0.5 text-left', draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5');
-  return p.open ? (
-    <button type="button" data-cell={`${dzien}|${person.nazwa}`} aria-label={label} title={label} onClick={() => p.open!(dzien, person)}
-      className={cn(cls, 'transition-colors duration-200 hover:bg-action/8')}>{body}</button>
-  ) : (
-    <div data-cell={`${dzien}|${person.nazwa}`} role="img" aria-label={label} title={label} className={cls}>{body}</div>
   );
 }

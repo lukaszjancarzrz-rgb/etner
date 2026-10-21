@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { badgeText, freshByJob, harmonogramCount, naJutroCount, zakupyCount } from './badges.js';
+import { badgeText, changedDays, freshByJob, naJutroCount, unseenDays, zakupyCount } from './badges.js';
 
 const T0 = '2026-10-21T08:00:00.000Z', T1 = '2026-10-21T09:00:00.000Z', T2 = '2026-10-21T10:00:00.000Z';
 const r = (o: Record<string, unknown>) => ({ id: Math.random().toString(36), createdAt: T0, updatedAt: T0, ...o }) as any;
@@ -33,15 +33,23 @@ describe('liczniki w menu', () => {
     expect(naJutroCount([r({ dzien: '2026-11-01', ekipa: 'A', zabrane: false })], '2026-10-31', { role: 'pracownik', ekipa: 'A' })).toBe(1);
   });
 
-  it('harmonogramCount: zmienione dni mojego wiersza od wejścia; bez wiersza 0', () => {
+  it('changedDays i unseenDays: mój wiersz (admin bez wiersza: wszyscy), bez własnych zmian; dzień widziany po zmianie znika', () => {
     const people = [r({ id: 'p1', userId: 'me' }), r({ id: 'p2', userId: 'x' })];
     const entries = [
-      r({ personId: 'p1', dzien: '2026-10-22', slot: 0, updatedAt: T2 }), r({ personId: 'p1', dzien: '2026-10-22', slot: 1, updatedAt: T2 }),
+      r({ personId: 'p1', dzien: '2026-10-22', slot: 0, updatedAt: T1 }), r({ personId: 'p1', dzien: '2026-10-22', slot: 1, updatedAt: T2 }),
       r({ personId: 'p1', dzien: '2026-10-23', updatedAt: T2 }), r({ personId: 'p1', dzien: '2026-10-24', updatedAt: T0 }),
-      r({ personId: 'p2', dzien: '2026-10-22', updatedAt: T2 }),
+      r({ personId: 'p2', dzien: '2026-10-25', updatedAt: T2 }), r({ personId: 'p2', dzien: '2026-10-26', updatedAt: T2, createdBy: 'adm' }),
+      r({ personId: 'p1', dzien: '2026-10-27', updatedAt: T2, _tmp: true }),
     ];
-    expect(harmonogramCount(entries, people, 'me', T1)).toBe(2);
-    expect(harmonogramCount(entries, people, 'admin', T1)).toBe(0);
+    const w = changedDays(entries, people, { id: 'me', role: 'pracownik' });
+    expect(Object.fromEntries(w)).toEqual({ '2026-10-22': T2, '2026-10-23': T2, '2026-10-24': T0 });
+    expect(changedDays(entries, people, { id: 'x2', role: 'pracownik' }).size).toBe(0);
+    // admin bez wiersza: zmiany wszystkich oprócz własnych
+    expect([...changedDays(entries, people, { id: 'adm', role: 'admin' }).keys()].sort()).toEqual(['2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25']);
+    const seen: Record<string, string> = { '2026-10-22': T1 };
+    expect(unseenDays(w, (d) => seen[d] ?? T1)).toEqual(['2026-10-22', '2026-10-23']);
+    seen['2026-10-22'] = T2; // dzień obejrzany po zmianie
+    expect(unseenDays(w, (d) => seen[d] ?? T1)).toEqual(['2026-10-23']);
   });
 
   it('zakupyCount i badgeText', () => {

@@ -5,13 +5,12 @@ import { useRoute } from '../../routes.js';
 import { BottomNav } from './BottomNav.js';
 import { SideNav } from './SideNav.js';
 import { TopBar } from './TopBar.js';
-import { useBadges, useMarkScreen } from './useBadges.js';
+import { useBadges } from './useBadges.js';
 
 export function Shell() {
   const route = useRoute();
   const s = screens[route.screen]!;
   const Screen = s.component;
-  useMarkScreen(route.screen);
   const badges = useBadges();
   return (
     <div className="min-h-[100dvh] desk:pl-64">

@@ -87,7 +87,7 @@ const navKey = (userId: string, screen: string) => `nav-seen:${userId}:${screen}
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 /** Tylko odczyt (bezpieczne w useMemo). Bez zapisanej bazy: „teraz”, czyli nic nie jest nowe, dopóki ensureSeenBase jej nie zapisze. */
 export const seenAt = (jobId: string): string => read(`seen:${jobId}`) ?? read(SEEN0) ?? new Date().toISOString();
-/** Ostatnie wejście na ekran (liczniki w menu), per użytkownik; tylko odczyt. */
+/** Baza „ostatnio widziane” ekranu (pierwsze uruchomienie), per użytkownik; tylko odczyt. */
 export const screenSeenAt = (userId: string, screen: string): string => read(navKey(userId, screen)) ?? new Date().toISOString();
 /** Pierwsze uruchomienie: baza „ostatnio widziane” = teraz (stare dane nie są „nowe”). Wołać w efekcie. */
 export function ensureSeenBase(userId: string, screens: string[]): void {
@@ -104,8 +104,10 @@ export function markSeen(jobId: string): void {
   try { localStorage.setItem(`seen:${jobId}`, new Date().toISOString()); } catch { /* prywatne okno */ }
   bump();
 }
-export function markScreenSeen(userId: string, screen: string): void {
-  try { localStorage.setItem(navKey(userId, screen), new Date().toISOString()); } catch { /* prywatne okno */ }
+/** Ostatnie obejrzenie dnia harmonogramu (karta / kolumna widoczna na ekranie); bez wpisu: baza z pierwszego uruchomienia. */
+export const daySeenAt = (userId: string, dzien: string): string => read(`harm-day:${userId}:${dzien}`) ?? screenSeenAt(userId, 'harm');
+export function markDaySeen(userId: string, dzien: string): void {
+  try { localStorage.setItem(`harm-day:${userId}:${dzien}`, new Date().toISOString()); } catch { /* prywatne okno */ }
   bump();
 }
 /** Zmienia się po każdym markSeen (liczniki „nowe” liczone od nowa). */
