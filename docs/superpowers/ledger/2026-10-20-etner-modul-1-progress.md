@@ -144,3 +144,4 @@ Owner withdrew both 2026-10-21 (2) changes ("zostawmy to na razie"): Task 18b re
 Task 18a: hardening re-review — all 9 addressed, no new breakage (commits a239af4..d4d4fee)
 Task 18a: minor (deferred): 5000 distinct logins can fill limiter (429 for new keys ≤15 min); anyone can lock a known login with 5 bad attempts (accepted)
 Task 18a: complete (commits 8b83f13..d4d4fee, review clean)
+Note: klienci worker-visibility test failed once (1/9 runs) while a reviewer subagent was concurrently running/checking out the repo (it left HEAD detached at d4d4fee — reviewer violated read-only; fixed by cherry-pick); 8 later runs green — watch for flakiness in final review
