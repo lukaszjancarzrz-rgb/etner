@@ -7,6 +7,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { Db } from './core/db.js';
 import { mountAuth } from './core/auth.js';
 import { logError } from './core/errors.js';
+import { mountSync } from './core/sync.js';
 
 export interface AppDeps {
   version: string;
@@ -31,6 +32,7 @@ export function createApp(deps: AppDeps): Hono {
   app.get('/api/health', (c) => c.json({ ok: true, version: deps.version }));
 
   mountAuth(app, deps);
+  mountSync(app, deps);
 
   const webDist = deps.webDist ?? defaultWebDist;
   const hasWeb = existsSync(join(webDist, 'index.html'));

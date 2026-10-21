@@ -9,8 +9,8 @@ export type CronDef = { name: string; schedule: string; run(deps: AppDeps): void
 export type ModuleDef = {
   name: string;
   routes(app: Hono, deps: AppDeps): void;
-  /** true = widoczne, false = ukryte, ChangeRow = wersja okrojona dla tego użytkownika. */
-  visibleTo?(user: User, ch: ChangeRow): boolean | ChangeRow;
+  /** Brak visibleTo = tylko admin (sync.ts). true = widoczne, false = ukryte, ChangeRow = wersja okrojona dla tego użytkownika. */
+  visibleTo?(user: User, ch: ChangeRow, deps: AppDeps): boolean | ChangeRow;
   cron?: CronDef[];
   /** Tabele modułu (eksport). */
   tables?: Record<string, SQLiteTable>;
