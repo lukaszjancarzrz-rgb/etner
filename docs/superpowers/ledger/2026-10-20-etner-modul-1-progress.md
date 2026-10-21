@@ -137,3 +137,6 @@ STOP: owner checkpoint after Task 18 (deploy via render.yaml Blueprint = owner s
 - Ruling R28: scrypt from node:crypto (no new dependency), format `scrypt$<salt b64>$<hash b64>` with timingSafeEqual; failed-attempt limit in process memory (5 per login / 15 min → 429), shortcut acceptable for one process; token_hash column dropped; R16/R23 superseded (demo: fixed demo password, GET /api/demo/konta only with DEMO=1, login screen lists demo accounts); Task 22 will not carry old link tokens — cost: owner hands out passwords at go-live.
 Task 18a: BASE 8b83f13; impl a239af4; review dispatched
 Owner withdrew both 2026-10-21 (2) changes ("zostawmy to na razie"): Task 18b removed from plan/spec; nothing in code changed. Client editing UI and „pokaż klientowi” scope remain open questions for later.
+Task 18a: hardening re-review — all 9 addressed, no new breakage (commits a239af4..d4d4fee)
+Task 18a: minor (deferred): 5000 distinct logins can fill limiter (429 for new keys ≤15 min); anyone can lock a known login with 5 bad attempts (accepted)
+Task 18a: complete (commits 8b83f13..d4d4fee, review clean)
