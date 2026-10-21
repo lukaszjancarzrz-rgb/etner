@@ -90,7 +90,7 @@ firma ─┬─ klient ── obiekt (adres, mapa) ─┬─ zlecenie (rodzaj: m
 
 - **Dostęp:**
   - role: `pracownik`, `admin`, plus uprawnienie `finanse` (moduły 3–4, na start obaj admini),
-  - osobiste linki dla ludzi z firmy, potem sesja na urządzeniu,
+  - osobiste konta dla ludzi z firmy: login (imię lub krótka nazwa) i hasło, potem sesja na urządzeniu; hasło startowe nadaje admin, pracownik może je zmienić (zmiana 2026-10-21, zamiast osobistych linków),
   - **linki publiczne** (moduł 2): osobny rodzaj dostępu, token tylko do jednego paszportu, tylko odczyt, tylko elementy `dla_klienta`, można go unieważnić i wygenerować nowy, bez dostępu do API pracowników,
   - uprawnienia sprawdza wyłącznie serwer, w jednym miejscu (`core/permissions`).
 - **Synchronizacja:**

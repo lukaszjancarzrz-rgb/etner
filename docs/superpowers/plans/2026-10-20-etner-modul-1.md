@@ -34,13 +34,17 @@
   `Claude-Session: https://claude.ai/code/session_01UAcYpC7hiQ88s85djQuEMk`
 - Nie wpisywać haseł ani kluczy za właściciela. Klucze (R2, Render, VAPID, konto usługi Google) wkleja właściciel jako sekrety.
 
+## Zmiana 2026-10-21: login i hasło zamiast linków
+
+Decyzja właściciela po zadaniu 18: logowanie loginem (imię lub krótka nazwa) i hasłem zamiast osobistych linków. Hasło startowe nadaje admin, pracownik może je zmienić sam, reset przez admina wylogowuje wszystkie urządzenia. Sesja na urządzeniu (cookie `etner_s`, 180 dni) bez zmian. Wykonuje to zadanie 18a. Wzmianki o linkach i tokenach linków w zadaniach 4, 8, 16, 18, 19, 22 i 23 czytać jako login i hasło.
+
 ## Review Focus
 
 1. **Kolejka offline po zamknięciu aplikacji.** Zapisy zrobione bez zasięgu, a potem zamknięcie aplikacji: po ponownym otwarciu muszą się wysłać, każdy dokładnie raz. Test w zadaniu 17.
 2. **Wyciek danych przez SSE / `changes`.** Pracownik nie może dostać zmiany leada, uwag admina ani szkicu harmonogramu, także przy pobieraniu „od numeru”. Test w zadaniu 5 i w każdym module (`visibleTo`).
 3. **Przełom doby i zmiana czasu.** Wpis dodany o 23:30 czasu polskiego trafia do właściwego dnia. Ostatnia niedziela marca i października nie przesuwa dni harmonogramu. Test w zadaniu 2.
 4. **Dwóch adminów edytuje tę samą komórkę harmonogramu.** Zatwierdzenie bierze tylko szkice, które admin widział (wartość „będzie” musi się zgadzać). Szkic zmieniony w międzyczasie zostaje do zatwierdzenia. Test w zadaniu 14.
-5. **Sesja wygasła lub link unieważniony, gdy telefon był offline.** Zapisy z kolejki dostają 401, aplikacja pokazuje „Zaloguj się ponownie”, a kolejka zostaje (nie jest kasowana). Test w zadaniu 17.
+5. **Sesja wygasła lub hasło zresetowane, gdy telefon był offline.** Zapisy z kolejki dostają 401, aplikacja pokazuje „Zaloguj się ponownie”, a kolejka zostaje (nie jest kasowana). Test w zadaniu 17.
 
 ---
 
@@ -577,6 +581,21 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
 - [ ] **Step 4:** e2e PASS. Wdrożenie na Render, sprawdzenie adresu na telefonie (zrzuty ekranu dla właściciela).
 - [ ] **Step 5:** Commit. **STOP: właściciel sprawdza wygląd i działanie na telefonie i komputerze. Poprawki przed dalszymi zadaniami.**
 
+### Task 18a: Login i hasło zamiast linków
+
+**Files:**
+- Modify: `server/src/core/auth.ts`, `core/schema-base.ts` (+ migracja), `modules/uzytkownicy/*`, `scripts/seed-demo.ts`, `scripts/export-sheets.ts`, `test-utils.ts`, `web/src/core/session.ts` + ekran logowania, `web/e2e/demo.spec.ts`, `README.md`
+
+**Interfaces:**
+- `users.login` (unikalny, bez rozróżniania wielkości liter), `users.password_hash` (scrypt z solą); kolumna tokenu linku usunięta.
+- `POST /api/login {login, haslo}` → cookie `etner_s` jak dotąd; zły login lub hasło → 401 `ZLE_DANE`; po 5 nieudanych próbach na login w 15 min → 429 `ZA_DUZO_PROB`.
+- `POST /api/me/haslo {stare, nowe}` – zmiana własnego hasła (min. 8 znaków), wylogowuje pozostałe urządzenia.
+- `POST /api/users` (admin) przyjmuje `login` i `haslo`; `POST /api/users/:id/haslo {haslo}` (admin) – reset, wylogowuje wszystkie urządzenia tej osoby. Trasa nowego linku znika.
+- Tryb demo: stałe hasło demo, `GET /api/demo/konta` (tylko DEMO=1), ekran logowania pokazuje konta demo do wyboru.
+
+- [ ] **Step 1: Testy:** dobre i złe hasło, wyłączony użytkownik, blokada po 5 próbach, reset przez admina unieważnia sesje, zmiana własnego hasła, skrót hasła nigdy w zmianach, snapshot ani eksporcie.
+- [ ] **Step 2:** FAIL. **Step 3:** Implementacja. **Step 4:** PASS + e2e. **Step 5:** Commit.
+
 ### Task 19: Pozostałe ekrany
 
 **Files:**
@@ -587,7 +606,7 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
   - **Leady:** lista „Na już / Na kiedyś / Zamknięte” z zaległymi kontaktami na górze, karta z historią kontaktów, „Zapisz kontakt” (notatka + następny termin), „Zrób zlecenie” (z „oznacz jako Przyjęta”).
   - **Na jutro:** wybór ekipy (pracownik: tylko swoja) i dnia, lista z odhaczaniem, szybkie dodawanie.
   - **Zadania:** grupy, priorytet, termin, cykliczne.
-  - **Użytkownicy:** lista, edycja, nowy link (pokazany raz, kopiuj / udostępnij), kolumny harmonogramu.
+  - **Użytkownicy:** lista, edycja, login, ustawienie / reset hasła, kolumny harmonogramu.
   - **Ustawienia:**
     - słowniki,
     - godzina porannego przypomnienia,
@@ -661,7 +680,7 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
       - zgodne hasło → `zlecenie`,
       - reszta → `tekst` + „do przejrzenia”.
     - Załączniki z `dla_klienta=false`.
-    - Numery Z/L i tokeny linków bez zmian.
+    - Numery Z/L bez zmian. Logowanie: każdy dostaje login i hasło startowe (stare linki nie działają).
   - `apply(plan, deps)`; `report(plan, db)` → tabela źródło / baza / różnica + lista „do przejrzenia” (CSV i ekran w Ustawieniach).
   - CLI: `pnpm migrate-old --xlsx Firma.xlsx --appdb Aplikacja.xlsx --firestore <SA_PATH> --drive <folderId> [--dry-run]`.
 
@@ -693,5 +712,5 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
 - [ ] **Step 1:** `setup.sh` jest idempotentny. Test: `bash -n` + `shellcheck` w CI.
 - [ ] **Step 2:** Uruchomienie na serwerze. `GET /api/health` z domeny → 200. Wymuszony `rollback` działa.
 - [ ] **Step 3:** Test odtworzenia: `litestream restore` na czysty katalog → aplikacja startuje z tymi samymi danymi.
-- [ ] **Step 4:** Przeniesienie danych na produkcji (Task 22). Raport do właściciela. Wyłączenie wyzwalaczy i wdrożenia Apps Script. Linki dla pracowników bez zmian, nowy adres.
+- [ ] **Step 4:** Przeniesienie danych na produkcji (Task 22). Raport do właściciela. Wyłączenie wyzwalaczy i wdrożenia Apps Script. Pracownicy dostają login i hasło startowe, nowy adres.
 - [ ] **Step 5:** Commit. **STOP: właściciel potwierdza raport przeniesienia i działanie na telefonach.**
