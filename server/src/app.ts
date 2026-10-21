@@ -13,7 +13,13 @@ import { mountPush, type PushSender } from './core/notify.js';
 import { registerModules, type ModuleDef } from './core/registry.js';
 import { mountSync } from './core/sync.js';
 
+/** Dziennik (zadanie 12); brak = wpisy systemowe pomijane. Musi być bezpieczny w transakcji. */
+export interface Diary { addSystem(owner: { type: 'job' | 'lead'; id: string }, tekst: string): void }
+
 export interface AppDeps {
+  /** Zegar; domyślnie `new Date()` (testy podstawiają stały). */
+  now?: () => Date;
+  diary?: Diary;
   version: string;
   db: Db;
   files: FileStore;
