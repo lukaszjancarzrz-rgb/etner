@@ -44,3 +44,6 @@ Task 1: fix round 1/5 (4 addressed, 0 open; commits 8a50857..87a3a70)
 Task 1: minor (deferred): two vite majors in lockfile (vitest optional peer resolves vite 8 in server/shared) — collapse when web plugins are added
 Task 1: minor (deferred): SPA fallback 404s client routes whose last segment has a dot (e.g. /x/1.5)
 Task 1: complete (commits 6da7c8c..87a3a70, review clean)
+Task 2: minor (deferred): dayOf lacks 23:30-local and DST-boundary test cases (Review Focus 3) — add 2026-10-20T21:30Z→10-20, 2026-01-15T23:30Z→01-16, 2026-03-29T01:30Z→03-29
+Task 2: minor (deferred): Wigilia returned for years <2025; newId re-export exposes seedTime; fmtZl(-0.4) → "-0,00 zł"
+Task 2: complete (commits d8e45e4..ba408a3, review clean)
