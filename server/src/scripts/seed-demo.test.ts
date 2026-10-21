@@ -35,7 +35,9 @@ describe('seedDemo', () => {
     const workers = db.select().from(users).all().filter((u) => u.role === 'pracownik');
     expect(workers).toHaveLength(5);
     expect(new Set(workers.map((w) => w.ekipa))).toEqual(new Set(['ekipa Bartek', 'ekipa Marek']));
-    expect(n(db, schedulePeople)).toBeGreaterThanOrEqual(7);
+    // kolumny harmonogramu tylko dla pracowników
+    const sp = db.select().from(schedulePeople).all();
+    expect(sp.map((p) => p.userId).sort()).toEqual(workers.map((w) => w.id).sort());
     expect(n(db, clients)).toBe(12);
     expect(n(db, sites)).toBeGreaterThanOrEqual(12);
     expect(n(db, leads)).toBe(6);

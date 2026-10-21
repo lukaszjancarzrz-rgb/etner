@@ -1,10 +1,10 @@
 import { addDays, isWorkday, mondayOf, plHolidays } from '@etner/shared';
 import { CaretLeft, CaretRight, MapPin, NavigationArrow, Phone, Briefcase, CalendarBlank, NotePencil } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { dayLong, dayShort, mapsUrl, telHref, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { useDesk } from '../../core/layout/status.js';
 import { useEntities, type Rec } from '../../core/store.js';
-import { Badge, Empty } from '../../core/ui/bits.js';
+import { Badge, Empty, Segmented } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
@@ -12,7 +12,7 @@ import type { Route } from '../../routes.js';
 import { useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
-import { cellKey, cellsOf, cellText, type Slot } from './model.js';
+import { cellKey, cellsOf, cellText, monthDays, type Slot } from './model.js';
 
 export type Ctx = {
   jobs: Map<string, JobView>;
@@ -22,14 +22,22 @@ export type Ctx = {
 
 const validDay = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined);
 
+type View = 'tydzien' | 'miesiac';
+const VIEW_KEY = 'harm-widok';
+const readView = (): View => { try { return localStorage.getItem(VIEW_KEY) === 'miesiac' ? 'miesiac' : 'tydzien'; } catch { return 'tydzien'; } };
+
 export function Harmonogram({ route }: { route: Route }) {
   const me = useMe();
   const admin = useIsAdmin();
   const desk = useDesk();
   const loading = useLoading();
   const t = today();
-  const monday = mondayOf(validDay(route.param) ?? t);
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday]);
+  const anchor = validDay(route.param) ?? t;
+  const [view, setViewState] = useState<View>(readView);
+  const setView = (v: View) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* prywatne okno */ } };
+  const month = desk && view === 'miesiac'; // telefon: zawsze tydzień
+  const monday = mondayOf(anchor);
+  const days = useMemo(() => (month ? monthDays(anchor) : Array.from({ length: 7 }, (_, i) => addDays(monday, i))), [month, anchor, monday]);
 
   const people = useEntities('schedule_people');
   const entries = useEntities('schedule_entries');
@@ -43,7 +51,7 @@ export function Harmonogram({ route }: { route: Route }) {
 
   const ctx: Ctx = useMemo(() => ({ jobs, codes: new Map(codesDict.map((d) => [d.wartosc, d.kolor ?? undefined])), crew }), [jobs, codesDict, crew]);
   const sorted = useMemo(() => [...people].sort((a, b) => a.kolejnosc - b.kolejnosc || a.nazwa.localeCompare(b.nazwa, 'pl')), [people]);
-  const cells = useMemo(() => cellsOf(entries.filter((e) => e.dzien >= days[0]! && e.dzien <= days[6]!)), [entries, days]);
+  const cells = useMemo(() => cellsOf(entries.filter((e) => e.dzien >= days[0]! && e.dzien <= days.at(-1)!)), [entries, days]);
   const draftMap = useMemo(() => new Map(admin ? drafts.map((d) => [cellKey(d.dzien, d.personId), d]) : []), [drafts, admin]);
   const noteOf = useMemo(() => new Map(notes.map((n) => [n.dzien, n.tekst as string])), [notes]);
   const ekipaOf = useMemo(() => new Map(users.map((u) => [u.id, u.ekipa as string | null])), [users]);
@@ -60,12 +68,15 @@ export function Harmonogram({ route }: { route: Route }) {
   return (
     <section className="mx-auto grid max-w-[1400px] gap-4 px-4 py-4 desk:px-8 desk:py-6">
       {mine && <WhereNext person={mine} entries={entries} ctx={ctx} />}
-      <WeekNav monday={monday} today={t} />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">{month ? <MonthNav day={anchor} today={t} /> : <WeekNav monday={monday} today={t} />}</div>
+        {desk && <Segmented label="Widok" value={view} onChange={setView} className="w-64" options={[{ v: 'tydzien', label: 'Tydzień' }, { v: 'miesiac', label: 'Miesiąc' }]} />}
+      </div>
       {admin && <DraftBar drafts={drafts} people={sorted} entries={entries} ctx={ctx} />}
       {!sorted.length ? (
         <Empty icon={CalendarBlank} title="Harmonogram nie ma jeszcze osób" hint="Administrator dodaje osoby (kolumny) w ustawieniach użytkowników." />
-      ) : desk ? <WeekTable {...props} /> : <DayCards {...props} />}
-      {edit && <CellEditor dzien={edit.dzien} person={edit.person} current={cells.get(cellKey(edit.dzien, edit.person.id)) ?? []}
+      ) : month ? <MonthTable {...props} /> : desk ? <WeekTable {...props} /> : <DayCards {...props} />}
+      {edit && <CellEditor dzien={edit.dzien} person={edit.person} people={sorted} current={cells.get(cellKey(edit.dzien, edit.person.id)) ?? []}
         draft={draftMap.get(cellKey(edit.dzien, edit.person.id))} ekipa={ekipaOf.get(edit.person.userId) ?? null} ctx={ctx} onClose={() => setEdit(null)} />}
     </section>
   );
@@ -100,6 +111,27 @@ function WeekNav({ monday, today: t }: { monday: string; today: string }) {
       </div>
       <a href={`#harm/${addDays(monday, 7)}`} aria-label="Następny tydzień" className="grid h-12 w-12 place-items-center rounded-full border border-line bg-card hover:border-ink-2"><CaretRight className="h-5 w-5" /></a>
       {!isNow && <a href="#harm" className="ml-auto inline-flex h-12 items-center rounded-full px-4 font-semibold text-action hover:bg-action/10">Dziś</a>}
+    </div>
+  );
+}
+
+const MONTH = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const monthName = (d: string) => MONTH.format(new Date(`${d.slice(0, 7)}-15T12:00:00Z`));
+
+function MonthNav({ day, today: t }: { day: string; today: string }) {
+  const first = `${day.slice(0, 7)}-01`;
+  const prev = `${addDays(first, -1).slice(0, 7)}-01`;
+  const next = addDays(monthDays(day).at(-1)!, 1);
+  const isNow = t.slice(0, 7) === day.slice(0, 7);
+  return (
+    <div className="flex items-center gap-2">
+      <a href={`#harm/${prev}`} aria-label="Poprzedni miesiąc" className="grid h-12 w-12 place-items-center rounded-full border border-line bg-card hover:border-ink-2"><CaretLeft className="h-5 w-5" /></a>
+      <div className="px-4 text-center">
+        <p className="font-wide text-lg font-extrabold leading-tight first-letter:uppercase">{monthName(day)}</p>
+        <p className="text-sm text-ink-2">{isNow ? 'Ten miesiąc' : 'Miesiąc'}</p>
+      </div>
+      <a href={`#harm/${next}`} aria-label="Następny miesiąc" className="grid h-12 w-12 place-items-center rounded-full border border-line bg-card hover:border-ink-2"><CaretRight className="h-5 w-5" /></a>
+      {!isNow && <a href="#harm" className="inline-flex h-12 items-center rounded-full px-4 font-semibold text-action hover:bg-action/10">Ten miesiąc</a>}
     </div>
   );
 }
@@ -311,3 +343,84 @@ function WeekTable(p: ViewProps) {
   );
 }
 
+
+const shortLabel = (s: Slot, ctx: Ctx) => (s.rodzaj === 'zlecenie' ? ctx.jobs.get(s.jobId)?.numer ?? 'zl.' : s.rodzaj === 'kod' ? s.kod : s.tekst);
+const WD2 = ['nd', 'pn', 'wt', 'śr', 'cz', 'pt', 'sb'];
+
+/** Komputer: miesiąc jako zwarta tabela osoba × dzień (przewijana w poziomie wewnątrz ramki). */
+function MonthTable(p: ViewProps) {
+  const box = useRef<HTMLDivElement>(null);
+  const month = p.days[0]!.slice(0, 7);
+  // dziś widoczne bez przewijania: tydzień przed dzisiejszym dniem przy lewej krawędzi
+  useEffect(() => {
+    const el = box.current, th = el?.querySelector<HTMLElement>('th[data-today]');
+    if (el) el.scrollLeft = th ? Math.max(0, th.offsetLeft - 176 - 7 * th.offsetWidth) : 0;
+  }, [month]);
+  return (
+    <div ref={box} className="max-h-[calc(100dvh-15rem)] overflow-auto overscroll-x-contain rounded-2xl border border-line bg-card shadow-card">
+      <table className="border-separate border-spacing-0 text-left text-xs">
+        <thead>
+          <tr>
+            <th scope="col" className="sticky top-0 left-0 z-20 w-44 min-w-44 border-r border-b border-line bg-card px-3 py-2 text-sm font-semibold text-ink-2">Osoba</th>
+            {p.days.map((d) => {
+              const { wd, info } = p.dayInfo(d);
+              const isToday = d === p.today;
+              return (
+                <th key={d} scope="col" data-today={isToday || undefined} title={info ?? p.noteOf.get(d)} className={cn('sticky top-0 z-10 min-w-14 border-b border-line bg-card px-1 py-1.5 text-center font-semibold',
+                  wd !== 1 && 'bg-[color-mix(in_srgb,var(--bg)_70%,var(--card))] text-ink-2', isToday && 'bg-[color-mix(in_srgb,var(--action)_14%,var(--card))] text-action')}>
+                  <span className="block text-sm font-extrabold tabular-nums">{Number(d.slice(8))}</span>
+                  <span className={cn('block', info && 'text-danger')}>{WD2[weekdayOf(d)]}</span>
+                  {p.noteOf.get(d) && <NotePencil className="mx-auto h-3.5 w-3.5" aria-label={`Uwaga: ${p.noteOf.get(d)}`} />}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {p.people.map((x) => (
+            <tr key={x.id}>
+              <th scope="row" className={cn('sticky left-0 z-10 border-r border-b border-line/70 bg-card px-3 py-1 text-sm', x.id === p.mine?.id && 'bg-[color-mix(in_srgb,var(--action)_6%,var(--card))]')}>
+                <NameCell person={x} mine={x.id === p.mine?.id} color={p.ctx.crew(p.ekipaOf.get(x.userId))} />
+              </th>
+              {p.days.map((d) => (
+                <td key={d} className={cn('h-11 border-b border-line/70 p-0.5', p.dayInfo(d).wd !== 1 && 'bg-bg/60', d === p.today && 'bg-action/8')}>
+                  <MonthCell dzien={d} person={x} p={p} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const weekdayOf = (d: string) => new Date(`${d}T12:00:00Z`).getUTCDay();
+
+function MonthCell({ dzien, person, p }: { dzien: string; person: Rec; p: ViewProps }) {
+  const key = cellKey(dzien, person.id);
+  const cur = p.cells.get(key) ?? [];
+  const draft = p.draftMap.get(key);
+  const shown = draft && Array.isArray(draft.proposal) ? (draft.proposal as Slot[]) : cur;
+  const label = `${person.nazwa}, ${dayShort(dzien)}: ${cellText(shown, p.ctx.jobs)}${draft ? ' (szkic)' : ''}`;
+  const body = (
+    <span className="grid h-full gap-px">
+      {shown.map((s, i) => {
+        const color = s.rodzaj === 'zlecenie' ? p.ctx.crew(p.ctx.jobs.get(s.jobId)?.ekipa) : s.rodzaj === 'kod' ? p.ctx.codes.get(s.kod) ?? '#8896a5' : undefined;
+        return (
+          <span key={i} className="flex min-w-0 items-center truncate rounded-md px-1 font-semibold tabular-nums leading-tight"
+            style={s.rodzaj === 'kod' ? { background: `${color}30`, boxShadow: `inset 0 0 0 1px ${color}80` } : { boxShadow: `inset 3px 0 0 ${color ?? 'var(--line)'}`, background: 'color-mix(in srgb, var(--bg) 70%, transparent)' }}>
+            <span className="truncate pl-0.5">{shortLabel(s, p.ctx)}</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+  const cls = cn('block h-full w-full min-w-0 rounded-lg p-0.5 text-left', draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5');
+  return p.open ? (
+    <button type="button" data-cell={`${dzien}|${person.nazwa}`} aria-label={label} title={label} onClick={() => p.open!(dzien, person)}
+      className={cn(cls, 'transition-colors duration-200 hover:bg-action/8')}>{body}</button>
+  ) : (
+    <div data-cell={`${dzien}|${person.nazwa}`} role="img" aria-label={label} title={label} className={cls}>{body}</div>
+  );
+}

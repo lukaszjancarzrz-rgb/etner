@@ -17,7 +17,7 @@ import * as zakupy from '../modules/zakupy/service.js';
 import * as zlecenia from '../modules/zlecenia/service.js';
 
 const BARTEK = 'ekipa Bartek', MAREK = 'ekipa Marek';
-/** Wymyślone osoby; kolejność = kolejność kolumn w harmonogramie (ekipy, potem biuro). */
+/** Wymyślone osoby; kolejność = kolejność kolumn w harmonogramie. Admini nie mają kolumn. */
 const DEMO_USERS = [
   { login: 'bartek', name: 'Bartek Gawlik', role: 'pracownik', ekipa: BARTEK },
   { login: 'piotr', name: 'Piotr Kuchta', role: 'pracownik', ekipa: BARTEK },
@@ -118,7 +118,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     }
     const a1 = u.tomek!.id, a2 = u.anna!.id;
     const people: Record<string, string> = {};
-    for (const d of DEMO_USERS) people[d.login] = uzytkownicy.createPerson(db, a1, { nazwa: d.name, userId: u[d.login]!.id }).id;
+    for (const d of DEMO_USERS) if (d.role !== 'admin') people[d.login] = uzytkownicy.createPerson(db, a1, { nazwa: d.name, userId: u[d.login]!.id }).id;
 
     // Klienci z obiektami.
     const cl = CLIENTS.map(([nazwa, miejscowosc, adres], i) => {
@@ -145,7 +145,6 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     const first = mondayOf(today);
     const cell = (login: string, k: number, i: number, wk: number, dow: number): ScheduleProposal => {
       const d = DEMO_USERS.find((x) => x.login === login)!;
-      if (d.role === 'admin') return dow === 0 ? [{ rodzaj: 'tekst', tekst: 'Biuro', polDnia: false }] : wk === 3 && dow === 4 && login === 'anna' ? [{ rodzaj: 'kod', kod: 'szkolenie', polDnia: false }] : [];
       if (login === 'kamil' && wk === 1 && dow < 2) return [{ rodzaj: 'kod', kod: 'urlop', polDnia: false }];
       if (login === 'adam' && wk === 2 && dow === 4) return [{ rodzaj: 'kod', kod: 'szkolenie', polDnia: false }];
       const js = crewJobs(d.ekipa!);
@@ -157,6 +156,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
       const dzien = addDays(first, i);
       if (isWorkday(dzien, []) !== 1) continue;
       DEMO_USERS.forEach((d, k) => {
+        if (!people[d.login]) return;
         const value = cell(d.login, k, i, Math.floor(i / 7), i % 7);
         if (Array.isArray(value) && value.length) harmonogram.setDraft(db, a1, { from: dzien, to: dzien, people: [people[d.login]!], value, workdaysOnly: false });
       });

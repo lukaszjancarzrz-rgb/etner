@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
+import { addDays, dayOf, isWorkday, mondayOf } from '@etner/shared';
 
 const photo = fileURLToPath(new URL('./fixtures/zdjecie.jpg', import.meta.url));
 
@@ -13,7 +14,6 @@ async function loginAdmin(page: Page) {
   await expect(page.getByRole('alert')).toHaveText('Nieprawidłowy login lub hasło.');
   await page.getByRole('button', { name: /Tomasz Wrona/ }).click();
   await expect(page.getByRole('heading', { name: 'Harmonogram', level: 1 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
 }
 
 /** Obraz faktycznie wczytany (302 → podpisany link → plik). */
@@ -80,4 +80,68 @@ test('demo: zlecenie, dziennik ze zdjęciem, harmonogram, zakupy', async ({ page
   await expect(item).not.toContainText('wysyłanie');
   await page.reload();
   await expect(page.locator('li[id^="z-"]', { hasText: `${tag} taśma` })).toBeVisible();
+});
+
+test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiersza', async ({ page }, info) => {
+  const phone = info.project.name.startsWith('iPhone');
+  const [a, b] = phone ? ['Bartek Gawlik', 'Piotr Kuchta'] : ['Marek Pilch', 'Adam Pająk'];
+  const start = addDays(mondayOf(dayOf(new Date())), 28); // poza 4 tygodniami z danych demo i pierwszym testem
+  const work: string[] = [];
+  for (let d = start; work.length < 3; d = addDays(d, 1)) if (isWorkday(d, []) === 1) work.push(d);
+  await loginAdmin(page);
+  await page.goto(`/#harm/${start}`);
+  const cellOf = (d: string, who: string) => page.locator(`[data-cell="${d}|${who}"]`);
+  await expect(cellOf(start, a)).toBeVisible();
+  // admin nie ma kolumny ani „Gdzie jedziesz”
+  await expect(page.locator('[data-cell$="|Tomasz Wrona"]')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Gdzie jedziesz' })).toHaveCount(0);
+
+  await cellOf(start, a).click();
+  const ed = page.getByRole('dialog');
+  await ed.getByLabel('Zlecenie').click();
+  await page.getByPlaceholder('Numer, klient lub miejscowość').fill('Bukowski');
+  await page.getByRole('option').first().click();
+  const numer = (await ed.getByLabel('Zlecenie').innerText()).split(',')[0]!.trim();
+  await ed.getByRole('checkbox', { name: b }).click();
+  await expect(ed.getByRole('checkbox', { name: a })).toHaveAttribute('aria-checked', 'true');
+  await ed.getByLabel('Do').fill(work[2]!);
+  await expect(ed.getByRole('checkbox', { name: 'Tylko dni robocze' })).toHaveAttribute('aria-checked', 'true');
+  await ed.getByRole('button', { name: 'Zapisz szkic' }).click();
+  await expect(ed).toBeHidden();
+  for (const d of work) for (const w of [a, b]) {
+    await expect(cellOf(d, w)).toContainText(numer);
+    await expect(cellOf(d, w)).toHaveAttribute('aria-label', /\(szkic\)$/);
+  }
+
+  await page.getByRole('button', { name: 'Przejrzyj' }).click();
+  const review = page.getByRole('dialog', { name: 'Szkice harmonogramu' });
+  await expect(review.getByText(numer).first()).toBeVisible();
+  await review.getByRole('button', { name: 'Zatwierdź i powiadom' }).click();
+  await expect(review).toBeHidden();
+  await page.reload();
+  for (const d of work) for (const w of [a, b]) {
+    await expect(cellOf(d, w)).toContainText(numer);
+    await expect(cellOf(d, w)).not.toHaveAttribute('aria-label', /\(szkic\)$/);
+  }
+});
+
+test('harmonogram: widok miesiąca na komputerze', async ({ page }, info) => {
+  test.skip(info.project.name.startsWith('iPhone'), 'telefon ma tylko tydzień');
+  const t = dayOf(new Date());
+  const name = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${t.slice(0, 7)}-15T12:00:00Z`));
+  await loginAdmin(page);
+  await page.getByRole('radio', { name: 'Miesiąc' }).click();
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
+  const days = Number(addDays(`${addDays(`${t.slice(0, 7)}-28`, 7).slice(0, 7)}-01`, -1).slice(8));
+  await expect(page.locator('[data-cell$="|Bartek Gawlik"]')).toHaveCount(days);
+  await expect(page.locator(`[data-cell="${t}|Bartek Gawlik"]`)).toBeVisible();
+  await page.reload(); // wybór zapamiętany
+  await expect(page.getByRole('radio', { name: 'Miesiąc' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('link', { name: 'Następny miesiąc' }).click();
+  await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Ten miesiąc' }).click();
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
+  // komórka miesiąca otwiera ten sam edytor
+  await page.locator(`[data-cell="${t}|Bartek Gawlik"]`).click();
+  await expect(page.getByRole('dialog', { name: 'Bartek Gawlik' })).toBeVisible();
 });

@@ -1,3 +1,4 @@
+import { addDays, isWorkday } from '@etner/shared';
 import { ApiError } from '../../core/api.js';
 import type { Rec } from '../../core/store.js';
 import type { JobView } from '../zlecenia/jobs.js';
@@ -46,4 +47,18 @@ export function errText(e: unknown): string {
     return e.message;
   }
   return 'Brak połączenia. Szkice można przejrzeć i zatwierdzić, gdy będzie zasięg.';
+}
+
+/** Dni szkicu zbiorczego [from, to] (jak serwer: `workdaysOnly` pomija weekendy, święta i dni wolne). */
+export function rangeDays(from: string, to: string, workdaysOnly: boolean, extraOff: string[]): string[] {
+  const out: string[] = [];
+  for (let d = from; d <= to && out.length <= 400; d = addDays(d, 1)) if (!workdaysOnly || isWorkday(d, extraOff) === 1) out.push(d);
+  return out;
+}
+
+/** Wszystkie dni miesiąca kalendarzowego, w którym leży `day`. */
+export function monthDays(day: string): string[] {
+  const out: string[] = [];
+  for (let d = `${day.slice(0, 7)}-01`; d.startsWith(day.slice(0, 7)); d = addDays(d, 1)) out.push(d);
+  return out;
 }
