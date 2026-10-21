@@ -79,8 +79,8 @@ export function Scope({ jobId, disabled }: { jobId: string; disabled?: boolean }
                     <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-line pt-2">
                       <Button variant="ghost" size="sm" onClick={() => setForm(p)}><PencilSimple className="h-4 w-4" />Edytuj</Button>
                       <span className="ml-auto flex gap-1">
-                        <Button variant="ghost" size="sm" className="w-10 px-0" aria-label={`Przesuń wyżej punkt ${i + 1}`} disabled={i === 0 || busy} onClick={() => move(i, -1)}><ArrowUp className="h-5 w-5" /></Button>
-                        <Button variant="ghost" size="sm" className="w-10 px-0" aria-label={`Przesuń niżej punkt ${i + 1}`} disabled={i === items.length - 1 || busy} onClick={() => move(i, 1)}><ArrowDown className="h-5 w-5" /></Button>
+                        <Button variant="ghost" size="sm" className="w-10 px-0" aria-label={`Przesuń wyżej punkt ${i + 1}`} disabled={i === 0 || busy} onClick={() => move(i, -1)}><ArrowUp className="h-5 w-5 shrink-0" /></Button>
+                        <Button variant="ghost" size="sm" className="w-10 px-0" aria-label={`Przesuń niżej punkt ${i + 1}`} disabled={i === items.length - 1 || busy} onClick={() => move(i, 1)}><ArrowDown className="h-5 w-5 shrink-0" /></Button>
                       </span>
                     </div>
                   )}
