@@ -1,6 +1,6 @@
 import { CloudArrowUp, WifiSlash } from '@phosphor-icons/react';
 import { askLogin, useSession } from '../session.js';
-import { Logo } from './Logo.js';
+import { Mark } from './Logo.js';
 import { useOnline, useQueued } from './status.js';
 
 export function TopBar({ title }: { title: string }) {
@@ -11,7 +11,7 @@ export function TopBar({ title }: { title: string }) {
     <header className="sticky top-0 z-30 border-b border-line bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="stripes h-1 desk:hidden" aria-hidden />
       <div className="flex h-14 items-center gap-3 px-4 desk:h-16 desk:px-8">
-        <span className="desk:hidden"><Logo className="h-8 w-8" /></span>
+        <span className="desk:hidden"><Mark className="h-8 w-8" /></span>
         <h1 className="min-w-0 flex-1 truncate font-wide text-xl font-extrabold desk:text-2xl">{title}</h1>
         <div className="flex items-center gap-2" aria-live="polite">
           {!online && (

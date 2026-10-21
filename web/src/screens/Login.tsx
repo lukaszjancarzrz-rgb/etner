@@ -34,10 +34,7 @@ export function Login() {
     <main className="grid min-h-[100dvh] grid-rows-[auto_1fr]">
       <div className="stripes h-8 desk:h-12" aria-hidden />
       <div className="mx-auto flex w-full max-w-md flex-col justify-center gap-6 px-6 py-10">
-        <div className="flex items-center gap-3">
-          <Logo className="h-12 w-12" />
-          <span className="font-wide text-3xl font-black tracking-tight">ETNER</span>
-        </div>
+        <Logo size="lg" />
         <div className="border-l-4 border-action pl-4">
           <h1 className="font-wide text-2xl font-extrabold">Zaloguj się</h1>
           <p className="mt-2 text-ink-2">Wpisz swój login i hasło.</p>

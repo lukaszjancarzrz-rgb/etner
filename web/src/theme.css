@@ -14,6 +14,8 @@
   --grid: rgb(10 34 64 / 0.035);
   --shadow: 0 1px 2px rgb(10 34 64 / 0.06), 0 4px 16px rgb(10 34 64 / 0.06);
   --crew-mix: 0%;
+  --logo-pulse: #262b6b;
+  --logo-word: #1e2a4a;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -30,6 +32,8 @@
     --grid: rgb(255 255 255 / 0.03);
     --shadow: 0 1px 2px rgb(0 8 20 / 0.3), 0 6px 20px rgb(0 8 20 / 0.25);
     --crew-mix: 50%;
+    --logo-pulse: #ffffff;
+    --logo-word: #ffffff;
     color-scheme: dark;
   }
 }
@@ -46,6 +50,8 @@
   --grid: rgb(255 255 255 / 0.03);
   --shadow: 0 1px 2px rgb(0 8 20 / 0.3), 0 6px 20px rgb(0 8 20 / 0.25);
   --crew-mix: 50%;
+  --logo-pulse: #ffffff;
+  --logo-word: #ffffff;
   color-scheme: dark;
 }
 

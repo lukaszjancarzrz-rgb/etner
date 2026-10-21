@@ -11,7 +11,6 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
       <div className="stripes h-1.5" aria-hidden />
       <div className="flex h-16 items-center gap-3 px-5">
         <Logo />
-        <span className="font-wide text-xl font-black tracking-tight">ETNER</span>
       </div>
       <ul className="grid gap-1 px-3 py-2">
         {Object.entries(screens).filter(([, s]) => s.nav !== false).map(([k, s]) => {
