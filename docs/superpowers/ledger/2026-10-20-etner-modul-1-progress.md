@@ -83,3 +83,5 @@ Task 8: complete (commits 0759566..0f94d1a, review clean)
 Task 9: minor (deferred): snapshot leak assertion weak (no length/whitelist check); no worker-403 tests on write routes; '+48 727' partial phone query; szukaj updates not in changes; Record<string,any> in projections
 Task 9: minor → carried into Task 10: addSite spreads Partial input (explicit undefined → NOT NULL) — Task 10 calls it directly
 Task 9: complete (commits f86fca0..12653e4, review clean)
+Task 10: BASE 1253d86; impl 241e714; review: Important — zod4 .partial() keeps defaults → partial PUT wipes fields (check all modules)
+Task 10: minor (deferred): newClient silently ignores clientId; no invalid-status PUT test; next numer scans all jobs (shortcut); notify title tail = job number

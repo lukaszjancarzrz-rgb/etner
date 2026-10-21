@@ -4,6 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { ZodType } from 'zod';
 import type { AppDeps } from '../../app.js';
 import { requireAdmin, requireUser } from '../../core/auth.js';
+import { logError } from '../../core/errors.js';
 import { notify } from '../../core/notify.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
@@ -35,7 +36,8 @@ export function routes(app: Hono, deps: AppDeps): void {
     const out: svc.Outbox = [];
     const { result, dup } = runOp(db, opId, uid, () => svc.save(db, uid, { ...d, id }, out));
     if (!result) throw new HTTPException(404, { message: 'Nie znaleziono' });
-    if (!dup) for (const o of out) await notify(deps, o.userIds, o.n); // po commit
+    // Po commit; błąd wysyłki nie może zamienić zapisanego zlecenia w 500.
+    if (!dup) for (const o of out) await notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, uid));
     return c.json(result);
   };
   app.post('/api/jobs', admin, async (c) => write(c, await body(c, jobCreateSchema)));

@@ -44,6 +44,15 @@ describe('klienci: wyszukiwanie', () => {
   });
 });
 
+describe('klienci: częściowa zmiana obiektu', () => {
+  it('PUT /api/sites bez pól nie kasuje pozostałych', async () => {
+    const { app, admin, db, uid } = await setup();
+    const k = create(db, uid, { ...base, nazwa: 'A', site: { nazwa: 'Dom', adres: 'Długa 5', miejscowosc: 'Zawoja', mapa: 'm', opis: 'o' } });
+    const r = await (await app.request(`/api/sites/${k.site!.id}`, json(admin, 'PUT', { miejscowosc: 'Żywiec' }))).json();
+    expect(r).toMatchObject({ nazwa: 'Dom', adres: 'Długa 5', miejscowosc: 'Żywiec', mapa: 'm', opis: 'o' });
+  });
+});
+
 describe('klienci: trasy i widoczność', () => {
   it('pracownik nie wyszukuje; admin tworzy przez opId raz', async () => {
     const { app, admin, worker, db } = await setup();

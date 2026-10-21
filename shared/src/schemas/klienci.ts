@@ -37,5 +37,6 @@ export const clientUpdateSchema = z.object({
 export type ClientUpdate = z.infer<typeof clientUpdateSchema>;
 
 export const siteCreateSchema = siteInputSchema.extend({ opId });
-export const siteUpdateSchema = siteInputSchema.partial().extend({ opId });
+// Bez wartości domyślnych: pominięte pole nie może nadpisać zapisanego.
+export const siteUpdateSchema = z.object({ nazwa: txt, adres: txt, miejscowosc: txt, mapa: txt, opis: txt }).partial().extend({ opId });
 export type SiteUpdate = z.infer<typeof siteUpdateSchema>;

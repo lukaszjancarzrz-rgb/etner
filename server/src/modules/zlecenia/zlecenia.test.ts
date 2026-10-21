@@ -104,6 +104,17 @@ describe('zlecenia', () => {
     expect(active(deps.db)).toEqual([]);
   });
 
+  it('częściowy PUT nie kasuje pól; błąd pusha nie psuje zapisu', async () => {
+    const { app, admin, push, k, deps } = await setup();
+    const j = await (await app.request('/api/jobs', req(admin, 'POST', { clientId: k.client.id, status: 'Nowe', zakres: 'montaż', uwagiAdmin: 'u', rodzaj: 'serwis', kategoria: 'Serwis' }))).json();
+    const r = await (await app.request(`/api/jobs/${j.id}`, req(admin, 'PUT', { status: 'W realizacji' }))).json();
+    expect(r).toMatchObject({ zakres: 'montaż', uwagiAdmin: 'u', rodzaj: 'serwis', kategoria: 'Serwis' });
+    push.mockRejectedValue(new Error('boom'));
+    const res = await app.request(`/api/jobs/${j.id}`, req(admin, 'PUT', { ekipa: 'ekipa Bartek' }));
+    expect(res.status).toBe(200);
+    expect(get(deps.db, j.id)!.ekipa).toBe('ekipa Bartek');
+  });
+
   it('pracownik POST/PUT -> 403', async () => {
     const { app, worker, k } = await setup();
     expect((await app.request('/api/jobs', req(worker, 'POST', { clientId: k.client.id, status: 'Nowe' }))).status).toBe(403);
