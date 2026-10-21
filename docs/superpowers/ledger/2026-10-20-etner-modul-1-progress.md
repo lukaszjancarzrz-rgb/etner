@@ -55,3 +55,8 @@ Task 3: minor (deferred): foreign-user opId throws plain Error → 500; map to 4
 Task 3: complete (commits 2900590..d7ea7bf, review clean)
 Task 4: minor (deferred): requireAdmin wraps requireUser with custom next; old session not deleted on re-login, expired sessions never purged; cookie Path / limit / forged-cookie tests missing; deleteCookie without flags
 Task 4: complete (commits e605ed1..f213c91, review clean)
+Task 5: BASE 5820237; impl ac6dc6e; review: Important — swallowed SSE drain error; controller adds session recheck, Last-Event-ID, Object.hasOwn
+Task 5: minor (deferred): clients list write-only; tests lack since>0 SSE, hidden rows between since, concurrent backlog/live
+Task 5: fix round 1/5 (4 addressed, 0 open; commits ac6dc6e..57e85ad)
+Task 5: minor (deferred): ping-path .catch(stop) unlogged; client-abort during drain logs a noise error row; ping-path session check untested
+Task 5: complete (commits 5820237..57e85ad, review clean)
