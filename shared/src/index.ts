@@ -8,3 +8,6 @@ export * from './schemas/klienci.js';
 export * from './schemas/zlecenia.js';
 export * from './schemas/leady.js';
 export * from './schemas/dziennik.js';
+export * from './schemas/najutro.js';
+export * from './schemas/zakupy.js';
+export * from './schemas/zadania.js';
