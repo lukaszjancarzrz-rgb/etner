@@ -25,6 +25,8 @@ export interface AppDeps {
   vapidPublic?: string;
   /** Katalog zbudowanego frontendu; domyślnie web/dist (sprawdzany względem pakietu serwera). */
   webDist?: string;
+  /** Czy klient ma nieusunięte zlecenie (dostarcza moduł zleceń); brak = nikt, więc pracownik nie widzi klientów. */
+  clientHasJobs?: (clientId: string) => boolean;
   /** Cookie Secure; domyślnie włączone w produkcji. */
   secureCookie?: boolean;
 }
