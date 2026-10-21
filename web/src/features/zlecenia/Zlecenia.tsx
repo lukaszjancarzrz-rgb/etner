@@ -113,11 +113,12 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
           </span>
         </span>
         <span className="truncate font-wide text-lg font-extrabold leading-tight">{j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient'}</span>
-        <span className="flex items-center gap-2 text-sm text-ink-2">
+        <span className="flex items-end gap-2 text-sm text-ink-2">
           {j.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
-          <span className="ml-auto" />
-          {j.kategoria && <CategoryPill name={j.kategoria} color={cat(j.kategoria)} className="shrink-0" />}
-          {j.ekipa && <span className="inline-flex shrink-0 items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />{j.ekipa}</span>}
+          <span className="ml-auto flex shrink-0 flex-col items-end gap-1">
+            {j.kategoria && <CategoryPill name={j.kategoria} color={cat(j.kategoria)} />}
+            {j.ekipa && <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />{j.ekipa}</span>}
+          </span>
         </span>
       </a>
     </li>
