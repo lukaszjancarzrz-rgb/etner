@@ -157,7 +157,7 @@ function WhereSlot({ slot, ctx }: { slot: Slot; ctx: Ctx }) {
 
 /** Wartość komórki: zlecenia z kolorem ekipy, kody w kolorze słownika, tekst. */
 export function CellView({ slots, ctx, compact }: { slots: Slot[]; ctx: Ctx; compact?: boolean }) {
-  if (!slots.length) return <span className="text-sm text-ink-2/60" aria-label="pusto">·</span>;
+  if (!slots.length) return <span className="text-sm text-ink-2/60"><span aria-hidden>·</span><span className="sr-only">pusto</span></span>;
   return (
     <span className={cn('grid min-w-0 gap-1', slots.length === 2 && compact && 'grid-cols-1')}>
       {slots.map((s, i) => s.rodzaj === 'zlecenie' ? <JobChip key={i} slot={s} ctx={ctx} compact={compact} /> : <CodeChip key={i} slot={s} ctx={ctx} />)}
@@ -203,7 +203,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   const body = (
     <>
       <CellView slots={shown} ctx={p.ctx} compact={compact} />
-      {draft && <span className="absolute top-1 right-1 rounded-full bg-action px-1.5 text-[10px] font-bold leading-4 text-action-ink">szkic</span>}
+      {draft && <span className="absolute top-1 right-1 rounded-full bg-action px-1.5 text-xs font-bold leading-4 text-action-ink">szkic</span>}
     </>
   );
   const cls = cn('relative block h-full w-full min-w-0 rounded-xl p-1.5 text-left', draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5');
@@ -211,7 +211,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
     <button type="button" data-cell={`${dzien}|${person.nazwa}`} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
       onClick={() => p.open!(dzien, person)} className={cn(cls, 'min-h-12 transition-colors duration-200 hover:bg-action/8')}>{body}</button>
   ) : (
-    <div data-cell={`${dzien}|${person.nazwa}`} aria-label={label} className={cls}>{body}</div>
+    <div data-cell={`${dzien}|${person.nazwa}`} role="img" aria-label={label} className={cls}>{body}</div>
   );
 }
 

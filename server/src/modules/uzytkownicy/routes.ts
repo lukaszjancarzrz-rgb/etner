@@ -9,8 +9,8 @@ import * as svc from './service.js';
 
 const bad = (message: string) => new HTTPException(400, { message });
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
-/** Link logowania: BASE_URL, a bez niego adres, z którego przyszło zapytanie. */
-const linkOf = (c: Context, token: string) => `${process.env.BASE_URL || new URL(c.req.url).origin}/login#${token}`;
+/** Link logowania: BASE_URL, na Render RENDER_EXTERNAL_URL, a bez nich adres, z którego przyszło zapytanie. */
+const linkOf = (c: Context, token: string) => `${process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || new URL(c.req.url).origin}/login#${token}`;
 
 export function routes(app: Hono, { db }: AppDeps): void {
   const admin = requireAdmin(db);

@@ -1,6 +1,6 @@
 import { fmtZl, toGr } from '@etner/shared';
-import { CaretDown, Plus, ShoppingCart, Trash } from '@phosphor-icons/react';
-import { useEffect, useMemo, useState } from 'react';
+import { Plus, ShoppingCart, Trash } from '@phosphor-icons/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { fmtWhen, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { useEntities, type Rec } from '../../core/store.js';
@@ -23,6 +23,7 @@ export function Zakupy({ route }: { route: Route }) {
   const statusy = useDict('status_zakupu');
   const loading = useLoading();
   const [doneOpen, setDoneOpen] = useState(false);
+  const [flash, setFlash] = useState<string | undefined>();
   const last = statusy.at(-1)?.wartosc;
   const hl = route.highlight;
   const hlStatus = hl && items.find((i) => i.id === hl)?.status;
@@ -31,6 +32,9 @@ export function Zakupy({ route }: { route: Route }) {
     if (!hlStatus) return;
     if (hlStatus === last) setDoneOpen(true);
     requestAnimationFrame(() => document.getElementById(`z-${hl}`)?.scrollIntoView({ block: 'center' }));
+    setFlash(hl);
+    const t = setTimeout(() => setFlash(undefined), 2500); // jak w dzienniku
+    return () => clearTimeout(t);
   }, [hl, hlStatus, last]);
 
   const groups = useMemo(() => statusy.map((s) => ({
@@ -50,13 +54,8 @@ export function Zakupy({ route }: { route: Route }) {
         const shut = collapsible && !doneOpen;
         return (
           <div key={status} className="grid gap-2">
-            {collapsible ? (
-              <button type="button" onClick={() => setDoneOpen((o) => !o)} aria-expanded={!shut} className="flex h-11 items-center justify-between text-left">
-                <SectionTitle count={list.length}>{status}</SectionTitle>
-                <CaretDown className={cn('h-5 w-5 text-ink-2 transition-transform duration-200', !shut && 'rotate-180')} />
-              </button>
-            ) : <SectionTitle count={list.length} className="h-11">{status}</SectionTitle>}
-            {!shut && <ul className="grid gap-2">{list.map((i) => <Item key={i.id} i={i} statusy={statusy} flash={i.id === hl} />)}</ul>}
+            <SectionTitle count={list.length} toggle={collapsible ? { open: !shut, onToggle: () => setDoneOpen((o) => !o) } : undefined}>{status}</SectionTitle>
+            {!shut && <ul className="grid gap-2">{list.map((i) => <Item key={i.id} i={i} statusy={statusy} flash={i.id === flash} />)}</ul>}
           </div>
         );
       })}
@@ -102,8 +101,12 @@ function Item({ i, statusy, flash }: { i: Rec; statusy: Rec[]; flash: boolean })
   const admin = useIsAdmin();
   const me = useMe();
   const names = useNames();
-  const [kwota, setKwota] = useState(i.kwotaGr != null ? (i.kwotaGr / 100).toFixed(2).replace('.', ',') : '');
+  const fmt = (gr: number | null | undefined) => (gr != null ? (gr / 100).toFixed(2).replace('.', ',') : '');
+  const [kwota, setKwota] = useState(fmt(i.kwotaGr));
   const [kErr, setKErr] = useState('');
+  const kRef = useRef<HTMLInputElement>(null);
+  // zmiana z innego urządzenia (SSE) nadpisuje pole, chyba że ktoś właśnie w nim pisze
+  useEffect(() => { if (document.activeElement !== kRef.current) { setKwota(fmt(i.kwotaGr)); setKErr(''); } }, [i.kwotaGr]);
   const put = (patch: Record<string, unknown>) => updateVia('shopping', i.id, patch, { kind: 'zakupy', url: `/api/shopping/${i.id}`, method: 'PUT', body: patch }).catch(fail('Zmiana nie została zapisana'));
   const saveKwota = () => {
     const t = kwota.trim();
@@ -128,7 +131,7 @@ function Item({ i, statusy, flash }: { i: Rec; statusy: Rec[]; flash: boolean })
           <>
             <Select value={i.status} onValueChange={(status) => void put({ status })} options={statusy.map((s) => ({ value: s.wartosc, label: s.wartosc }))} className="h-10 text-sm" />
             <div className="grid gap-1">
-              <Input aria-label={`Kwota: ${i.co}`} aria-invalid={!!kErr} inputMode="decimal" value={kwota} onChange={(e) => setKwota(e.target.value)} onBlur={saveKwota}
+              <Input ref={kRef} aria-label={`Kwota: ${i.co}`} aria-invalid={!!kErr} inputMode="decimal" value={kwota} onChange={(e) => setKwota(e.target.value)} onBlur={saveKwota}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), saveKwota())} placeholder="kwota zł" className="h-10 px-3 text-sm" />
               {kErr && <p className="text-xs text-danger">{kErr}</p>}
             </div>

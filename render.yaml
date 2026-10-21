@@ -7,7 +7,8 @@ services:
     plan: free
     branch: modul-1
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
-    startCommand: node server/dist/main.js
+    # NODE_ENV tylko przy starcie: przy budowaniu pnpm pominąłby devDependencies; w produkcji ciasteczko jest Secure.
+    startCommand: NODE_ENV=production node server/dist/main.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
@@ -18,7 +19,7 @@ services:
         value: /tmp/etner
       - key: APP_SECRET
         generateValue: true
-      # Adres usługi, np. https://etner-demo.onrender.com (linki logowania); pusty = adres z zapytania.
+      # Adres usługi do linków logowania; pusty = RENDER_EXTERNAL_URL (ustawia Render), potem adres z zapytania.
       - key: BASE_URL
         sync: false
       # Testowy bucket R2 (osobny od produkcyjnego); puste = zdjęcia na dysku w DATA_DIR.

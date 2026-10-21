@@ -1,6 +1,6 @@
-import { Briefcase, CaretDown, MagnifyingGlass, Plus } from '@phosphor-icons/react';
+import { Briefcase, MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
-import { matches, seenAt, useCrewColor, useIsAdmin, useLoading, useMe, useStatusGroup } from '../../core/data.js';
+import { matches, seenAt, useCrewColor, useIsAdmin, useLoading, useMe, useSeenVersion, useStatusGroup } from '../../core/data.js';
 import { useEntities } from '../../core/store.js';
 import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
@@ -46,6 +46,7 @@ function JobList({ selected }: { selected?: string }) {
   const entries = useEntities('diary_entries');
   const sched = useEntities('schedule_entries');
 
+  const seenVer = useSeenVersion();
   const planned = useMemo(() => new Set(sched.map((e) => e.jobId).filter(Boolean)), [sched]);
   const fresh = useMemo(() => {
     const m = new Map<string, number>();
@@ -57,7 +58,7 @@ function JobList({ selected }: { selected?: string }) {
       if (e.createdAt > s) m.set(e.ownerId, (m.get(e.ownerId) ?? 0) + 1);
     }
     return m;
-  }, [entries, me?.id]);
+  }, [entries, me?.id, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const list = useMemo(() => [...jobs.values()]
     .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.zakres, j.status, j.ekipa))
@@ -85,12 +86,7 @@ function JobList({ selected }: { selected?: string }) {
         const collapsed = g === 'zamkniete' && !closedOpen && !q;
         return (
           <div key={g} className="grid gap-2">
-            {g === 'zamkniete' ? (
-              <button type="button" onClick={() => setClosedOpen((o) => !o)} aria-expanded={!collapsed} className="flex h-11 items-center justify-between rounded-xl text-left">
-                <SectionTitle count={items.length}>{title}</SectionTitle>
-                <CaretDown className={cn('h-5 w-5 text-ink-2 transition-transform duration-200', !collapsed && 'rotate-180')} />
-              </button>
-            ) : <SectionTitle count={items.length} className="h-11">{title}</SectionTitle>}
+            <SectionTitle count={items.length} toggle={g === 'zamkniete' && !q ? { open: !collapsed, onToggle: () => setClosedOpen((o) => !o) } : undefined}>{title}</SectionTitle>
             {!collapsed && (
               <ul className="grid gap-2">
                 {items.map((j) => <JobRow key={j.id} j={j} on={j.id === selected} nowe={fresh.get(j.id) ?? 0} missing={g === 'aktualne' && !planned.has(j.id)} color={crew(j.ekipa)} />)}

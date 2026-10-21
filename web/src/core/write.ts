@@ -42,11 +42,14 @@ export function dropTmp(): void {
 
 /**
  * Rekord z serwera często przychodzi przez SSE przed odpowiedzią na zapis; do tego czasu ukrywamy
- * rekord tymczasowy, jeśli jest już prawdziwy o tych samych polach (bez podwójnego wpisu na liście).
+ * rekord tymczasowy, jeśli jest już prawdziwy o tych samych polach i nie starszy od niego
+ * (z zapasem na różnicę zegarów). Starszy rekord o tej samej treści to inny wpis, nie echo.
  */
+const SKEW_MS = 30_000; // zegar telefonu a serwera
 export function withoutEchoes(recs: Rec[], fields: string[]): Rec[] {
   if (!recs.some((r) => r._tmp)) return recs;
   const sig = (r: Rec) => JSON.stringify(fields.map((f) => r[f] ?? null));
-  const real = new Set(recs.filter((r) => !r._tmp).map(sig));
-  return recs.filter((r) => !r._tmp || !real.has(sig(r)));
+  const real = new Map<string, number[]>();
+  for (const r of recs) if (!r._tmp) real.set(sig(r), [...(real.get(sig(r)) ?? []), Date.parse(r.createdAt)]);
+  return recs.filter((r) => !r._tmp || !(real.get(sig(r)) ?? []).some((t) => t >= Date.parse(r.createdAt) - SKEW_MS));
 }

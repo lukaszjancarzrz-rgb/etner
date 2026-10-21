@@ -1,5 +1,5 @@
 import { dayOf } from '@etner/shared';
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useSession } from './session.js';
 import { useEntities, type Rec } from './store.js';
 
@@ -41,7 +41,8 @@ const PALETTE = ['#0070ab', '#00736b', '#8a5a00', '#7a3e9d', '#b3261e', '#3f5368
 export function useCrewColor(): (ekipa: string | null | undefined) => string | undefined {
   const ek = useDict('ekipa');
   return useMemo(() => {
-    const m = new Map(ek.filter((d) => d.wartosc !== 'mieszane').map((d, i) => [d.wartosc, d.kolor || PALETTE[i % PALETTE.length]!]));
+    // w trybie ciemnym jaśniejszy odcień (--crew-mix), żeby pasek miał kontrast ≥3:1 z kartą
+    const m = new Map(ek.filter((d) => d.wartosc !== 'mieszane').map((d, i) => [d.wartosc, `color-mix(in srgb, ${d.kolor || PALETTE[i % PALETTE.length]!}, white var(--crew-mix))`]));
     return (e) => (e ? m.get(e) : undefined);
   }, [ek]);
 }
@@ -89,9 +90,15 @@ export function seenAt(jobId: string): string {
     return localStorage.getItem(`seen:${jobId}`) ?? base;
   } catch { return new Date().toISOString(); }
 }
+let seenVer = 0;
+const seenSubs = new Set<() => void>();
 export function markSeen(jobId: string): void {
   try { localStorage.setItem(`seen:${jobId}`, new Date().toISOString()); } catch { /* prywatne okno */ }
+  seenVer++;
+  for (const f of seenSubs) f();
 }
+/** Zmienia się po każdym markSeen (liczniki „nowe” liczone od nowa). */
+export const useSeenVersion = () => useSyncExternalStore((f) => { seenSubs.add(f); return () => seenSubs.delete(f); }, () => seenVer);
 
 export const matches = (q: string, ...xs: (string | null | undefined)[]) => {
   const n = (s: string) => s.toLocaleLowerCase('pl').normalize('NFD').replace(/\p{M}/gu, '').replace(/ł/g, 'l');

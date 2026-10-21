@@ -10,10 +10,14 @@ import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import type { Ctx } from './Harmonogram.js';
 import { CellView } from './Harmonogram.js';
-import { cellKey, cellsOf, type Slot } from './model.js';
+import { cellKey, cellsOf, errText, type Slot } from './model.js';
 
 type DraftOut = { key: string; dzien: string; personId: string | null; proposal: Slot[] | { tekst: string }; proposalHash: string; by: string };
 type Result = { applied: string[]; skipped: string[] };
+
+const QUEUED = Symbol('queued');
+/** Zapis z kolejki, który nie wrócił w tym czasie (offline albo sesja wygasła), zostaje w kolejce. */
+const within = <T,>(p: Promise<T>, ms = 15_000) => Promise.race([p, new Promise<typeof QUEUED>((r) => setTimeout(() => r(QUEUED), ms))]);
 
 /** Pasek szkiców (admin): liczba zmian, przegląd, zatwierdzenie z powiadomieniem. */
 export function DraftBar({ drafts, people, entries, ctx }: { drafts: Rec[]; people: Rec[]; entries: Rec[]; ctx: Ctx }) {
@@ -48,29 +52,41 @@ function Review({ drafts, people, entries, ctx, onClose }: { drafts: Rec[]; peop
     const ds = drafts.map((d) => d.dzien as string).sort();
     setErr('');
     api<{ drafts?: DraftOut[] }>(`/api/schedule?from=${ds[0]}&to=${ds.at(-1)}`)
-      .then((r) => setList(r.drafts ?? []), () => setErr('Brak połączenia. Szkice można przejrzeć i zatwierdzić, gdy będzie zasięg.'));
+      .then((r) => setList(r.drafts ?? []), (e) => setErr(errText(e)));
   };
   useEffect(load, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cells = cellsOf(entries);
   async function act(kind: 'approve' | 'discard') {
     if (!list?.length) return;
+    if (!navigator.onLine) return setErr(errText(new TypeError('offline')));
     setBusy(true);
+    setErr('');
     try {
       if (kind === 'approve') {
-        const r = (await outbox.enqueue({ kind: 'harmonogram', url: '/api/schedule/approve', method: 'POST', body: { items: list.map((d) => ({ key: d.key, proposalHash: d.proposalHash })) } })) as Result;
-        setRes(r);
-        if (!r.skipped.length) { toast(`Zatwierdzono ${r.applied.length}`, { body: 'Pracownicy dostali powiadomienie o zmianach.', tone: 'ok' }); onClose(); }
+        const p = outbox.enqueue({ kind: 'harmonogram', url: '/api/schedule/approve', method: 'POST', body: { items: list.map((d) => ({ key: d.key, proposalHash: d.proposalHash })) } });
+        const r = await within(p);
+        if (r === QUEUED) {
+          // zatwierdzenie obejmie tylko te wersje szkiców (hashe), więc może bezpiecznie poczekać w kolejce
+          setErr('Zatwierdzenie czeka w kolejce (brak zasięgu albo sesja wygasła). Wyśle się samo, a wynik pokaże się w harmonogramie.');
+          p.then((x) => { const v = x as Result; toast(`Zatwierdzono ${v.applied.length}`, { body: v.skipped.length ? `Pominięto ${v.skipped.length}: zmienione przez innego administratora.` : 'Pracownicy dostali powiadomienie.', tone: 'ok' }); },
+            (e: unknown) => toast('Zatwierdzenie nie zostało przyjęte', { body: errText(e), tone: 'error' }));
+          return;
+        }
+        setRes(r as Result);
+        if (!(r as Result).skipped.length) { toast(`Zatwierdzono ${(r as Result).applied.length}`, { body: 'Pracownicy dostali powiadomienie o zmianach.', tone: 'ok' }); onClose(); }
         else { setList(null); load(); }
       } else {
         const keys = list.map((d) => d.key);
-        await outbox.enqueue({ kind: 'harmonogram', url: '/api/schedule/discard', method: 'POST', body: { keys },
-          optimistic: (s) => { for (const d of s.all('schedule_drafts')) if (keys.includes(cellKey(d.dzien, d.personId))) s.remove('schedule_drafts', d.id); } });
+        // odrzucenie jest optymistyczne: zamykamy od razu, błąd przyjdzie jako komunikat
+        void outbox.enqueue({ kind: 'harmonogram', url: '/api/schedule/discard', method: 'POST', body: { keys },
+          optimistic: (s) => { for (const d of s.all('schedule_drafts')) if (keys.includes(cellKey(d.dzien, d.personId))) s.remove('schedule_drafts', d.id); } })
+          .catch((e: unknown) => toast('Szkice nie zostały odrzucone', { body: errText(e), tone: 'error' }));
         toast('Szkice odrzucone', { tone: 'info' });
         onClose();
       }
     } catch (e) {
-      setErr((e as Error).message);
+      setErr(errText(e));
     } finally { setBusy(false); }
   }
 

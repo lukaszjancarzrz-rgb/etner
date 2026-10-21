@@ -1,16 +1,20 @@
-import type { Icon } from '@phosphor-icons/react';
-import type { ReactNode } from 'react';
+import { CaretDown, type Icon } from '@phosphor-icons/react';
+import type { ReactNode, TextareaHTMLAttributes } from 'react';
 import { cn } from './cn.js';
 
-/** Nagłówek sekcji: blok z paskiem po lewej (motyw ze strony ETNER). */
-export const SectionTitle = ({ children, count, className, right }: { children: ReactNode; count?: number; className?: string; right?: ReactNode }) => (
-  <div className={cn('flex items-center justify-between gap-3', className)}>
-    <h2 className="flex items-baseline gap-2 border-l-4 border-action pl-3 font-wide text-base font-extrabold">
-      {children}{count !== undefined && <span className="font-sans text-sm font-semibold text-ink-2">{count}</span>}
+/** Nagłówek sekcji: blok z paskiem po lewej (motyw ze strony ETNER). `toggle` = sekcja zwijana (przycisk w nagłówku). */
+export function SectionTitle({ children, count, className, toggle }: { children: ReactNode; count?: number; className?: string; toggle?: { open: boolean; onToggle: () => void } }) {
+  const label = <span className="flex items-baseline gap-2">{children}{count !== undefined && <span className="font-sans text-sm font-semibold text-ink-2">{count}</span>}</span>;
+  return (
+    <h2 className={cn('flex min-h-11 items-center border-l-4 border-action pl-3 font-wide text-base font-extrabold', className)}>
+      {toggle ? (
+        <button type="button" onClick={toggle.onToggle} aria-expanded={toggle.open} className="flex min-h-11 flex-1 items-center justify-between gap-3 text-left">
+          {label}<CaretDown className={cn('h-5 w-5 text-ink-2 transition-transform duration-200', toggle.open && 'rotate-180')} aria-hidden />
+        </button>
+      ) : label}
     </h2>
-    {right}
-  </div>
-);
+  );
+}
 
 /** Pusty stan: ikona, zdanie, podpowiedź co zrobić. */
 export const Empty = ({ icon: I, title, hint, children }: { icon: Icon; title: string; hint?: string; children?: ReactNode }) => (
@@ -48,7 +52,7 @@ export function Segmented<T extends string>({ value, onChange, options, label, c
   );
 }
 
-export const Textarea = ({ className, ...p }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
+export const Textarea = ({ className, ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     className={cn('min-h-24 w-full rounded-xl border border-line bg-card px-4 py-3 text-base text-ink placeholder:text-ink-2 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/30 aria-invalid:border-danger', className)}
     {...p}

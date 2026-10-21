@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { cellsOf, sameCell } from './model.js';
+import { ApiError } from '../../core/api.js';
+import { cellsOf, errText, sameCell } from './model.js';
 
 it('cellsOf: sloty po kolei w komórce dzień|osoba, sameCell bez względu na kolejność kluczy', () => {
   const m = cellsOf([
@@ -10,4 +11,11 @@ it('cellsOf: sloty po kolei w komórce dzień|osoba, sameCell bez względu na ko
   expect(m.get('2026-10-26|p1')).toEqual([{ rodzaj: 'zlecenie', jobId: 'j1', polDnia: true }, { rodzaj: 'kod', kod: 'urlop', polDnia: true }]);
   expect(sameCell(m.get('2026-10-27|p1')!, [{ polDnia: false, tekst: 'Biuro', rodzaj: 'tekst' }])).toBe(true);
   expect(sameCell(m.get('2026-10-27|p1')!, [])).toBe(false);
+});
+
+it('errText: sesja, serwer, brak sieci, komunikat serwera', () => {
+  expect(errText(new ApiError(401, 'x'))).toMatch(/Sesja wygasła/);
+  expect(errText(new ApiError(503, 'x'))).toMatch(/Błąd serwera/);
+  expect(errText(new TypeError('Failed to fetch'))).toMatch(/Brak połączenia/);
+  expect(errText(new ApiError(400, 'Nie znaleziono osoby w harmonogramie'))).toBe('Nie znaleziono osoby w harmonogramie');
 });

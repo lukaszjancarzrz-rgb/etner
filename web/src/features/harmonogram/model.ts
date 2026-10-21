@@ -1,3 +1,4 @@
+import { ApiError } from '../../core/api.js';
 import type { Rec } from '../../core/store.js';
 import type { JobView } from '../zlecenia/jobs.js';
 
@@ -36,3 +37,13 @@ export function slotLabel(s: Slot, jobs: Map<string, JobView>): string {
 }
 export const cellText = (slots: Slot[], jobs: Map<string, JobView>) =>
   slots.length ? slots.map((s) => `${slotLabel(s, jobs)}${s.polDnia ? ' (pół dnia)' : ''}`).join(' + ') : 'pusto';
+
+/** Treść błędu: sesja (401), serwer (5xx), brak sieci albo komunikat serwera. */
+export function errText(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.status === 401) return 'Sesja wygasła. Otwórz swój link logowania jeszcze raz.';
+    if (e.status >= 500) return 'Błąd serwera. Spróbuj ponownie za chwilę.';
+    return e.message;
+  }
+  return 'Brak połączenia. Szkice można przejrzeć i zatwierdzić, gdy będzie zasięg.';
+}

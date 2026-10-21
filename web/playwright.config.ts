@@ -18,6 +18,7 @@ const launchOptions = existsSync(local) ? { executablePath: local } : {};
 
 export default defineConfig({
   testDir: 'e2e',
+  globalTeardown: './e2e/teardown.ts',
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,

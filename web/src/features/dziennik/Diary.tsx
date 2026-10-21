@@ -90,8 +90,8 @@ export function KlientToggle({ on, onChange, dark }: { on: boolean; onChange: (v
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)}
       className={cn('inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors duration-200', on ? (dark ? 'bg-ok text-white' : 'bg-ok/12 text-ok') : dark ? 'text-white/85 hover:bg-white/10' : 'text-ink-2 hover:bg-ink/5')}>
-      {on ? <Eye className="h-5 w-5" weight="bold" /> : <EyeSlash className="h-5 w-5" />}
-      {on ? 'Widoczne dla klienta' : 'Pokaż klientowi'}
+      {on ? <Eye className="h-5 w-5" weight="bold" aria-hidden /> : <EyeSlash className="h-5 w-5" aria-hidden />}
+      Pokaż klientowi
     </button>
   );
 }
@@ -107,7 +107,10 @@ function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId:
   const gal = useRef<HTMLInputElement>(null);
   const alive = useRef(true);
   const me = useMe();
-  useEffect(() => () => { alive.current = false; }, []);
+  const current = useRef<Picked[]>([]);
+  current.current = files;
+  // podglądy niewysłanych plików zwalniamy przy wyjściu z karty
+  useEffect(() => () => { alive.current = false; for (const f of current.current) URL.revokeObjectURL(f.url); }, []);
 
   async function add(list: FileList | null) {
     if (!list?.length) return;
@@ -134,7 +137,7 @@ function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId:
     // Podgląd od razu z lokalnych plików; prawdziwe miniatury przychodzą z serwera.
     const extra = sent.map((f, i) => ({ entity: 'attachments', rec: { id: `${entryTmp}-${i}`, ownerType: 'entry', ownerId: entryTmp, rodzaj: f.img ? 'zdjecie' : 'plik', nazwa: f.name, _src: f.url, createdAt: now } }));
     void createVia('diary_entries', { kind: 'dziennik', url: '/api/diary', method: 'POST', body: { owner_type: ownerType, owner_id: ownerId, tekst: t }, files: sent.map((f) => f.file) },
-      { id: entryTmp, ownerType, ownerId, tekst: t, authorId: me?.id }, extra).catch((x: Error) => {
+      { id: entryTmp, ownerType, ownerId, tekst: t, authorId: me?.id }, extra).then(() => { for (const f of sent) URL.revokeObjectURL(f.url); }, (x: Error) => {
       // odrzucony wpis wraca do formularza z tekstem i zdjęciami
       if (alive.current) { setTekst((cur) => cur || t); setFiles((cur) => (cur.length ? cur : sent)); setErr(x.message); }
       else toast('Wpis nie został zapisany', { body: x.message, tone: 'error' });
@@ -154,7 +157,7 @@ function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId:
             <li key={f.url} className="relative">
               {f.img ? <img src={f.url} alt={f.name} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" />
                 : <span className="grid h-18 w-18 place-items-center rounded-xl border border-line text-xs"><FilePdf className="h-6 w-6" /></span>}
-              <button type="button" aria-label={`Usuń ${f.name}`} onClick={() => setFiles((x) => x.filter((_, k) => k !== i))}
+              <button type="button" aria-label={`Usuń ${f.name}`} onClick={() => { URL.revokeObjectURL(f.url); setFiles((x) => x.filter((_, k) => k !== i)); }}
                 className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-card"><X className="h-4 w-4" weight="bold" /></button>
             </li>
           ))}
