@@ -127,3 +127,7 @@ Task 18: BASE 0d3fb75; impl 4951fd9..6156d48; review dispatched
 Task 18: review: Important — withoutEchoes hides genuinely new look-alike entries (offline duplicates); demo cookie not Secure; month view missing
 - Ruling R27: month view dropped for the owner checkpoint (week table + prev/next on desktop); owner decides after review — cost: one more screen later if wanted.
 Task 18: minor (deferred): no worker-role e2e; job form / Zakupy admin controls / „Pokaż klientowi” / swipe only checked by eye; corepack on Render unverified until owner deploys
+Task 18: fix round 1/5 (all addressed, 0 open; commits 85b9752..4bdb655)
+Task 18: minor (deferred): 30 s echo window assumes phone clock within 30 s of server
+Task 18: complete (commits 0d3fb75..4bdb655, review clean) — controller verified: unit 12/21/128 pass, build clean, e2e 2/2 pass
+STOP: owner checkpoint after Task 18 (deploy via render.yaml Blueprint = owner step O2). Final whole-branch review runs after the last task.
