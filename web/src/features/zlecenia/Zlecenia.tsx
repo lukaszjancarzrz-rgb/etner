@@ -52,7 +52,8 @@ function JobList({ selected }: { selected?: string }) {
   const planned = useMemo(() => new Set(sched.map((e) => e.jobId).filter(Boolean)), [sched]);
   const scope = useEntities('job_scope_items');
   const rawJobs = useEntities('jobs');
-  const fresh = useMemo(() => freshByJob(rawJobs, entries, scope, me?.id, seenAt, admin), [rawJobs, entries, scope, me?.id, admin, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pumble = useEntities('pumble_messages');
+  const fresh = useMemo(() => freshByJob(rawJobs, entries, scope, me?.id, seenAt, admin, pumble), [rawJobs, entries, scope, me?.id, admin, pumble, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
   const scopeText = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const p of scope) m.set(p.jobId, [...(m.get(p.jobId) ?? []), p.tekst]);

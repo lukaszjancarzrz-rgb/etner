@@ -8,6 +8,7 @@ import { Skeleton } from '../../core/ui/skeleton.js';
 import { CategoryPill, useCatColor } from '../../core/ui/category.js';
 import { Diary } from '../dziennik/Diary.js';
 import { JobForm } from './JobForm.js';
+import { Pumble } from './Pumble.js';
 import { Scope } from './Scope.js';
 import { fmtDni, jobDays } from './jobs.js';
 
@@ -80,6 +81,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
         </div>
       </div>
       <Scope jobId={id} disabled={!!job._tmp} />
+      <Pumble job={job} />
       <Diary ownerType="job" ownerId={id} highlight={highlight} disabled={!!job._tmp} />
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}
     </article>

@@ -18,6 +18,9 @@ describe('liczniki w menu', () => {
     expect(freshByJob(jobs, entries, scope, 'me', () => T2).size).toBe(0);
     // pracownik: sama zmiana wiersza zlecenia (np. uwagi admina) nie jest nowością
     expect(Object.fromEntries(freshByJob(jobs, entries, scope, 'me', () => T1, false))).toEqual({ j1: 1, j3: 1 });
+    // Pumble: cudze wiadomości po wizycie; własne (wysłane z ETNER) i stare nie
+    const pb = [r({ jobId: 'j3', createdBy: null, createdAt: T2 }), r({ jobId: 'j3', createdBy: 'me', createdAt: T2 }), r({ jobId: 'j2', createdBy: 'w', createdAt: T0 })];
+    expect(Object.fromEntries(freshByJob([], [], [], 'me', () => T1, false, pb))).toEqual({ j3: 1 });
   });
 
   it('naJutroCount: dziś i jutro, niezabrane, ekipa pracownika; admin wszystkie', () => {

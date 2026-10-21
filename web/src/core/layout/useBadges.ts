@@ -30,6 +30,7 @@ export function useBadges(): Record<string, number> {
   const jobs = useEntities('jobs');
   const entries = useEntities('diary_entries');
   const scope = useEntities('job_scope_items');
+  const pumble = useEntities('pumble_messages');
   const shopping = useEntities('shopping');
   const first = useDict('status_zakupu')[0]?.wartosc;
   return useMemo((): Record<string, number> => {
@@ -38,8 +39,8 @@ export function useBadges(): Record<string, number> {
     return {
       jutro: naJutroCount(checklists, day, me),
       harm,
-      zl: freshByJob(jobs, entries, scope, me.id, seenAt, admin).size,
+      zl: freshByJob(jobs, entries, scope, me.id, seenAt, admin, pumble).size,
       zakupy: zakupyCount(shopping, first, admin),
     };
-  }, [me, ver, day, harm, checklists, jobs, entries, scope, shopping, first]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, first]); // eslint-disable-line react-hooks/exhaustive-deps
 }

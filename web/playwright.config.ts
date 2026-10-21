@@ -34,6 +34,6 @@ export default defineConfig({
     url: `http://127.0.0.1:${port}/api/health`,
     reuseExistingServer: false,
     timeout: 60_000,
-    env: { DEMO: '1', DATA_DIR: process.env.E2E_DATA!, PORT: String(port), NODE_ENV: 'test' },
+    env: { DEMO: '1', PUMBLE_FAKE: '1', DATA_DIR: process.env.E2E_DATA!, PORT: String(port), NODE_ENV: 'test' },
   },
 });

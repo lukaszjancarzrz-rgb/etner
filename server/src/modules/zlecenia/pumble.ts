@@ -161,7 +161,8 @@ export async function pollTick(deps: AppDeps): Promise<void> {
   try {
     const open = svc.list(deps.db).filter((j) => live(deps, j)).sort((a, b) => a.numer.localeCompare(b.numer));
     for (const j of open.filter((x) => !x.pumbleChannelId).slice(0, CREATE_PER_TICK)) await ensureChannel(deps, j.id).catch((e) => logError(deps.db, 'pumble:kanal', e));
-    const withCh = open.filter((j) => j.pumbleChannelId);
+    // świeży odczyt: kanały założone przed chwilą też są odpytywane w tym obiegu
+    const withCh = open.map((j) => svc.get(deps.db, j.id) ?? j).filter((j) => j.pumbleChannelId);
     const start = withCh.length ? s.rr % withCh.length : 0;
     const batch = [...withCh.slice(start), ...withCh.slice(0, start)].slice(0, PER_TICK);
     s.rr = start + batch.length;

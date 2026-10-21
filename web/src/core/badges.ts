@@ -2,17 +2,18 @@ import { addDays } from '@etner/shared';
 import type { Rec } from './store.js';
 
 /**
- * „Nowe” w zleceniach (jedno źródło dla listy i menu): wpisy dziennika innych osób, zmienione punkty
+ * „Nowe” w zleceniach (jedno źródło dla listy i menu): wpisy dziennika innych osób, wiadomości Pumble innych osób, zmienione punkty
  * zakresu i zmienione zlecenie, nowsze niż `since(jobId)`. Własne zmiany robi się z otwartej karty,
  * a karta przy wyjściu zapisuje wizytę, więc nie liczą się jako nowe; wyjątek: zlecenie dodane przez siebie.
  * Zmiana samego zlecenia liczy się tylko dla admina (`jobRow`).
  */
-export function freshByJob(jobs: Rec[], entries: Rec[], scope: Rec[], meId: string | undefined, since: (jobId: string) => string, jobRow = true): Map<string, number> {
+export function freshByJob(jobs: Rec[], entries: Rec[], scope: Rec[], meId: string | undefined, since: (jobId: string) => string, jobRow = true, pumble: Rec[] = []): Map<string, number> {
   const m = new Map<string, number>();
   const s = new Map<string, string>();
   const at = (id: string) => s.get(id) ?? (s.set(id, since(id)), s.get(id)!);
   const bump = (id: string) => m.set(id, (m.get(id) ?? 0) + 1);
   for (const e of entries) if (e.ownerType === 'job' && !e._tmp && e.authorId !== meId && e.createdAt > at(e.ownerId)) bump(e.ownerId);
+  for (const p of pumble) if (p.createdBy !== meId && p.createdAt > at(p.jobId)) bump(p.jobId);
   for (const p of scope) if (!p._tmp && p.createdBy !== meId && p.updatedAt > at(p.jobId)) bump(p.jobId);
   // pracownik (jobRow=false): wiersz zlecenia pomijamy, bo zmiana mogła dotyczyć tylko uwag admina
   if (jobRow) for (const j of jobs) if (!j._tmp && j.updatedAt > at(j.id) && !(j.createdBy === meId && j.createdAt === j.updatedAt)) bump(j.id);
