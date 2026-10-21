@@ -106,9 +106,9 @@ describe('zlecenia', () => {
 
   it('częściowy PUT nie kasuje pól; błąd pusha nie psuje zapisu', async () => {
     const { app, admin, push, k, deps } = await setup();
-    const j = await (await app.request('/api/jobs', req(admin, 'POST', { clientId: k.client.id, status: 'Nowe', zakres: 'montaż', uwagiAdmin: 'u', rodzaj: 'serwis', kategoria: 'Serwis' }))).json();
+    const j = await (await app.request('/api/jobs', req(admin, 'POST', { clientId: k.client.id, status: 'Nowe', zakres: 'montaż', uwagiAdmin: 'u', rodzaj: 'serwis', kategoria: 'Inne' }))).json();
     const r = await (await app.request(`/api/jobs/${j.id}`, req(admin, 'PUT', { status: 'W realizacji' }))).json();
-    expect(r).toMatchObject({ zakres: 'montaż', uwagiAdmin: 'u', rodzaj: 'serwis', kategoria: 'Serwis' });
+    expect(r).toMatchObject({ zakres: 'montaż', uwagiAdmin: 'u', rodzaj: 'serwis', kategoria: 'Inne' });
     push.mockRejectedValue(new Error('boom'));
     const res = await app.request(`/api/jobs/${j.id}`, req(admin, 'PUT', { ekipa: 'ekipa Bartek' }));
     expect(res.status).toBe(200);

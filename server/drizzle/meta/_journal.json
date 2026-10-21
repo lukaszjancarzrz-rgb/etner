@@ -85,6 +85,13 @@
       "when": 1792601433526,
       "tag": "0011_worthless_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1792606411423,
+      "tag": "0012_kategorie_rodzaje",
+      "breakpoints": true
     }
   ]
 }

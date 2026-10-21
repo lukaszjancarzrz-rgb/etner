@@ -8,6 +8,7 @@ import { dict } from './schema.js';
 type Item = string | [wartosc: string, extra: { grupa?: DictGrupa; platne?: boolean; kolor?: string }];
 const g = (grupa: DictGrupa, ...w: string[]): Item[] => w.map((x) => [x, { grupa }]);
 const kod = (w: string, platne: boolean, kolor: string): Item => [w, { platne, kolor }];
+const kol = (w: string, kolor: string): Item => [w, { kolor }];
 
 export const SEED: Record<DictRodzaj, Item[]> = {
   status_zlecenia: [
@@ -22,8 +23,9 @@ export const SEED: Record<DictRodzaj, Item[]> = {
     ...g('pozniej', 'Na kiedyś'),
   ],
   ekipa: ['ekipa Bartek', 'ekipa Marek', 'mieszane'],
-  kategoria: ['Rekuperacja', 'Klimatyzacja', 'Pompa ciepła', 'Serwis', 'Inne'],
-  rodzaj_zlecenia: ['montaż', 'serwis', 'gwarancja', 'inne'],
+  // R30: kolor kategorii = kolor zlecenia w harmonogramie
+  kategoria: [kol('Elektryka', '#0070ab'), kol('Fotowoltaika', '#c62828'), kol('Rekuperacja', '#2e7d32'), kol('Klimatyzacja', '#7b1fa2'), kol('Inne', '#f9a825')],
+  rodzaj_zlecenia: ['montaż', 'przygotówka', 'serwis', 'inne'],
   zrodlo: ['Polecenie', 'Strona www', 'Facebook', 'Telefon', 'Inne'],
   kod_nieobecnosci: [kod('urlop', true, '#00736b'), kod('L4', true, '#c0392b'), kod('szkolenie', true, '#0070ab'), kod('wolne', false, '#8896a5'), kod('UŻ', true, '#b9770e')],
   status_zadania: ['Do zrobienia', 'W toku', 'Zrobione'],
