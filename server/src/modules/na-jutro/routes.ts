@@ -11,7 +11,7 @@ import { can } from '../../core/permissions.js';
 import * as users from '../uzytkownicy/service.js';
 import * as svc from './service.js';
 
-const forbidden = () => new HTTPException(403, { message: 'Brak uprawnień' });
+const forbidden = () => new HTTPException(403, { message: 'BRAK_UPRAWNIEN' });
 
 export function routes(app: Hono, deps: AppDeps): void {
   const { db } = deps;

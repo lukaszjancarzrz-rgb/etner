@@ -7,15 +7,18 @@ import { routes } from './routes.js';
 import { checklists } from './schema.js';
 import { pending } from './service.js';
 
-/** Listę widzi tylko ekipa (user.ekipa === ekipa listy) i admin; przeniesienie do innej ekipy: widzą obie. */
+/** Listę widzi tylko ekipa (user.ekipa === ekipa listy) i admin; przeniesienie: stara ekipa dostaje tylko usunięcie. */
 export const naJutro: ModuleDef = {
   name: 'na-jutro',
   routes,
   tables: { checklists },
   visibleTo(user, ch) {
     if (can(user, 'admin')) return true;
-    const ekipy = [ch.before, ch.after].map((r) => (r as { ekipa?: string } | null)?.ekipa);
-    return !!user.ekipa && ekipy.includes(user.ekipa);
+    const [b, a] = [ch.before, ch.after].map((r) => (r as { ekipa?: string } | null)?.ekipa);
+    if (!user.ekipa) return false;
+    if (a === user.ekipa) return true;
+    // Przeniesienie do innej ekipy: stara ekipa dostaje tylko polecenie usunięcia, bez nowej treści.
+    return b === user.ekipa ? { ...ch, action: 'delete', after: { id: ch.entityId, ekipa: b, deletedAt: ch.at } } : false;
   },
   cron: [{
     name: 'na-jutro-rano',

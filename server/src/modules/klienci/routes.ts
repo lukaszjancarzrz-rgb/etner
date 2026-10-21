@@ -1,20 +1,14 @@
 import { clientCreateSchema, clientUpdateSchema, siteCreateSchema, siteUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import type { ZodType } from 'zod';
 import type { AppDeps } from '../../app.js';
+import { body } from '../../core/body.js';
 import { requireAdmin, requireUser } from '../../core/auth.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
 import * as svc from './service.js';
 
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
-async function body<T>(c: Context, schema: ZodType<T>): Promise<T> {
-  const r = schema.safeParse(await c.req.json().catch(() => null));
-  if (!r.success) throw new HTTPException(400, { message: r.error.issues[0]?.message ?? 'Błędne dane' });
-  return r.data;
-}
-
 export function routes(app: Hono, deps: AppDeps): void {
   const { db } = deps;
   const admin = requireAdmin(db);

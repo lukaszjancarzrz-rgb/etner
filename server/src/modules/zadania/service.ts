@@ -24,6 +24,7 @@ export function save(db: Db, userId: string, input: TaskSaveInput, today: string
   if (!status) throw new HTTPException(400, { message: 'Brak statusów zadań w słowniku' });
   if (!slowniki.list(db, 'status_zadania').some((s) => s.wartosc === status)) throw new HTTPException(400, { message: 'Nieznany status zadania' });
   patch.status = status;
+  // Literał 'Zrobione': seed słownika; wartość „ukończone” nie ma w słowniku osobnego znacznika.
   if (status === 'Zrobione' && (patch.cykliczne ?? old?.cykliczne)) Object.assign(patch, { status: first, ostatnio: today });
   const now = new Date().toISOString();
   if (old) {

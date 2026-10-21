@@ -2,8 +2,8 @@ import { diaryCreateSchema, klientFlagSchema, newId } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
-import type { ZodType } from 'zod';
 import type { AppDeps } from '../../app.js';
+import { body } from '../../core/body.js';
 import { requireUser } from '../../core/auth.js';
 import { makeVariants } from '../../core/files.js';
 import { logError } from '../../core/errors.js';
@@ -16,12 +16,6 @@ import * as svc from './service.js';
 const MAX = 25 * 1024 * 1024;
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
 const forbidden = () => new HTTPException(403, { message: 'BRAK_UPRAWNIEN' });
-
-async function body<T>(c: Context, schema: ZodType<T>): Promise<T> {
-  const r = schema.safeParse(await c.req.json().catch(() => null));
-  if (!r.success) throw new HTTPException(400, { message: r.error.issues[0]?.message ?? 'Błędne dane' });
-  return r.data;
-}
 
 /** Rodzaj pliku po magic bytes (deklarowany typ jest ignorowany). */
 function sniff(b: Buffer): { ext: string; mime: string; img: boolean } | null {

@@ -96,4 +96,19 @@ describe('na jutro', () => {
     await rankoTick(deps, [def], new Date('2026-03-10T06:00:00Z'));
     expect(push).toHaveBeenCalled();
   });
+
+  it('przeniesienie do innej ekipy nie wycieka nowej treści do starej', async () => {
+    const { app, c1, c2, admin, deps } = await setup();
+    const w3 = addUser(deps, { name: 'Trzeci', ekipa: 'ekipa C' });
+    const c3 = await loginCookie(app, w3.token);
+    const row = await (await app.request('/api/checklists', req(c1, 'POST', { ekipa: 'ekipa A', dzien: '2026-03-11', tekst: 'Drabina' }))).json();
+    const r = await app.request(`/api/checklists/${row.id}`, req(admin, 'PUT', { ekipa: 'ekipa B', tekst: 'Nowy' }));
+    expect(r.status).toBe(200);
+    const ch = async (ck: string) => (await (await app.request('/api/changes?since=0', req(ck, 'GET'))).json()).changes as { action: string; data: unknown }[];
+    const a = await ch(c1);
+    expect(JSON.stringify(a)).not.toContain('Nowy');
+    expect(a.at(-1)).toMatchObject({ action: 'delete' });
+    expect(JSON.stringify(await ch(c2))).toContain('Nowy');
+    expect(await ch(c3)).toEqual([]);
+  });
 });
