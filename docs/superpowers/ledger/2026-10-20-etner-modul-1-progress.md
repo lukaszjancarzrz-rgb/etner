@@ -76,3 +76,7 @@ Task 7: complete (commits eefa69a..6824695, review clean)
 - Ruling R17: Task 8 also seeds one firma 'ETNER' when none exists (needed by firm-scoped tables) — cost: none.
 Task 8: BASE 0759566; impl d695a59; review: Important — plaintext login link cached in op_ids.result
 Task 8: minor (deferred): no test for PUT /api/dict opId replay / update+resurrect branches; users.admins/crewMembers return ids
+Task 8: fix round 1/5 (4 addressed, 0 open; commits d695a59..0f94d1a)
+Task 8: minor (deferred): op_ids test checks '/login#' not raw token; BASE_URL test deletes rather than restores; lost-response replay gets link:null (use new-link)
+Task 8: complete (commits 0759566..0f94d1a, review clean)
+- Ruling R18: klienci.visibleTo for workers asks an injected `deps.clientHasJobs?(clientId)` (default false → hidden); Task 10 provides it. When a job is created or its client/site changes, zlecenia records an 'update' change for that client and site (re-emit) so workers who never got the earlier client change receive it — cost: extra change rows.
