@@ -91,4 +91,9 @@ export function mountPush(app: Hono, deps: AppDeps): void {
       .where(and(eq(pushSubscriptions.endpoint, b.data.endpoint), eq(pushSubscriptions.userId, c.get('user').id))).run();
     return c.json({ ok: true });
   });
+
+  app.post('/api/push/test', requireUser(db), async (c) => {
+    const sent = await notify(deps, [c.get('user').id], { title: '🔔 Próbne powiadomienie', body: 'Powiadomienia działają na tym urządzeniu.', url: '#wiecej', tag: 'test' });
+    return c.json({ sent });
+  });
 }

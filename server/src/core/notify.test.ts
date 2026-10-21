@@ -91,6 +91,17 @@ describe('trasy push', () => {
     await post(app, '/api/push/subscribe', c1, body);
     expect(deps.db.select().from(pushSubscriptions).where(and(eq(pushSubscriptions.userId, u1.user.id), isNull(pushSubscriptions.deletedAt))).all()).toHaveLength(1);
   });
+  it('POST /api/push/test: tylko do własnych urządzeń, wymaga logowania', async () => {
+    const push = vi.fn<PushSender>(async () => ({ statusCode: 201 }));
+    const deps = testDeps({ push }); const app = createApp(deps);
+    const u1 = addUser(deps), u2 = addUser(deps);
+    sub(deps, u1.user.id, 'e1'); sub(deps, u2.user.id, 'e2');
+    expect((await post(app, '/api/push/test', '', {})).status).toBe(401);
+    const r = await post(app, '/api/push/test', await loginCookie(app, u1.login), {});
+    expect(await r.json()).toEqual({ sent: 1 });
+    expect(push.mock.calls.map((x) => x[0].endpoint)).toEqual(['e1']);
+    expect(JSON.parse(push.mock.calls[0]![1] as string)).toMatchObject({ url: '#wiecej', tag: 'test' });
+  });
   it('GET /api/push/key', async () => {
     const off = await createApp(testDeps()).request('/api/push/key');
     expect(await off.json()).toEqual({ key: null });

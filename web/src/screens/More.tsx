@@ -1,5 +1,6 @@
-import { CaretRight, Desktop, Moon, SignOut, Sun, UsersThree } from '@phosphor-icons/react';
-import { useState, type FormEvent } from 'react';
+import { Bell, CaretRight, Desktop, Moon, SignOut, Sun, UsersThree } from '@phosphor-icons/react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { disablePush, enablePush, pushState, testPush, type PushState } from '../core/push.js';
 import { ApiError, api } from '../core/api.js';
 import { logout, useSession } from '../core/session.js';
 import { setTheme, useTheme, type Theme } from '../core/theme.js';
@@ -47,6 +48,48 @@ function ChangePassword() {
   );
 }
 
+const STAN: Partial<Record<PushState, string>> = {
+  wlaczone: 'Włączone na tym urządzeniu.',
+  wylaczone: 'Wyłączone na tym urządzeniu.',
+  zablokowane: 'Zablokowane w ustawieniach przeglądarki. Zezwól na powiadomienia dla tej strony w ustawieniach telefonu lub przeglądarki.',
+};
+
+function Notifications() {
+  const [st, setSt] = useState<PushState | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { pushState().then(setSt, () => setSt('wylaczone')); }, []);
+  const run = async (f: () => Promise<PushState | void>, ok?: string) => {
+    setBusy(true);
+    try { const r = await f(); if (r) setSt(r); if (ok) toast(ok, { tone: 'ok' }); }
+    catch (err) { toast('Nie udało się', { body: err instanceof ApiError ? err.message : 'Brak połączenia z serwerem.', tone: 'error' }); }
+    setBusy(false);
+  };
+  const sendTest = () => run(async () => {
+    const { sent } = await testPush();
+    if (!sent) throw new ApiError(0, 'Serwer nie wysłał powiadomienia. Wyłącz i włącz powiadomienia ponownie.');
+  }, 'Wysłano próbne powiadomienie');
+  return (
+    <div className="grid gap-3 rounded-2xl border border-line bg-card p-5" aria-busy={st === null}>
+      <h2 className="flex items-center gap-2 font-wide text-lg font-extrabold"><Bell className="h-5 w-5 text-action" weight="duotone" />Powiadomienia</h2>
+      {st === null ? <p className="text-sm text-ink-2">Sprawdzanie…</p>
+        : st === 'ios' || st === 'brak' ? <p className="text-sm">Na iPhonie: Udostępnij → Do ekranu początkowego, potem otwórz aplikację z ikony.</p>
+        : st === 'serwer' ? <p className="text-sm text-ink-2">Serwer nie ma włączonych powiadomień.</p>
+        : (
+          <>
+            <p className={cn('text-sm', st === 'wlaczone' ? 'font-semibold text-ok' : st === 'zablokowane' ? 'text-danger' : 'text-ink-2')} role="status">{STAN[st]}</p>
+            {st === 'wylaczone' && <Button onClick={() => void run(enablePush)} disabled={busy}><Bell className="h-5 w-5" />Włącz powiadomienia na tym urządzeniu</Button>}
+            {st === 'wlaczone' && (
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => void sendTest()} disabled={busy}>Wyślij próbne powiadomienie</Button>
+                <Button variant="secondary" onClick={() => void run(disablePush)} disabled={busy}>Wyłącz</Button>
+              </div>
+            )}
+          </>
+        )}
+    </div>
+  );
+}
+
 /** Więcej: Klienci (admin), Ustawienia (motyw), wylogowanie. */
 export function More() {
   const theme = useTheme();
@@ -73,6 +116,7 @@ export function More() {
           ))}
         </div>
       </div>
+      <Notifications />
       <ChangePassword />
       <div className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-card p-5">
         <div className="min-w-0">
