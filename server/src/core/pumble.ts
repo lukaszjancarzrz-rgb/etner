@@ -2,7 +2,7 @@
 export type PumbleUser = { id: string; email: string; name: string; workspaceId?: string; isAddonBot?: boolean; isPumbleBot?: boolean };
 export type PumbleMessage = {
   id: string; channelId?: string; author: string; text: string; timestamp?: string; timestampMilli?: number;
-  deleted?: boolean; authorAppId?: string | null; threadRootId?: string | null; files?: unknown[];
+  deleted?: boolean; authorAppId?: string | null; threadRootId?: string | null; files?: unknown[]; attachments?: unknown[];
 };
 
 export type PumbleChannel = { id: string; name: string; type?: string; channelType?: string };

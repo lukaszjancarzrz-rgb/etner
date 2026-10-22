@@ -80,6 +80,12 @@ export function routes(app: Hono, deps: AppDeps): void {
       return c.json(await pumble.send(deps, c.get('user'), c.req.param('id'), text, opId));
     } catch (e) { return pumbleFail(e, c); }
   });
+  app.post('/api/jobs/:id/pumble/watch', requireUser(db), (c) => {
+    const id = c.req.param('id');
+    if (!svc.get(db, id)) throw new HTTPException(404, { message: 'Nie znaleziono' });
+    pumble.watch(deps, id);
+    return c.json({ ok: true });
+  });
   app.post('/api/jobs/:id/pumble/channel', admin, async (c) => {
     try {
       return c.json(view(c, nf(await pumble.ensureChannel(deps, c.req.param('id'), true))));

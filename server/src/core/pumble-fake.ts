@@ -19,8 +19,8 @@ export function fakePumble(users: PumbleUser[] = []) {
     calls: [] as string[],
     workspaceId: 'ws-demo',
     /** Wiadomość od osoby z Pumble (do testów i demo). */
-    post(channelId: string, author: string, text: string, at = new Date()): PumbleMessage {
-      const m = { id: id(), channelId, author, text, timestamp: at.toISOString(), timestampMilli: at.getTime() };
+    post(channelId: string, author: string, text: string, at = new Date(), files?: unknown[]): PumbleMessage {
+      const m: PumbleMessage = { id: id(), channelId, author, text, timestamp: at.toISOString(), timestampMilli: at.getTime(), ...(files && { files }) };
       channels.get(channelId)!.messages.unshift(m); // najnowsze pierwsze, jak w Pumble
       return m;
     },

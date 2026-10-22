@@ -15,7 +15,8 @@ import * as users from '../uzytkownicy/service.js';
 import { jobs, pumbleMessages } from './schema.js';
 import * as svc from './service.js';
 
-export const POLL_MS = 20_000;
+/** Kanały „oglądane” (karta otwarta, sygnał co 15 s z aplikacji): co 3 s, najwyżej 20; reszta co 30 s. */
+export const FAST_MS = 3_000, SLOW_MS = 30_000, WATCH_TTL = 30_000, WATCH_MAX = 20;
 const USERS_TTL = 10 * 60_000, RETRY_MS = 5 * 60_000, KEEP = 50, PER_TICK = 50, CREATE_PER_TICK = 5;
 const BACKOFF_MIN = 60_000, BACKOFF_MAX = 30 * 60_000;
 
@@ -28,6 +29,7 @@ type St = {
   /** Zlecenia, którym nie udało się dodać osób (Pumble niedostępne); obieg ponawia. */
   pending: Set<string>;
   sending: Map<string, Promise<unknown>>; bg: Set<Promise<unknown>>;
+  watch: Map<string, number>;
   rr: number; running: boolean; backoffMs: number; backoffUntil: number;
   /** Ostatni wpis zbiorczy błędów kanałów: zbiór kanałów i czas (nowy wpis przy zmianie zbioru albo raz na godzinę). */
   lastSummary?: { key: string; at: number };
@@ -36,9 +38,13 @@ const states = new WeakMap<PumbleClient, St>();
 const st = (p: PumbleClient): St => {
   let s = states.get(p);
   if (!s) states.set(p, (s = { tried: new Map(), added: new Map(), checked: new Set(), publicLogged: new Set(), missLogged: new Set(), badLogged: new Set(),
-    inflight: new Map(), pending: new Set(), sending: new Map(), bg: new Set(), rr: 0, running: false, backoffMs: 0, backoffUntil: 0 }));
+    inflight: new Map(), pending: new Set(), sending: new Map(), bg: new Set(), watch: new Map(), rr: 0, running: false, backoffMs: 0, backoffUntil: 0 }));
   return s;
 };
+/** Zapis sygnału „oglądam” kartę zlecenia. */
+export function watch(deps: AppDeps, jobId: string): void {
+  if (deps.pumble) st(deps.pumble).watch.set(jobId, now(deps).getTime());
+}
 const now = (deps: AppDeps) => (deps.now ?? (() => new Date()))();
 const group = (deps: AppDeps, j: svc.JobRow) => slowniki.groupOf(deps.db, 'status_zlecenia', j.status);
 
@@ -213,7 +219,8 @@ async function pollJob(deps: AppDeps, p: PumbleClient, j: svc.JobRow): Promise<n
       const pre = m.authorAppId || m.author === me.id ? PREFIX.exec(m.text ?? '') : null;
       const sig = pre && byName.has(pre[1]!) ? pre : null;
       const row = t.insert(pumbleMessages).values({
-        id: newId(), jobId: j.id, messageId: m.id, authorName: sig?.[1] ?? u?.name ?? 'Pumble', text: (sig?.[2] ?? m.text) || '(plik)',
+        id: newId(), jobId: j.id, messageId: m.id, authorName: sig?.[1] ?? u?.name ?? 'Pumble', text: (sig?.[2] ?? m.text) || '',
+        files: m.files?.length || m.attachments?.length ? JSON.stringify({ files: m.files ?? [], ...(m.attachments?.length && { attachments: m.attachments }) }) : null,
         sentAt: iso(m), threadRootId: m.threadRootId ?? null, createdAt: ts, updatedAt: ts,
         createdBy: (sig ? byName.get(sig[1]!) : u?.email && byEmail.get(u.email.toLowerCase())) || null,
       }).returning().get();
@@ -238,7 +245,7 @@ function trim(db: AppDeps['db'], jobId: string): void {
  * Jeden obieg: ponowienie osób, kanały dla aktualnych zleceń bez kanału (do 5), nowe wiadomości (do 50 kanałów, po kolei w kółko).
  * Błąd całego Pumble przerywa obieg: jeden wpis w błędach i przerwa rosnąca od 1 min do 30 min. Błędy kanałów: jeden wpis na obieg.
  */
-export async function pollTick(deps: AppDeps): Promise<void> {
+export async function pollTick(deps: AppDeps, fast = false): Promise<void> {
   const p = deps.pumble;
   if (!p) return;
   const s = st(p), t = now(deps).getTime();
@@ -247,6 +254,16 @@ export async function pollTick(deps: AppDeps): Promise<void> {
   const errs: { cid: string; e: unknown }[] = [];
   const one = async (cid: string, f: () => Promise<unknown>) => { try { await f(); } catch (e) { if (isGlobalPumbleError(e)) throw e; errs.push({ cid, e }); } };
   try {
+    if (fast) {
+      // tylko oglądane kanały (najświeższe sygnały pierwsze, najwyżej WATCH_MAX); starsze sygnały wygasają
+      for (const [id, at] of s.watch) if (t - at > WATCH_TTL) s.watch.delete(id);
+      const hot = [...s.watch].sort((a, b) => b[1] - a[1]).slice(0, WATCH_MAX);
+      for (const [id] of hot) {
+        const j = svc.get(deps.db, id);
+        if (j?.pumbleChannelId && group(deps, j) !== 'zamkniete') await one(j.pumbleChannelId, () => pollJob(deps, p, j));
+      }
+      s.backoffMs = 0;
+    } else {
     for (const id of [...s.pending]) {
       const j = svc.get(deps.db, id);
       if (j?.pumbleChannelId) await one(j.pumbleChannelId, () => addPeople(deps, id, membersOf(deps, j)));
@@ -262,6 +279,7 @@ export async function pollTick(deps: AppDeps): Promise<void> {
     s.rr = start + batch.length;
     for (const j of batch) await one(j.pumbleChannelId!, () => pollJob(deps, p, j));
     s.backoffMs = 0;
+    }
   } catch (e) {
     if (!s.backoffMs) logError(deps.db, 'pumble', new Error(`Pumble nie odpowiada, odpytywanie wstrzymane (ponowienie co 1–30 min): ${e instanceof Error ? e.message : e}`));
     s.backoffMs = Math.min(BACKOFF_MAX, s.backoffMs ? s.backoffMs * 2 : BACKOFF_MIN);
@@ -276,12 +294,12 @@ export async function pollTick(deps: AppDeps): Promise<void> {
   } else if (!key) s.lastSummary = undefined;
 }
 
-/** Odpytywanie co 20 s (pierwszy obieg od razu); zwraca stop(). */
-export function startPoll(deps: AppDeps, ms = POLL_MS): () => void {
-  const run = () => void pollTick(deps).catch((e) => logError(deps.db, 'pumble:tick', e));
-  run();
-  const t = setInterval(run, ms);
-  return () => clearInterval(t);
+/** Obieg pełny co 30 s (pierwszy od razu) i szybki (oglądane kanały) co 3 s; zwraca stop(). Obiegi nie nakładają się (`running`). */
+export function startPoll(deps: AppDeps, slowMs = SLOW_MS, fastMs = FAST_MS): () => void {
+  const run = (fast: boolean) => () => void pollTick(deps, fast).catch((e) => logError(deps.db, 'pumble:tick', e));
+  run(false)();
+  const a = setInterval(run(false), slowMs), b = setInterval(run(true), fastMs);
+  return () => { clearInterval(a); clearInterval(b); };
 }
 
 /**

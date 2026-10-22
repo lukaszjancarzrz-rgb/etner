@@ -1,4 +1,4 @@
-import { ArrowSquareOut, ChatsCircle, PaperPlaneRight, Plus } from '@phosphor-icons/react';
+import { ArrowSquareOut, Camera, ChatsCircle, PaperclipHorizontal, PaperPlaneRight, Plus } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { newId } from '@etner/shared';
 import { api, ApiError } from '../../core/api.js';
@@ -18,6 +18,30 @@ const pumbleOn = () => (status ??= api<{ enabled: boolean }>('/api/pumble/status
 export const jobMessages = (all: Rec[], jobId: string): Rec[] =>
   all.filter((m) => m.jobId === jobId).sort((a, b) => a.sentAt.localeCompare(b.sentAt) || a.id.localeCompare(b.id));
 
+const IMG = /\.(jpe?g|png|gif|webp|heic|avif|bmp)$/i;
+const str = (v: unknown) => (typeof v === 'string' ? v : '');
+/** Pliki wiadomości (kolumna `files`: {files, attachments?}); podglądy tylko z adresów, które Pumble podaje samo (bez klucza API). */
+export function fileInfo(m: Rec): { images: number; others: number; previews: { url: string; name: string }[] } {
+  let list: Rec[] = [];
+  try { const j = JSON.parse(m.files ?? 'null'); list = Array.isArray(j) ? j : j?.files ?? []; } catch { /* uszkodzone dane = brak plików */ }
+  const previews: { url: string; name: string }[] = [];
+  let images = 0;
+  for (const f of list) {
+    const name = str(f.name) || str(f.fileName) || str(f.title);
+    const isImg = str(f.mimeType ?? f.mimetype ?? f.contentType).startsWith('image/') || IMG.test(name);
+    if (isImg) images++;
+    // shortcut: image preview needs live check of Pumble file auth (R35)
+    const url = [f.thumbnailUrl, f.previewUrl, isImg ? f.url : ''].map(str).find((u) => /^https:\/\//.test(u));
+    if (isImg && url) previews.push({ url, name: name || 'zdjęcie' });
+  }
+  return { images, others: list.length - images, previews };
+}
+const plural = (n: number, one: string, few: string, many: string) => (n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 > 20) ? few : many);
+export const fileLine = (author: string, { images, others }: { images: number; others: number }): { img: boolean; text: string }[] => [
+  ...(images ? [{ img: true, text: `${author} wrzucił ${images === 1 ? 'zdjęcie' : `${images} ${plural(images, '', 'zdjęcia', 'zdjęć')}`}` }] : []),
+  ...(others ? [{ img: false, text: `${author} wrzucił ${others === 1 ? 'plik' : others > 1 ? `${others} ${plural(others, '', 'pliki', 'plików')}` : ''}` }] : []),
+];
+
 /** Sekcja „Pumble” karty zlecenia: kilka ostatnich wiadomości, pole do kanału, przejście do Pumble. Wymaga sieci (nie idzie przez kolejkę offline). */
 export function Pumble({ job }: { job: Rec }) {
   const [on, setOn] = useState(false);
@@ -35,6 +59,15 @@ export function Pumble({ job }: { job: Rec }) {
     void api<{ url: string }>(`/api/pumble/link/${job.id}`).then((r) => live && setUrl(r.url), () => {});
     return () => { live = false; };
   }, [on, ch, job.id]);
+  // sygnał „oglądam”: serwer odpytuje ten kanał co 3 s zamiast co 30 s
+  useEffect(() => {
+    if (!on || !ch || job._tmp) return;
+    const ping = () => { if (document.visibilityState === 'visible') void api(`/api/jobs/${job.id}/pumble/watch`, { method: 'POST' }).catch(() => {}); };
+    ping();
+    const t = setInterval(ping, 15_000);
+    document.addEventListener('visibilitychange', ping);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', ping); };
+  }, [on, ch, job.id, job._tmp]);
   const [creating, setCreating] = useState(false);
 
   if (!on || job._tmp) return null;
@@ -66,7 +99,8 @@ export function Pumble({ job }: { job: Rec }) {
               {shown.map((m) => (
                 <li key={m.id} className="grid gap-0.5">
                   <p className="flex flex-wrap items-baseline gap-x-2"><span className="font-semibold">{m.authorName}</span><span className="text-sm text-ink-2">{fmtWhen(m.sentAt)}</span></p>
-                  <p className="max-w-[70ch] whitespace-pre-wrap break-words">{m.text}</p>
+                  {m.text && <p className="max-w-[70ch] whitespace-pre-wrap break-words">{m.text}</p>}
+                  <Files m={m} />
                 </li>
               ))}
             </ol>
@@ -75,6 +109,19 @@ export function Pumble({ job }: { job: Rec }) {
         </div>
       )}
     </section>
+  );
+}
+
+function Files({ m }: { m: Rec }) {
+  const f = fileInfo(m);
+  if (!m.files) return null;
+  return (
+    <>
+      {f.previews.length > 0 && <div className="flex flex-wrap gap-2">{f.previews.map((p) => <img key={p.url} src={p.url} alt={p.name} loading="lazy" className="h-24 max-w-full rounded-lg border border-line object-cover" />)}</div>}
+      {fileLine(m.authorName, f).filter((l) => !(l.img && f.previews.length)).map((l) => (
+        <p key={l.text} className="flex items-center gap-2 text-sm text-ink-2">{l.img ? <Camera className="h-5 w-5" /> : <PaperclipHorizontal className="h-5 w-5" />}{l.text}</p>
+      ))}
+    </>
   );
 }
 

@@ -49,6 +49,8 @@ if (!pumble && demo && process.env.PUMBLE_FAKE === '1' && process.env.NODE_ENV !
     const t = Date.now();
     f.post(ch.id, 'pb-bartek', 'Materiał na miejscu, zaczynamy jutro o 7:00.', new Date(t - 3_600_000));
     f.post(ch.id, 'bot', 'Tomasz Wrona: Dobrze, klient będzie od 8.', new Date(t - 1_800_000)).authorAppId = 'etner';
+    f.post(ch.id, 'pb-bartek', '', new Date(t - 600_000), [{ id: 'f1', name: 'wycena-dach.pdf', mimeType: 'application/pdf' }]);
+    f.post(ch.id, 'pb-bartek', 'Stan dachu przed pracami.', new Date(t - 300_000), [{ id: 'f2', name: 'dach-1.jpg', mimeType: 'image/jpeg' }, { id: 'f3', name: 'dach-2.jpg', mimeType: 'image/jpeg' }]);
     return ch;
   };
   pumble = f.client;

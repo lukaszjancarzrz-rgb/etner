@@ -41,4 +41,6 @@ export const pumbleMessages = sqliteTable('pumble_messages', {
   /** ISO UTC. */
   sentAt: text('sent_at').notNull(),
   threadRootId: text('thread_root_id'),
+  /** JSON {files, attachments?}: surowe dane plików z Pumble; null = bez plików. */
+  files: text('files'),
 });

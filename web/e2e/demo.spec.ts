@@ -362,6 +362,8 @@ test('Pumble (atrapa): sekcja na karcie zlecenia, wysłanie dodaje wiadomość',
   const sec = page.getByRole('region', { name: 'Pumble' });
   await expect(sec.getByText('Materiał na miejscu, zaczynamy jutro o 7:00.')).toBeVisible();
   await expect(sec.getByText('Tomasz Wrona', { exact: true }).first()).toBeVisible(); // prefiks bota jako autor
+  await expect(sec.getByText('Bartek Gawlik wrzucił plik')).toBeVisible();
+  await expect(sec.getByText('Bartek Gawlik wrzucił 2 zdjęcia')).toBeVisible();
   await expect(sec.getByRole('link', { name: 'Przejdź do Pumble' })).toHaveAttribute('href', /^https:\/\/app\.pumble\.com\/workspace\/ws-demo\//);
   const text = `E2E ${info.project.name}: wjeżdżamy o 8`;
   await sec.getByPlaceholder('Napisz do kanału…').fill(text);

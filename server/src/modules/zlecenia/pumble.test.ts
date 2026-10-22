@@ -311,4 +311,45 @@ describe('Pumble', () => {
     const us = snap.records.filter((r: any) => r.entity === 'users');
     expect(us.map((r: any) => r.data.email)).toEqual(['b1@firma.pl']);
   });
+
+  it('oglądane kanały: szybki obieg tylko dla nich (najwyżej 20), reszta w pełnym', async () => {
+    const s = await setup();
+    const a = await newJob(s), b = await newJob(s);
+    s.f.post(a.pumbleChannelId, 'pb', 'A1');
+    s.f.post(b.pumbleChannelId, 'pb', 'B1');
+    expect((await s.app.request(`/api/jobs/nie-ma/pumble/watch`, req(s.worker, 'POST'))).status).toBe(404);
+    expect((await s.app.request(`/api/jobs/${a.id}/pumble/watch`, req('', 'POST'))).status).toBe(401);
+    expect((await s.app.request(`/api/jobs/${a.id}/pumble/watch`, req(s.worker, 'POST'))).status).toBe(200);
+    await pollTick(s.deps, true);
+    expect(messages(s.deps.db, a.id).map((m) => m.text)).toEqual(['A1']);
+    expect(messages(s.deps.db, b.id)).toHaveLength(0);
+    clock = new Date(clock.getTime() + 31_000); // sygnał wygasł
+    s.f.post(a.pumbleChannelId, 'pb', 'A2');
+    await pollTick(s.deps, true);
+    expect(messages(s.deps.db, a.id)).toHaveLength(1);
+    await pollTick(s.deps);
+    expect(messages(s.deps.db, b.id)).toHaveLength(1);
+    expect(messages(s.deps.db, a.id)).toHaveLength(2);
+    // limit 20: 25 oglądanych, odpytane 20 najświeższych
+    const jobs = [];
+    for (let i = 0; i < 25; i++) { const j = await newJob(s); s.f.post(j.pumbleChannelId, 'pb', 'x'); jobs.push(j); }
+    for (const j of jobs) { clock = new Date(clock.getTime() + 10); await s.app.request(`/api/jobs/${j.id}/pumble/watch`, req(s.worker, 'POST')); }
+    s.f.calls.length = 0;
+    await pollTick(s.deps, true);
+    expect(s.f.calls.filter((c) => c === 'listMessages')).toHaveLength(20);
+    expect(messages(s.deps.db, jobs[24].id)).toHaveLength(1);
+    expect(messages(s.deps.db, jobs[0].id)).toHaveLength(0);
+  });
+
+  it('pliki z wiadomości zapisane; tekst pusty zostaje pusty', async () => {
+    const s = await setup();
+    const j = await newJob(s);
+    s.f.post(j.pumbleChannelId, 'pb', '', new Date(), [{ name: 'a.pdf', mimeType: 'application/pdf' }]);
+    s.f.post(j.pumbleChannelId, 'pb', 'zwykła');
+    await pollTick(s.deps);
+    const [f, n] = messages(s.deps.db, j.id).sort((x, y) => (x.files ? -1 : 1) - (y.files ? -1 : 1));
+    expect(f!.text).toBe('');
+    expect(JSON.parse(f!.files!)).toEqual({ files: [{ name: 'a.pdf', mimeType: 'application/pdf' }] });
+    expect(n!.files).toBeNull();
+  });
 });
