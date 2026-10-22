@@ -6,8 +6,8 @@ export function BottomNav({ route, badges }: { route: Route; badges: Record<stri
   return (
     <nav aria-label="Menu" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] desk:hidden">
       <ul className="grid grid-cols-5">
-        {Object.entries(screens).filter(([, s]) => s.nav !== false).map(([k, s]) => {
-          const on = route.screen === k || (k === 'wiecej' && route.screen === 'kl');
+        {Object.entries(screens).filter(([, s]) => s.nav === undefined).map(([k, s]) => {
+          const on = route.screen === k || (k === 'wiecej' && screens[route.screen]?.nav !== undefined); // ekrany spoza paska są w Więcej
           const I = s.icon;
           const n = badges[k] ?? 0;
           return (

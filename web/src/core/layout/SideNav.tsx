@@ -1,4 +1,4 @@
-import { screens, type Route } from '../../routes.js';
+import { navKey, screens, type Route } from '../../routes.js';
 import { useSession } from '../session.js';
 import { badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
@@ -13,8 +13,8 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
         <Logo />
       </div>
       <ul className="grid gap-1 px-3 py-2">
-        {Object.entries(screens).filter(([, s]) => s.nav !== false).map(([k, s]) => {
-          const on = route.screen === k || (k === 'wiecej' && route.screen === 'kl');
+        {Object.entries(screens).filter(([, s]) => s.nav !== false && (!s.admin || me?.role === 'admin')).map(([k, s]) => {
+          const on = navKey(route.screen) === k;
           const I = s.icon;
           const n = badges[k] ?? 0;
           return (

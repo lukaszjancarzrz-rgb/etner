@@ -1,4 +1,4 @@
-import { Bell, CaretRight, Desktop, Moon, SignOut, Sun, UsersThree } from '@phosphor-icons/react';
+import { Bell, CaretRight, Desktop, Handshake, ListChecks, Moon, SignOut, Sun, UsersThree, type Icon } from '@phosphor-icons/react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { disablePush, enablePush, pushState, testPush, type PushState } from '../core/push.js';
 import { ApiError, api } from '../core/api.js';
@@ -92,18 +92,26 @@ function Notifications() {
   );
 }
 
-/** Więcej: Klienci (admin), Ustawienia (motyw), wylogowanie. */
+const Tile = ({ href, icon: I, title, hint }: { href: string; icon: Icon; title: string; hint: string }) => (
+  <a href={href} className="flex min-h-16 items-center gap-4 rounded-2xl border border-line bg-card px-5 py-4 hover:border-ink-2">
+    <I className="h-7 w-7 text-action" weight="duotone" />
+    <span className="min-w-0 flex-1"><span className="block font-wide text-lg font-extrabold">{title}</span><span className="block text-sm text-ink-2">{hint}</span></span>
+    <CaretRight className="h-5 w-5 text-ink-2" />
+  </a>
+);
+
+/** Więcej: Leady, Zadania, Klienci (admin), Ustawienia (motyw), wylogowanie. */
 export function More() {
   const theme = useTheme();
   const { me } = useSession();
   return (
     <section className="mx-auto grid max-w-2xl gap-6 px-4 py-6">
       {me?.role === 'admin' && (
-        <a href="#kl" className="flex min-h-16 items-center gap-4 rounded-2xl border border-line bg-card px-5 py-4 hover:border-ink-2">
-          <UsersThree className="h-7 w-7 text-action" weight="duotone" />
-          <span className="min-w-0 flex-1"><span className="block font-wide text-lg font-extrabold">Klienci</span><span className="block text-sm text-ink-2">Kontakty, obiekty, leady i zlecenia klienta</span></span>
-          <CaretRight className="h-5 w-5 text-ink-2" />
-        </a>
+        <div className="grid gap-3">
+          <Tile href="#leady" icon={Handshake} title="Leady" hint="Zapytania klientów, kontakty, zlecenie z leada" />
+          <Tile href="#zad" icon={ListChecks} title="Zadania" hint="Sprawy biura: grupy, terminy, cykliczne" />
+          <Tile href="#kl" icon={UsersThree} title="Klienci" hint="Kontakty, obiekty, leady i zlecenia klienta" />
+        </div>
       )}
       <div className="rounded-2xl border border-line bg-card p-5">
         <h2 className="mb-1 font-wide text-lg font-extrabold">Ustawienia</h2>
