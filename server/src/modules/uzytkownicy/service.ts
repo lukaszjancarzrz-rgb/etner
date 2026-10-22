@@ -16,6 +16,18 @@ export const strip = <T extends { passwordHash?: unknown }>(r: T): Omit<T, 'pass
   const { passwordHash: _, ...rest } = r;
   return rest;
 };
+/** Co pracownik widzi o innych: tylko imię i zdjęcie (bez loginu, e-maila, roli, ekipy). */
+export const pub = (r: Record<string, unknown>) => ({ id: r.id, name: r.name, avatarKey: r.avatarKey ?? null, updatedAt: r.updatedAt, deletedAt: r.deletedAt ?? null });
+
+/** Zdjęcie użytkownika (ścieżka w magazynie plików); null usuwa. */
+export function setAvatar(db: Db, by: string, id: string, avatarKey: string | null): PublicUser | null {
+  const old = get(db, id);
+  if (!old || old.deletedAt) return null;
+  const row = db.update(users).set({ avatarKey, updatedAt: new Date().toISOString() }).where(eq(users.id, id)).returning().get();
+  recordChange(db, by, 'users', id, 'update', strip(old), strip(row));
+  return strip(row);
+}
+
 /** Słowniki: ekipa użytkownika (changes bez password_hash). */
 export const dictRefs = dictRefsFor('users', users, { ekipa: users.ekipa }, strip);
 

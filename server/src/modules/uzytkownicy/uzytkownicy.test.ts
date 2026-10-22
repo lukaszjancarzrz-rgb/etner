@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import sharp from 'sharp';
 import { createApp } from '../../app.js';
 import { addUser, loginCookie, testDeps } from '../../test-utils.js';
 import { modules } from '../index.js';
@@ -96,7 +97,7 @@ describe('użytkownicy', () => {
     expect(crewMembers(deps.db, 'ekipa Bartek')).toEqual([w.user.id]);
   });
 
-  it('zmiany użytkowników widzi tylko admin, pracownik tylko własny rekord; password_hash nigdzie nie wychodzi', async () => {
+  it('zmiany użytkowników: admin wszystko, pracownik swój rekord, cudze tylko imię i zdjęcie; password_hash nigdzie nie wychodzi', async () => {
     const { app, a, w, admin } = await setup();
     await send(app, 'PUT', `/api/users/${w.user.id}`, admin, { name: 'Jan K.' });
     await send(app, 'PUT', `/api/users/${a.user.id}`, admin, { name: 'Szef 2' });
@@ -106,8 +107,11 @@ describe('użytkownicy', () => {
       const ch = (await (await get(app, '/api/changes?since=0', cookie)).json()) as any;
       const snap = (await (await get(app, '/api/snapshot', cookie)).json()) as any;
       expect(JSON.stringify([ch, snap])).not.toMatch(/password_?hash|passwordHash|scrypt/i);
-      const ids = new Set([...ch.changes, ...snap.records].filter((c: any) => c.entity === 'users').map((c: any) => c.id));
-      expect([...ids].sort()).toEqual(who === 'admin' ? [a.user.id, w.user.id].sort() : [w.user.id]);
+      const recs = [...ch.changes, ...snap.records].filter((c: any) => c.entity === 'users');
+      expect([...new Set(recs.map((c: any) => c.id))].sort()).toEqual([a.user.id, w.user.id].sort());
+      // pracownik: cudze konto tylko jako imię i zdjęcie
+      if (who === 'worker') for (const r of recs.filter((c: any) => c.id === a.user.id)) expect(Object.keys(r.data).sort()).toEqual(['avatarKey', 'deletedAt', 'id', 'name', 'updatedAt']);
+      if (who === 'worker') expect(recs.find((c: any) => c.id === w.user.id).data.login).toBe(w.login);
     }
   });
 
@@ -136,5 +140,41 @@ describe('użytkownicy', () => {
     expect(((await (await get(app, '/api/schedule-people', worker)).json()) as any[])).toHaveLength(0);
     const ch = (await (await get(app, '/api/changes?since=0', worker)).json()) as any;
     expect(ch.changes.filter((c: any) => c.entity === 'schedule_people')).toHaveLength(3);
+  });
+
+  it('zdjęcie: sam albo admin; tylko obrazy; 256 px WebP; pracownik widzi zdjęcie innych, ale nie e-mail', async () => {
+    const { deps, app, a, w, admin, worker } = await setup();
+    await send(app, 'PUT', `/api/users/${a.user.id}`, admin, { email: 'szef@firma.pl' });
+    const up = (id: string, cookie: string, body: Buffer, name = 'a.jpg') => {
+      const fd = new FormData();
+      fd.set('file', new File([new Uint8Array(body)], name));
+      return app.request(`/api/users/${id}/avatar`, { method: 'POST', headers: { cookie }, body: fd });
+    };
+    const jpg = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#468' } }).jpeg().toBuffer();
+    expect((await up(a.user.id, worker, jpg)).status).toBe(403); // cudze
+    expect((await up(w.user.id, worker, Buffer.from('%PDF-1.4 nie zdjęcie'), 'x.pdf')).status).toBe(415);
+    expect((await up(w.user.id, worker, Buffer.alloc(11 * 1024 * 1024))).status).toBe(413);
+    const r = await up(w.user.id, worker, jpg);
+    expect(r.status).toBe(200);
+    const key = ((await r.json()) as any).avatarKey as string;
+    expect(key).toMatch(new RegExp(`^avatar/${w.user.id}/.+\\.webp$`));
+    const meta = await sharp(await deps.files.get(key)).metadata();
+    expect([meta.format, meta.width, meta.height]).toEqual(['webp', 256, 256]);
+    const ra = await up(a.user.id, admin, jpg); // admin swoje
+    expect(ra.status).toBe(200);
+    expect((await up(w.user.id, admin, jpg)).status).toBe(200); // admin cudze
+    // pracownik: zdjęcie admina przez podpisany link, bez e-maila w snapshocie
+    const snap = (await (await get(app, '/api/snapshot', worker)).json()) as any;
+    const other = snap.records.find((x: any) => x.entity === 'users' && x.id === a.user.id).data;
+    expect(other.avatarKey).toMatch(/^avatar\//);
+    expect(JSON.stringify(snap)).not.toContain('szef@firma.pl');
+    const g = await get(app, `/api/users/${a.user.id}/avatar`, worker);
+    expect(g.status).toBe(302);
+    expect((await app.request(g.headers.get('location')!)).headers.get('content-type')).toBe('image/webp');
+    expect((await app.request(`/api/users/${a.user.id}/avatar`)).status).toBe(401); // bez sesji
+    // usunięcie: sam albo admin
+    expect((await send(app, 'DELETE', `/api/users/${a.user.id}/avatar`, worker)).status).toBe(403);
+    expect(((await (await send(app, 'DELETE', `/api/users/${w.user.id}/avatar`, worker)).json()) as any).avatarKey).toBeNull();
+    expect((await get(app, `/api/users/${w.user.id}/avatar`, admin)).status).toBe(404);
   });
 });

@@ -1,18 +1,22 @@
 import { schedulePersonSchema, schedulePersonUpdateSchema, userCreateSchema, userPasswordSchema, userUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { bodyLimit } from 'hono/body-limit';
+import sharp from 'sharp';
+import { newId } from '@etner/shared';
 import type { AppDeps } from '../../app.js';
 import { body } from '../../core/body.js';
 import { requireAdmin, requireUser } from '../../core/auth.js';
 import { hashPassword } from '../../core/password.js';
 import { runOp } from '../../core/ops.js';
+import { can } from '../../core/permissions.js';
 import * as svc from './service.js';
 
 const bad = (message: string) => new HTTPException(400, { message });
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
 const taken = (e: unknown) => { throw e instanceof svc.LoginTakenError ? new HTTPException(409, { message: 'LOGIN_ZAJETY' }) : e; };
 
-export function routes(app: Hono, { db }: AppDeps): void {
+export function routes(app: Hono, { db, files }: AppDeps): void {
   const admin = requireAdmin(db);
   const me = (c: Context) => c.get('user').id;
 
@@ -71,5 +75,35 @@ export function routes(app: Hono, { db }: AppDeps): void {
   app.delete('/api/schedule-people/:id', admin, (c) => {
     if (!svc.deletePerson(db, me(c), c.req.param('id'))) throw notFound();
     return c.json({ ok: true });
+  });
+
+  // Zdjęcie użytkownika: zmienia on sam albo admin; widzi każdy zalogowany (link podpisany, krótki TTL).
+  const AVATAR_MAX = 10 * 1024 * 1024;
+  const selfOrAdmin = (c: Context) => {
+    const id = c.req.param('id')!;
+    if (id !== me(c) && !can(c.get('user'), 'admin')) throw new HTTPException(403, { message: 'BRAK_UPRAWNIEN' });
+    if (!svc.get(db, id) || svc.get(db, id)!.deletedAt) throw notFound();
+    return id;
+  };
+  const limit = bodyLimit({ maxSize: AVATAR_MAX + 64 * 1024, onError: (c) => c.json({ error: 'Zdjęcie jest za duże (max 10 MB).' }, 413) });
+  app.post('/api/users/:id/avatar', requireUser(db), limit, async (c) => {
+    const id = selfOrAdmin(c);
+    const f = ((await c.req.parseBody().catch(() => ({}))) as Record<string, unknown>)['file'];
+    if (!(f instanceof File)) throw bad('Brak pliku');
+    if (f.size > AVATAR_MAX) throw new HTTPException(413, { message: 'Zdjęcie jest za duże (max 10 MB).' });
+    const buf = Buffer.from(await f.arrayBuffer());
+    const fmt = await sharp(buf).metadata().then((m) => m.format, () => undefined);
+    if (!fmt || !['jpeg', 'png', 'webp'].includes(fmt)) throw new HTTPException(415, { message: 'Dozwolone są zdjęcia JPEG, PNG i WebP.' });
+    const out = await sharp(buf).rotate().resize(256, 256, { fit: 'cover' }).webp({ quality: 80 }).toBuffer();
+    const key = `avatar/${id}/${newId()}.webp`; // nowy klucz = nowy adres, przeglądarka nie pokaże starego z pamięci
+    await files.put(key, out, 'image/webp');
+    return c.json(svc.setAvatar(db, me(c), id, key));
+  });
+  app.delete('/api/users/:id/avatar', requireUser(db), (c) => c.json(svc.setAvatar(db, me(c), selfOrAdmin(c), null)));
+  app.get('/api/users/:id/avatar', requireUser(db), async (c) => {
+    const key = svc.get(db, c.req.param('id'))?.avatarKey;
+    if (!key) throw notFound();
+    c.header('cache-control', 'private, max-age=300');
+    return c.redirect(await files.url(key, 3600), 302);
   });
 }
