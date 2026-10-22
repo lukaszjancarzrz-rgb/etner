@@ -112,8 +112,8 @@ export function markSeen(jobId: string): void {
 export const DAY_SEEN_KEEP = 60;
 /** Ostatnie obejrzenie dnia harmonogramu (karta / kolumna widoczna na ekranie); bez wpisu: baza z pierwszego uruchomienia. */
 export const daySeenAt = (userId: string, dzien: string): string => read(`harm-day:${userId}:${dzien}`) ?? screenSeenAt(userId, 'harm');
-export function markDaySeen(userId: string, dzien: string): void {
-  try { localStorage.setItem(`harm-day:${userId}:${dzien}`, new Date().toISOString()); } catch { /* prywatne okno */ }
+export function markDaySeen(userId: string, dzien: string, at = new Date().toISOString()): void {
+  try { localStorage.setItem(`harm-day:${userId}:${dzien}`, at); } catch { /* prywatne okno */ }
   bump();
 }
 /** Zmienia się po każdym markSeen (liczniki „nowe” liczone od nowa). */

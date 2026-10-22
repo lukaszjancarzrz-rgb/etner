@@ -51,14 +51,16 @@ export const unseenDays = (changed: Map<string, string>, seen: (dzien: string) =
 
 /** Dni obejrzane na ekranie harmonogramu: zapis „widziane” dopiero przy wyjściu z ekranu (`flush`), żeby „nowe” zostało na ekranie. */
 export class ViewedDays {
-  private days = new Set<string>();
-  add(d: string) { this.days.add(d); }
-  /** Zapisuje obejrzane dni (`mark`) i czyści zbiór; zwraca zapisane. */
-  flush(mark: (d: string) => void): string[] {
-    const out = [...this.days].sort();
+  private days = new Map<string, string>();
+  /** Dzień obejrzany o `at` (ISO); późniejsze obejrzenie nadpisuje wcześniejsze. */
+  add(d: string, at = new Date().toISOString()) { this.days.set(d, at); }
+  delete(d: string) { this.days.delete(d); }
+  /** Zapisuje obejrzane dni z czasem ostatniego obejrzenia (`mark`) i czyści; zmiana późniejsza niż obejrzenie zostaje „nowa”. */
+  flush(mark: (d: string, at: string) => void): string[] {
+    const out = [...this.days].sort(([a], [b]) => (a < b ? -1 : 1));
     this.days.clear();
-    for (const d of out) mark(d);
-    return out;
+    for (const [d, at] of out) mark(d, at);
+    return out.map(([d]) => d);
   }
 }
 

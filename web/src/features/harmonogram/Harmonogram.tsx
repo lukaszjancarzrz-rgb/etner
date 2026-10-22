@@ -63,10 +63,10 @@ export function Harmonogram({ route }: { route: Route }) {
   // obejrzane dni (widoczne ≥1 s) zapisujemy dopiero przy wyjściu z ekranu / schowaniu aplikacji; dotknięcie zmienionego dnia zapisuje od razu
   const viewed = useRef(new ViewedDays());
   const seen = useMemo(() => (me ? (d: string) => viewed.current.add(d) : undefined), [me]);
-  const tap = useMemo(() => (me ? (d: string) => { if (fresh.has(d)) markDaySeen(me.id, d); } : undefined), [me, fresh]);
+  const tap = useMemo(() => (me ? (d: string) => { if (fresh.has(d)) { viewed.current.delete(d); markDaySeen(me.id, d); } } : undefined), [me, fresh]);
   useEffect(() => {
     if (!me) return;
-    const flush = () => { viewed.current.flush((d) => markDaySeen(me!.id, d)); };
+    const flush = () => { viewed.current.flush((d, at) => markDaySeen(me!.id, d, at)); };
     const hide = () => { if (document.hidden) flush(); };
     document.addEventListener('visibilitychange', hide);
     addEventListener('pagehide', flush);
@@ -283,7 +283,7 @@ function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { 
     <span className="min-w-0 pl-2.5">
       <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
         <span className="sr-only">{j?.numer ?? 'zlecenie'}</span>
-        {j?.kategoria && <span className="flex min-w-0 shrink-0 items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span className="truncate">{j.kategoria}</span></span>}
+        {j?.kategoria && <span className="flex min-w-0 items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span className="truncate">{j.kategoria}</span></span>}
         {slot.polDnia && <span className="shrink-0 font-bold" aria-label="pół dnia">½</span>}
         {j?.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
       </span>
@@ -336,7 +336,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   return (
     <div data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} role="group" aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
       // kliknięcie obok odnośnika (myszą) też otwiera edytor; z klawiatury i czytnika: przycisk ✎
-      onClick={(e) => { p.tap?.(dzien); if (p.open && !(e.target as Element).closest('a,button')) p.open(dzien, person); }}
+      onClick={p.open || p.fresh.has(dzien) ? (e) => { p.tap?.(dzien); if (p.open && !(e.target as Element).closest('a,button')) p.open(dzien, person); } : undefined}
       className={cn(cls, p.open && 'min-h-12 cursor-pointer transition-colors duration-200 hover:bg-action/8', p.open && !compact && 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1')}>
       <CellView slots={shown} ctx={p.ctx} compact={compact} link reserve={!!p.open && compact} />
       {p.open && (

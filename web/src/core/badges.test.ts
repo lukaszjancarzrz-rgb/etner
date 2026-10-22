@@ -69,14 +69,24 @@ describe('liczniki w menu', () => {
 });
 
 describe('ViewedDays (widziane przy wyjściu)', () => {
-  it('nic nie zapisuje przed flush, potem zapisuje każdy dzień raz i czyści', () => {
+  it('nic nie zapisuje przed flush, potem każdy dzień raz z czasem ostatniego obejrzenia', () => {
     const v = new ViewedDays();
-    const marked: string[] = [];
-    v.add('2026-08-12'); v.add('2026-08-10'); v.add('2026-08-12');
+    const marked: [string, string][] = [];
+    v.add('2026-08-12', T0); v.add('2026-08-10', T0); v.add('2026-08-12', T1);
     expect(marked).toEqual([]);
-    expect(v.flush((d) => marked.push(d))).toEqual(['2026-08-10', '2026-08-12']);
-    expect(marked).toEqual(['2026-08-10', '2026-08-12']);
-    expect(v.flush((d) => marked.push(d))).toEqual([]);
+    expect(v.flush((d, at) => marked.push([d, at]))).toEqual(['2026-08-10', '2026-08-12']);
+    expect(marked).toEqual([['2026-08-10', T0], ['2026-08-12', T1]]);
+    expect(v.flush((d, at) => marked.push([d, at]))).toEqual([]);
     expect(marked).toHaveLength(2);
+  });
+  it('zmiana po obejrzeniu zostaje nowa, dotknięty dzień nie jest zapisywany drugi raz', () => {
+    const v = new ViewedDays();
+    const seen = new Map<string, string>();
+    v.add('2026-08-10', T0); v.add('2026-08-11', T0);
+    v.delete('2026-08-11');
+    v.flush((d, at) => seen.set(d, at));
+    const changed = new Map([['2026-08-10', T1], ['2026-08-11', T1]]);
+    expect(unseenDays(changed, (d) => seen.get(d) ?? T0)).toEqual(['2026-08-10', '2026-08-11']);
+    expect(seen.has('2026-08-11')).toBe(false);
   });
 });
