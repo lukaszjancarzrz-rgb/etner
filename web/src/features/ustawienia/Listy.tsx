@@ -92,11 +92,14 @@ function Editor({ t, onDeleted }: { t: Rec; onDeleted: () => void }) {
     <fieldset className="grid gap-2">
       <legend className="mb-2 text-sm font-semibold">{label}</legend>
       <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {opts.filter((o) => o.wartosc !== 'mieszane').map((o) => (
-          <label key={o.id} className="flex min-h-10 cursor-pointer items-center gap-2 text-sm">
-            <Checkbox checked={value.includes(o.wartosc)} onCheckedChange={() => set(toggle(value, o.wartosc))} />{o.wartosc}
-          </label>
-        ))}
+        {[...opts.map((o) => o.wartosc as string), ...value.filter((v) => !opts.some((o) => o.wartosc === v))].map((w) => {
+          const gone = !opts.some((o) => o.wartosc === w); // np. usunięta ze słownika: widać ją, żeby dało się odznaczyć
+          return (
+            <label key={w} className="flex min-h-10 cursor-pointer items-center gap-2 text-sm">
+              <Checkbox checked={value.includes(w)} onCheckedChange={() => set(toggle(value, w))} />{w}{gone && <span className="text-danger">(nie ma w słowniku)</span>}
+            </label>
+          );
+        })}
       </div>
     </fieldset>
   );

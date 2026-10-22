@@ -273,9 +273,14 @@ export async function pollTick(deps: AppDeps, fast = false): Promise<void> {
     const open = svc.list(deps.db).filter((j) => group(deps, j) !== 'zamkniete').sort((a, b) => a.numer.localeCompare(b.numer));
     // kanały tylko dla nowych zleceń (bez zakładania dla istniejących; te ręcznie przyciskiem admina)
     const wait = svc.awaitingChannel(deps.db);
-    for (const id of [...wait]) if (svc.get(deps.db, id)?.pumbleChannelId !== null) wait.delete(id);
-    const todo = open.filter((j) => wait.has(j.id) && group(deps, j) === 'aktualne' && canTry(s, j.id, t)).slice(0, CREATE_PER_TICK);
-    for (const j of todo) await one(`zlecenie ${j.numer}`, () => ensureChannel(deps, j.id));
+    for (const id of [...wait]) {
+      const j = svc.get(deps.db, id);
+      // ma kanał, usunięte albo przeniesione poza „aktualne”: już nie czeka (później tylko przyciskiem admina)
+      if (!j || j.pumbleChannelId !== null || group(deps, j) !== 'aktualne') wait.delete(id);
+    }
+    const todo = open.filter((j) => wait.has(j.id) && canTry(s, j.id, t)).slice(0, CREATE_PER_TICK);
+    // jedna próba w obiegu na zlecenie (po nieudanej przy zapisie); potem przycisk admina
+    for (const j of todo) { wait.delete(j.id); await one(`zlecenie ${j.numer}`, () => ensureChannel(deps, j.id)); }
     // świeży odczyt: kanały założone przed chwilą też są odpytywane w tym obiegu
     const withCh = open.map((j) => svc.get(deps.db, j.id) ?? j).filter((j) => j.pumbleChannelId);
     const start = withCh.length ? s.rr % withCh.length : 0;

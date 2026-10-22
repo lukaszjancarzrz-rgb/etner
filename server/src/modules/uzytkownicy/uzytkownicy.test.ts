@@ -154,6 +154,9 @@ describe('użytkownicy', () => {
     expect((await up(a.user.id, worker, jpg)).status).toBe(403); // cudze
     expect((await up(w.user.id, worker, Buffer.from('%PDF-1.4 nie zdjęcie'), 'x.pdf')).status).toBe(415);
     expect((await up(w.user.id, worker, Buffer.alloc(11 * 1024 * 1024))).status).toBe(413);
+    // bomba dekompresyjna: mały plik, ogromne wymiary
+    const bomb = await sharp({ create: { width: 10000, height: 5000, channels: 3, background: '#fff' } }).png({ compressionLevel: 9 }).toBuffer();
+    expect((await up(w.user.id, worker, bomb, 'b.png')).status).toBe(415);
     const r = await up(w.user.id, worker, jpg);
     expect(r.status).toBe(200);
     const key = ((await r.json()) as any).avatarKey as string;
@@ -162,7 +165,10 @@ describe('użytkownicy', () => {
     expect([meta.format, meta.width, meta.height]).toEqual(['webp', 256, 256]);
     const ra = await up(a.user.id, admin, jpg); // admin swoje
     expect(ra.status).toBe(200);
-    expect((await up(w.user.id, admin, jpg)).status).toBe(200); // admin cudze
+    const r2 = await up(w.user.id, admin, jpg); // admin cudze
+    expect(r2.status).toBe(200);
+    await expect(deps.files.get(key)).rejects.toThrow(); // stary plik usunięty
+    const key2 = ((await r2.json()) as any).avatarKey as string;
     // pracownik: zdjęcie admina przez podpisany link, bez e-maila w snapshocie
     const snap = (await (await get(app, '/api/snapshot', worker)).json()) as any;
     const other = snap.records.find((x: any) => x.entity === 'users' && x.id === a.user.id).data;
@@ -175,6 +181,7 @@ describe('użytkownicy', () => {
     // usunięcie: sam albo admin
     expect((await send(app, 'DELETE', `/api/users/${a.user.id}/avatar`, worker)).status).toBe(403);
     expect(((await (await send(app, 'DELETE', `/api/users/${w.user.id}/avatar`, worker)).json()) as any).avatarKey).toBeNull();
+    await expect(deps.files.get(key2)).rejects.toThrow();
     expect((await get(app, `/api/users/${w.user.id}/avatar`, admin)).status).toBe(404);
   });
 });

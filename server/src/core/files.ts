@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 
@@ -10,6 +10,8 @@ export interface FileStore {
   put(key: string, body: Buffer, type: string): Promise<void>;
   url(key: string, ttlSec?: number): Promise<string>;
   get(key: string): Promise<Buffer>;
+  /** Usuwa plik; brak pliku to nie błąd. */
+  del(key: string): Promise<void>;
 }
 /** Magazyn dyskowy sam obsługuje podpisane linki (`GET /api/files/*`). */
 export interface DiskStore extends FileStore {
@@ -41,6 +43,9 @@ export function diskStore(dir: string, secret: string): DiskStore {
     async get(key) {
       return readFile(path(key));
     },
+    async del(key) {
+      await rm(path(key), { force: true });
+    },
     async url(key, ttlSec = 600) {
       const exp = Math.floor(Date.now() / 1000) + ttlSec;
       return `/api/files/${checkKey(key)}?exp=${exp}&sig=${sign(key, exp)}`;
@@ -68,6 +73,9 @@ export function r2Store(cfg: R2Config): FileStore {
       await s3.send(new PutObjectCommand({ Bucket: cfg.bucket, Key: checkKey(key), Body: body, ContentType: type }));
     },
     url: (key, ttlSec = 600) => getSignedUrl(s3, new GetObjectCommand({ Bucket: cfg.bucket, Key: checkKey(key) }), { expiresIn: ttlSec }),
+    async del(key) {
+      await s3.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: checkKey(key) }));
+    },
     async get(key) {
       const r = await s3.send(new GetObjectCommand({ Bucket: cfg.bucket, Key: checkKey(key) }));
       return Buffer.from(await r.Body!.transformToByteArray());
@@ -81,8 +89,11 @@ export function fileStoreFromEnv(env: Record<string, string | undefined>): FileS
   return diskStore(join(env.DATA_DIR ?? './data', 'files'), env.APP_SECRET ?? '');
 }
 
+/** Górna granica pikseli wejścia (bomba dekompresyjna); 40 Mpx mieści każde zdjęcie z telefonu. */
+export const MAX_PIXELS = 40e6;
+
 export async function makeVariants(input: Buffer): Promise<{ orig: Buffer; view: Buffer; thumb: Buffer; w: number; h: number }> {
-  const base = () => sharp(input).rotate(); // EXIF
+  const base = () => sharp(input, { limitInputPixels: MAX_PIXELS }).rotate(); // EXIF
   const resize = (px: number, quality: number) =>
     base().resize(px, px, { fit: 'inside', withoutEnlargement: true }).webp({ quality }).toBuffer();
   const { info } = await base().toBuffer({ resolveWithObject: true });

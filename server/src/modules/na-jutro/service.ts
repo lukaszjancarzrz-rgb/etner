@@ -2,7 +2,7 @@ import { and, asc, count, eq, isNull } from 'drizzle-orm';
 import { newId, type ChecklistCreate } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
-import { dictRefsFor } from '../../core/dict-refs.js';
+import { dictRefsFor, type DictRefs } from '../../core/dict-refs.js';
 import { checklists, checklistTemplates } from './schema.js';
 
 /** Słowniki: ekipa w listach „na jutro”. */
@@ -66,6 +66,22 @@ export function updateTemplate(db: Db, userId: string, id: string, d: TemplateIn
   recordChange(db, userId, 'checklist_templates', id, del ? 'delete' : 'update', old, row);
   return row;
 }
+
+/** Słowniki: kategorie i rodzaje list predefiniowanych (tablice JSON). */
+const TPL_COLS: Record<string, 'kategorie' | 'rodzaje'> = { kategoria: 'kategorie', rodzaj_zlecenia: 'rodzaje' };
+export const templateDictRefs: DictRefs = {
+  count(db, rodzaj, value) {
+    const col = TPL_COLS[rodzaj];
+    if (!col) return 0;
+    // col tylko z TPL_COLS (stała), wartość jako parametr
+    return (db.$client.prepare(`select count(*) n from checklist_templates t where t.deleted_at is null and exists (select 1 from json_each(t.${col}) where value = ?)`).get(value) as { n: number }).n;
+  },
+  rename(db, userId, rodzaj, from, to) {
+    const col = TPL_COLS[rodzaj];
+    if (!col) return;
+    for (const t of listTemplates(db)) if (t[col].includes(from)) updateTemplate(db, userId, t.id, { [col]: [...new Set(t[col].map((v) => (v === from ? to : v)))] });
+  },
+};
 
 const SEED_TEMPLATES: [string[], string[]][] = [
   [['Elektryka', 'Fotowoltaika'], ['Elektryka', 'Montaż fotowoltaiki', 'Alarm', 'Kamery']],

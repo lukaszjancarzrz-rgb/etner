@@ -9,6 +9,8 @@ import { body } from '../../core/body.js';
 import { requireAdmin, requireUser } from '../../core/auth.js';
 import { hashPassword } from '../../core/password.js';
 import { runOp } from '../../core/ops.js';
+import { logError } from '../../core/errors.js';
+import { MAX_PIXELS } from '../../core/files.js';
 import { can } from '../../core/permissions.js';
 import * as svc from './service.js';
 
@@ -85,6 +87,13 @@ export function routes(app: Hono, { db, files }: AppDeps): void {
     if (!svc.get(db, id) || svc.get(db, id)!.deletedAt) throw notFound();
     return id;
   };
+  /** Nowe zdjęcie (albo brak) w bazie, potem kasujemy stary plik; błąd kasowania tylko do dziennika (zostaje osierocony plik). */
+  const replaceAvatar = async (c: Context, id: string, key: string | null) => {
+    const old = svc.get(db, id)?.avatarKey;
+    const u = svc.setAvatar(db, me(c), id, key);
+    if (old && old !== key) await files.del(old).catch((e) => logError(db, 'avatar:usun', e, me(c)));
+    return u;
+  };
   const limit = bodyLimit({ maxSize: AVATAR_MAX + 64 * 1024, onError: (c) => c.json({ error: 'Zdjęcie jest za duże (max 10 MB).' }, 413) });
   app.post('/api/users/:id/avatar', requireUser(db), limit, async (c) => {
     const id = selfOrAdmin(c);
@@ -92,14 +101,16 @@ export function routes(app: Hono, { db, files }: AppDeps): void {
     if (!(f instanceof File)) throw bad('Brak pliku');
     if (f.size > AVATAR_MAX) throw new HTTPException(413, { message: 'Zdjęcie jest za duże (max 10 MB).' });
     const buf = Buffer.from(await f.arrayBuffer());
-    const fmt = await sharp(buf).metadata().then((m) => m.format, () => undefined);
+    const img = () => sharp(buf, { limitInputPixels: MAX_PIXELS });
+    const fmt = await img().metadata().then((m) => m.format, () => undefined);
     if (!fmt || !['jpeg', 'png', 'webp'].includes(fmt)) throw new HTTPException(415, { message: 'Dozwolone są zdjęcia JPEG, PNG i WebP.' });
-    const out = await sharp(buf).rotate().resize(256, 256, { fit: 'cover' }).webp({ quality: 80 }).toBuffer();
+    const out = await img().rotate().resize(256, 256, { fit: 'cover' }).webp({ quality: 80 }).toBuffer()
+      .catch(() => { throw new HTTPException(415, { message: 'Nie udało się odczytać zdjęcia.' }); });
     const key = `avatar/${id}/${newId()}.webp`; // nowy klucz = nowy adres, przeglądarka nie pokaże starego z pamięci
     await files.put(key, out, 'image/webp');
-    return c.json(svc.setAvatar(db, me(c), id, key));
+    return c.json(await replaceAvatar(c, id, key));
   });
-  app.delete('/api/users/:id/avatar', requireUser(db), (c) => c.json(svc.setAvatar(db, me(c), selfOrAdmin(c), null)));
+  app.delete('/api/users/:id/avatar', requireUser(db), async (c) => c.json(await replaceAvatar(c, selfOrAdmin(c), null)));
   app.get('/api/users/:id/avatar', requireUser(db), async (c) => {
     const key = svc.get(db, c.req.param('id'))?.avatarKey;
     if (!key) throw notFound();

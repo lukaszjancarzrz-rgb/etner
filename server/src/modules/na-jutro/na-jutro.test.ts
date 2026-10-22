@@ -78,7 +78,7 @@ describe('na jutro', () => {
     const { deps, app, c1, admin, push, w1, w1b, w2 } = await setup();
     const mk = async (ck: string, ekipa: string, dzien: string, tekst: string) => (await (await app.request('/api/checklists', req(ck, 'POST', { ekipa, dzien, tekst }))).json()).id;
     const done = await mk(c1, 'ekipa A', '2026-03-10', 'Zrobione już');
-    await mk(c1, 'ekipa A', '2026-03-10', 'Wiertarka');
+    const wiertarka = await mk(c1, 'ekipa A', '2026-03-10', 'Wiertarka');
     await mk(admin, 'ekipa B', '2026-03-10', 'Kabel');
     await mk(admin, 'ekipa B', '2026-03-11', 'Jutrzejsze');
     await app.request(`/api/checklists/${done}/zabrane`, req(c1, 'POST', { zabrane: true }));
@@ -92,7 +92,7 @@ describe('na jutro', () => {
     expect(p.map((x) => x.endpoint).sort()).toEqual([w1.user.name, w1b.user.name, w2.user.name].sort());
     expect(p.find((x) => x.endpoint === w1.user.name)!.body).toContain('Wiertarka');
     expect(p.find((x) => x.endpoint === w1.user.name)!.body).not.toContain('Zrobione już');
-    expect(p.find((x) => x.endpoint === w1.user.name)).toMatchObject({ title: '📦 Do zabrania dziś: 1', url: '#jutro' });
+    expect(p.find((x) => x.endpoint === w1.user.name)).toMatchObject({ title: '📦 Do zabrania dziś: 1', url: `#jutro~${wiertarka}` });
     expect(p.find((x) => x.endpoint === w2.user.name)!.body).not.toContain('Jutrzejsze');
     // godzina 'rano' w Warszawie (06:00Z = 07:00 CET) odpala def przez rankoTick
     push.mockClear();
@@ -141,5 +141,19 @@ describe('na jutro', () => {
     for (const x of listTemplates(deps.db)) await app.request(`/api/checklist-templates/${x.id}`, req(admin, 'DELETE'));
     seedBase(deps.db);
     expect(listTemplates(deps.db)).toHaveLength(0);
+  });
+
+  it('słowniki: zmiana nazwy kategorii zmienia ją w listach predefiniowanych; wartość w liście jest „w użyciu”', async () => {
+    const { app, admin } = await setup();
+    const dict = (await (await app.request('/api/dict', req(admin, 'GET'))).json()) as { id: string; rodzaj: string; wartosc: string; grupa: string | null; kolor: string | null; platne: boolean | null }[];
+    const kat = dict.filter((d) => d.rodzaj === 'kategoria');
+    const items = kat.map((d) => ({ id: d.id, wartosc: d.wartosc === 'Fotowoltaika' ? 'PV' : d.wartosc, grupa: d.grupa, kolor: d.kolor, platne: d.platne }));
+    expect((await app.request('/api/dict/kategoria', req(admin, 'PUT', { items }))).status).toBe(200);
+    const ts = (await (await app.request('/api/checklist-templates', req(admin, 'GET'))).json()) as { nazwa: string; kategorie: string[] }[];
+    expect(ts.find((t) => t.nazwa === 'Kamery')!.kategorie).toEqual(['Elektryka', 'PV']);
+    // usunięcie wartości użytej w liście: odmowa
+    const r = await app.request('/api/dict/kategoria', req(admin, 'PUT', { items: items.filter((i) => i.wartosc !== 'Klimatyzacja') }));
+    expect(r.status).toBe(409);
+    expect(await r.json()).toMatchObject({ error: 'WARTOSC_W_UZYCIU', value: 'Klimatyzacja' });
   });
 });

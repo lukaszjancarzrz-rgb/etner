@@ -315,8 +315,18 @@ describe('Pumble', () => {
     const fromLead = save(s.deps.db, s.a.user.id, { clientId: s.k.client.id, status: 'Nowe' } as any)!;
     await pollTick(s.deps);
     expect(get(s.deps.db, fromLead.id)!.pumbleChannelId).toBeTruthy();
+    expect(awaitingChannel(s.deps.db).size).toBe(0);
+    // przeniesione poza „aktualne” przed obiegiem: bez kanału i bez czekania; nieudana próba w obiegu też kończy czekanie
+    const later = save(s.deps.db, s.a.user.id, { clientId: s.k.client.id, status: 'Na później' } as any)!;
+    s.f.fail = true;
+    const failing = save(s.deps.db, s.a.user.id, { clientId: s.k.client.id, status: 'Nowe' } as any)!;
+    clock = new Date(clock.getTime() + 5 * 60_000 + 1);
     await pollTick(s.deps);
-    expect(awaitingChannel(s.deps.db).size).toBe(0); // sprzątnięte w następnym obiegu
+    expect(awaitingChannel(s.deps.db).size).toBe(0);
+    s.f.fail = false;
+    clock = new Date(clock.getTime() + 30 * 60_000);
+    await pollTick(s.deps);
+    expect([get(s.deps.db, later.id)!.pumbleChannelId, get(s.deps.db, failing.id)!.pumbleChannelId]).toEqual([null, null]);
   });
 
   it('e-mail użytkownika: małe litery, walidacja; pracownik nie widzi cudzych e-maili', async () => {

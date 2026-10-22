@@ -25,11 +25,13 @@ export const naJutro: ModuleDef = {
     name: 'na-jutro-rano',
     schedule: 'rano',
     async run(deps) {
-      const byEkipa = new Map<string, string[]>();
-      for (const r of pending(deps.db, dayOf((deps.now ?? (() => new Date()))()))) byEkipa.set(r.ekipa, [...(byEkipa.get(r.ekipa) ?? []), r.tekst]);
-      for (const [ekipa, list] of byEkipa) {
+      const byEkipa = new Map<string, { id: string; tekst: string }[]>();
+      for (const r of pending(deps.db, dayOf((deps.now ?? (() => new Date()))()))) byEkipa.set(r.ekipa, [...(byEkipa.get(r.ekipa) ?? []), r]);
+      for (const [ekipa, rows] of byEkipa) {
+        const list = rows.map((r) => r.tekst);
         const body = list.length > 3 ? `${list.slice(0, 3).join(', ')} i ${list.length - 3} więcej` : list.join(', ');
-        await notify(deps, users.crewMembers(deps.db, ekipa), { title: `📦 Do zabrania dziś: ${list.length}`, body, url: '#jutro', tag: `jutro-rano-${ekipa}` });
+        // `#jutro~<id>` przełącza ekran na dziś i tę ekipę (domyślnie ekran pokazuje jutro)
+        await notify(deps, users.crewMembers(deps.db, ekipa), { title: `📦 Do zabrania dziś: ${list.length}`, body, url: `#jutro~${rows[0]!.id}`, tag: `jutro-rano-${ekipa}` });
       }
     },
   }],
