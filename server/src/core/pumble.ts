@@ -5,10 +5,13 @@ export type PumbleMessage = {
   deleted?: boolean; authorAppId?: string | null; threadRootId?: string | null; files?: unknown[];
 };
 
+export type PumbleChannel = { id: string; name: string; type?: string; channelType?: string };
+
 export interface PumbleClient {
-  createChannel(d: { name: string; type: 'PRIVATE' | 'PUBLIC'; description: string }): Promise<{ id: string; name: string }>;
-  /** Kanał o tej nazwie albo null (Pumble odpowiada wtedy błędem). */
-  getChannel(name: string): Promise<{ id: string; name: string } | null>;
+  /** `type` jak w specyfikacji: 'private' albo 'public'. */
+  createChannel(d: { name: string; type: 'private' | 'public'; description: string }): Promise<{ id: string; name: string }>;
+  /** Kanał o tej nazwie lub id albo null (Pumble odpowiada wtedy błędem). Specyfikacja nie obiecuje typu kanału; czytamy go, jeśli przyjdzie. */
+  getChannel(q: { channel: string } | { channelId: string }): Promise<PumbleChannel | null>;
   addUsers(channelId: string, userIds: string[]): Promise<void>;
   listMessages(channelId: string, limit: number): Promise<PumbleMessage[]>;
   sendMessage(d: { channelId: string; text: string; asBot: boolean }): Promise<{ id: string; channelId: string }>;
@@ -17,8 +20,14 @@ export interface PumbleClient {
 }
 
 export class PumbleError extends Error {
-  constructor(public status: number, message: string) { super(`Pumble ${status}: ${message}`); }
+  /** `path`: wywołany adres bez zapytania, np. '/listUsers'. */
+  constructor(public status: number, message: string, public path = '') { super(`Pumble ${status} ${path}: ${message}`); }
 }
+
+const GLOBAL_PATHS = new Set(['/listUsers', '/myInfo']);
+/** Błąd całego Pumble (brak sieci, zły klucz, awaria), a nie jednego kanału: przerywa obieg odpytywania. */
+export const isGlobalPumbleError = (e: unknown): boolean =>
+  e instanceof PumbleError && (e.status === 0 || e.status === 401 || e.status >= 500 || (e.status === 403 && GLOBAL_PATHS.has(e.path)));
 
 const BASE = 'https://pumble-api-keys.addons.marketplace.cake.com';
 
@@ -32,16 +41,16 @@ export function pumbleClient(apiKey: string, base = BASE, timeoutMs = 10_000): P
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch (e) {
-      throw new PumbleError(0, e instanceof Error ? e.message : String(e)); // sieć lub limit czasu
+      throw new PumbleError(0, e instanceof Error ? e.message : String(e), path.split('?')[0]); // sieć lub limit czasu
     }
     const txt = await res.text();
-    if (!res.ok) throw new PumbleError(res.status, txt.slice(0, 300));
+    if (!res.ok) throw new PumbleError(res.status, txt.slice(0, 300), path.split('?')[0]);
     return (txt ? JSON.parse(txt) : null) as T;
   }
   const q = (o: Record<string, string | number>) => new URLSearchParams(Object.entries(o).map(([k, v]) => [k, String(v)])).toString();
   return {
     createChannel: (d) => call('POST', '/createChannel', d),
-    getChannel: (name) => call<{ id: string; name: string }>('GET', `/getChannel?${q({ channel: name })}`).catch((e) => {
+    getChannel: (by) => call<PumbleChannel>('GET', `/getChannel?${q(by)}`).catch((e) => {
       if (e instanceof PumbleError && e.status >= 400 && e.status < 500) return null;
       throw e;
     }),

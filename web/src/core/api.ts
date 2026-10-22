@@ -11,11 +11,15 @@ export class ApiError extends Error {
   }
 }
 
-/** fetch + JSON. Błąd sieci przechodzi jako TypeError, odpowiedź nie-2xx jako ApiError. */
-export async function api<T = unknown>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
-  const { json, ...rest } = init;
+/**
+ * fetch + JSON. Błąd sieci przechodzi jako TypeError (limit czasu jako DOMException), odpowiedź nie-2xx jako ApiError.
+ * Limit czasu domyślnie 20 s; bez limitu dla wysyłki plików (FormData). Kolejka offline traktuje przekroczenie jak brak sieci.
+ */
+export async function api<T = unknown>(path: string, init: RequestInit & { json?: unknown; timeout?: number } = {}): Promise<T> {
+  const { json, timeout = 20_000, ...rest } = init;
   const res = await fetch(cfg.base + path, {
     credentials: 'same-origin',
+    ...(!rest.signal && !(rest.body instanceof FormData) && typeof AbortSignal.timeout === 'function' && { signal: AbortSignal.timeout(timeout) }),
     ...rest,
     ...(json !== undefined && { body: JSON.stringify(json), headers: { 'content-type': 'application/json', ...rest.headers } }),
   });

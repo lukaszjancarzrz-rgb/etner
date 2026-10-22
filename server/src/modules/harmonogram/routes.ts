@@ -40,8 +40,8 @@ export function routes(app: Hono, deps: AppDeps): void {
     const { result, dup } = runOp(db, b.opId, me(c).id, () => svc.approve(db, me(c).id, b.items, now(), out, touched));
     // Po commit; błąd wysyłki nie cofa zatwierdzenia.
     if (!dup) for (const o of out) await notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, me(c).id));
-    // nowe osoby zlecenia → jego kanał Pumble (już dodane są pomijane)
-    if (!dup && deps.pumble) for (const j of touched) await pumbleAddPeople(deps, j, svc.peopleForJob(db, j)).catch((e) => logError(db, 'pumble', e, me(c).id));
+    // nowe osoby zlecenia → jego kanał Pumble, po odpowiedzi (już dodane są pomijane)
+    if (!dup) for (const j of touched) pumbleAddPeople(deps, j, svc.peopleForJob(db, j));
     return c.json(result);
   });
   app.post('/api/schedule/discard', auth, async (c) => {

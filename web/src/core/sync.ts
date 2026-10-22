@@ -15,7 +15,7 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
 
   async function catchUp() {
     if (!store.last) {
-      const s = await api<{ records: { entity: string; id: string; data: Record<string, any> | null }[]; last: number }>('/api/snapshot');
+      const s = await api<{ records: { entity: string; id: string; data: Record<string, any> | null }[]; last: number }>('/api/snapshot', { timeout: 60_000 });
       store.replace(s.records, s.last);
       return;
     }

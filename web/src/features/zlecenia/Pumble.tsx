@@ -1,5 +1,6 @@
 import { ArrowSquareOut, ChatsCircle, PaperPlaneRight, Plus } from '@phosphor-icons/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { newId } from '@etner/shared';
 import { api, ApiError } from '../../core/api.js';
 import { fmtWhen, useIsAdmin } from '../../core/data.js';
 import { useOnline } from '../../core/layout/status.js';
@@ -81,6 +82,8 @@ function SendForm({ jobId, online }: { jobId: string; online: boolean }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  // jeden opId na treść: ponowienie po przekroczeniu czasu nie wyśle drugi raz; zmiana treści = nowa wiadomość
+  const op = useRef(newId());
   const id = `pb-${jobId}`;
 
   async function send() {
@@ -90,8 +93,9 @@ function SendForm({ jobId, online }: { jobId: string; online: boolean }) {
     setBusy(true);
     setErr('');
     try {
-      store.put('pumble_messages', await api<Rec>(`/api/jobs/${jobId}/pumble`, { method: 'POST', json: { text: t } }));
+      store.put('pumble_messages', await api<Rec>(`/api/jobs/${jobId}/pumble`, { method: 'POST', json: { text: t, opId: op.current } }));
       setText('');
+      op.current = newId();
     } catch (e) {
       setErr(e instanceof ApiError && (e.body as Rec | undefined)?.error !== 'PUMBLE' ? e.message : 'Nie udało się wysłać do Pumble.');
     } finally { setBusy(false); }
@@ -101,7 +105,7 @@ function SendForm({ jobId, online }: { jobId: string; online: boolean }) {
     <form onSubmit={(e) => { e.preventDefault(); void send(); }} className="grid gap-2 border-t border-line pt-3" noValidate>
       <label htmlFor={id} className="sr-only">Wiadomość do kanału Pumble</label>
       <div className="flex items-end gap-2">
-        <Textarea id={id} value={text} rows={1} onChange={(e) => setText(e.target.value)} placeholder="Napisz do kanału…" className="min-h-12! flex-1 resize-y py-2.5"
+        <Textarea id={id} value={text} rows={1} onChange={(e) => { setText(e.target.value); op.current = newId(); }} placeholder="Napisz do kanału…" className="min-h-12! flex-1 resize-y py-2.5"
           aria-invalid={!!err} aria-describedby={err ? `${id}-e` : undefined}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} />
         <Button type="submit" size="icon" aria-label="Wyślij do Pumble" disabled={busy || !online || !text.trim()}><PaperPlaneRight className="h-5 w-5" weight="fill" /></Button>

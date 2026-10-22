@@ -9,8 +9,6 @@ import { notify } from '../../core/notify.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
 import { PumbleError } from '../../core/pumble.js';
-import { opIds } from '../../core/schema-base.js';
-import { eq } from 'drizzle-orm';
 import * as pumble from './pumble.js';
 import * as scope from './scope.js';
 import * as users from '../uzytkownicy/service.js';
@@ -39,15 +37,9 @@ export function routes(app: Hono, deps: AppDeps): void {
     if (!result) throw new HTTPException(404, { message: 'Nie znaleziono' });
     // Po commit; błąd wysyłki nie może zamienić zapisanego zlecenia w 500.
     if (!dup) for (const o of out) await notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, uid));
-    if (deps.pumble && !dup) {
-      const log = (e: unknown) => logError(db, 'pumble', e, uid);
-      if (!id) {
-        const r = await pumble.ensureChannel(deps, result.id).catch(log);
-        if (r) return c.json(r); // z id kanału
-      } else if (prev && prev.ekipa !== result.ekipa && result.ekipa && result.ekipa !== 'mieszane') {
-        await pumble.addPeople(deps, result.id, users.crewMembers(db, result.ekipa)).catch(log);
-      }
-    }
+    // Pumble po odpowiedzi (zapis nie czeka); id kanału dociera zmianą zlecenia
+    if (!dup && !id) pumble.later(deps, 'pumble:kanal', () => pumble.ensureChannel(deps, result.id));
+    else if (!dup && prev && prev.ekipa !== result.ekipa && result.ekipa && result.ekipa !== 'mieszane') pumble.addPeopleLater(deps, result.id, users.crewMembers(db, result.ekipa));
     return c.json(result);
   };
   app.post('/api/jobs', admin, async (c) => write(c, await body(c, jobCreateSchema)));
@@ -83,13 +75,8 @@ export function routes(app: Hono, deps: AppDeps): void {
   };
   app.post('/api/jobs/:id/pumble', requireUser(db), async (c) => {
     const { opId, text } = await body(c, pumbleSendSchema);
-    const uid = c.get('user').id;
-    const prev = opId ? db.select().from(opIds).where(eq(opIds.opId, opId)).get() : undefined;
-    if (prev && prev.userId === uid) return c.json(prev.result); // powtórzone kliknięcie: nie wysyłamy drugi raz
     try {
-      const row = await pumble.send(deps, c.get('user'), c.req.param('id'), text);
-      if (opId) runOp(db, opId, uid, () => row);
-      return c.json(row);
+      return c.json(await pumble.send(deps, c.get('user'), c.req.param('id'), text, opId));
     } catch (e) { return pumbleFail(e, c); }
   });
   app.post('/api/jobs/:id/pumble/channel', admin, async (c) => {

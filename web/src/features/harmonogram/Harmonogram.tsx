@@ -90,7 +90,7 @@ export function Harmonogram({ route }: { route: Route }) {
     requestAnimationFrame(() => document.querySelector(`[data-key="${CSS.escape(target)}"]`)?.scrollIntoView({ behavior: smooth(), block: 'center', inline: 'center' }));
     const tm = setTimeout(() => setFlash(undefined), 2500);
     return () => clearTimeout(tm);
-  }, [target, loading, month]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target, loading]); // eslint-disable-line react-hooks/exhaustive-deps -- zmiana widoku nie podświetla drugi raz
 
   if (loading) return <HarmSkeleton />;
   const props = { days, people: sorted, cells, draftMap, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t, fresh, seen, flash };

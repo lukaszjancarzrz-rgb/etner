@@ -13,7 +13,7 @@ import { jobs } from './schema.js';
 
 export type JobRow = typeof jobs.$inferSelect;
 /** Dla harmonogramu: nowe osoby zlecenia trafiają do jego kanału Pumble. */
-export { addPeople as pumbleAddPeople } from './pumble.js';
+export { addPeopleLater as pumbleAddPeople } from './pumble.js';
 export type JobRef = { id: string; numer: string; klient: string; miejscowosc: string; status: string };
 /** Powiadomienie do wysłania dopiero po zatwierdzeniu transakcji. */
 export type Outbox = { userIds: string[]; n: Notification }[];
@@ -34,7 +34,10 @@ const ref = (db: Db, j: JobRow): JobRef => ({
   klient: klienci.get(db, j.clientId)?.nazwa ?? '',
   miejscowosc: (j.siteId && klienci.getSite(db, j.siteId)?.miejscowosc) || '',
 });
-/** Krótko o kliencie: osoba – nazwisko (ostatnie słowo), firma – cała nazwa. */
+/**
+ * Krótko o kliencie: osoba – nazwa jak zapisana, gdy to jedno słowo, inaczej ostatnie słowo (zwykle nazwisko, np. „Jan Kowalski” → „Kowalski”);
+ * firma – cała nazwa. Kanał Pumble i powiadomienia używają tej samej reguły.
+ */
 export const clientShort = (c: { typ: string; nazwa: string } | undefined): string =>
   !c ? '' : c.typ === 'osoba' ? c.nazwa.trim().split(/\s+/).at(-1) ?? '' : c.nazwa.trim();
 
