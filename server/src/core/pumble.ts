@@ -25,9 +25,9 @@ export class PumbleError extends Error {
 }
 
 const GLOBAL_PATHS = new Set(['/listUsers', '/myInfo']);
-/** Błąd całego Pumble (brak sieci, zły klucz, awaria), a nie jednego kanału: przerywa obieg odpytywania. */
+/** Błąd całego Pumble (brak sieci, zły klucz, limit zapytań 429, awaria), a nie jednego kanału: przerywa obieg odpytywania. */
 export const isGlobalPumbleError = (e: unknown): boolean =>
-  e instanceof PumbleError && (e.status === 0 || e.status === 401 || e.status >= 500 || (e.status === 403 && GLOBAL_PATHS.has(e.path)));
+  e instanceof PumbleError && (e.status === 0 || e.status === 401 || e.status === 429 || e.status >= 500 || (e.status === 403 && GLOBAL_PATHS.has(e.path)));
 
 const BASE = 'https://pumble-api-keys.addons.marketplace.cake.com';
 

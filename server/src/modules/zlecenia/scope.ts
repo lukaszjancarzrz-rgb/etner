@@ -42,6 +42,9 @@ export function update(db: Db, userId: string, id: string, d: Omit<ScopeUpdate, 
 }
 
 /** Miękko, razem ze zdjęciami punktu. */
+/** Punkt istnieje, ale jest już usunięty (powtórzone usunięcie z kolejki offline). */
+export const removed = (db: Db, id: string): boolean => !!db.select({ d: jobScopeItems.deletedAt }).from(jobScopeItems).where(eq(jobScopeItems.id, id)).get()?.d;
+
 export function remove(db: Db, userId: string, id: string): boolean {
   const old = getItem(db, id);
   if (!old) return false;

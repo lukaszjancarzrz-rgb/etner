@@ -72,7 +72,11 @@ describe('zakres prac', () => {
     expect((await s.app.request(`/api/attachments/${ph}/file`, json(s.worker, 'GET'))).status).toBe(404);
     const del = (await feed(s, s.worker)).filter((x) => x.id === a.id || x.id === ph).at(-1)!;
     expect(del.data.deletedAt).toBeTruthy();
-    expect((await s.app.request(`/api/scope/${a.id}`, json(s.admin, 'DELETE'))).status).toBe(404);
+    // powtórka z kolejki (pierwsza odpowiedź przepadła): 200 i bez nowej zmiany; nieistniejący nadal 404
+    const n = (await feed(s, s.admin)).length;
+    expect((await s.app.request(`/api/scope/${a.id}`, json(s.admin, 'DELETE'))).status).toBe(200);
+    expect((await feed(s, s.admin)).length).toBe(n);
+    expect((await s.app.request('/api/scope/nie-ma', json(s.admin, 'DELETE'))).status).toBe(404);
   });
 
   it('pokaż klientowi na zdjęciu punktu (admin)', async () => {

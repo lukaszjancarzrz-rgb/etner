@@ -268,9 +268,21 @@ describe('Pumble', () => {
     s.f.channels.delete(a.pumbleChannelId); s.f.channels.delete(b.pumbleChannelId);
     await pollTick(s.deps);
     await pollTick(s.deps);
-    const o = errs(s, 'pumble:obieg');
-    expect(o).toHaveLength(2);
-    expect(o[0]!.message).toMatch(/^Error: 2 błędów kanałów/);
+    expect(errs(s, 'pumble:obieg')).toHaveLength(1); // ten sam zbiór kanałów: jeden wpis
+    expect(errs(s, 'pumble:obieg')[0]!.message).toMatch(/^Error: 2 błędów kanałów/);
+    clock = new Date(clock.getTime() + 3_600_000);
+    await pollTick(s.deps);
+    expect(errs(s, 'pumble:obieg')).toHaveLength(2); // po godzinie przypomnienie
+    s.f.channels.set(a.pumbleChannelId, { id: a.pumbleChannelId, name: 'a', type: 'private', description: '', members: new Set(), messages: [] });
+    await pollTick(s.deps);
+    expect(errs(s, 'pumble:obieg')).toHaveLength(3); // zbiór się zmienił
+    // 429: jak awaria całego Pumble – obieg przerwany, przerwa
+    s.f.failOn.set('listMessages', 429);
+    s.f.calls.length = 0;
+    await pollTick(s.deps);
+    await pollTick(s.deps);
+    expect(s.f.calls).toEqual(['listMessages']);
+    expect(errs(s, 'pumble')).toHaveLength(2);
   });
 
   it('kanały dla istniejących zleceń: tylko aktualne, do 5 na obieg', async () => {

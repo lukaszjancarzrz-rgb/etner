@@ -37,6 +37,9 @@ export function update(db: Db, userId: string, id: string, d: Omit<ShoppingUpdat
   return row;
 }
 
+/** Wiersz istnieje, ale jest już usunięty (powtórzone usunięcie z kolejki offline). */
+export const removed = (db: Db, id: string): boolean => !!db.select({ d: shopping.deletedAt }).from(shopping).where(eq(shopping.id, id)).get()?.d;
+
 export function remove(db: Db, userId: string, id: string): void {
   const old = get(db, id);
   if (!old) return;

@@ -61,7 +61,8 @@ export function routes(app: Hono, deps: AppDeps): void {
     return c.json(nf(op(c, opId, () => scope.update(db, c.get('user').id, c.req.param('id'), d))));
   });
   app.delete('/api/scope/:id', admin, (c) => {
-    nf(scope.remove(db, c.get('user').id, c.req.param('id')) || undefined);
+    const id = c.req.param('id');
+    if (!scope.remove(db, c.get('user').id, id) && !scope.removed(db, id)) nf(undefined); // już usunięty: 200 (powtórka z kolejki)
     return c.json({ ok: true });
   });
 

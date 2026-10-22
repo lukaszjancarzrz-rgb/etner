@@ -52,6 +52,8 @@ describe('zakupy', () => {
     const id = await mk();
     expect((await app.request(`/api/shopping/${id}`, req(worker2, 'DELETE'))).status).toBe(403);
     expect((await app.request(`/api/shopping/${id}`, req(worker, 'DELETE'))).status).toBe(200);
+    expect((await app.request(`/api/shopping/${id}`, req(worker, 'DELETE'))).status).toBe(200); // powtórka: już usunięte
+    expect((await app.request('/api/shopping/nie-ma', req(worker, 'DELETE'))).status).toBe(404);
     const id2 = await mk();
     expect((await app.request(`/api/shopping/${id2}`, req(admin, 'DELETE'))).status).toBe(200);
     expect(await (await app.request('/api/shopping', req(admin, 'GET'))).json()).toEqual([]);

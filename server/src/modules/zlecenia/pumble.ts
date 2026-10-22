@@ -29,6 +29,8 @@ type St = {
   pending: Set<string>;
   sending: Map<string, Promise<unknown>>; bg: Set<Promise<unknown>>;
   rr: number; running: boolean; backoffMs: number; backoffUntil: number;
+  /** Ostatni wpis zbiorczy błędów kanałów: zbiór kanałów i czas (nowy wpis przy zmianie zbioru albo raz na godzinę). */
+  lastSummary?: { key: string; at: number };
 };
 const states = new WeakMap<PumbleClient, St>();
 const st = (p: PumbleClient): St => {
@@ -44,7 +46,7 @@ const group = (deps: AppDeps, j: svc.JobRow) => slowniki.groupOf(deps.db, 'statu
 export function later(deps: AppDeps, where: string, f: () => Promise<unknown>): void {
   if (!deps.pumble) return;
   const s = st(deps.pumble);
-  const pr: Promise<unknown> = f().catch((e) => logError(deps.db, where, e)).finally(() => s.bg.delete(pr));
+  const pr: Promise<unknown> = Promise.resolve().then(f).catch((e) => logError(deps.db, where, e)).finally(() => s.bg.delete(pr));
   s.bg.add(pr);
 }
 /** Czeka, aż skończą się zadania z `later` (testy). */
@@ -242,30 +244,36 @@ export async function pollTick(deps: AppDeps): Promise<void> {
   const s = st(p), t = now(deps).getTime();
   if (s.running || t < s.backoffUntil) return; // poprzedni obieg trwa albo przerwa po awarii
   s.running = true;
-  const errs: unknown[] = [];
-  const one = async (f: () => Promise<unknown>) => { try { await f(); } catch (e) { if (isGlobalPumbleError(e)) throw e; errs.push(e); } };
+  const errs: { cid: string; e: unknown }[] = [];
+  const one = async (cid: string, f: () => Promise<unknown>) => { try { await f(); } catch (e) { if (isGlobalPumbleError(e)) throw e; errs.push({ cid, e }); } };
   try {
     for (const id of [...s.pending]) {
       const j = svc.get(deps.db, id);
-      if (j?.pumbleChannelId) await one(() => addPeople(deps, id, membersOf(deps, j)));
+      if (j?.pumbleChannelId) await one(j.pumbleChannelId, () => addPeople(deps, id, membersOf(deps, j)));
       s.pending.delete(id);
     }
     const open = svc.list(deps.db).filter((j) => group(deps, j) !== 'zamkniete').sort((a, b) => a.numer.localeCompare(b.numer));
     const todo = open.filter((j) => !j.pumbleChannelId && group(deps, j) === 'aktualne' && canTry(s, j.id, t)).slice(0, CREATE_PER_TICK);
-    for (const j of todo) await one(() => ensureChannel(deps, j.id));
+    for (const j of todo) await one(`zlecenie ${j.numer}`, () => ensureChannel(deps, j.id));
     // świeży odczyt: kanały założone przed chwilą też są odpytywane w tym obiegu
     const withCh = open.map((j) => svc.get(deps.db, j.id) ?? j).filter((j) => j.pumbleChannelId);
     const start = withCh.length ? s.rr % withCh.length : 0;
     const batch = [...withCh.slice(start), ...withCh.slice(0, start)].slice(0, PER_TICK);
     s.rr = start + batch.length;
-    for (const j of batch) await one(() => pollJob(deps, p, j));
+    for (const j of batch) await one(j.pumbleChannelId!, () => pollJob(deps, p, j));
     s.backoffMs = 0;
   } catch (e) {
     if (!s.backoffMs) logError(deps.db, 'pumble', new Error(`Pumble nie odpowiada, odpytywanie wstrzymane (ponowienie co 1–30 min): ${e instanceof Error ? e.message : e}`));
     s.backoffMs = Math.min(BACKOFF_MAX, s.backoffMs ? s.backoffMs * 2 : BACKOFF_MIN);
     s.backoffUntil = t + s.backoffMs;
   } finally { s.running = false; }
-  if (errs.length) logError(deps.db, 'pumble:obieg', new Error(`${errs.length} błędów kanałów w obiegu, pierwszy: ${errs[0] instanceof Error ? errs[0].message : errs[0]}`));
+  // jeden wpis, gdy zmienia się zbiór psujących się kanałów, i najwyżej raz na godzinę dla tego samego (usunięty kanał nie zalewa dziennika)
+  const key = [...new Set(errs.map((x) => x.cid))].sort().join(',');
+  if (key && (s.lastSummary?.key !== key || t - s.lastSummary.at >= 3_600_000)) {
+    s.lastSummary = { key, at: t };
+    const e0 = errs[0]!.e;
+    logError(deps.db, 'pumble:obieg', new Error(`${errs.length} błędów kanałów w obiegu (${key}), pierwszy: ${e0 instanceof Error ? e0.message : e0}`));
+  } else if (!key) s.lastSummary = undefined;
 }
 
 /** Odpytywanie co 20 s (pierwszy obieg od razu); zwraca stop(). */
@@ -301,8 +309,9 @@ export async function send(deps: AppDeps, user: User, jobId: string, text: strin
         return row ?? deps.db.select().from(pumbleMessages).where(eq(pumbleMessages.messageId, r.id)).get()!;
       }).result;
     } catch (e) {
-      // wiadomość już poszła: bez 500, obieg i tak ją dopisze
+      // wiadomość już poszła: bez 500, obieg i tak ją dopisze; opId zapisany osobno, żeby ponowienie nie wysłało drugi raz
       logError(deps.db, 'pumble:zapis', e, user.id);
+      if (opId) try { deps.db.insert(opIds).values({ opId, userId: user.id, at: ts, result: vals }).onConflictDoNothing().run(); } catch (e2) { logError(deps.db, 'pumble:zapis', e2, user.id); }
       return vals;
     }
   })().finally(() => { if (opId) s.sending.delete(opId); });

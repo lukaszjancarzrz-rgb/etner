@@ -46,6 +46,7 @@ export function routes(app: Hono, deps: AppDeps): void {
 
   app.delete('/api/shopping/:id', auth, (c) => {
     const r = svc.get(db, c.req.param('id'));
+    if (!r && svc.removed(db, c.req.param('id'))) return c.json({ ok: true }); // już usunięte: powtórka po przekroczeniu czasu
     if (!r) throw notFound();
     if (r.by !== me(c).id && !can(me(c), 'admin')) throw forbidden();
     svc.remove(db, me(c).id, r.id);
