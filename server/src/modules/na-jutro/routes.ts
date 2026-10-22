@@ -1,8 +1,8 @@
-import { checklistCreateSchema, checklistToggleSchema, checklistUpdateSchema } from '@etner/shared';
+import { checklistCreateSchema, checklistTemplateSchema, checklistTemplateUpdateSchema, checklistToggleSchema, checklistUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
-import { requireUser } from '../../core/auth.js';
+import { requireAdmin, requireUser } from '../../core/auth.js';
 import { body } from '../../core/body.js';
 import { logError } from '../../core/errors.js';
 import { notify } from '../../core/notify.js';
@@ -58,6 +58,23 @@ export function routes(app: Hono, deps: AppDeps): void {
     const r = visible(c, c.req.param('id'));
     if (r.createdBy !== me(c).id && !can(me(c), 'admin')) throw forbidden();
     svc.remove(db, me(c).id, r.id);
+    return c.json({ ok: true });
+  });
+
+  // Listy predefiniowane (18j): czyta każdy, zmienia admin.
+  const admin = requireAdmin(db);
+  const nf = <T,>(r: T | undefined): T => { if (!r) throw new HTTPException(404, { message: 'Nie znaleziono' }); return r; };
+  app.get('/api/checklist-templates', auth, (c) => c.json(svc.listTemplates(db)));
+  app.post('/api/checklist-templates', admin, async (c) => {
+    const { opId, ...d } = await body(c, checklistTemplateSchema);
+    return c.json(runOp(db, opId, me(c).id, () => svc.createTemplate(db, me(c).id, d)).result);
+  });
+  app.put('/api/checklist-templates/:id', admin, async (c) => {
+    const { opId, ...d } = await body(c, checklistTemplateUpdateSchema);
+    return c.json(nf(runOp(db, opId, me(c).id, () => svc.updateTemplate(db, me(c).id, c.req.param('id'), d)).result));
+  });
+  app.delete('/api/checklist-templates/:id', admin, (c) => {
+    nf(svc.updateTemplate(db, me(c).id, c.req.param('id'), {}, true));
     return c.json({ ok: true });
   });
 }

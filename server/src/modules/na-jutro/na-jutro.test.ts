@@ -7,6 +7,7 @@ import { addUser, loginCookie, testDeps } from '../../test-utils.js';
 import { modules } from '../index.js';
 import { seedBase } from '../slowniki/seed.js';
 import { naJutro } from './index.js';
+import { listTemplates } from './service.js';
 
 async function setup() {
   const push = vi.fn(async (_s: unknown, _p: string) => ({ statusCode: 201 }));
@@ -106,11 +107,39 @@ describe('na jutro', () => {
     const row = await (await app.request('/api/checklists', req(c1, 'POST', { ekipa: 'ekipa A', dzien: '2026-03-11', tekst: 'Drabina' }))).json();
     const r = await app.request(`/api/checklists/${row.id}`, req(admin, 'PUT', { ekipa: 'ekipa B', tekst: 'Nowy' }));
     expect(r.status).toBe(200);
-    const ch = async (ck: string) => (await (await app.request('/api/changes?since=0', req(ck, 'GET'))).json()).changes as { action: string; data: unknown }[];
+    const ch = async (ck: string) => ((await (await app.request('/api/changes?since=0', req(ck, 'GET'))).json()).changes as { entity: string; action: string; data: unknown }[]).filter((x) => x.entity === 'checklists');
     const a = await ch(c1);
     expect(JSON.stringify(a)).not.toContain('Nowy');
     expect(a.at(-1)).toMatchObject({ action: 'delete' });
     expect(JSON.stringify(await ch(c2))).toContain('Nowy');
     expect(await ch(c3)).toEqual([]);
+  });
+
+  it('listy predefiniowane: seed idempotentny, czyta każdy, zmienia tylko admin', async () => {
+    const { app, deps, admin, c1, c2 } = await setup();
+    const names = (await (await app.request('/api/checklist-templates', req(c2, 'GET'))).json()).map((t: { nazwa: string }) => t.nazwa);
+    expect(names).toEqual(['Elektryka', 'Montaż fotowoltaiki', 'Alarm', 'Kamery', 'Reku przygotówka', 'Reku rozkładanie instalacji', 'Montaż rekuperatora', 'Rozciąganie rur klimy', 'Montaż klimy']);
+    seedBase(deps.db);
+    expect(listTemplates(deps.db)).toHaveLength(9);
+    expect(listTemplates(deps.db).find((t) => t.nazwa === 'Montaż klimy')).toMatchObject({ kategorie: ['Klimatyzacja'], rodzaje: [], pozycje: [] });
+    const body = { nazwa: 'Serwis klimy', kategorie: ['Klimatyzacja'], rodzaje: ['serwis'], pozycje: ['Manometry', 'Odkurzacz'] };
+    expect((await app.request('/api/checklist-templates', req(c1, 'POST', body))).status).toBe(403);
+    expect((await app.request('/api/checklist-templates', req(admin, 'POST', { ...body, nazwa: ' ' }))).status).toBe(400);
+    const t = await (await app.request('/api/checklist-templates', req(admin, 'POST', body))).json();
+    expect(t).toMatchObject({ ...body, kolejnosc: 9 });
+    expect((await app.request(`/api/checklist-templates/${t.id}`, req(c1, 'PUT', { pozycje: [] }))).status).toBe(403);
+    const u = await (await app.request(`/api/checklist-templates/${t.id}`, req(admin, 'PUT', { pozycje: ['Odkurzacz', 'Manometry', 'Pompa'] }))).json();
+    expect(u).toMatchObject({ nazwa: 'Serwis klimy', pozycje: ['Odkurzacz', 'Manometry', 'Pompa'] });
+    // pracownik dostaje zmiany list (synchronizacja)
+    const ch = (await (await app.request('/api/changes?since=0', req(c2, 'GET'))).json()).changes as { entity: string; id: string }[];
+    expect(ch.filter((x) => x.entity === 'checklist_templates' && x.id === t.id)).toHaveLength(2);
+    expect((await app.request(`/api/checklist-templates/${t.id}`, req(c1, 'DELETE'))).status).toBe(403);
+    expect((await app.request(`/api/checklist-templates/${t.id}`, req(admin, 'DELETE'))).status).toBe(200);
+    expect((await app.request(`/api/checklist-templates/${t.id}`, req(admin, 'DELETE'))).status).toBe(404);
+    expect(listTemplates(deps.db)).toHaveLength(9);
+    // usunięte listy seedu nie wracają przy restarcie
+    for (const x of listTemplates(deps.db)) await app.request(`/api/checklist-templates/${x.id}`, req(admin, 'DELETE'));
+    seedBase(deps.db);
+    expect(listTemplates(deps.db)).toHaveLength(0);
   });
 });

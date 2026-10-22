@@ -3,6 +3,7 @@ import { newId, type DictGrupa, type DictRodzaj } from '@etner/shared';
 import type { Db } from '../../core/db.js';
 import { firmy } from '../../core/schema-base.js';
 import { dict } from './schema.js';
+import { seedTemplates } from '../na-jutro/service.js';
 
 // Najlepsze przypuszczenie (R15): prawdziwe listy Parametry nie były dostępne. Właściciel poprawia je tu lub w aplikacji.
 type Item = string | [wartosc: string, extra: { grupa?: DictGrupa; platne?: boolean; kolor?: string }];
@@ -48,4 +49,5 @@ export function seedBase(db: Db): void {
   if (db.select({ n: count() }).from(firmy).get()!.n === 0) {
     db.insert(firmy).values({ id: newId(), nazwa: 'ETNER', skrot: 'ETNER', prefiksZ: 'Z', prefiksL: 'L', createdAt: now, updatedAt: now }).run();
   }
+  seedTemplates(db);
 }

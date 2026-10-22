@@ -11,3 +11,13 @@ export const checklists = sqliteTable('checklists', {
   zabraneBy: text('zabrane_by'),
   zabraneAt: text('zabrane_at'),
 });
+
+/** Listy predefiniowane (18j): pozycje w kolejności; odhaczanie tylko na urządzeniu. */
+export const checklistTemplates = sqliteTable('checklist_templates', {
+  ...baseCols(),
+  nazwa: text('nazwa').notNull(),
+  kategorie: text('kategorie', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  rodzaje: text('rodzaje', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  pozycje: text('pozycje', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  kolejnosc: integer('kolejnosc').notNull().default(0),
+});

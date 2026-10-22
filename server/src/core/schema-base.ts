@@ -29,6 +29,8 @@ export const users = sqliteTable('users', {
   scheduleCol: text('schedule_col'),
   /** Małymi literami; po nim szukamy konta w Pumble. */
   email: text('email'),
+  /** Zdjęcie 256 px WebP w magazynie plików; brak = inicjały. */
+  avatarKey: text('avatar_key'),
 });
 
 export const sessions = sqliteTable('sessions', {
