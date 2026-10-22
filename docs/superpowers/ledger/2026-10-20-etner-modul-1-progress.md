@@ -199,3 +199,7 @@ Task 19b: fix round 1/5 (all addressed; 2780673)
 Task 19b: minor (deferred): renamed kod stays inside unapproved schedule draft proposals; lead_contacts.status snapshot not renamed; no test for rename+reorder+add in one PUT; admin screens save without offline queue
 Task 19b: complete (commits 8c4676d..2780673, review clean). Task 19 done → owner checkpoint (plan STOP after 19).
 ## Owner notes 2026-10-22 (14 points) recorded as Task 19c — WAITING for owner's go (do not start).
+Owner go for Task 19c (2026-10-22, "limit reset, continue").
+- Ruling R37: 19c point 5 — contacts grouped by the lead status saved at contact time; a single contact can be soft-deleted by an admin — cost: regroup if owner meant something else.
+- Ruling R38: 19c point 6 — e-mail via SMTP (nodemailer; env SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM; recipient setting default etner@etner-instalacje.pl); missing config → skipped + one logError per day — cost: owner pastes SMTP secrets.
+- Split: 19c-A (points 5,6,7,8,9,12,13 – leady, klienci, zadania, e-mail) and 19c-B (points 1,2,3,4,10,11,14 – Pumble existing jobs, desktop density, na jutro, lists 18j, avatars) in parallel with disjoint files.
