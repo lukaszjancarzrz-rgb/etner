@@ -188,3 +188,6 @@ Task 18h: complete (commits 49185db..0143555, review clean)
 - Ruling R35: Pumble file schema/download auth undocumented and test key revoked → store raw `files` JSON now, show file names; finish image preview after a short live check with a temporary key from the owner — cost: one more owner step.
 Task 18i: implemented c8454ae (watch fast poll 3 s / others 30 s, max 20; files JSON stored; file info line „wrzucił zdjęcie/plik”). Live check with owner's 2nd temp key: Pumble file objects = {name, mimeType, path, thumbnails[{path,width,height}], publicPath:null}; files.pumble.com returns 401 without user session and with ApiKey → thumbnails impossible via API key (R35 resolved: info line only; code ignores `path`, so no broken images).
 ## Owner 2026-10-22: predefined checklists per job kind (local-only ticking, suggested by the day's job) → planned as Task 18j, built when the owner sends the lists.
+Task 18i: fix round 1/5 (all addressed; 8f14e8d). Owner refinement (no file names; „<autor> wrzucił zdjęcie/plik” line) is the owner's 2026-10-22 message — supersedes the brief's "file name" line.
+Task 18i: minor (deferred): per-mode dedup → up to 2 pumble:obieg rows/hour per channel; files+attachments summed without dedup (no live sample with attachments); onConflictDoNothing without target
+Task 18i: complete (commits b9e232b..8f14e8d, review clean)
