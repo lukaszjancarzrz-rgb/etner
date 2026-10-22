@@ -172,3 +172,7 @@ Owner tweaks (direct, controller commit f7e2703): Galeria input image/* only + s
 - Owner: push texts name the job by client surname – miejscowość (not numer); schedule push opens #harm/<day>~<personId> scrolled + highlighted → queued to the 18g implementer as a follow-up commit.
 Task 18g: BASE 744d920; impl 37eeeab..2f8da5c; review: Important — asBot to private channel forbidden by spec (plan-mandated); membership never retried; error log flood on outage; job save blocks on Pumble (~40 s)
 - Ruling R32: send with asBot:false (appears as key owner, keeps „Imię: ” prefix); createChannel type lowercase 'private' verified via getChannel (not private → log, no members); backfill only 'aktualne' jobs, ≤5 per tick — cost: messages from the app look like the key owner in Pumble.
+Task 18g: fix round 1/5 (all addressed; 81b1d61); small follow-up dispatched (log throttle, 429 global, idempotent DELETE, opId on DB failure, sync throw in later())
+Task 18g: follow-up 214190a (log throttle, 429 global, idempotent DELETE, opId on DB failure, sync throw caught)
+Task 18g: minor (deferred): real Pumble channel type / key-owner posting unverified (fake follows spec); retry state in memory; e2e failed once right after build, then 3/3 green (no failing test name captured) — watch for flakiness
+Task 18g: complete (commits 744d920..214190a, review clean). Owner checkpoint.
