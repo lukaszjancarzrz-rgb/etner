@@ -65,6 +65,10 @@ describe('leady', () => {
     const r2 = await (await app.request(`/api/leads/${l2.id}/to-job`, req(admin, 'POST', { job: { status: 'Nowe' } }))).json();
     expect(r2.lead.status).toBe('Nowy');
     expect(itemsOf(deps.db, r2.job.id)).toEqual([]); // bez scope: bez punktu
+    // drugie zlecenie z tego samego leada: 409
+    const r3 = await app.request(`/api/leads/${l2.id}/to-job`, req(admin, 'POST', { job: { status: 'Nowe' } }));
+    expect(r3.status).toBe(409);
+    expect(await r3.json()).toEqual({ error: 'LEAD_MA_ZLECENIE' });
   });
 
   it('pracownik: 403 na trasach i brak zmian leada w feedzie', async () => {

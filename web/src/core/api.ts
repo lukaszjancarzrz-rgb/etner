@@ -5,6 +5,9 @@ export const emit = (type: string, detail?: unknown) => bus.dispatchEvent(new Cu
 /** Adres serwera; w przeglądarce pusty (ten sam host), w testach absolutny. */
 export const cfg = { base: '' };
 
+/** Kody błędów serwera → tekst dla człowieka. */
+const CODES: Record<string, string> = { LEAD_MA_ZLECENIE: 'Ten lead ma już zlecenie', LOGIN_ZAJETY: 'Ten login jest już zajęty' };
+
 export class ApiError extends Error {
   constructor(public status: number, message: string, public body?: unknown) {
     super(message);
@@ -25,7 +28,7 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    const msg = typeof body?.error === 'string' && body.error !== 'SESJA' ? body.error : res.status === 401 ? 'Zaloguj się ponownie' : 'Błąd serwera – spróbuj ponownie.';
+    const msg = typeof body?.error === 'string' && body.error !== 'SESJA' ? CODES[body.error] ?? body.error : res.status === 401 ? 'Zaloguj się ponownie' : 'Błąd serwera – spróbuj ponownie.';
     throw new ApiError(res.status, msg, body);
   }
   return body as T;

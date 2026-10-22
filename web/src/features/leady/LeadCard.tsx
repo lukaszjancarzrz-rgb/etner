@@ -67,7 +67,11 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
             <Button variant="secondary" size="sm" onClick={() => setForm('edit')} disabled={!!lead._tmp}><PencilSimple className="h-4 w-4" />Edytuj</Button>
           </div>
 
-          {job ? (
+          {job?._tmp ? (
+            <p className="flex min-h-12 items-center gap-2 rounded-xl border border-line px-4 py-2 font-semibold text-ink-2">
+              <Briefcase className="h-5 w-5 shrink-0" weight="fill" />Zlecenie zapisuje się…
+            </p>
+          ) : job ? (
             <a href={`#zl/${job.id}`} className="flex min-h-12 items-center gap-2 rounded-xl border border-ok/50 bg-ok/10 px-4 py-2 font-semibold hover:border-ok">
               <Briefcase className="h-5 w-5 shrink-0 text-ok" weight="fill" />
               <span className="min-w-0">Zlecenie: {[jobClient?.nazwa ?? client?.nazwa ?? 'Klient', jobSite?.miejscowosc].filter(Boolean).join(' – ')}</span>

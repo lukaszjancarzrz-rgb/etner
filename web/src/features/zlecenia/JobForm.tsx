@@ -25,6 +25,7 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
   const ekipy = useDict('ekipa');
   const rodzaje = useDict('rodzaj_zlecenia');
   const kategorie = useDict('kategoria');
+  const leadStatusy = useDict('status_leada');
   const pre = lead ? jobPrefill(lead, statusy) : undefined;
   const leadClient = useEntity('clients', lead?.clientId ?? undefined);
   const leadSite = useEntity('sites', lead?.siteId ?? undefined);
@@ -67,7 +68,9 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
       ? updateVia('jobs', job.id, body, { kind: 'zlecenie', url: `/api/jobs/${job.id}`, method: 'PUT', body })
       : lead
         // serwer: klient i obiekt leada, punkt zakresu, „Przyjęta”; odpowiedź { lead, job }
-        ? createVia<{ lead: Rec; job: Rec }>('jobs', { kind: 'zlecenie', url: `/api/leads/${lead.id}/to-job`, method: 'POST', body: { accept, scope: scope.trim(), job: body } }, tmp)
+        ? createVia<{ lead: Rec; job: Rec }>('jobs', { kind: 'zlecenie', url: `/api/leads/${lead.id}/to-job`, method: 'POST', body: { accept, scope: scope.trim(), job: body },
+          // jak serwer: „Przyjęta” = 4. status leada
+          optimistic: (s) => { const st = leadStatusy[3]?.wartosc; const l = s.get('leads', lead.id); if (accept && st && l) s.put('leads', { ...l, status: st }); } }, tmp)
           .then((r) => { store.put('jobs', r.job); store.put('leads', r.lead); return r.job; })
         : createVia<Rec>('jobs', { kind: 'zlecenie', url: '/api/jobs', method: 'POST', body }, tmp);
     if (!navigator.onLine) {

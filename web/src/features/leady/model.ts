@@ -1,4 +1,16 @@
+import { toGr } from '@etner/shared';
 import type { Rec } from '../../core/store.js';
+
+const MAX_GR = 100_000_000_00;
+/** Pole kwoty: grosze albo komunikat błędu. „12.500” (kropka + 3 cyfry) to prawie na pewno tysiące, nie grosze. */
+export function parseZl(text: string): { gr: number } | { error: string } {
+  if (/\.\d{3}(?!\d)/.test(text)) return { error: 'Użyj przecinka dla groszy, np. 12 500 albo 12500,00' };
+  let gr: number;
+  try { gr = toGr(text); } catch { return { error: 'Wpisz kwotę, np. 12 000 albo 12000,50' }; }
+  if (gr < 0) return { error: 'Wpisz kwotę, np. 12 000 albo 12000,50' };
+  if (gr > MAX_GR) return { error: 'Maksymalnie 100 000 000,00 zł' };
+  return { gr };
+}
 
 /** Otwarty lead z terminem kontaktu na dziś lub wcześniej (jak `overdue` na serwerze). */
 export const isOverdue = (l: Rec, group: string, today: string) => group !== 'zamkniete' && !!l.nastepny && l.nastepny <= today;

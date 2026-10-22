@@ -1,4 +1,5 @@
-import { fmtZl, toGr } from '@etner/shared';
+import { fmtZl } from '@etner/shared';
+import { parseZl } from './model.js';
 import { useState } from 'react';
 import { go } from '../../routes.js';
 import { useDict } from '../../core/data.js';
@@ -36,7 +37,8 @@ export function LeadForm({ lead, onClose }: { lead?: Rec; onClose: () => void })
     if (nowy && !nowy.nazwa.trim()) er.nazwa = 'Podaj nazwę klienta';
     let wartoscGr: number | null = null;
     if (f.wartosc.trim()) {
-      try { wartoscGr = toGr(f.wartosc); if (wartoscGr < 0) throw new Error(); } catch { er.wartosc = 'Wpisz kwotę, np. 12 000 albo 12000,50'; }
+      const r = parseZl(f.wartosc);
+      if ('error' in r) er.wartosc = r.error; else wartoscGr = r.gr;
     }
     setErr(er);
     if (Object.keys(er).length) return;
@@ -76,7 +78,7 @@ export function LeadForm({ lead, onClose }: { lead?: Rec; onClose: () => void })
           <div className="grid gap-4 min-[560px]:grid-cols-2">
             <Field label="Kategoria">{(id) => <Select id={id} value={f.kategoria || undefined} onValueChange={(kategoria) => set({ kategoria })} options={opts(kategorie)} placeholder="Wybierz" />}</Field>
             <Field label="Źródło">{(id) => <Select id={id} value={f.zrodlo || undefined} onValueChange={(zrodlo) => set({ zrodlo })} options={opts(zrodla)} placeholder="Skąd przyszło zapytanie" />}</Field>
-            <Field label="Wartość (zł netto)" error={err.wartosc} hint={!err.wartosc && f.wartosc.trim() ? (() => { try { return fmtZl(toGr(f.wartosc)); } catch { return undefined; } })() : undefined}>
+            <Field label="Wartość (zł netto)" error={err.wartosc} hint={!err.wartosc && f.wartosc.trim() ? (() => { const r = parseZl(f.wartosc); return 'gr' in r ? fmtZl(r.gr) : undefined; })() : undefined}>
               {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.wartosc} inputMode="decimal" value={f.wartosc} onChange={(e) => set({ wartosc: e.target.value })} placeholder="np. 12 000" />}
             </Field>
             <Field label="Następny kontakt">{(id) => <Input id={id} type="date" value={f.nastepny} onChange={(e) => set({ nastepny: e.target.value })} />}</Field>

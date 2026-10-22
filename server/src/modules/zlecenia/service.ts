@@ -14,6 +14,8 @@ import { jobs } from './schema.js';
 export type JobRow = typeof jobs.$inferSelect;
 /** Dla harmonogramu: nowe osoby zlecenia trafiają do jego kanału Pumble. */
 export { addPeopleLater as pumbleAddPeople } from './pumble.js';
+/** Dla leadów: pierwszy punkt zakresu zlecenia utworzonego z leada. */
+export { create as addScopeItem } from './scope.js';
 export type JobRef = { id: string; numer: string; klient: string; miejscowosc: string; status: string };
 /** Powiadomienie do wysłania dopiero po zatwierdzeniu transakcji. */
 export type Outbox = { userIds: string[]; n: Notification }[];
@@ -26,6 +28,8 @@ export const list = (db: Db): JobRow[] =>
   db.select().from(jobs).where(isNull(jobs.deletedAt)).orderBy(desc(jobs.numer)).all();
 export const forSite = (db: Db, siteId: string): JobRow[] =>
   db.select().from(jobs).where(and(eq(jobs.siteId, siteId), isNull(jobs.deletedAt))).orderBy(asc(jobs.numer)).all();
+export const leadHasJob = (db: Db, leadId: string): boolean =>
+  !!db.select({ id: jobs.id }).from(jobs).where(and(eq(jobs.leadId, leadId), isNull(jobs.deletedAt))).limit(1).get();
 export const clientHasJobs = (db: Db, clientId: string): boolean =>
   !!db.select({ id: jobs.id }).from(jobs).where(and(eq(jobs.clientId, clientId), isNull(jobs.deletedAt))).limit(1).get();
 

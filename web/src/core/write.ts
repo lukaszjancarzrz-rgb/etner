@@ -9,8 +9,9 @@ export const tmpId = () => `tmp-${newId()}`;
 /**
  * Nowy rekord przez kolejkę: od razu widoczny jako tymczasowy, po odpowiedzi zastąpiony wersją z serwera
  * (ta sama wersja przychodzi też przez SSE). `extra` = dodatkowe rekordy tymczasowe (np. miniatury zdjęć).
+ * `w.optimistic` = dodatkowa zmiana sklepu (cofana przy odrzuceniu).
  */
-export function createVia<T = Rec>(entity: string, w: Omit<Write, 'optimistic'>, rec: Record<string, unknown>, extra: { entity: string; rec: Rec }[] = []): Promise<T> {
+export function createVia<T = Rec>(entity: string, w: Write, rec: Record<string, unknown>, extra: { entity: string; rec: Rec }[] = []): Promise<T> {
   const id = (rec.id as string | undefined) ?? tmpId();
   const drop = () => { store.remove(entity, id); for (const x of extra) store.remove(x.entity, x.rec.id); };
   return outbox.enqueue({
@@ -18,6 +19,7 @@ export function createVia<T = Rec>(entity: string, w: Omit<Write, 'optimistic'>,
     optimistic: (s) => {
       s.put(entity, { createdAt: new Date().toISOString(), ...rec, id, _tmp: true });
       for (const x of extra) s.put(x.entity, { ...x.rec, _tmp: true });
+      w.optimistic?.(s);
     },
   }).then((r) => {
     drop();

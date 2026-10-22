@@ -8,7 +8,6 @@ import { defaultFirmaId } from '../../core/firma.js';
 import { firmy } from '../../core/schema-base.js';
 import * as klienci from '../klienci/service.js';
 import * as slowniki from '../slowniki/service.js';
-import * as scope from '../zlecenia/scope.js';
 import * as zlecenia from '../zlecenia/service.js';
 import { leadContacts, leads } from './schema.js';
 
@@ -93,10 +92,11 @@ export function contact(db: Db, userId: string, id: string, note: string, next: 
 export function toJob(db: Db, userId: string, leadId: string, job: LeadToJob['job'], accept: boolean, out: zlecenia.Outbox, diary?: Diary, scopeText = ''): { lead: LeadRow; job: zlecenia.JobRow } | undefined {
   const lead = get(db, leadId);
   if (!lead) return undefined;
+  if (zlecenia.leadHasJob(db, leadId)) throw new HTTPException(409, { message: 'LEAD_MA_ZLECENIE' });
   const input: JobSaveInput = { ...job, leadId };
   if (lead.clientId) { input.clientId = lead.clientId; input.siteId = lead.siteId; delete input.newClient; delete input.newSite; }
   const row = zlecenia.save(db, userId, input, out)!;
-  if (scopeText) scope.create(db, userId, row.id, { tekst: scopeText, uploads: [] });
+  if (scopeText) zlecenia.addScopeItem(db, userId, row.id, { tekst: scopeText, uploads: [] });
   // Lead bez klienta dostaje klienta utworzonego przez zlecenie.
   const link = lead.clientId ? undefined : { clientId: row.clientId, siteId: row.siteId };
   const acceptStatus = accept ? slowniki.list(db, 'status_leada')[3]?.wartosc : undefined;

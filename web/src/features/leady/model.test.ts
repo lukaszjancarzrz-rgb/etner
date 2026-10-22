@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { jobPrefill, leadSections, nextAfterContact } from './model.js';
+import { jobPrefill, leadSections, nextAfterContact, parseZl } from './model.js';
 
 const G: Record<string, string> = { Nowy: 'aktualne', 'Na kiedyś': 'pozniej', Przyjęta: 'zamkniete' };
 const group = (s: string) => G[s] ?? 'aktualne';
@@ -36,5 +36,19 @@ describe('jobPrefill', () => {
   it('bez opisu: temat; bez klienta: puste', () => {
     expect(jobPrefill({ id: 'x', clientId: null, siteId: null, kategoria: '', temat: 'Klima', opis: '' }, [...statusy].reverse()))
       .toEqual({ clientId: '', siteId: '', kategoria: '', status: 'Nowe', scope: 'Klima' });
+  });
+});
+
+describe('parseZl', () => {
+  it('odrzuca „12.500”, ujemne i powyżej 100 mln; przyjmuje przecinek i kropkę z groszami', () => {
+    expect(parseZl('12.500')).toEqual({ error: 'Użyj przecinka dla groszy, np. 12 500 albo 12500,00' });
+    expect(parseZl('1.250.000')).toHaveProperty('error');
+    expect(parseZl('12 500')).toEqual({ gr: 1250000 });
+    expect(parseZl('12500,00')).toEqual({ gr: 1250000 });
+    expect(parseZl('12.5')).toEqual({ gr: 1250 });
+    expect(parseZl('-5')).toHaveProperty('error');
+    expect(parseZl('abc')).toHaveProperty('error');
+    expect(parseZl('100 000 000,00')).toEqual({ gr: 10000000000 });
+    expect(parseZl('100 000 000,01')).toEqual({ error: 'Maksymalnie 100 000 000,00 zł' });
   });
 });
