@@ -204,3 +204,5 @@ Owner go for Task 19c (2026-10-22, "limit reset, continue").
 - Ruling R38: 19c point 6 — e-mail via SMTP (nodemailer; env SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM; recipient setting default etner@etner-instalacje.pl); missing config → skipped + one logError per day — cost: owner pastes SMTP secrets.
 - Split: 19c-A (points 5,6,7,8,9,12,13 – leady, klienci, zadania, e-mail) and 19c-B (points 1,2,3,4,10,11,14 – Pumble existing jobs, desktop density, na jutro, lists 18j, avatars) in parallel with disjoint files.
 Task 19c-B: review — Important: template matching breaks on category rename; rano push opens tomorrow; fix round 1 dispatched (+ sharp pixel limit, old avatar delete, pointer:fine density, awaitingChannel cleanup, Pumble author→user avatar, 1100/1280 px check)
+Task 19c-B: fix round 1/5 (all addressed; 274b8c2) — complete (commits 60834a9..274b8c2)
+Task 19c-B: minor (deferred): matching lists not shown next to the day in the schedule (only in Na jutro); Pumble retry state in memory (admin button after restart)
