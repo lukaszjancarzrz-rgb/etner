@@ -649,6 +649,15 @@ Decyzja właściciela 2026-10-21 (zmienia „bez Pumble” z projektu całości)
 - [ ] **Step 1: Testy (atrapa Pumble):** nowe zlecenie zakłada kanał i dodaje właściwe osoby; błąd Pumble nie psuje zapisu zlecenia (ponowienie później); odpytywanie zapisuje tylko nowe wiadomości i rozsyła je; pracownik widzi wiadomości zleceń jak zlecenia; wysyłka idzie jako bot z imieniem; bez klucza nic się nie dzieje.
 - [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
 
+### Task 18h: Wyraźniejsze „nowe”, harmonogram bez numerów
+
+Decyzje właściciela 2026-10-22:
+- **„Nowe” zostaje, dopóki użytkownik nie zmieni ekranu albo nie kliknie zmiany:** zmieniony dzień w harmonogramie ma znacznik przez cały pobyt na ekranie; obejrzane (widoczne) dni są oznaczane jako widziane dopiero przy wyjściu z ekranu harmonogramu albo po kliknięciu w zmienioną komórkę / dzień. Zlecenia bez zmian (znacznik do otwarcia karty).
+- **Znaczniki „nowe” na czerwono:** liczniki w menu, pigułki „nowe” na dniach, zleceniach i w Pumble – czerwone tło (#c62828), biały tekst, dobrze widoczne w jasnym i ciemnym motywie.
+- **Harmonogram bez numerów zleceń:** karta zlecenia w harmonogramie pokazuje kategorię (nazwa + kolor), miejscowość i klienta; numer ukryty (zostaje w nazwie dostępności i w karcie zlecenia).
+
+- [ ] **Step 1–5:** testy czystych funkcji „widziane przy wyjściu”, e2e: znacznik zostaje po 2 s na ekranie, znika po przejściu na inny ekran; zrzuty.
+
 ### Task 19: Pozostałe ekrany
 
 **Files:**

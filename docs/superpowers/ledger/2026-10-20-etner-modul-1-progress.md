@@ -176,3 +176,4 @@ Task 18g: fix round 1/5 (all addressed; 81b1d61); small follow-up dispatched (lo
 Task 18g: follow-up 214190a (log throttle, 429 global, idempotent DELETE, opId on DB failure, sync throw caught)
 Task 18g: minor (deferred): real Pumble channel type / key-owner posting unverified (fake follows spec); retry state in memory; e2e failed once right after build, then 3/3 green (no failing test name captured) — watch for flakiness
 Task 18g: complete (commits 744d920..214190a, review clean). Owner checkpoint.
+## Zmiany właściciela 2026-10-22 → Task 18h (nowe until leaving screen / click; red markers; schedule chips without numer, with kategoria label). Pumble live: owner reports channel creation fails in real Pumble → debug with a live key (owner offered).
