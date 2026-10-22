@@ -21,3 +21,21 @@ export async function resizePhoto(file: Blob): Promise<Blob> {
     bmp.close();
   }
 }
+
+/** Zdjęcie profilowe: środek kadru do kwadratu `px`, JPEG 0.85 (serwer i tak robi 256 px WebP). Nieznany format idzie bez zmian. */
+export async function squarePhoto(file: Blob, px = 512): Promise<Blob> {
+  let bmp: ImageBitmap;
+  try {
+    bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    return file;
+  }
+  try {
+    const side = Math.min(bmp.width, bmp.height), out = Math.min(px, side);
+    const c = new OffscreenCanvas(out, out);
+    c.getContext('2d')!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, out, out);
+    return await c.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  } finally {
+    bmp.close();
+  }
+}

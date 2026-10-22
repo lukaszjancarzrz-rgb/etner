@@ -9,6 +9,7 @@ import { cn } from '../../core/ui/cn.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, tmpId, updateVia, withoutEchoes } from '../../core/write.js';
 import { Viewer } from './Viewer.js';
+import { Avatar } from '../../core/ui/avatar.js';
 
 export const fileUrl = (a: Rec, v: 'thumb' | 'view' | 'orig') => a._src ?? `/api/attachments/${a.id}/file?v=${v}`;
 
@@ -59,7 +60,7 @@ export function Diary({ ownerType, ownerId, highlight, disabled }: { ownerType: 
           return (
             <li key={e.id} id={`e-${e.id}`} className={cn('scroll-mt-24 rounded-2xl border bg-card p-4 transition-[box-shadow,border-color] duration-300', flash === e.id ? 'border-ok ring-4 ring-ok/25' : 'border-line')}>
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <p className="font-semibold">{e.authorId ? names(e.authorId) : 'Wpis systemowy'}</p>
+                <p className="flex items-center gap-2 font-semibold">{e.authorId && <Avatar userId={e.authorId} size="sm" />}{e.authorId ? names(e.authorId) : 'Wpis systemowy'}</p>
                 <p className="text-sm text-ink-2">{e._tmp ? 'wysyłanie…' : fmtWhen(e.createdAt)}</p>
               </div>
               {e.tekst && <p className={cn('mt-1.5 max-w-[70ch] whitespace-pre-wrap', !e.authorId && 'text-ink-2')}>{e.tekst}</p>}

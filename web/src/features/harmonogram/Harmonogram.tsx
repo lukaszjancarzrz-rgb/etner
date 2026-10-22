@@ -16,6 +16,7 @@ import { useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
 import { cellKey, cellsOf, cellText, monthDays, slotLabel, type Slot } from './model.js';
+import { Avatar } from '../../core/ui/avatar.js';
 
 export type Ctx = {
   jobs: Map<string, JobView>;
@@ -356,6 +357,7 @@ function NameCell({ person, mine, color }: { person: Rec; mine: boolean; color?:
   return (
     <span className="flex min-w-0 items-center gap-2">
       <span className="h-6 w-1 shrink-0 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />
+      {person.userId && <Avatar userId={person.userId} name={person.nazwa} size="xs" />}
       <span className={cn('min-w-0 leading-tight [overflow-wrap:anywhere]', mine ? 'font-bold' : 'font-semibold')}>{person.nazwa}</span>
       {mine && <span className="shrink-0 rounded-full bg-ink px-1.5 text-[11px] font-bold leading-5 text-bg">Ty</span>}
     </span>

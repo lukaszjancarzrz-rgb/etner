@@ -8,6 +8,7 @@ import { store, useEntities, type Rec } from '../../core/store.js';
 import { SectionTitle, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { toast } from '../../core/ui/toast.js';
+import { Avatar } from '../../core/ui/avatar.js';
 
 const HOME = 'https://app.pumble.com';
 // raz na uruchomienie aplikacji; brak sieci = sekcja ukryta do następnego otwarcia karty
@@ -92,7 +93,7 @@ export function Pumble({ job }: { job: Rec }) {
             <ol className="grid gap-3" aria-live="polite">
               {shown.map((m) => (
                 <li key={m.id} className="grid gap-0.5">
-                  <p className="flex flex-wrap items-baseline gap-x-2"><span className="font-semibold">{m.authorName}</span><span className="text-sm text-ink-2">{fmtWhen(m.sentAt)}</span></p>
+                  <p className="flex flex-wrap items-center gap-x-2"><Avatar userId={m.createdBy} name={m.authorName} size="sm" /><span className="font-semibold">{m.authorName}</span><span className="text-sm text-ink-2">{fmtWhen(m.sentAt)}</span></p>
                   {m.text && <p className="max-w-[70ch] whitespace-pre-wrap break-words">{m.text}</p>}
                   <Files m={m} />
                 </li>

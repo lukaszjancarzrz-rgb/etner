@@ -3,7 +3,9 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { loginSchema } from '@etner/shared';
 import { ApiError, api } from '../../core/api.js';
 import { useDict, useLoading, useMe } from '../../core/data.js';
-import { store, useEntities, type Rec } from '../../core/store.js';
+import { store, useEntities, useEntity, type Rec } from '../../core/store.js';
+import { Avatar } from '../../core/ui/avatar.js';
+import { AvatarUpload } from './AvatarUpload.js';
 import { Badge, Empty, SectionTitle, Segmented } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
@@ -41,7 +43,7 @@ export function Uzytkownicy() {
   if (loading) return <div className="mx-auto grid max-w-5xl gap-3 p-4" aria-busy="true" aria-label="Wczytywanie użytkowników">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div>;
 
   return (
-    <section className="mx-auto grid max-w-6xl gap-6 px-4 py-4 desk:grid-cols-[minmax(0,1fr)_400px] desk:items-start desk:py-6">
+    <section className="mx-auto grid max-w-6xl gap-6 px-4 py-4 desk:grid-cols-[minmax(0,1fr)_28rem] desk:items-start desk:py-6">
       <div className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle count={users.length}>Konta</SectionTitle>
@@ -51,7 +53,8 @@ export function Uzytkownicy() {
         <ul className="grid gap-2">
           {sorted.map((u) => (
             <li key={u.id}>
-              <button type="button" onClick={() => setForm(u)} className={cn('grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left hover:border-ink-2', !u.active && 'opacity-70')}>
+              <button type="button" onClick={() => setForm(u)} className={cn('grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left hover:border-ink-2', !u.active && 'opacity-70')}>
+                <Avatar userId={u.id} name={u.name} size="lg" />
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold">{u.name}</span>
@@ -84,6 +87,7 @@ function UserForm({ user, onClose, onShow }: { user?: Rec; onClose: () => void; 
   const ekipy = useDict('ekipa').filter((e) => e.wartosc !== 'mieszane');
   const people = useEntities('schedule_people');
   const linked = user ? people.find((p) => p.userId === user.id) : undefined;
+  const live = useEntity('users', user?.id) ?? user;
   const [f, setF] = useState({
     name: (user?.name as string) ?? '', login: (user?.login as string) ?? '', haslo: '', role: (user?.role as 'admin' | 'pracownik') ?? 'pracownik',
     finanse: !!(user?.perms as string[] | undefined)?.includes('finanse'), ekipa: (user?.ekipa as string) || NONE, email: (user?.email as string) ?? '',
@@ -130,6 +134,7 @@ function UserForm({ user, onClose, onShow }: { user?: Rec; onClose: () => void; 
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <Sheet title={user ? user.name : 'Nowy użytkownik'}>
         <form onSubmit={submit} noValidate className="grid gap-4">
+          {live && <AvatarUpload user={live} />}
           <Field label="Imię i nazwisko" error={err.name}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.name} value={f.name} onChange={(e) => set({ name: e.target.value })} autoComplete="off" />}</Field>
           <Field label="Login" error={err.login} hint="Małe litery, cyfry, kropka, myślnik.">
             {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.login} value={f.login} onChange={(e) => set({ login: e.target.value })} autoCapitalize="none" autoComplete="off" spellCheck={false} placeholder="np. jan.nowak" />}
