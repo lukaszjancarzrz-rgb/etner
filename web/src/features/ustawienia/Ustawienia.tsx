@@ -1,10 +1,10 @@
-import { ArrowDown, ArrowUp, Bell, BookOpen, Bug, Clock, Copy, Desktop, Database, Key, Moon, Plus, Sun, Trash } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, Bell, BookOpen, Bug, Clock, Copy, Desktop, Database, Key, Moon, Plus, Sun, Trash, UserCircle } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { DICT_GRUPY, DICT_RODZAJE } from '@etner/shared';
 import { disablePush, enablePush, pushState, testPush, type PushState } from '../../core/push.js';
 import { ApiError, api } from '../../core/api.js';
-import { fmtWhen, useIsAdmin } from '../../core/data.js';
-import { store, useEntities, type Rec } from '../../core/store.js';
+import { fmtWhen, useIsAdmin, useMe } from '../../core/data.js';
+import { store, useEntities, useEntity, type Rec } from '../../core/store.js';
 import { setTheme, useTheme, type Theme } from '../../core/theme.js';
 import { Button } from '../../core/ui/button.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
@@ -14,25 +14,19 @@ import { Select } from '../../core/ui/select.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { move } from '../uzytkownicy/model.js';
+import { AvatarUpload } from '../uzytkownicy/AvatarUpload.js';
+import { Card } from './card.js';
+import { Templates } from './Listy.js';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Brak połączenia z serwerem.');
 
-const Card = ({ title, icon: I, hint, children, className }: { title: string; icon: typeof Sun; hint?: string; children: ReactNode; className?: string }) => (
-  <section aria-label={title} className={cn('grid content-start gap-4 rounded-2xl border border-line bg-card p-5', className)}>
-    <div>
-      <h2 className="flex items-center gap-2 font-wide text-lg font-extrabold"><I className="h-5 w-5 text-action" weight="duotone" />{title}</h2>
-      {hint && <p className="mt-1 text-sm text-ink-2">{hint}</p>}
-    </div>
-    {children}
-  </section>
-);
-
-/** Ustawienia: motyw, powiadomienia, hasło; admin dodatkowo słowniki, godzina przypomnienia, log błędów, stan kopii. */
+/** Ustawienia: moje zdjęcie, motyw, powiadomienia, hasło; admin dodatkowo listy predefiniowane, słowniki, godzina przypomnienia, log błędów, stan kopii. */
 export function Ustawienia() {
   const admin = useIsAdmin();
   return (
     <div className="mx-auto grid max-w-6xl gap-5 px-4 py-4 desk:grid-cols-2 desk:items-start desk:py-6">
       <div className="grid gap-5">
+        <MyPhoto />
         <ThemeCard />
         <Notifications />
         <ChangePassword />
@@ -41,6 +35,7 @@ export function Ustawienia() {
       </div>
       {admin && (
         <div className="grid gap-5">
+          <Templates />
           <Dictionaries />
           <ErrorLog />
         </div>
@@ -54,6 +49,17 @@ const themes: { v: Theme; label: string; icon: typeof Sun }[] = [
   { v: 'light', label: 'Jasny', icon: Sun },
   { v: 'dark', label: 'Ciemny', icon: Moon },
 ];
+
+function MyPhoto() {
+  const me = useMe();
+  const u = useEntity('users', me?.id);
+  if (!me) return null;
+  return (
+    <Card title="Moje zdjęcie" icon={UserCircle} hint="Widać je przy Twoich wpisach w dzienniku, w Pumble, na liście „na jutro” i w harmonogramie.">
+      <AvatarUpload user={u ?? { id: me.id, name: me.name }} />
+    </Card>
+  );
+}
 
 function ThemeCard() {
   const theme = useTheme();

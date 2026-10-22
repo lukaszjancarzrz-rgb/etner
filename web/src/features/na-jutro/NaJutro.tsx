@@ -1,4 +1,4 @@
-import { CaretLeft, CaretRight, Check, PencilSimple, Plus, SunHorizon, Trash, X } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, Check, ListChecks, PencilSimple, Plus, SunHorizon, Trash, X } from '@phosphor-icons/react';
 import { addDays } from '@etner/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { dayLong, fmtWhen, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
@@ -9,6 +9,10 @@ import { Button } from '../../core/ui/button.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
 import { cn } from '../../core/ui/cn.js';
 import { Input } from '../../core/ui/input.js';
+import { Avatar } from '../../core/ui/avatar.js';
+import { Dialog, Sheet } from '../../core/ui/sheet.js';
+import { useJobs, type JobView } from '../zlecenia/jobs.js';
+import { dayJobIds, rankTemplates } from './model.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
@@ -79,6 +83,7 @@ export function NaJutro({ route }: { route: Route }) {
           <ul className="grid gap-2">{taken.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>
         </div>
       )}
+      <Lists ekipa={ekipa} day={day} />
     </section>
   );
 }
@@ -141,9 +146,12 @@ function Item({ i, flash }: { i: Rec; flash: boolean }) {
       ) : (
         <div className="min-w-0">
           <p className={cn('text-lg font-semibold leading-snug', i.zabrane && 'text-ink-2 line-through decoration-2')}>{i.tekst}</p>
-          <p className="mt-0.5 text-sm text-ink-2">
-            {i._tmp ? 'wysyłanie…' : i.zabrane ? `zabrał ${names(i.zabraneBy)}${i.zabraneAt ? `, ${fmtWhen(i.zabraneAt)}` : ''}` : `dodał ${names(i.createdBy)}, ${fmtWhen(i.createdAt)}`}
-          </p>
+          {i._tmp ? <p className="mt-0.5 text-sm text-ink-2">wysyłanie…</p> : (
+            <div className="mt-1 grid gap-0.5 text-sm text-ink-2">
+              <Who verb="dodał" id={i.createdBy} at={i.createdAt} name={names(i.createdBy)} />
+              {i.zabrane && <Who verb="zabrał" id={i.zabraneBy} at={i.zabraneAt} name={names(i.zabraneBy)} />}
+            </div>
+          )}
         </div>
       )}
       <div className="flex">
@@ -153,3 +161,70 @@ function Item({ i, flash }: { i: Rec; flash: boolean }) {
     </li>
   );
 }
+
+function Who({ verb, id, at, name }: { verb: string; id?: string | null; at?: string | null; name: string }) {
+  return <p className="flex min-w-0 items-center gap-1.5"><Avatar userId={id} name={name} size="xs" /><span className="min-w-0">{verb} {name}{at ? ` · ${fmtWhen(at)}` : ''}</span></p>;
+}
+
+/** Listy predefiniowane (18j): pasujące do zleceń ekipy tego dnia na górze. Odhaczanie tylko w oknie; zamknięcie zeruje (nic nie idzie na serwer). */
+function Lists({ ekipa, day }: { ekipa: string; day: string }) {
+  const me = useMe();
+  const templates = useEntities('checklist_templates');
+  const entries = useEntities('schedule_entries');
+  const people = useEntities('schedule_people');
+  const users = useEntities('users');
+  const jobs = useJobs();
+  const [open, setOpen] = useState<string>();
+  const ranked = useMemo(() => {
+    const ek = new Map(users.map((u) => [u.id, u.ekipa as string | null | undefined]));
+    const ids = dayJobIds(entries, people, day, ekipa, me?.id, jobs, (u) => ek.get(u));
+    return rankTemplates(templates, ids.map((id) => jobs.get(id)!));
+  }, [templates, entries, people, users, jobs, day, ekipa, me?.id]);
+  if (!templates.length) return null;
+  const cur = ranked.find((x) => x.t.id === open);
+  const where = (j: JobView) => [j.client?.nazwa, j.site?.miejscowosc].filter(Boolean).join(' – ');
+  return (
+    <div className="grid gap-2">
+      <SectionTitle count={templates.length}>Listy</SectionTitle>
+      <ul className="grid gap-2 min-[560px]:grid-cols-2">
+        {ranked.map(({ t, jobs: js }) => (
+          <li key={t.id}>
+            <button type="button" onClick={() => setOpen(t.id)} data-fits={js.length > 0 || undefined}
+              className={cn('flex h-full w-full items-start gap-3 rounded-2xl border p-3 text-left transition-colors hover:border-ink-2', js.length ? 'border-action bg-action/8' : 'border-line bg-card')}>
+              <ListChecks className={cn('mt-0.5 h-6 w-6 shrink-0', js.length ? 'text-action' : 'text-ink-2')} weight={js.length ? 'fill' : 'regular'} />
+              <span className="grid min-w-0 gap-0.5">
+                <span className="font-semibold leading-snug">{t.nazwa}</span>
+                <span className="text-sm text-ink-2">{t.pozycje?.length ? `${t.pozycje.length} poz.` : 'bez pozycji'}</span>
+                {js.length > 0 && <span className="text-sm font-semibold text-action [overflow-wrap:anywhere]">pasuje do: {js.map(where).join(', ')}</span>}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <Dialog open={!!cur} onOpenChange={(v) => !v && setOpen(undefined)}>
+        {cur && <TemplateSheet t={cur.t} />}
+      </Dialog>
+    </div>
+  );
+}
+
+function TemplateSheet({ t }: { t: Rec }) {
+  const [done, setDone] = useState<Set<number>>(() => new Set()); // tylko w tym oknie
+  const items: string[] = t.pozycje ?? [];
+  const flip = (i: number) => setDone((d) => { const n = new Set(d); if (n.has(i)) n.delete(i); else n.add(i); return n; });
+  return (
+    <Sheet title={t.nazwa} description={items.length ? `Odhaczone ${done.size} z ${items.length}. Po zamknięciu wszystko znowu do odhaczenia.` : 'Lista nie ma jeszcze pozycji. Dodaje je biuro w Ustawieniach.'}>
+      <ul className="grid gap-1">
+        {items.map((x, i) => (
+          <li key={i}>
+            <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-ink/5">
+              <Checkbox checked={done.has(i)} onCheckedChange={() => flip(i)} className="h-7 w-7" />
+              <span className={cn('min-w-0 [overflow-wrap:anywhere]', done.has(i) && 'text-ink-2 line-through')}>{x}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </Sheet>
+  );
+}
+
