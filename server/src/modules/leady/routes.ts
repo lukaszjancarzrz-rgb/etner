@@ -8,6 +8,7 @@ import { logError } from '../../core/errors.js';
 import { notify } from '../../core/notify.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
+import { z } from 'zod';
 import * as svc from './service.js';
 
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
@@ -46,6 +47,16 @@ export function routes(app: Hono, deps: AppDeps): void {
     return c.json(result);
   });
 
+  app.delete('/api/leads/:id/contacts/:contactId', guard, (c) => {
+    if (!svc.removeContact(db, uid(c), c.req.param('id'), c.req.param('contactId'))) throw notFound();
+    return c.json({ ok: true });
+  });
+  app.get('/api/settings/leady-email', guard, (c) => c.json({ email: svc.leadyEmail(db) }));
+  app.put('/api/settings/leady-email', guard, async (c) => {
+    const { email } = await body(c, z.object({ email: z.string().trim().email('Wpisz poprawny adres e-mail') }));
+    svc.setLeadyEmail(db, email);
+    return c.json({ email });
+  });
   app.post('/api/leads/:id/to-job', guard, async (c) => {
     const b = await body(c, leadToJobSchema);
     const out: import('../zlecenia/service.js').Outbox = [];

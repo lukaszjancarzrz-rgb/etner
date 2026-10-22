@@ -5,7 +5,8 @@ import type { Diary } from '../../app.js';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import { defaultFirmaId } from '../../core/firma.js';
-import { firmy } from '../../core/schema-base.js';
+import { firmy, settings } from '../../core/schema-base.js';
+import type { Mail } from '../../core/mail.js';
 import * as klienci from '../klienci/service.js';
 import * as slowniki from '../slowniki/service.js';
 import * as zlecenia from '../zlecenia/service.js';
@@ -90,6 +91,41 @@ export function contact(db: Db, userId: string, id: string, note: string, next: 
   }).returning().get();
   recordChange(db, userId, 'lead_contacts', c.id, 'create', null, c);
   return { lead, contact: c };
+}
+
+/** Usuwa (miękko) jeden kontakt; pola leada (ostatni/następny) zostają. */
+export function removeContact(db: Db, userId: string, leadId: string, contactId: string): boolean {
+  const old = db.select().from(leadContacts).where(and(eq(leadContacts.id, contactId), eq(leadContacts.leadId, leadId), isNull(leadContacts.deletedAt))).get();
+  if (!old) return false;
+  const now = new Date().toISOString();
+  const row = db.update(leadContacts).set({ deletedAt: now, updatedAt: now }).where(eq(leadContacts.id, contactId)).returning().get();
+  recordChange(db, userId, 'lead_contacts', contactId, 'delete', old, row);
+  return true;
+}
+
+export const LEADY_EMAIL_DEFAULT = 'etner@etner-instalacje.pl';
+/** Adres porannego e-maila o zaległych kontaktach (ustawienie `leady_email`). */
+export const leadyEmail = (db: Db): string =>
+  db.select().from(settings).where(eq(settings.key, 'leady_email')).get()?.value || LEADY_EMAIL_DEFAULT;
+export function setLeadyEmail(db: Db, value: string): void {
+  const now = new Date().toISOString();
+  db.insert(settings).values({ key: 'leady_email', value, updatedAt: now }).onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: now } }).run();
+}
+
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const pl = (d: string) => d.split('-').reverse().join('.');
+/** E-mail z listą zaległych kontaktów albo null, gdy nie ma zaległych. */
+export function overdueMail(db: Db, today: string, baseUrl = ''): Omit<Mail, 'to'> | null {
+  const rows = overdue(db, today).sort((a, b) => a.nastepny.localeCompare(b.nastepny)).map((l) => {
+    const k = l.clientId ? klienci.get(db, l.clientId) : undefined;
+    return { klient: k?.nazwa ?? 'Bez klienta', temat: l.temat, termin: pl(l.nastepny), tel: k?.telefony.join(', ') ?? '', link: `${baseUrl.replace(/\/$/, '')}/#ld/${l.id}` };
+  });
+  if (!rows.length) return null;
+  return {
+    subject: `Zaległe kontakty z klientami: ${rows.length}`,
+    text: rows.map((r) => `- ${r.klient} – ${r.temat}, termin ${r.termin}${r.tel ? `, tel. ${r.tel}` : ''}\n  ${r.link}`).join('\n'),
+    html: `<ul>${rows.map((r) => `<li><a href="${esc(r.link)}"><b>${esc(r.klient)}</b> – ${esc(r.temat)}</a>, termin ${r.termin}${r.tel ? `, tel. ${esc(r.tel)}` : ''}</li>`).join('')}</ul>`,
+  };
 }
 
 /** Zlecenie z leada (ten sam klient i obiekt); `accept` zamyka lead statusem 4. wartości słownika. Wywołuj w runOp. */

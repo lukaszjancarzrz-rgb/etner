@@ -9,6 +9,7 @@ import { mountAuth } from './core/auth.js';
 import { logError } from './core/errors.js';
 import type { FileStore } from './core/files.js';
 import type { PumbleClient } from './core/pumble.js';
+import type { Mailer } from './core/mail.js';
 import { mountFiles } from './core/files-route.js';
 import { mountPush, type PushSender } from './core/notify.js';
 import { registerModules, type ModuleDef } from './core/registry.js';
@@ -40,6 +41,10 @@ export interface AppDeps {
   demoAccounts?: () => { name: string; role: string; ekipa: string | null; login: string; haslo: string }[];
   /** Pumble (PUMBLE_API_KEY); brak = kanały zleceń wyłączone. */
   pumble?: PumbleClient;
+  /** Wysyłka e-maili (SMTP_*; w testach atrapa); brak = e-maile pomijane. */
+  mailer?: Mailer;
+  /** Publiczny adres aplikacji do linków w e-mailach (BASE_URL / RENDER_EXTERNAL_URL). */
+  baseUrl?: string;
   /** Cookie Secure; domyślnie włączone w produkcji. */
   secureCookie?: boolean;
 }
