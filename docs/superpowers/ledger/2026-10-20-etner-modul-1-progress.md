@@ -195,3 +195,6 @@ Task 19a: review Approved (commits 6ce1867..08530a3); minors folded into the fir
 Task 19a: complete
 Task 19b: BASE 8c4676d; impl 9662fd8..e31b759; review: Important — dictionary rename/remove breaks records using the value; empty status list allowed
 - Ruling R36: real rename — PUT /api/dict items carry id; changed wartosc updates the dict row in place and cascades the new text to every referencing record (jobs, leads, users, checklists, schedule kod, tasks, shopping) in one tx with changes; removing a value in use → 409 WARTOSC_W_UZYCIU; empty status dictionaries rejected; status_zakupu exactly 2 values — cost: wider tx on rename (rare admin action).
+Task 19b: fix round 1/5 (all addressed; 2780673)
+Task 19b: minor (deferred): renamed kod stays inside unapproved schedule draft proposals; lead_contacts.status snapshot not renamed; no test for rename+reorder+add in one PUT; admin screens save without offline queue
+Task 19b: complete (commits 8c4676d..2780673, review clean). Task 19 done → owner checkpoint (plan STOP after 19).
