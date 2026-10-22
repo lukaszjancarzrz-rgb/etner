@@ -6,7 +6,7 @@ import * as users from '../uzytkownicy/service.js';
 import { routes } from './routes.js';
 import { leadContacts, leads } from './schema.js';
 import { logError } from '../../core/errors.js';
-import { leadyEmail, overdue, overdueMail } from './service.js';
+import { leadyEmail, overdue, overdueMail, setSetting, setting } from './service.js';
 
 /** Leady i historia kontaktów widzi tylko osoba z uprawnieniem `leady`. */
 export const leady: ModuleDef = {
@@ -27,10 +27,13 @@ export const leady: ModuleDef = {
     name: 'leady-email',
     schedule: '0 7 * * *',
     async run(deps) {
-      const m = overdueMail(deps.db, dayOf((deps.now ?? (() => new Date()))()), deps.baseUrl);
-      if (!m) return;
+      const day = dayOf((deps.now ?? (() => new Date()))());
+      // najwyżej raz na dzień (np. restart serwera o 7:00); zapis przed wysyłką jak `rano_ostatnio`
+      if (setting(deps.db, 'leady_email_ostatnio') === day) return;
+      setSetting(deps.db, 'leady_email_ostatnio', day);
       if (!deps.mailer) return logError(deps.db, 'cron:leady-email', new Error('Brak konfiguracji SMTP (SMTP_HOST, MAIL_FROM) – e-mail o zaległych kontaktach nie wysłany'));
-      await deps.mailer({ ...m, to: leadyEmail(deps.db) });
+      const m = overdueMail(deps.db, day, deps.baseUrl);
+      if (m) await deps.mailer({ ...m, to: leadyEmail(deps.db) });
     },
   }],
 };

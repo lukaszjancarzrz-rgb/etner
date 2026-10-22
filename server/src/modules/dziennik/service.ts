@@ -82,7 +82,7 @@ export function create(db: Db, user: User, input: DiaryCreate, peopleForJob: (jo
   const body = `${user.name}: ${tekst.slice(0, 200)}${photos ? ` 📷 ${photos}` : ''}`;
   if (type === 'lead') {
     const l = leady.get(db, ownerId)!;
-    out.push({ userIds: users.admins(db).filter((u) => u !== user.id), n: { title: `📝 Nowy wpis w dzienniku: ${l.numer} – ${l.temat}`, body, url: `#ld/${ownerId}~${entry.id}`, tag: `dz-${entry.id}` } });
+    out.push({ userIds: users.admins(db).filter((u) => u !== user.id), n: { title: `📝 Nowy wpis w dzienniku: ${leady.leadLabel(db, l)}`, body, url: `#ld/${ownerId}~${entry.id}`, tag: `dz-${entry.id}` } });
   } else {
     const job = zlecenia.get(db, ownerId)!;
     const label = zlecenia.jobLabel(db, job);

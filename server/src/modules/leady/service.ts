@@ -29,6 +29,10 @@ export const contactsOf = (db: Db, leadId: string): ContactRow[] =>
   db.select().from(leadContacts).where(and(eq(leadContacts.leadId, leadId), isNull(leadContacts.deletedAt)))
     .orderBy(desc(leadContacts.dzien), desc(leadContacts.createdAt)).all();
 
+/** „Klient – temat” (bez numeru leada, R: 19c pkt 13). */
+export const leadLabel = (db: Db, l: LeadRow): string =>
+  [l.clientId ? klienci.get(db, l.clientId)?.nazwa : undefined, l.temat].filter(Boolean).join(' – ');
+
 /** Otwarte leady z terminem kontaktu <= today. */
 export const overdue = (db: Db, today: string): LeadRow[] =>
   list(db).filter((l) => l.nastepny !== '' && l.nastepny <= today && slowniki.groupOf(db, 'status_leada', l.status) !== 'zamkniete');
@@ -93,10 +97,11 @@ export function contact(db: Db, userId: string, id: string, note: string, next: 
   return { lead, contact: c };
 }
 
-/** Usuwa (miękko) jeden kontakt; pola leada (ostatni/następny) zostają. */
+/** Usuwa (miękko) jeden kontakt; pola leada (ostatni/następny) zostają. Już usunięty kontakt tego leada: true (powtórka z kolejki offline). */
 export function removeContact(db: Db, userId: string, leadId: string, contactId: string): boolean {
-  const old = db.select().from(leadContacts).where(and(eq(leadContacts.id, contactId), eq(leadContacts.leadId, leadId), isNull(leadContacts.deletedAt))).get();
+  const old = db.select().from(leadContacts).where(and(eq(leadContacts.id, contactId), eq(leadContacts.leadId, leadId))).get();
   if (!old) return false;
+  if (old.deletedAt) return true;
   const now = new Date().toISOString();
   const row = db.update(leadContacts).set({ deletedAt: now, updatedAt: now }).where(eq(leadContacts.id, contactId)).returning().get();
   recordChange(db, userId, 'lead_contacts', contactId, 'delete', old, row);
@@ -105,12 +110,13 @@ export function removeContact(db: Db, userId: string, leadId: string, contactId:
 
 export const LEADY_EMAIL_DEFAULT = 'etner@etner-instalacje.pl';
 /** Adres porannego e-maila o zaległych kontaktach (ustawienie `leady_email`). */
-export const leadyEmail = (db: Db): string =>
-  db.select().from(settings).where(eq(settings.key, 'leady_email')).get()?.value || LEADY_EMAIL_DEFAULT;
-export function setLeadyEmail(db: Db, value: string): void {
+export const setting = (db: Db, key: string): string | undefined => db.select().from(settings).where(eq(settings.key, key)).get()?.value;
+export function setSetting(db: Db, key: string, value: string): void {
   const now = new Date().toISOString();
-  db.insert(settings).values({ key: 'leady_email', value, updatedAt: now }).onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: now } }).run();
+  db.insert(settings).values({ key, value, updatedAt: now }).onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: now } }).run();
 }
+export const leadyEmail = (db: Db): string => setting(db, 'leady_email') || LEADY_EMAIL_DEFAULT;
+export const setLeadyEmail = (db: Db, value: string): void => setSetting(db, 'leady_email', value);
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const pl = (d: string) => d.split('-').reverse().join('.');
@@ -143,6 +149,6 @@ export function toJob(db: Db, userId: string, leadId: string, job: LeadToJob['jo
   if (accept && !acceptStatus) throw bad('Brak statusu przyjęcia w słowniku');
   const upd = acceptStatus ? save(db, userId, { id: leadId, status: acceptStatus, ...link }) : link ? save(db, userId, { id: leadId, ...link }) : lead;
   diary?.addSystem({ type: 'lead', id: leadId }, `Utworzono zlecenie ${row.numer}`);
-  diary?.addSystem({ type: 'job', id: row.id }, `Z leada ${lead.numer}`);
+  diary?.addSystem({ type: 'job', id: row.id }, `Z leada: ${leadLabel(db, lead)}`);
   return { lead: upd!, job: row };
 }

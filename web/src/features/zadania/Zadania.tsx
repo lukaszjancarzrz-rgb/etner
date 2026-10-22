@@ -103,17 +103,17 @@ function Task({ t, onEdit }: { t: Rec; onEdit: () => void }) {
         <Checkbox checked={done} disabled={!!t._tmp} aria-label={`Zrobione: ${t.tekst}`} onCheckedChange={(v) => toggle(v === true)} className="h-8 w-8" />
       </label>
       <div className="min-w-0">
-      <button type="button" onClick={onEdit} disabled={!!t._tmp} className="block w-full min-w-0 text-left">
-        <span className={cn('block font-semibold leading-snug', done && 'text-ink-2 line-through decoration-2')}>{t.tekst}</span>
-        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
-          {t.priorytet != null && <Badge tone={t.priorytet === 1 ? 'ink' : 'line'}>P{t.priorytet}</Badge>}
-          {t.status !== first && !done && <Badge tone="action">{t.status}</Badge>}
-          {t.termin && <span className={cn(late && 'font-bold text-danger')}>{late ? 'po terminie ' : 'termin '}{t.termin === day ? 'dziś' : fmtDay(t.termin)}</span>}
-          {t.cykliczne && <span className="inline-flex items-center gap-1"><ArrowsClockwise className="h-4 w-4" aria-hidden />{t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne'}{t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}</span>}
-          {t._tmp && <span>wysyłanie…</span>}
-        </span>
-      </button>
-      {client && <a href={`#kl/${client.id}`} className="mt-1 inline-flex min-h-8 items-center gap-1 text-sm font-semibold text-action"><User className="h-4 w-4" aria-hidden />{client.nazwa}</a>}
+        <button type="button" onClick={onEdit} disabled={!!t._tmp} className="block w-full min-w-0 text-left">
+          <span className={cn('block font-semibold leading-snug', done && 'text-ink-2 line-through decoration-2')}>{t.tekst}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
+            {t.priorytet != null && <Badge tone={t.priorytet === 1 ? 'ink' : 'line'}>P{t.priorytet}</Badge>}
+            {t.status !== first && !done && <Badge tone="action">{t.status}</Badge>}
+            {t.termin && <span className={cn(late && 'font-bold text-danger')}>{late ? 'po terminie ' : 'termin '}{t.termin === day ? 'dziś' : fmtDay(t.termin)}</span>}
+            {t.cykliczne && <span className="inline-flex items-center gap-1"><ArrowsClockwise className="h-4 w-4" aria-hidden />{t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne'}{t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}</span>}
+            {t._tmp && <span>wysyłanie…</span>}
+          </span>
+        </button>
+        {client && <a href={`#kl/${client.id}`} className="mt-1 inline-flex min-h-8 items-center gap-1 text-sm font-semibold text-action"><User className="h-4 w-4" aria-hidden />{client.nazwa}</a>}
       </div>
       <Button variant="ghost" size="sm" aria-label={`Edytuj: ${t.tekst}`} onClick={onEdit} disabled={!!t._tmp} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>
     </li>

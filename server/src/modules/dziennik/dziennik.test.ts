@@ -113,7 +113,7 @@ describe('dziennik', () => {
     const t = new Date().toISOString();
     s.deps.db.insert(pushSubscriptions).values({ id: newId(), userId: w3.user.id, endpoint: 'adm2', p256dh: 'p', auth: 'a', createdAt: t, updatedAt: t }).run();
     await post(s, s.admin, { owner_type: 'lead', owner_id: s.lead.id });
-    expect(JSON.parse((s.push.mock.calls as any[])[0][1])).toMatchObject({ title: '📝 Nowy wpis w dzienniku: L0001 – Rekuperacja', url: expect.stringMatching(new RegExp(`^#ld/${s.lead.id}~`)) });
+    expect(JSON.parse((s.push.mock.calls as any[])[0][1])).toMatchObject({ title: '📝 Nowy wpis w dzienniku: Nowak – Rekuperacja', url: expect.stringMatching(new RegExp(`^#ld/${s.lead.id}~`)) });
     const adm = await s.app.request(`/api/attachments/${id}/file?v=thumb`, json(s.admin, 'GET'));
     expect(adm.status).toBe(302);
     expect(adm.headers.get('location')).toContain('/api/files/att/');
@@ -138,7 +138,7 @@ describe('dziennik', () => {
     expect(res.status).toBe(200);
     const rows = s.deps.db.$client.prepare('select owner_type, author_id, tekst from diary_entries order by owner_type').all();
     expect(rows).toEqual([
-      { owner_type: 'job', author_id: null, tekst: expect.stringMatching(/^Z leada L0001/) },
+      { owner_type: 'job', author_id: null, tekst: expect.stringMatching(/^Z leada: Nowak – Rekuperacja$/) },
       { owner_type: 'lead', author_id: null, tekst: expect.stringMatching(/^Utworzono zlecenie Z/) },
     ]);
   });

@@ -12,7 +12,6 @@ import type { Route } from '../../routes.js';
 import { LeadCard } from './LeadCard.js';
 import { LeadForm } from './LeadForm.js';
 import { leadSections } from './model.js';
-import { LeadyEmail } from './LeadyEmail.js';
 
 /** Leady (admin): `#leady` lista, `#ld/<id>~<wpis>` karta; na komputerze lista obok karty. */
 export function Leady({ route }: { route: Route }) {
@@ -87,7 +86,6 @@ function LeadList({ selected }: { selected?: string }) {
           </div>
         );
       })}
-      {!q && <LeadyEmail />}
       {creating && <LeadForm onClose={() => setCreating(false)} />}
     </section>
   );

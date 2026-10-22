@@ -60,7 +60,7 @@ describe('leady', () => {
     expect(lead.status).toBe('Przyjęta');
     expect(lead.zamknieteAt).toBeTruthy();
     expect(diary.addSystem).toHaveBeenCalledWith({ type: 'lead', id: l.id }, `Utworzono zlecenie ${job.numer}`);
-    expect(diary.addSystem).toHaveBeenCalledWith({ type: 'job', id: job.id }, 'Z leada L0001');
+    expect(diary.addSystem).toHaveBeenCalledWith({ type: 'job', id: job.id }, 'Z leada: Nowak – Klima');
     // bez accept status leada bez zmian
     const l2 = await (await app.request('/api/leads', req(admin, 'POST', { clientId: k.client.id, temat: 'Inny' }))).json();
     const r2 = await (await app.request(`/api/leads/${l2.id}/to-job`, req(admin, 'POST', { job: { status: 'Nowe' } }))).json();
@@ -103,25 +103,31 @@ describe('leady', () => {
     const l2 = await (await app.request('/api/leads', req(admin, 'POST', { temat: 'Y' }))).json();
     expect((await app.request(`/api/leads/${l2.id}/contacts/${contact.id}`, req(admin, 'DELETE'))).status).toBe(404);
     expect((await app.request(`/api/leads/${l.id}/contacts/${contact.id}`, req(admin, 'DELETE'))).status).toBe(200);
-    expect((await app.request(`/api/leads/${l.id}/contacts/${contact.id}`, req(admin, 'DELETE'))).status).toBe(404);
+    expect((await app.request(`/api/leads/${l.id}/contacts/${contact.id}`, req(admin, 'DELETE'))).status).toBe(200); // powtórka: bez zmian
+    expect((await app.request(`/api/leads/${l.id}/contacts/brak`, req(admin, 'DELETE'))).status).toBe(404);
     const full = await (await app.request(`/api/leads/${l.id}`, req(admin, 'GET'))).json();
     expect(full.contacts).toEqual([]);
     expect(full).toMatchObject({ nastepny: lead.nastepny, ostatni: lead.ostatni });
     const feed = (await (await app.request('/api/changes?since=0', req(admin, 'GET'))).json()).changes as any[];
     expect(feed.some((c) => c.entity === 'lead_contacts' && c.id === contact.id && c.action === 'delete')).toBe(true);
   });
-  it('e-mail 7:00: lista zaległych do adresu z ustawień; nic gdy zero; brak SMTP = log błędu', async () => {
+  it('e-mail 7:00: lista zaległych do adresu z ustawień; raz na dzień; nic gdy zero; brak SMTP = jeden log na dzień', async () => {
     const { app, admin, k, deps } = await setup();
     const def = modules.find((m) => m.name === 'leady')!.cron!.find((d) => d.name === 'leady-email')!;
     expect(def.schedule).toBe('0 7 * * *');
+    let day = 10;
+    deps.now = () => new Date(`2026-03-${day}T06:00:00Z`);
+    const next = () => { day += 1; return def.run(deps); };
     const mailer = vi.fn(async () => {});
     Object.assign(deps, { mailer, baseUrl: 'https://etner.example/' });
     await def.run(deps);
     expect(mailer).not.toHaveBeenCalled();
     const mk = (nastepny: string, temat: string, status?: string) => app.request('/api/leads', req(admin, 'POST', { clientId: k.client.id, temat, nastepny, status }));
     const l = await (await mk('2026-03-09', 'Klima <biuro>')).json();
-    await mk('2026-03-11', 'Przyszły'); await mk('2026-03-01', 'Zamknięty', 'Odrzucona');
-    await def.run(deps);
+    await mk('2026-03-30', 'Przyszły'); await mk('2026-03-01', 'Zamknięty', 'Odrzucona');
+    await def.run(deps); // ten sam dzień: już było
+    expect(mailer).not.toHaveBeenCalled();
+    await next();
     expect(mailer).toHaveBeenCalledTimes(1);
     const m = (mailer.mock.calls[0] as any)[0];
     expect(m).toMatchObject({ to: 'etner@etner-instalacje.pl', subject: 'Zaległe kontakty z klientami: 1' });
@@ -131,11 +137,12 @@ describe('leady', () => {
     expect((await app.request('/api/settings/leady-email', req(admin, 'PUT', { email: 'zle' }))).status).toBe(400);
     expect(await (await app.request('/api/settings/leady-email', req(admin, 'PUT', { email: 'biuro@firma.pl' }))).json()).toEqual({ email: 'biuro@firma.pl' });
     expect(await (await app.request('/api/settings/leady-email', req(admin, 'GET'))).json()).toEqual({ email: 'biuro@firma.pl' });
-    await def.run(deps);
+    await next();
     expect((mailer.mock.calls[1] as any)[0].to).toBe('biuro@firma.pl');
     delete deps.mailer;
-    await def.run(deps);
+    await next(); await def.run(deps);
     const errs = await (await app.request('/api/errors', req(admin, 'GET'))).json();
     expect(errs.filter((e: any) => e.where === 'cron:leady-email')).toHaveLength(1);
   });
+
 });

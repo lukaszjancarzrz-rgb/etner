@@ -34,7 +34,8 @@ export function save(db: Db, userId: string, input: TaskSaveInput, today: string
     const cykl = (patch.cykl === undefined ? old?.cykl : patch.cykl) as Parameters<typeof nextTermin>[1] | null | undefined;
     Object.assign(patch, { status: first, ostatnio: today }, cykl && { termin: nextTermin(today, cykl) });
   }
-  if (patch.clientId && !klienci.get(db, patch.clientId as string)) throw new HTTPException(400, { message: 'Nie znaleziono klienta' });
+  // tylko przy zmianie: zadanie z klientem usuniętym później nadal da się zapisać
+  if (patch.clientId && patch.clientId !== old?.clientId && !klienci.get(db, patch.clientId as string)) throw new HTTPException(400, { message: 'Nie znaleziono klienta' });
   const now = new Date().toISOString();
   if (old) {
     const row = db.update(tasks).set({ ...patch, updatedAt: now }).where(eq(tasks.id, old.id)).returning().get();
@@ -46,9 +47,11 @@ export function save(db: Db, userId: string, input: TaskSaveInput, today: string
   return row;
 }
 
+/** Już usunięte zadanie: true (powtórka z kolejki offline). */
 export function remove(db: Db, userId: string, id: string): boolean {
-  const old = get(db, id);
+  const old = db.select().from(tasks).where(eq(tasks.id, id)).get();
   if (!old) return false;
+  if (old.deletedAt) return true;
   const now = new Date().toISOString();
   const row = db.update(tasks).set({ deletedAt: now, updatedAt: now }).where(eq(tasks.id, id)).returning().get();
   recordChange(db, userId, 'tasks', id, 'delete', old, row);

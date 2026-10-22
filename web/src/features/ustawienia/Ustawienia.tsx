@@ -17,10 +17,11 @@ import { move } from '../uzytkownicy/model.js';
 import { AvatarUpload } from '../uzytkownicy/AvatarUpload.js';
 import { Card } from './card.js';
 import { Templates } from './Listy.js';
+import { LeadyEmail } from '../leady/LeadyEmail.js';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Brak połączenia z serwerem.');
 
-/** Ustawienia: moje zdjęcie, motyw, powiadomienia, hasło; admin dodatkowo listy predefiniowane, słowniki, godzina przypomnienia, log błędów, stan kopii. */
+/** Ustawienia: moje zdjęcie, motyw, powiadomienia, hasło; admin dodatkowo listy predefiniowane, słowniki, godzina przypomnienia, e-mail o zaległych kontaktach, log błędów, stan kopii. */
 export function Ustawienia() {
   const admin = useIsAdmin();
   return (
@@ -31,6 +32,7 @@ export function Ustawienia() {
         <Notifications />
         <ChangePassword />
         {admin && <Morning />}
+        {admin && <LeadyEmail />}
         {admin && <Backups />}
       </div>
       {admin && (

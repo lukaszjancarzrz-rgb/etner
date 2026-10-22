@@ -4,6 +4,8 @@ import { addUser, loginCookie, testDeps } from '../../test-utils.js';
 import { modules } from '../index.js';
 import { seedBase } from '../slowniki/seed.js';
 import { create as newClient } from '../klienci/service.js';
+import { clients } from '../klienci/schema.js';
+import { eq } from 'drizzle-orm';
 
 async function setup() {
   const deps = testDeps({ now: () => new Date('2026-03-10T23:30:00Z') }); // 00:30 następnego dnia w Warszawie
@@ -55,5 +57,12 @@ describe('zadania', () => {
     expect(t.clientId).toBe(k.client.id);
     expect((await (await app.request(`/api/tasks/${t.id}`, req(admin, 'PUT', { clientId: null }))).json()).clientId).toBeNull();
     expect((await app.request(`/api/tasks/${t.id}`, req(admin, 'PUT', { clientId: 'brak' }))).status).toBe(400);
+    // klient usunięty po przypisaniu: zadanie nadal da się zapisać
+    await app.request(`/api/tasks/${t.id}`, req(admin, 'PUT', { clientId: k.client.id }));
+    deps.db.update(clients).set({ deletedAt: new Date().toISOString() }).where(eq(clients.id, k.client.id)).run();
+    expect((await app.request(`/api/tasks/${t.id}`, req(admin, 'PUT', { tekst: 'Faktura 2', clientId: k.client.id }))).status).toBe(200);
+    expect((await app.request(`/api/tasks/${t.id}`, req(admin, 'DELETE'))).status).toBe(200);
+    expect((await app.request(`/api/tasks/${t.id}`, req(admin, 'DELETE'))).status).toBe(200); // powtórka
+    expect((await app.request('/api/tasks/brak', req(admin, 'DELETE'))).status).toBe(404);
   });
 });
