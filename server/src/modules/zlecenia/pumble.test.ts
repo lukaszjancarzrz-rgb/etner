@@ -7,6 +7,7 @@ import { modules } from '../index.js';
 import { create as newClient } from '../klienci/service.js';
 import { seedBase } from '../slowniki/seed.js';
 import * as users from '../uzytkownicy/service.js';
+import { pumbleMessages } from './schema.js';
 import { channelSlug, idle, messages, pollTick } from './pumble.js';
 import { get } from './service.js';
 
@@ -351,5 +352,33 @@ describe('Pumble', () => {
     expect(f!.text).toBe('');
     expect(JSON.parse(f!.files!)).toEqual({ files: [{ name: 'a.pdf', mimeType: 'application/pdf' }] });
     expect(n!.files).toBeNull();
+  });
+
+  it('czysty szybki obieg nie kasuje dedupu błędów pełnego obiegu', async () => {
+    const s = await setup();
+    const bad = await newJob(s), ok = await newJob(s);
+    s.f.channels.delete(bad.pumbleChannelId);
+    await s.app.request(`/api/jobs/${ok.id}/pumble/watch`, req(s.worker, 'POST'));
+    const n = () => recentErrors(s.deps.db).filter((e: any) => e.where === 'pumble:obieg').length;
+    await pollTick(s.deps);
+    await pollTick(s.deps, true);
+    await pollTick(s.deps);
+    expect(n()).toBe(1);
+  });
+
+  it('wiadomość wpisana przez send() w trakcie obiegu nie cofa paczki', async () => {
+    const s = await setup();
+    const j = await newJob(s);
+    const m1 = s.f.post(j.pumbleChannelId, 'pb', 'jedna', new Date('2026-10-21T08:00:00Z'));
+    s.f.post(j.pumbleChannelId, 'pb', 'dwie', new Date('2026-10-21T08:01:00Z'));
+    clock = new Date(clock.getTime() + 11 * 60_000); // wygasła pamięć podręczna osób: listUsers wywoła się po sprawdzeniu znanych
+    const lu = s.f.client.listUsers;
+    s.f.client.listUsers = async () => {
+      const ts = new Date().toISOString();
+      s.deps.db.insert(pumbleMessages).values({ id: 'x1', jobId: j.id, messageId: m1.id, authorName: 'Szef', text: 'jedna', sentAt: ts, createdAt: ts, updatedAt: ts }).run();
+      return lu();
+    };
+    await pollTick(s.deps);
+    expect(messages(s.deps.db, j.id).map((m) => m.text).sort()).toEqual(['dwie', 'jedna']);
   });
 });

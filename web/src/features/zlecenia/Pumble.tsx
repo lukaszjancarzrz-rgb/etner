@@ -20,21 +20,12 @@ export const jobMessages = (all: Rec[], jobId: string): Rec[] =>
 
 const IMG = /\.(jpe?g|png|gif|webp|heic|avif|bmp)$/i;
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
-/** Pliki wiadomości (kolumna `files`: {files, attachments?}); podglądy tylko z adresów, które Pumble podaje samo (bez klucza API). */
-export function fileInfo(m: Rec): { images: number; others: number; previews: { url: string; name: string }[] } {
+/** Liczba zdjęć i innych plików wiadomości (kolumna `files`: {files, attachments?}). Podglądów nie ma: files.pumble.com odrzuca klucz API (401). */
+export function fileInfo(m: Rec): { images: number; others: number } {
   let list: Rec[] = [];
-  try { const j = JSON.parse(m.files ?? 'null'); list = Array.isArray(j) ? j : j?.files ?? []; } catch { /* uszkodzone dane = brak plików */ }
-  const previews: { url: string; name: string }[] = [];
-  let images = 0;
-  for (const f of list) {
-    const name = str(f.name) || str(f.fileName) || str(f.title);
-    const isImg = str(f.mimeType ?? f.mimetype ?? f.contentType).startsWith('image/') || IMG.test(name);
-    if (isImg) images++;
-    // shortcut: image preview needs live check of Pumble file auth (R35)
-    const url = [f.thumbnailUrl, f.previewUrl, isImg ? f.url : ''].map(str).find((u) => /^https:\/\//.test(u));
-    if (isImg && url) previews.push({ url, name: name || 'zdjęcie' });
-  }
-  return { images, others: list.length - images, previews };
+  try { const j = JSON.parse(m.files ?? 'null'); list = Array.isArray(j) ? j : [...(j?.files ?? []), ...(j?.attachments ?? [])]; } catch { /* uszkodzone dane = brak plików */ }
+  const images = list.filter((f) => str(f.mimeType ?? f.mimetype ?? f.contentType).startsWith('image/') || IMG.test(str(f.name) || str(f.fileName) || str(f.title))).length;
+  return { images, others: list.length - images };
 }
 const plural = (n: number, one: string, few: string, many: string) => (n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 > 20) ? few : many);
 export const fileLine = (author: string, { images, others }: { images: number; others: number }): { img: boolean; text: string }[] => [
@@ -113,16 +104,10 @@ export function Pumble({ job }: { job: Rec }) {
 }
 
 function Files({ m }: { m: Rec }) {
-  const f = fileInfo(m);
   if (!m.files) return null;
-  return (
-    <>
-      {f.previews.length > 0 && <div className="flex flex-wrap gap-2">{f.previews.map((p) => <img key={p.url} src={p.url} alt={p.name} loading="lazy" className="h-24 max-w-full rounded-lg border border-line object-cover" />)}</div>}
-      {fileLine(m.authorName, f).filter((l) => !(l.img && f.previews.length)).map((l) => (
-        <p key={l.text} className="flex items-center gap-2 text-sm text-ink-2">{l.img ? <Camera className="h-5 w-5" /> : <PaperclipHorizontal className="h-5 w-5" />}{l.text}</p>
-      ))}
-    </>
-  );
+  return <>{fileLine(m.authorName, fileInfo(m)).map((l) => (
+    <p key={l.text} className="flex items-center gap-2 text-sm text-ink-2">{l.img ? <Camera className="h-5 w-5" /> : <PaperclipHorizontal className="h-5 w-5" />}{l.text}</p>
+  ))}</>;
 }
 
 function SendForm({ jobId, online }: { jobId: string; online: boolean }) {

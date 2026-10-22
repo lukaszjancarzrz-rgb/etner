@@ -368,7 +368,7 @@ test('Pumble (atrapa): sekcja na karcie zlecenia, wysłanie dodaje wiadomość',
   const text = `E2E ${info.project.name}: wjeżdżamy o 8`;
   await sec.getByPlaceholder('Napisz do kanału…').fill(text);
   await sec.getByPlaceholder('Napisz do kanału…').press('Enter');
-  await expect(sec.getByText(text)).toBeVisible();
+  await expect(sec.locator('p', { hasText: text })).toBeVisible(); // nie pole tekstowe, które jeszcze nie zdążyło się wyczyścić
   await expect(sec.getByPlaceholder('Napisz do kanału…')).toHaveValue('');
 });
 

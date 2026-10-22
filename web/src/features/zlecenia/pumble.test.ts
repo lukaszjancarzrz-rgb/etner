@@ -14,8 +14,9 @@ describe('Pumble', () => {
       { img: true, text: 'Bartek wrzucił 3 zdjęcia' }, { img: false, text: 'Bartek wrzucił plik' }]);
     expect(fileLine('B', fileInfo(m(Array.from({ length: 5 }, () => ({ name: 'a.png' })))))[0]!.text).toBe('B wrzucił 5 zdjęć');
   });
-  it('pliki: podgląd tylko z https i tylko dla zdjęć', () => {
-    const f = fileInfo({ id: 'x', files: JSON.stringify([{ name: 'a.jpg', thumbnailUrl: 'https://cdn.example/t.jpg' }, { name: 'b.jpg', url: 'http://x/b.jpg' }, { name: 'c.pdf', url: 'https://x/c.pdf' }]) });
-    expect(f.previews).toEqual([{ url: 'https://cdn.example/t.jpg', name: 'a.jpg' }]);
+  it('pliki: liczy też attachments; liczby mnogie 12, 21, 22', () => {
+    expect(fileLine('B', fileInfo({ id: 'x', files: JSON.stringify({ files: [{ name: 'a.pdf' }], attachments: [{ name: 'b.pdf' }] }) }))[0]!.text).toBe('B wrzucił 2 pliki');
+    const t = (n: number) => fileLine('B', { images: n, others: 0 })[0]!.text;
+    expect([t(12), t(21), t(22)]).toEqual(['B wrzucił 12 zdjęć', 'B wrzucił 21 zdjęć', 'B wrzucił 22 zdjęcia']);
   });
 });

@@ -32,13 +32,13 @@ type St = {
   watch: Map<string, number>;
   rr: number; running: boolean; backoffMs: number; backoffUntil: number;
   /** Ostatni wpis zbiorczy błędów kanałów: zbiór kanałów i czas (nowy wpis przy zmianie zbioru albo raz na godzinę). */
-  lastSummary?: { key: string; at: number };
+  lastSummary: { fast?: { key: string; at: number }; slow?: { key: string; at: number } };
 };
 const states = new WeakMap<PumbleClient, St>();
 const st = (p: PumbleClient): St => {
   let s = states.get(p);
   if (!s) states.set(p, (s = { tried: new Map(), added: new Map(), checked: new Set(), publicLogged: new Set(), missLogged: new Set(), badLogged: new Set(),
-    inflight: new Map(), pending: new Set(), sending: new Map(), bg: new Set(), watch: new Map(), rr: 0, running: false, backoffMs: 0, backoffUntil: 0 }));
+    inflight: new Map(), pending: new Set(), sending: new Map(), bg: new Set(), watch: new Map(), rr: 0, running: false, backoffMs: 0, backoffUntil: 0, lastSummary: {} }));
   return s;
 };
 /** Zapis sygnału „oglądam” kartę zlecenia. */
@@ -219,12 +219,13 @@ async function pollJob(deps: AppDeps, p: PumbleClient, j: svc.JobRow): Promise<n
       const pre = m.authorAppId || m.author === me.id ? PREFIX.exec(m.text ?? '') : null;
       const sig = pre && byName.has(pre[1]!) ? pre : null;
       const row = t.insert(pumbleMessages).values({
-        id: newId(), jobId: j.id, messageId: m.id, authorName: sig?.[1] ?? u?.name ?? 'Pumble', text: (sig?.[2] ?? m.text) || '',
+        id: newId(), jobId: j.id, messageId: m.id, authorName: sig?.[1] ?? u?.name ?? 'ktoś', text: (sig?.[2] ?? m.text) || '',
         files: m.files?.length || m.attachments?.length ? JSON.stringify({ files: m.files ?? [], ...(m.attachments?.length && { attachments: m.attachments }) }) : null,
         sentAt: iso(m), threadRootId: m.threadRootId ?? null, createdAt: ts, updatedAt: ts,
         createdBy: (sig ? byName.get(sig[1]!) : u?.email && byEmail.get(u.email.toLowerCase())) || null,
-      }).returning().get();
-      recordChange(t, null, 'pumble_messages', row.id, 'create', null, row);
+      }).onConflictDoNothing().returning().get();
+      // wiadomość wpisana w międzyczasie przez send() (UNIQUE message_id): pomijamy, bez cofania paczki
+      if (row) recordChange(t, null, 'pumble_messages', row.id, 'create', null, row);
     }
     trim(t, j.id);
   });
@@ -287,11 +288,13 @@ export async function pollTick(deps: AppDeps, fast = false): Promise<void> {
   } finally { s.running = false; }
   // jeden wpis, gdy zmienia się zbiór psujących się kanałów, i najwyżej raz na godzinę dla tego samego (usunięty kanał nie zalewa dziennika)
   const key = [...new Set(errs.map((x) => x.cid))].sort().join(',');
-  if (key && (s.lastSummary?.key !== key || t - s.lastSummary.at >= 3_600_000)) {
-    s.lastSummary = { key, at: t };
+  // osobno dla obiegu szybkiego i pełnego: czysty szybki obieg nie kasuje dedupu pełnego
+  const mode = fast ? 'fast' : 'slow', last = s.lastSummary[mode];
+  if (key && (last?.key !== key || t - last.at >= 3_600_000)) {
+    s.lastSummary[mode] = { key, at: t };
     const e0 = errs[0]!.e;
     logError(deps.db, 'pumble:obieg', new Error(`${errs.length} błędów kanałów w obiegu (${key}), pierwszy: ${e0 instanceof Error ? e0.message : e0}`));
-  } else if (!key) s.lastSummary = undefined;
+  } else if (!key) s.lastSummary[mode] = undefined;
 }
 
 /** Obieg pełny co 30 s (pierwszy od razu) i szybki (oglądane kanały) co 3 s; zwraca stop(). Obiegi nie nakładają się (`running`). */
