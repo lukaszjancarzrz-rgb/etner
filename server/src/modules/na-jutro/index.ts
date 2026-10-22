@@ -20,6 +20,7 @@ export const naJutro: ModuleDef = {
     // Przeniesienie do innej ekipy: stara ekipa dostaje tylko polecenie usunięcia, bez nowej treści.
     return b === user.ekipa ? { ...ch, action: 'delete', after: { id: ch.entityId, ekipa: b, deletedAt: ch.at } } : false;
   },
+  // o godzinie „rano” (ustawienia, domyślnie 07:00): każdy z ekipy, która ma niezabrane rzeczy na dziś
   cron: [{
     name: 'na-jutro-rano',
     schedule: 'rano',
@@ -28,7 +29,7 @@ export const naJutro: ModuleDef = {
       for (const r of pending(deps.db, dayOf((deps.now ?? (() => new Date()))()))) byEkipa.set(r.ekipa, [...(byEkipa.get(r.ekipa) ?? []), r.tekst]);
       for (const [ekipa, list] of byEkipa) {
         const body = list.length > 3 ? `${list.slice(0, 3).join(', ')} i ${list.length - 3} więcej` : list.join(', ');
-        await notify(deps, users.crewMembers(deps.db, ekipa), { title: `📦 ${ekipa}: do zabrania na dziś (${list.length})`, body, url: '#jutro', tag: `jutro-rano-${ekipa}` });
+        await notify(deps, users.crewMembers(deps.db, ekipa), { title: `📦 Do zabrania dziś: ${list.length}`, body, url: '#jutro', tag: `jutro-rano-${ekipa}` });
       }
     },
   }],

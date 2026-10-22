@@ -91,6 +91,8 @@ describe('na jutro', () => {
     expect(p.map((x) => x.endpoint).sort()).toEqual([w1.user.name, w1b.user.name, w2.user.name].sort());
     expect(p.find((x) => x.endpoint === w1.user.name)!.body).toContain('Wiertarka');
     expect(p.find((x) => x.endpoint === w1.user.name)!.body).not.toContain('Zrobione już');
+    expect(p.find((x) => x.endpoint === w1.user.name)).toMatchObject({ title: '📦 Do zabrania dziś: 1', url: '#jutro' });
+    expect(p.find((x) => x.endpoint === w2.user.name)!.body).not.toContain('Jutrzejsze');
     // godzina 'rano' w Warszawie (06:00Z = 07:00 CET) odpala def przez rankoTick
     push.mockClear();
     await rankoTick(deps, [def], new Date('2026-03-10T06:00:00Z'));
