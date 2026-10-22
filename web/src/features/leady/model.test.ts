@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { jobPrefill, leadSections, nextAfterContact, parseZl } from './model.js';
+import { QUICK_DATES, contactGroups, jobPrefill, leadSections, nextAfterContact, parseZl } from './model.js';
 
 const G: Record<string, string> = { Nowy: 'aktualne', 'Na kiedyś': 'pozniej', Przyjęta: 'zamkniete' };
 const group = (s: string) => G[s] ?? 'aktualne';
@@ -51,5 +51,21 @@ describe('parseZl', () => {
     expect(parseZl('abc')).toHaveProperty('error');
     expect(parseZl('100 000 000,00')).toEqual({ gr: 10000000000 });
     expect(parseZl('100 000 000,01')).toEqual({ error: 'Maksymalnie 100 000 000,00 zł' });
+  });
+});
+
+describe('QUICK_DATES', () => {
+  it('+3 dni, +1 tydz., +1 mies. (koniec miesiąca przycięty)', () => {
+    expect(QUICK_DATES.map((q) => q.at('2026-10-22'))).toEqual(['2026-10-25', '2026-10-29', '2026-11-22']);
+    expect(QUICK_DATES.map((q) => q.at('2027-01-31'))).toEqual(['2027-02-03', '2027-02-07', '2027-02-28']);
+  });
+});
+
+describe('contactGroups', () => {
+  it('kolejność słownika, nieznany status na końcu, od najnowszego', () => {
+    const C = (id: string, status: string, dzien: string, createdAt = '') => ({ id, status, dzien, createdAt });
+    const g = contactGroups([C('1', 'Nowy', '2026-10-01'), C('2', 'Oferta', '2026-10-05'), C('3', 'Nowy', '2026-10-03'), C('4', 'Stary', '2026-09-01'),
+      C('5', 'Nowy', '2026-10-03', '2026-10-03T12:00')], ['Nowy', 'Oferta', 'Przyjęta']);
+    expect(g.map((x) => [x.status, x.list.map((c) => c.id)])).toEqual([['Nowy', ['5', '3', '1']], ['Oferta', ['2']], ['Stary', ['4']]]);
   });
 });

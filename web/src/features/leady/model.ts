@@ -1,4 +1,4 @@
-import { toGr } from '@etner/shared';
+import { addDays, addMonths, toGr } from '@etner/shared';
 import type { Rec } from '../../core/store.js';
 
 const MAX_GR = 100_000_000_00;
@@ -52,4 +52,18 @@ export function jobPrefill(lead: Rec, statusy: Rec[]) {
     status: (statusy.find((s) => (s.grupa ?? 'aktualne') === 'aktualne')?.wartosc as string | undefined) ?? '',
     scope: String(lead.opis || lead.temat || '').trim(),
   };
+}
+
+/** Szybkie terminy kontaktu liczone od dziś. */
+export const QUICK_DATES = [
+  { label: '+3 dni', at: (d: string) => addDays(d, 3) },
+  { label: '+1 tydz.', at: (d: string) => addDays(d, 7) },
+  { label: '+1 mies.', at: (d: string) => addMonths(d, 1) },
+] as const;
+
+const newest = (a: Rec, b: Rec) => String(b.dzien).localeCompare(String(a.dzien)) || String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''));
+/** R37: kontakty w grupach wg statusu z chwili kontaktu, w kolejności słownika (nieznane na końcu), od najnowszego. */
+export function contactGroups(contacts: Rec[], statusy: string[]) {
+  const names = [...statusy, ...new Set(contacts.map((c) => c.status as string).filter((s) => !statusy.includes(s)))];
+  return names.map((status) => ({ status, list: contacts.filter((c) => c.status === status).sort(newest) })).filter((g) => g.list.length);
 }

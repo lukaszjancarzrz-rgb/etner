@@ -2,7 +2,7 @@ import { Handshake, MagnifyingGlass, Phone, Plus } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { fmtDay, matches, today, useLoading, useStatusGroup } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
-import { Empty, SectionTitle } from '../../core/ui/bits.js';
+import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { CategoryPill, useCatColor } from '../../core/ui/category.js';
 import { cn } from '../../core/ui/cn.js';
@@ -12,6 +12,7 @@ import type { Route } from '../../routes.js';
 import { LeadCard } from './LeadCard.js';
 import { LeadForm } from './LeadForm.js';
 import { leadSections } from './model.js';
+import { LeadyEmail } from './LeadyEmail.js';
 
 /** Leady (admin): `#leady` lista, `#ld/<id>~<wpis>` karta; na komputerze lista obok karty. */
 export function Leady({ route }: { route: Route }) {
@@ -86,6 +87,7 @@ function LeadList({ selected }: { selected?: string }) {
           </div>
         );
       })}
+      {!q && <LeadyEmail />}
       {creating && <LeadForm onClose={() => setCreating(false)} />}
     </section>
   );
@@ -96,10 +98,11 @@ function LeadRow({ l, on, overdue }: { l: Rec; on: boolean; overdue?: string }) 
   return (
     <li>
       <a href={`#ld/${l.id}`} aria-current={on ? 'page' : undefined}
-        className={cn('grid grid-cols-[minmax(0,1fr)] gap-1 rounded-2xl border bg-card px-4 py-3 transition-colors duration-200 hover:border-ink-2', on ? 'border-action ring-2 ring-action/25' : overdue ? 'border-danger/60' : 'border-line')}>
+        className={cn('grid grid-cols-[minmax(0,1fr)] gap-1 rounded-2xl border bg-card px-4 py-3 transition-colors duration-200 hover:border-ink-2', on ? 'border-action ring-2 ring-action/25' : overdue ? 'border-danger/60' : 'border-line', overdue && 'border-l-4 border-l-danger')}>
         <span className="flex items-center gap-2 text-sm">
-          <span className="font-semibold tabular-nums text-ink-2">{l._tmp ? 'zapisywanie' : l.numer}</span>
+          {l._tmp && <span className="font-semibold text-ink-2">zapisywanie</span>}
           <span className="truncate text-ink-2">{l.status}</span>
+          {overdue && <Badge tone="warn">zaległe</Badge>}
           {l.nastepny && (
             <span className={cn('ml-auto inline-flex shrink-0 items-center gap-1', overdue ? 'font-bold text-danger' : 'text-ink-2')}>
               <Phone className="h-4 w-4" weight={overdue ? 'fill' : 'regular'} aria-hidden />

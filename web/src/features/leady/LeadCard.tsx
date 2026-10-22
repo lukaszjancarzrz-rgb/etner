@@ -1,10 +1,10 @@
-import { ArrowLeft, Briefcase, Handshake, MapPin, PencilSimple, Phone } from '@phosphor-icons/react';
+import { ArrowLeft, Briefcase, EnvelopeSimple, Handshake, MapPin, PencilSimple, Phone, Trash } from '@phosphor-icons/react';
 import { fmtZl } from '@etner/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { fmtDay, fmtWhen, telHref, today, useDict, useLoading, useMe, useNames, useStatusGroup } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { store, useEntities, useEntity, type Rec } from '../../core/store.js';
-import { Empty, SectionTitle, Textarea } from '../../core/ui/bits.js';
+import { Badge, Empty, SectionTitle, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { CategoryPill, useCatColor } from '../../core/ui/category.js';
 import { cn } from '../../core/ui/cn.js';
@@ -16,8 +16,8 @@ import { tmpId, updateVia, withoutEchoes } from '../../core/write.js';
 import { Diary } from '../dziennik/Diary.js';
 import { siteLabel } from '../klienci/ClientPicker.js';
 import { JobForm } from '../zlecenia/JobForm.js';
-import { isOverdue, nextAfterContact } from './model.js';
-import { LeadForm } from './LeadForm.js';
+import { contactGroups, isOverdue, nextAfterContact } from './model.js';
+import { LeadForm, QuickDates } from './LeadForm.js';
 
 export function LeadCard({ id, highlight }: { id: string; highlight?: string }) {
   const lead = useEntity('leads', id);
@@ -44,18 +44,19 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
   const day = today();
   const overdue = isOverdue(lead, group(lead.status), day);
   const phones = (client?.telefony as string[] | undefined) ?? [];
+  const emails = (client?.emaile as string[] | undefined) ?? [];
   const setStatus = (status: string) => void updateVia('leads', id, { status }, { kind: 'lead', url: `/api/leads/${id}`, method: 'PUT', body: { status } })
     .catch((e: Error) => toast('Status nie został zmieniony', { body: e.message, tone: 'error' }));
 
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
       <a href="#leady" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action desk:hidden"><ArrowLeft className="h-5 w-5" />Leady</a>
-      <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+      <div className={cn('overflow-hidden rounded-2xl border border-line bg-card shadow-card', overdue && 'border-l-4 border-l-danger')}>
         <div className="grid gap-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
-                <span className="font-semibold tabular-nums">{lead._tmp ? 'zapisywanie' : lead.numer}</span>
+                {lead._tmp && <span className="font-semibold">zapisywanie</span>}
                 {lead.kategoria && <CategoryPill name={lead.kategoria} color={cat(lead.kategoria)} />}
               </p>
               <h2 className="mt-1 font-wide text-2xl font-extrabold leading-tight">
@@ -80,9 +81,10 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
             <Button onClick={() => setForm('job')} disabled={!!lead._tmp} className="justify-self-stretch min-[560px]:justify-self-start"><Briefcase className="h-5 w-5" weight="fill" />Zrób zlecenie</Button>
           )}
 
-          {phones.length > 0 && (
+          {phones.length + emails.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {phones.map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-full border border-line px-5 font-semibold"><Phone className="h-5 w-5" />{t}</a>)}
+              {emails.map((m) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-full border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
             </div>
           )}
 
@@ -92,7 +94,7 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
               <dd className="mt-1"><Select aria-label="Status leada" value={lead.status} onValueChange={setStatus} options={statusy.map((s) => ({ value: s.wartosc, label: s.wartosc }))} className="h-11" /></dd>
             </div>
             <Info k="Następny kontakt">
-              {lead.nastepny ? <span className={cn(overdue && 'text-danger')}>{fmtDay(lead.nastepny)}{overdue && ' (zaległy)'}</span> : 'brak'}
+              {lead.nastepny ? <span className={cn('inline-flex flex-wrap items-center gap-2', overdue && 'text-danger')}>{fmtDay(lead.nastepny)}{overdue && <Badge tone="warn">zaległe</Badge>}</span> : 'brak'}
             </Info>
             <Info k="Ostatni kontakt">{lead.ostatni ? fmtDay(lead.ostatni) : 'brak'}</Info>
             <Info k="Wartość">{lead.wartoscGr != null ? fmtZl(lead.wartoscGr) : 'brak'}</Info>
@@ -115,13 +117,22 @@ const Info = ({ k, children }: { k: string; children: React.ReactNode }) => (
   <div className="min-w-0"><dt className="text-ink-2">{k}</dt><dd className="mt-0.5 font-semibold">{children}</dd></div>
 );
 
-/** „Zapisz kontakt” i historia (od najnowszego). Bez nowego terminu: zaległy jest czyszczony, przyszły zostaje (reguła serwera). */
+/** „Zapisz kontakt” i historia w grupach statusu (R37, od najnowszego). Bez nowego terminu: zaległy jest czyszczony, przyszły zostaje (reguła serwera). */
 function Contacts({ lead }: { lead: Rec }) {
   const all = useEntities('lead_contacts');
   const names = useNames();
   const me = useMe();
+  const [del, setDel] = useState<string>();
+  const remove = (c: Rec) => {
+    if (del !== c.id) return setDel(c.id);
+    setDel(undefined);
+    void outbox.enqueue({ kind: 'lead', url: `/api/leads/${lead.id}/contacts/${c.id}`, method: 'DELETE', optimistic: (s) => s.remove('lead_contacts', c.id) })
+      .catch((x: Error) => toast('Kontakt nie został usunięty', { body: x.message, tone: 'error' }));
+  };
   const list = useMemo(() => withoutEchoes(all.filter((c) => c.leadId === lead.id), ['notatka', 'by'])
     .sort((a, b) => (a.dzien !== b.dzien ? (a.dzien < b.dzien ? 1 : -1) : a.createdAt < b.createdAt ? 1 : -1)), [all, lead.id]);
+  const statusy = useDict('status_leada');
+  const groups = useMemo(() => contactGroups(list, statusy.map((s) => s.wartosc as string)), [list, statusy]);
   const [note, setNote] = useState('');
   const [next, setNext] = useState('');
   const [err, setErr] = useState('');
@@ -137,7 +148,7 @@ function Contacts({ lead }: { lead: Rec }) {
     void outbox.enqueue({
       kind: 'lead', url: `/api/leads/${lead.id}/contact`, method: 'POST', body,
       optimistic: (s) => {
-        s.put('lead_contacts', { id: tmp, leadId: lead.id, dzien: day, notatka: n, nastepny: next, plan: due ? lead.nastepny : '', by: me?.id, createdAt: new Date().toISOString(), _tmp: true });
+        s.put('lead_contacts', { id: tmp, leadId: lead.id, dzien: day, status: lead.status, notatka: n, nastepny: next, plan: due ? lead.nastepny : '', by: me?.id, createdAt: new Date().toISOString(), _tmp: true });
         const l = s.get('leads', lead.id);
         if (l) s.put('leads', { ...l, ostatni: day, nastepny: nextAfterContact(l.nastepny, next, day) });
       },
@@ -157,27 +168,32 @@ function Contacts({ lead }: { lead: Rec }) {
         <Field label="Notatka z kontaktu" error={err}>{(id, d) => <Textarea id={id} aria-describedby={d} aria-invalid={!!err} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Z kim, co ustalono" className="min-h-20" />}</Field>
         <div className="grid gap-3 min-[560px]:grid-cols-[1fr_auto] min-[560px]:items-end">
           <Field label="Następny kontakt" hint={next ? undefined : due ? 'Bez daty zaległy termin zostanie wyczyszczony.' : lead.nastepny ? `Bez daty zostaje ${fmtDay(lead.nastepny)}.` : undefined}>
-            {(id, d) => <Input id={id} aria-describedby={d} type="date" value={next} min={day} onChange={(e) => setNext(e.target.value)} />}
+            {(id, d) => <div className="grid gap-2"><Input id={id} aria-describedby={d} type="date" value={next} min={day} onChange={(e) => setNext(e.target.value)} /><QuickDates onPick={setNext} /></div>}
           </Field>
           <Button type="submit">Zapisz kontakt</Button>
         </div>
       </form>
-      {!list.length ? <p className="text-sm text-ink-2">Nie było jeszcze kontaktu z klientem.</p> : (
-        <ol className="grid gap-2">
-          {list.map((c) => (
-            <li key={c.id} className="grid gap-1 rounded-2xl border border-line bg-card px-4 py-3">
-              <p className="flex flex-wrap items-center gap-x-2 text-sm text-ink-2">
-                <span className="font-semibold text-ink">{fmtDay(c.dzien)}</span>
-                <span>{names(c.by)}{c._tmp ? ', wysyłanie…' : c.createdAt ? `, ${fmtWhen(c.createdAt).replace(/^.* /, '')}` : ''}</span>
-              </p>
-              <p className="whitespace-pre-wrap">{c.notatka}</p>
-              {(c.plan || c.nastepny) && (
-                <p className="text-sm text-ink-2">{[c.plan && `zaplanowany na ${fmtDay(c.plan)}`, c.nastepny && `następny: ${fmtDay(c.nastepny)}`].filter(Boolean).join(', ')}</p>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
+      {!list.length ? <p className="text-sm text-ink-2">Nie było jeszcze kontaktu z klientem.</p> : groups.map((g) => (
+        <div key={g.status} className="grid gap-2">
+          <h3 className="text-sm font-semibold text-ink-2">{g.status} <span className="tabular-nums">({g.list.length})</span></h3>
+          <ol className="grid gap-2" aria-label={`Kontakty: ${g.status}`}>
+            {g.list.map((c) => (
+              <li key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-1 rounded-2xl border border-line bg-card px-4 py-3">
+                <p className="flex flex-wrap items-center gap-x-2 text-sm text-ink-2">
+                  <span className="font-semibold text-ink">{fmtDay(c.dzien)}</span>
+                  <span>{names(c.by)}{c._tmp ? ', wysyłanie…' : c.createdAt ? `, ${fmtWhen(c.createdAt).replace(/^.* /, '')}` : ''}</span>
+                </p>
+                <Button variant={del === c.id ? 'danger' : 'ghost'} size="sm" onClick={() => remove(c)} disabled={!!c._tmp} aria-label={del === c.id ? 'Na pewno usunąć kontakt?' : `Usuń kontakt z ${fmtDay(c.dzien)}`}
+                  className={cn('row-span-2 self-start', del !== c.id && 'w-10 px-0 text-ink-2')}>{del === c.id ? 'Usunąć?' : <Trash className="h-5 w-5 shrink-0" />}</Button>
+                <p className="whitespace-pre-wrap">{c.notatka}</p>
+                {(c.plan || c.nastepny) && (
+                  <p className="col-span-2 text-sm text-ink-2">{[c.plan && `zaplanowany na ${fmtDay(c.plan)}`, c.nastepny && `następny: ${fmtDay(c.nastepny)}`].filter(Boolean).join(', ')}</p>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
     </section>
   );
 }

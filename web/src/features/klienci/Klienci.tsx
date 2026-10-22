@@ -121,7 +121,7 @@ function ClientCard({ id }: { id: string }) {
             <ul className="grid gap-2">
               {leads.map((l) => (
                 <li key={l.id}><a href={`#ld/${l.id}`} className="grid gap-0.5 rounded-2xl border border-line bg-card px-4 py-3 hover:border-ink-2">
-                  <span className="flex items-center gap-2 text-sm text-ink-2"><span className="font-semibold tabular-nums">{l.numer}</span><Badge>{l.status}</Badge>{l.wartoscGr != null && <span className="ml-auto">{fmtZl(l.wartoscGr)}</span>}</span>
+                  <span className="flex items-center gap-2 text-sm text-ink-2"><Badge>{l.status}</Badge>{l.wartoscGr != null && <span className="ml-auto">{fmtZl(l.wartoscGr)}</span>}</span>
                   <span className="font-semibold">{l.temat}</span>
                   {l.nastepny && <span className="text-sm text-ink-2">Następny kontakt: {fmtDay(l.nastepny)}</span>}
                 </a></li>

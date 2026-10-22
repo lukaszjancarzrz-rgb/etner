@@ -6,12 +6,12 @@ import { Combobox } from '../../core/ui/combobox.js';
 import { Field, Input } from '../../core/ui/input.js';
 import { Select } from '../../core/ui/select.js';
 
-export type NewClient = { nazwa: string; telefon: string; adres: string; miejscowosc: string };
-export const emptyClient = (): NewClient => ({ nazwa: '', telefon: '', adres: '', miejscowosc: '' });
+export type NewClient = { nazwa: string; telefon: string; email: string; adres: string; miejscowosc: string };
+export const emptyClient = (): NewClient => ({ nazwa: '', telefon: '', email: '', adres: '', miejscowosc: '' });
 
 /** `newClient` + `newSite` do zapisu zlecenia albo leada. */
 export const newClientBody = (n: NewClient) => ({
-  newClient: { typ: 'osoba', nazwa: n.nazwa.trim(), telefony: n.telefon.trim() ? [n.telefon.trim()] : [], emaile: [], nip: '', notatki: '' },
+  newClient: { typ: 'osoba', nazwa: n.nazwa.trim(), telefony: n.telefon.trim() ? [n.telefon.trim()] : [], emaile: n.email.trim() ? [n.email.trim()] : [], nip: '', notatki: '' },
   newSite: { nazwa: '', adres: n.adres.trim(), miejscowosc: n.miejscowosc.trim(), mapa: '', opis: '' },
 });
 
@@ -35,7 +35,10 @@ export function ClientPicker({ clientId, siteId, onChange, nowy, onNowy, err }: 
           <Button variant="ghost" size="sm" onClick={() => onNowy(null)}><X className="h-4 w-4" />Wybierz z listy</Button>
         </div>
         <Field label="Imię i nazwisko lub firma" error={err.nazwa}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.nazwa} value={nowy.nazwa} onChange={(e) => onNowy({ ...nowy, nazwa: e.target.value })} autoFocus />}</Field>
-        <Field label="Telefon">{(id) => <Input id={id} type="tel" inputMode="tel" value={nowy.telefon} onChange={(e) => onNowy({ ...nowy, telefon: e.target.value })} />}</Field>
+        <div className="grid gap-3 min-[560px]:grid-cols-2">
+          <Field label="Telefon">{(id) => <Input id={id} type="tel" inputMode="tel" value={nowy.telefon} onChange={(e) => onNowy({ ...nowy, telefon: e.target.value })} />}</Field>
+          <Field label="E-mail" error={err.email}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.email} type="email" inputMode="email" autoComplete="off" value={nowy.email} onChange={(e) => onNowy({ ...nowy, email: e.target.value })} />}</Field>
+        </div>
         <div className="grid gap-3 min-[560px]:grid-cols-2">
           <Field label="Adres">{(id) => <Input id={id} value={nowy.adres} onChange={(e) => onNowy({ ...nowy, adres: e.target.value })} />}</Field>
           <Field label="Miejscowość">{(id) => <Input id={id} value={nowy.miejscowosc} onChange={(e) => onNowy({ ...nowy, miejscowosc: e.target.value })} />}</Field>

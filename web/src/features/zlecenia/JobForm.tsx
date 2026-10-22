@@ -11,6 +11,7 @@ import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia } from '../../core/write.js';
 import { ClientPicker, newClientBody, siteLabel, type NewClient } from '../klienci/ClientPicker.js';
+import { badEmail } from '../klienci/forms.js';
 import { jobPrefill } from '../leady/model.js';
 
 const NONE = '-';
@@ -49,6 +50,7 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
     const er: Record<string, string> = {};
     if (!job && !nowy && !f.clientId) er.client = 'Wybierz klienta albo dodaj nowego';
     if (nowy && !nowy.nazwa.trim()) er.nazwa = 'Podaj nazwę klienta';
+    if (nowy && badEmail(nowy.email)) er.email = 'Niepoprawny adres e-mail';
     if (!f.status) er.status = 'Wybierz status';
     if (f.termin && !/^\d{4}-(0[1-9]|1[0-2])$/.test(f.termin)) er.termin = 'Termin w formacie RRRR-MM';
     setErr(er);
@@ -90,12 +92,12 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <Sheet title={job ? `Zlecenie ${job.numer ?? ''}` : lead ? `Zlecenie z leada ${lead.numer}` : 'Nowe zlecenie'} className="desk:w-[min(640px,92vw)]">
+      <Sheet title={job ? `Zlecenie ${job.numer ?? ''}` : lead ? 'Zlecenie z leada' : 'Nowe zlecenie'} className="desk:w-[min(640px,92vw)]">
         <form onSubmit={(e) => void submit(e)} className="grid gap-4" noValidate>
           {err.form && <p role="alert" className="rounded-xl border border-danger/40 p-3 text-sm text-danger">{err.form}</p>}
           {lead?.clientId ? (
             <div className="rounded-2xl border border-line p-4">
-              <p className="text-sm text-ink-2">Klient z leada {lead.numer}</p>
+              <p className="text-sm text-ink-2">Klient z leada</p>
               <p className="font-semibold">{leadClient?.nazwa ?? 'Klient'}</p>
               {leadSite && <p className="text-sm text-ink-2">{siteLabel(leadSite)}</p>}
             </div>

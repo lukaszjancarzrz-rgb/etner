@@ -1,8 +1,8 @@
 import { fmtZl } from '@etner/shared';
-import { parseZl } from './model.js';
+import { QUICK_DATES, parseZl } from './model.js';
 import { useState } from 'react';
 import { go } from '../../routes.js';
-import { useDict } from '../../core/data.js';
+import { today, useDict } from '../../core/data.js';
 import type { Rec } from '../../core/store.js';
 import { Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
@@ -12,6 +12,7 @@ import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia } from '../../core/write.js';
 import { ClientPicker, newClientBody, type NewClient } from '../klienci/ClientPicker.js';
+import { badEmail } from '../klienci/forms.js';
 
 const opts = (d: Rec[]) => d.map((x) => ({ value: x.wartosc as string, label: x.wartosc as string }));
 const zlText = (gr: number | null | undefined) => (gr == null ? '' : fmtZl(gr).replace(/\s?zł$/, ''));
@@ -35,6 +36,7 @@ export function LeadForm({ lead, onClose }: { lead?: Rec; onClose: () => void })
     const er: Record<string, string> = {};
     if (!f.temat.trim()) er.temat = 'Podaj temat leada';
     if (nowy && !nowy.nazwa.trim()) er.nazwa = 'Podaj nazwę klienta';
+    if (nowy && badEmail(nowy.email)) er.email = 'Niepoprawny adres e-mail';
     let wartoscGr: number | null = null;
     if (f.wartosc.trim()) {
       const r = parseZl(f.wartosc);
@@ -70,7 +72,7 @@ export function LeadForm({ lead, onClose }: { lead?: Rec; onClose: () => void })
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <Sheet title={lead ? `Lead ${lead.numer ?? ''}` : 'Nowy lead'} className="desk:w-[min(640px,92vw)]">
+      <Sheet title={lead ? 'Edycja leada' : 'Nowy lead'} className="desk:w-[min(640px,92vw)]">
         <form onSubmit={(e) => void submit(e)} className="grid gap-4" noValidate>
           {err.form && <p role="alert" className="rounded-xl border border-danger/40 p-3 text-sm text-danger">{err.form}</p>}
           <ClientPicker clientId={f.clientId} siteId={f.siteId} onChange={set} nowy={nowy} onNowy={setNowy} err={err} />
@@ -81,7 +83,7 @@ export function LeadForm({ lead, onClose }: { lead?: Rec; onClose: () => void })
             <Field label="Wartość (zł netto)" error={err.wartosc} hint={!err.wartosc && f.wartosc.trim() ? (() => { const r = parseZl(f.wartosc); return 'gr' in r ? fmtZl(r.gr) : undefined; })() : undefined}>
               {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.wartosc} inputMode="decimal" value={f.wartosc} onChange={(e) => set({ wartosc: e.target.value })} placeholder="np. 12 000" />}
             </Field>
-            <Field label="Następny kontakt">{(id) => <Input id={id} type="date" value={f.nastepny} onChange={(e) => set({ nastepny: e.target.value })} />}</Field>
+            <Field label="Następny kontakt">{(id) => <div className="grid gap-2"><Input id={id} type="date" value={f.nastepny} onChange={(e) => set({ nastepny: e.target.value })} /><QuickDates onPick={(nastepny) => set({ nastepny })} /></div>}</Field>
             <Field label="Status">{(id) => <Select id={id} value={f.status} onValueChange={(status) => set({ status })} options={opts(statusy)} />}</Field>
           </div>
           <Field label="Opis" hint="Trafi jako pierwszy punkt zakresu prac, gdy zrobisz zlecenie.">{(id, d) => <Textarea id={id} aria-describedby={d} value={f.opis} onChange={(e) => set({ opis: e.target.value })} />}</Field>
@@ -94,3 +96,10 @@ export function LeadForm({ lead, onClose }: { lead?: Rec; onClose: () => void })
     </Dialog>
   );
 }
+
+/** „+3 dni”, „+1 tydz.”, „+1 mies.” od dziś: wpisują datę do pola. */
+export const QuickDates = ({ onPick }: { onPick: (day: string) => void }) => (
+  <div className="flex flex-wrap gap-2" role="group" aria-label="Szybki termin">
+    {QUICK_DATES.map((q) => <Button key={q.label} variant="secondary" size="sm" onClick={() => onPick(q.at(today()))}>{q.label}</Button>)}
+  </div>
+);
