@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addDays, dayOf } from '@etner/shared';
+import { addDays, addMonths, dayOf } from '@etner/shared';
 
 /** Logowanie kontem demo z listy na ekranie logowania. */
 async function login(page: Page, name: string) {
@@ -16,6 +16,7 @@ test('leady: nowy lead, kontakt, „Zrób zlecenie” → karta zlecenia z klien
   await login(page, 'Tomasz Wrona');
   await page.goto('/#leady');
   await expect(page.getByRole('heading', { name: 'Zaległe kontakty' })).toBeVisible(); // demo: lead z terminem sprzed 2 dni
+  await expect(page.getByText('zaległe', { exact: true }).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Nowy lead' }).click();
   const form = page.getByRole('dialog', { name: 'Nowy lead' });
@@ -44,9 +45,26 @@ test('leady: nowy lead, kontakt, „Zrób zlecenie” → karta zlecenia z klien
   await expect(contact).not.toContainText('wysyłanie');
   await expect(contact).toContainText(`następny: ${fmt(next)}`);
 
+  // Drugi kontakt z „+1 tydz.”, potem usunięty; kontakty w grupie statusu
+  const week = addDays(dayOf(new Date()), 7);
+  await page.getByLabel('Notatka z kontaktu').fill(`${tag}: drugi telefon`);
+  await page.getByRole('button', { name: '+1 tydz.' }).click();
+  await expect(page.getByLabel('Następny kontakt')).toHaveValue(week);
+  await page.getByRole('button', { name: 'Zapisz kontakt' }).click();
+  const c2 = page.locator('ol > li', { hasText: `${tag}: drugi telefon` });
+  await expect(c2).toContainText(`następny: ${fmt(week)}`);
+  await expect(c2).not.toContainText('wysyłanie');
+  await expect(page.getByRole('list', { name: 'Kontakty: Nowy' }).locator('li')).toHaveCount(2);
+  await c2.getByRole('button', { name: /^Usuń kontakt/ }).click();
+  await c2.getByRole('button', { name: 'Na pewno usunąć kontakt?' }).click();
+  await expect(c2).toHaveCount(0);
+  await page.reload();
+  await expect(contact).toBeVisible();
+  await expect(c2).toHaveCount(0);
+
   // Zrób zlecenie: formularz zlecenia wypełniony z leada
   await page.getByRole('button', { name: 'Zrób zlecenie' }).click();
-  const jf = page.getByRole('dialog', { name: /^Zlecenie z leada L\d+/ });
+  const jf = page.getByRole('dialog', { name: 'Zlecenie z leada' });
   await expect(jf.getByText(who)).toBeVisible();
   await expect(jf.getByLabel('Zakres prac (punkt 1)')).toHaveValue(`${tag}: dwie jednostki w salonie`);
   await expect(jf.getByRole('checkbox', { name: 'Oznacz lead jako Przyjęta' })).toHaveAttribute('aria-checked', 'true');
@@ -106,6 +124,8 @@ test('na jutro: pracownik dodaje i odhacza rzecz swojej ekipy; admin otwiera `#j
   await expect(item).toContainText('dodał Bartek Gawlik');
   await item.getByRole('checkbox', { name: `Zabrane: ${tag}` }).click();
   await expect(item).toContainText('zabrał Bartek Gawlik');
+  await expect(item).toContainText('dodał Bartek Gawlik'); // obie informacje naraz, z czasem
+  await expect(item).toContainText(/zabrał Bartek Gawlik · dziś \d{1,2}:\d{2}/);
   await page.reload();
   await expect(page.locator('li[id^="j-"]', { hasText: tag }).getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
 
@@ -140,6 +160,35 @@ test('zadania: admin dodaje zadanie, odhacza je; cykliczne wraca z datą „osta
   await cyc.getByRole('checkbox').click();
   await expect(cyc).toContainText(`ostatnio ${fmt(dayOf(new Date()))}`);
   await expect(cyc.getByRole('checkbox')).toHaveAttribute('aria-checked', 'false');
+});
+
+test('zadania: cykl „co miesiąc” i klient; po Zrobione termin = dziś + miesiąc, link do klienta', async ({ page }, info) => {
+  const tag = `E2E ${info.project.name} cykl`;
+  const who = info.project.name.startsWith('iPhone') ? 'Janina Targosz' : 'Krzysztof Łasak';
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#zad');
+  await page.getByLabel('Nowe zadanie').fill(tag);
+  await page.getByLabel('Nowe zadanie').press('Enter');
+  const task = page.locator('li', { hasText: tag });
+  await expect(task).not.toContainText('wysyłanie');
+  await task.getByRole('button', { name: `Edytuj: ${tag}` }).click();
+  const form = page.getByRole('dialog', { name: 'Zadanie' });
+  await form.getByRole('checkbox', { name: 'Cykliczne' }).click();
+  await form.getByRole('combobox', { name: 'Cykl' }).click();
+  await page.getByRole('option', { name: 'co miesiąc' }).click();
+  await form.getByLabel('Klient').click();
+  await page.getByPlaceholder('Nazwisko, firma').fill(who);
+  await page.getByRole('option', { name: who }).click();
+  await form.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(task).toContainText('co miesiąc');
+  await expect(task.getByRole('link', { name: who })).toHaveAttribute('href', /^#kl\//);
+  await expect(task).not.toContainText('wysyłanie');
+  await task.getByRole('checkbox', { name: `Zrobione: ${tag}` }).click();
+  const day = dayOf(new Date());
+  await expect(task).toContainText(`termin ${fmt(addMonths(day, 1))}`);
+  await page.reload();
+  await expect(task).toContainText(`termin ${fmt(addMonths(day, 1))}`);
+  await expect(task).toContainText(`ostatnio ${fmt(day)}`);
 });
 
 test('użytkownicy: admin tworzy pracownika z wygenerowanym hasłem, ten się loguje; reset hasła wylogowuje starą sesję', async ({ page, browser }, info) => {
@@ -231,4 +280,51 @@ test('powiadomienia: `#zl/<id>~<wpis>` otwiera zlecenie i podświetla wpis, `#za
   const shop = (await (await page.request.get('/api/shopping')).json()) as { id: string }[];
   await page.goto(`/#zakupy~${shop[0]!.id}`);
   await expect(page.locator(`#z-${shop[0]!.id}`)).toHaveClass(/ring-4/);
+});
+
+test('listy predefiniowane: admin dodaje pozycję w Ustawieniach, widać ją w Na jutro; odhaczenia znikają po zamknięciu', async ({ page }, info) => {
+  const tag = `E2E ${info.project.name} manometry`;
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#ust');
+  const card = page.getByRole('region', { name: 'Listy predefiniowane' });
+  await card.getByLabel('Lista', { exact: true }).click();
+  await page.getByRole('option', { name: 'Montaż klimy' }).click();
+  await card.getByLabel('Nowa pozycja').fill(tag);
+  await card.getByLabel('Nowa pozycja').press('Enter');
+  await card.getByRole('button', { name: 'Zapisz listę' }).click();
+  await expect(page.getByText('Lista zapisana', { exact: true })).toBeVisible();
+
+  await page.goto('/#jutro');
+  await page.getByRole('button', { name: /Montaż klimy/ }).click();
+  const sheet = page.getByRole('dialog', { name: 'Montaż klimy' });
+  const box = sheet.getByRole('checkbox', { name: tag });
+  await expect(box).toHaveAttribute('aria-checked', 'false');
+  await box.click();
+  await expect(box).toHaveAttribute('aria-checked', 'true');
+  await expect(sheet).toContainText(/Odhaczone 1 z \d+/);
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+  await page.getByRole('button', { name: /Montaż klimy/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Montaż klimy' }).getByRole('checkbox', { name: tag })).toHaveAttribute('aria-checked', 'false');
+});
+
+test('zdjęcie: pracownik dodaje swoje w Ustawieniach (kadr w telefonie, serwer 256 px)', async ({ page }, info) => {
+  test.skip(info.project.name !== 'Desktop 1440', 'jedno konto demo: raz wystarczy');
+  await login(page, 'Kamil Zięba');
+  await page.goto('/#ust');
+  const card = page.getByRole('region', { name: 'Moje zdjęcie' });
+  // 1×1 PNG
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+  await card.getByTestId('avatar-file').setInputFiles({ name: 'ja.png', mimeType: 'image/png', buffer: png });
+  await expect(card.locator('img')).toHaveAttribute('src', /\/api\/users\/.+\/avatar\?k=/);
+  await expect(card.getByRole('button', { name: 'Zmień zdjęcie' })).toBeVisible();
+  await expect.poll(() => card.locator('img').evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+});
+
+test('komputer: gęstszy układ (czcionka 14 px), telefon 16 px', async ({ page }, info) => {
+  await login(page, 'Tomasz Wrona');
+  const fs = await page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
+  expect(fs).toBe(info.project.name === 'Desktop 1440' ? '14px' : '16px');
+  if (info.project.name === 'Desktop 1440') await page.screenshot({ path: test.info().outputPath('gestosc-1440.png') });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
