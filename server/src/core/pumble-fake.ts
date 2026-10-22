@@ -35,6 +35,7 @@ export function fakePumble(users: PumbleUser[] = []) {
   const client: PumbleClient = {
     async createChannel(d) {
       guard('createChannel');
+      if (d.type !== 'PRIVATE' && d.type !== 'PUBLIC') throw new PumbleError(403, 'Allowed values are PUBLIC|PRIVATE', '/createChannel');
       if ([...channels.values()].some((c) => c.name === d.name)) throw new PumbleError(403, 'Channel name taken');
       const c = { id: id(), ...d, members: new Set<string>(), messages: [] };
       channels.set(c.id, c);
@@ -54,7 +55,7 @@ export function fakePumble(users: PumbleUser[] = []) {
     async listMessages(cid, limit) { guard('listMessages'); return ch(cid, '/listMessages').messages.slice(0, limit); },
     async sendMessage(d) {
       guard('sendMessage');
-      if (d.asBot && ch(d.channelId, '/sendMessage').type === 'private') throw new PumbleError(403, 'A bot is not allowed to post to a private channel', '/sendMessage');
+      ch(d.channelId, '/sendMessage'); // prawdziwe Pumble pozwala botowi pisać w kanale prywatnym (sprawdzone na żywo 2026-10-22)
       const m = s.post(d.channelId, d.asBot ? 'bot' : 'me', d.text);
       if (d.asBot) m.authorAppId = 'etner';
       return { id: m.id, channelId: d.channelId };

@@ -8,8 +8,8 @@ export type PumbleMessage = {
 export type PumbleChannel = { id: string; name: string; type?: string; channelType?: string };
 
 export interface PumbleClient {
-  /** `type` jak w specyfikacji: 'private' albo 'public'. */
-  createChannel(d: { name: string; type: 'private' | 'public'; description: string }): Promise<{ id: string; name: string }>;
+  /** Prawdziwe Pumble przyjmuje tylko 'PRIVATE' | 'PUBLIC' (małe litery → 403 „Allowed values are PUBLIC|PRIVATE”). */
+  createChannel(d: { name: string; type: 'PRIVATE' | 'PUBLIC'; description: string }): Promise<{ id: string; name: string }>;
   /** Kanał o tej nazwie lub id albo null (Pumble odpowiada wtedy błędem). Specyfikacja nie obiecuje typu kanału; czytamy go, jeśli przyjdzie. */
   getChannel(q: { channel: string } | { channelId: string }): Promise<PumbleChannel | null>;
   addUsers(channelId: string, userIds: string[]): Promise<void>;
@@ -50,7 +50,8 @@ export function pumbleClient(apiKey: string, base = BASE, timeoutMs = 10_000): P
   const q = (o: Record<string, string | number>) => new URLSearchParams(Object.entries(o).map(([k, v]) => [k, String(v)])).toString();
   return {
     createChannel: (d) => call('POST', '/createChannel', d),
-    getChannel: (by) => call<PumbleChannel>('GET', `/getChannel?${q(by)}`).catch((e) => {
+    // Pumble zwraca kanał opakowany: { channel: { id, name, channelType, … } }; brak kanału → 403
+    getChannel: (by) => call<PumbleChannel | { channel: PumbleChannel }>('GET', `/getChannel?${q(by)}`).then((r) => (r && 'channel' in r ? r.channel : r)).catch((e) => {
       if (e instanceof PumbleError && e.status >= 400 && e.status < 500) return null;
       throw e;
     }),

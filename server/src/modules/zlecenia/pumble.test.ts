@@ -53,7 +53,7 @@ describe('Pumble', () => {
     const j = await newJob(s);
     expect(j.pumbleChannelId).toBeTruthy();
     const c = chan(s, j.pumbleChannelId);
-    expect(c).toMatchObject({ name: 'z0001-kowalski-zawoja', type: 'private', description: 'Zlecenie Z0001 – Jan Kowalski, Długa 5 Zawoja' });
+    expect(c).toMatchObject({ name: 'z0001-kowalski-zawoja', type: 'PRIVATE', description: 'Zlecenie Z0001 – Jan Kowalski, Długa 5 Zawoja' });
     expect([...c.members].sort()).toEqual(['pa', 'pb']);
     expect(get(s.deps.db, j.id)!.pumbleChannelId).toBe(j.pumbleChannelId);
     const errs = recentErrors(s.deps.db).filter((e) => e.where === 'pumble:osoby');
@@ -67,7 +67,7 @@ describe('Pumble', () => {
 
   it('zajęta nazwa: przyrostek -2', async () => {
     const s = await setup();
-    await s.f.client.createChannel({ name: 'z0001-kowalski-zawoja', type: 'public', description: '' });
+    await s.f.client.createChannel({ name: 'z0001-kowalski-zawoja', type: 'PUBLIC', description: '' });
     const j = await newJob(s);
     expect(chan(s, j.pumbleChannelId).name).toBe('z0001-kowalski-zawoja-2');
   });
@@ -163,13 +163,13 @@ describe('Pumble', () => {
     const r = await send('  Brakuje kabla  ', 'op-1');
     expect(r.status).toBe(200);
     expect(await r.json()).toMatchObject({ authorName: 'Bartek', text: 'Brakuje kabla', createdBy: s.b1.user.id });
-    expect(chan(s, j.pumbleChannelId).messages[0]).toMatchObject({ text: 'Bartek: Brakuje kabla', author: 'me' });
+    expect(chan(s, j.pumbleChannelId).messages[0]).toMatchObject({ text: 'Bartek: Brakuje kabla', author: 'bot', authorAppId: 'etner' });
     await send('Brakuje kabla', 'op-1');
     // dwa naraz z tym samym opId: do Pumble raz
     const [r1, r2] = await Promise.all([send('Drugi', 'op-2'), send('Drugi', 'op-2')]);
     expect((await r1.json() as any).id).toBe((await r2.json() as any).id);
     expect(chan(s, j.pumbleChannelId).messages).toHaveLength(2);
-    await expect(s.f.client.sendMessage({ channelId: j.pumbleChannelId, text: 'x', asBot: true })).rejects.toThrow(/bot/);
+    await expect(s.f.client.createChannel({ name: 'x', type: 'private' as never, description: '' })).rejects.toThrow(/PUBLIC\|PRIVATE/);
     await pollTick(s.deps);
     expect(messages(s.deps.db, j.id)).toHaveLength(2);
     expect((await send('')).status).toBe(400);
@@ -236,7 +236,7 @@ describe('Pumble', () => {
 
   it('kanał nie jest prywatny: jeden czytelny błąd, nikt nie zostaje dodany', async () => {
     const s = await setup();
-    s.f.forceType = 'public';
+    s.f.forceType = 'PUBLIC';
     const j = await newJob(s);
     expect(j.pumbleChannelId).toBeTruthy();
     expect(chan(s, j.pumbleChannelId).members.size).toBe(0);
@@ -273,7 +273,7 @@ describe('Pumble', () => {
     clock = new Date(clock.getTime() + 3_600_000);
     await pollTick(s.deps);
     expect(errs(s, 'pumble:obieg')).toHaveLength(2); // po godzinie przypomnienie
-    s.f.channels.set(a.pumbleChannelId, { id: a.pumbleChannelId, name: 'a', type: 'private', description: '', members: new Set(), messages: [] });
+    s.f.channels.set(a.pumbleChannelId, { id: a.pumbleChannelId, name: 'a', type: 'PRIVATE', description: '', members: new Set(), messages: [] });
     await pollTick(s.deps);
     expect(errs(s, 'pumble:obieg')).toHaveLength(3); // zbiór się zmienił
     // 429: jak awaria całego Pumble – obieg przerwany, przerwa

@@ -167,7 +167,7 @@ export function ensureChannel(deps: AppDeps, jobId: string, force = false): Prom
     const { name, description } = channelInfo(deps, j);
     let free = name;
     for (let n = 2; await p.getChannel({ channel: free }); n++) free = `${name.slice(0, 80 - String(n).length - 1).replace(/-+$/, '')}-${n}`;
-    const ch = await p.createChannel({ name: free, type: 'private', description });
+    const ch = await p.createChannel({ name: free, type: 'PRIVATE', description });
     // id zapisujemy od razu, żeby błąd przy dodawaniu osób nie założył drugiego kanału
     const row = tx(deps.db, (db) => {
       const old = svc.get(db, jobId);
@@ -299,7 +299,7 @@ export async function send(deps: AppDeps, user: User, jobId: string, text: strin
     if (flying) return flying;
   }
   const run = (async () => {
-    const r = await p.sendMessage({ channelId: j.pumbleChannelId!, text: `${user.name}: ${text}`, asBot: false });
+    const r = await p.sendMessage({ channelId: j.pumbleChannelId!, text: `${user.name}: ${text}`, asBot: true });
     const ts = new Date().toISOString();
     const vals = { id: newId(), jobId, messageId: r.id, authorName: user.name, text, sentAt: ts, threadRootId: null, createdAt: ts, createdBy: user.id, updatedAt: ts, deletedAt: null };
     try {
