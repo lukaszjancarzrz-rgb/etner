@@ -28,9 +28,9 @@ export function useNames(): (userId: string | null | undefined) => string {
   }, [users, people]);
 }
 
-/** Grupa statusu zlecenia wg słownika (aktualne / pozniej / zamkniete). */
-export function useStatusGroup(): (status: string) => string {
-  const st = useDict('status_zlecenia');
+/** Grupa statusu zlecenia (albo leada) wg słownika (aktualne / pozniej / zamkniete). */
+export function useStatusGroup(rodzaj = 'status_zlecenia'): (status: string) => string {
+  const st = useDict(rodzaj);
   return useMemo(() => {
     const m = new Map(st.map((d) => [d.wartosc, d.grupa ?? 'aktualne']));
     return (s) => m.get(s) ?? 'aktualne';

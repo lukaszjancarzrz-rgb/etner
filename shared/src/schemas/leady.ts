@@ -41,5 +41,7 @@ export const leadToJobSchema = z.object({
   opId: z.string().min(1).optional(),
   accept: z.boolean().default(false),
   job: jobUpdateSchema.omit({ opId: true, leadId: true }),
+  /** Treść pierwszego punktu zakresu prac (np. opis leada); pusty = bez punktu. */
+  scope: txt.max(5000, 'Tekst jest za długi').default(''),
 });
 export type LeadToJob = z.infer<typeof leadToJobSchema>;

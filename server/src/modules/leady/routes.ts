@@ -49,7 +49,7 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.post('/api/leads/:id/to-job', guard, async (c) => {
     const b = await body(c, leadToJobSchema);
     const out: import('../zlecenia/service.js').Outbox = [];
-    const { result, dup } = runOp(db, b.opId, uid(c), () => svc.toJob(db, uid(c), c.req.param('id'), b.job, b.accept, out, deps.diary));
+    const { result, dup } = runOp(db, b.opId, uid(c), () => svc.toJob(db, uid(c), c.req.param('id'), b.job, b.accept, out, deps.diary, b.scope));
     if (!result) throw notFound();
     if (!dup) for (const o of out) await notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, uid(c)));
     return c.json(result);

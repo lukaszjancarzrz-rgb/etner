@@ -7,6 +7,7 @@ import { seedBase } from '../slowniki/seed.js';
 import { modules } from '../index.js';
 import { create as newClient } from '../klienci/service.js';
 import { get as getJob } from '../zlecenia/service.js';
+import { itemsOf } from '../zlecenia/scope.js';
 
 async function setup() {
   const push = vi.fn(async () => ({ statusCode: 201 }));
@@ -50,10 +51,11 @@ describe('leady', () => {
   it('to-job z accept: klient leada, status Przyjęta, grupa zamknięte, wpisy dziennika', async () => {
     const { app, admin, k, deps, diary } = await setup();
     const l = await (await app.request('/api/leads', req(admin, 'POST', { clientId: k.client.id, siteId: k.site!.id, temat: 'Klima' }))).json();
-    const res = await app.request(`/api/leads/${l.id}/to-job`, req(admin, 'POST', { accept: true, job: { status: 'Nowe' } }));
+    const res = await app.request(`/api/leads/${l.id}/to-job`, req(admin, 'POST', { accept: true, job: { status: 'Nowe', kategoria: 'Klimatyzacja' }, scope: 'Montaż 2 jednostek' }));
     expect(res.status).toBe(200);
     const { lead, job } = await res.json();
-    expect(getJob(deps.db, job.id)).toMatchObject({ clientId: k.client.id, siteId: k.site!.id, leadId: l.id });
+    expect(getJob(deps.db, job.id)).toMatchObject({ clientId: k.client.id, siteId: k.site!.id, leadId: l.id, kategoria: 'Klimatyzacja' });
+    expect(itemsOf(deps.db, job.id).map((p) => p.tekst)).toEqual(['Montaż 2 jednostek']);
     expect(lead.status).toBe('Przyjęta');
     expect(lead.zamknieteAt).toBeTruthy();
     expect(diary.addSystem).toHaveBeenCalledWith({ type: 'lead', id: l.id }, `Utworzono zlecenie ${job.numer}`);
@@ -62,6 +64,7 @@ describe('leady', () => {
     const l2 = await (await app.request('/api/leads', req(admin, 'POST', { clientId: k.client.id, temat: 'Inny' }))).json();
     const r2 = await (await app.request(`/api/leads/${l2.id}/to-job`, req(admin, 'POST', { job: { status: 'Nowe' } }))).json();
     expect(r2.lead.status).toBe('Nowy');
+    expect(itemsOf(deps.db, r2.job.id)).toEqual([]); // bez scope: bez punktu
   });
 
   it('pracownik: 403 na trasach i brak zmian leada w feedzie', async () => {
