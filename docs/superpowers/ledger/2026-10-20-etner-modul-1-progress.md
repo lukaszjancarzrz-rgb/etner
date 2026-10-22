@@ -191,3 +191,5 @@ Task 18i: implemented c8454ae (watch fast poll 3 s / others 30 s, max 20; files 
 Task 18i: fix round 1/5 (all addressed; 8f14e8d). Owner refinement (no file names; „<autor> wrzucił zdjęcie/plik” line) is the owner's 2026-10-22 message — supersedes the brief's "file name" line.
 Task 18i: minor (deferred): per-mode dedup → up to 2 pumble:obieg rows/hour per channel; files+attachments summed without dedup (no live sample with attachments); onConflictDoNothing without target
 Task 18i: complete (commits b9e232b..8f14e8d, review clean)
+Task 19a: review Approved (commits 6ce1867..08530a3); minors folded into the first commit of 19b: leady→zlecenia scope import via zlecenia service (module boundary), „Zrób zlecenie” pending state + optimistic lead status, server 409 on second to-job for the same lead, money „12.500” guard; deferred: Zadania row double tab stop, #jutro~ to crew outside options, admin default crew, task text length client check, #zl~ e2e replaced by #ld~
+Task 19a: complete
