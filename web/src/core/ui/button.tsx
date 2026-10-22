@@ -8,7 +8,7 @@ const variants = {
   ok: 'bg-ok text-white hover:brightness-110',
   danger: 'bg-danger text-white hover:brightness-110',
 };
-const sizes = { md: 'h-12 px-5 text-base', sm: 'h-10 px-4 text-sm', icon: 'h-12 w-12' };
+const sizes = { md: 'h-12 px-5 text-base', sm: 'h-10 px-4 text-sm', icon: 'h-12 w-12', iconTight: 'h-11 w-9 min-[560px]:w-11' };
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants; size?: keyof typeof sizes };
 

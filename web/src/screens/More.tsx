@@ -1,96 +1,6 @@
-import { Bell, CaretRight, Desktop, Handshake, ListChecks, Moon, SignOut, Sun, UsersThree, type Icon } from '@phosphor-icons/react';
-import { useEffect, useState, type FormEvent } from 'react';
-import { disablePush, enablePush, pushState, testPush, type PushState } from '../core/push.js';
-import { ApiError, api } from '../core/api.js';
+import { CaretRight, GearSix, Handshake, ListChecks, SignOut, UserGear, UsersThree, type Icon } from '@phosphor-icons/react';
 import { logout, useSession } from '../core/session.js';
-import { setTheme, useTheme, type Theme } from '../core/theme.js';
 import { Button } from '../core/ui/button.js';
-import { cn } from '../core/ui/cn.js';
-import { Field, Input } from '../core/ui/input.js';
-import { toast } from '../core/ui/toast.js';
-
-const opts: { v: Theme; label: string; icon: typeof Sun }[] = [
-  { v: 'system', label: 'Auto', icon: Desktop },
-  { v: 'light', label: 'Jasny', icon: Sun },
-  { v: 'dark', label: 'Ciemny', icon: Moon },
-];
-
-function ChangePassword() {
-  const [stare, setStare] = useState('');
-  const [nowe, setNowe] = useState('');
-  const [powt, setPowt] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (nowe.length < 8) return setError('Nowe hasło musi mieć co najmniej 8 znaków.');
-    if (nowe !== powt) return setError('Powtórzone hasło jest inne niż nowe.');
-    setBusy(true);
-    try {
-      await api('/api/me/haslo', { method: 'POST', json: { stare, nowe } });
-      setStare(''); setNowe(''); setPowt(''); setError(null);
-      toast('Hasło zostało zmienione', { body: 'Na pozostałych urządzeniach zalogujesz się ponownie.', tone: 'ok' });
-    } catch (err) {
-      const code = err instanceof ApiError ? (err.body as { error?: string } | null)?.error : undefined;
-      setError(code === 'ZLE_HASLO' ? 'Obecne hasło jest nieprawidłowe.' : err instanceof ApiError ? err.message : 'Brak połączenia z serwerem.');
-    }
-    setBusy(false);
-  }
-  return (
-    <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-line bg-card p-5">
-      <h2 className="font-wide text-lg font-extrabold">Zmień hasło</h2>
-      <Field label="Obecne hasło">{(id) => <Input id={id} type="password" autoComplete="current-password" value={stare} onChange={(e) => setStare(e.target.value)} required />}</Field>
-      <Field label="Nowe hasło" hint="Co najmniej 8 znaków.">{(id, d) => <Input id={id} aria-describedby={d} type="password" autoComplete="new-password" minLength={8} value={nowe} onChange={(e) => setNowe(e.target.value)} required />}</Field>
-      <Field label="Powtórz nowe hasło">{(id) => <Input id={id} type="password" autoComplete="new-password" value={powt} onChange={(e) => setPowt(e.target.value)} required />}</Field>
-      {error && <p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
-      <Button type="submit" variant="secondary" disabled={busy}>Zmień hasło</Button>
-    </form>
-  );
-}
-
-const STAN: Partial<Record<PushState, string>> = {
-  wlaczone: 'Włączone na tym urządzeniu.',
-  wylaczone: 'Wyłączone na tym urządzeniu.',
-  zablokowane: 'Zablokowane w ustawieniach przeglądarki. Zezwól na powiadomienia dla tej strony w ustawieniach telefonu lub przeglądarki.',
-};
-
-function Notifications() {
-  const [st, setSt] = useState<PushState | 'blad' | null>(null);
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { pushState().then(setSt, () => setSt('blad')); }, []);
-  const run = async (f: () => Promise<PushState | void>, ok?: string) => {
-    setBusy(true);
-    try { const r = await f(); if (r) setSt(r); if (ok) toast(ok, { tone: 'ok' }); }
-    catch (err) { toast('Nie udało się', { body: err instanceof ApiError ? err.message : 'Brak połączenia z serwerem.', tone: 'error' }); }
-    setBusy(false);
-  };
-  const sendTest = () => run(async () => {
-    const { sent } = await testPush();
-    if (!sent) throw new ApiError(0, 'Serwer nie wysłał powiadomienia. Wyłącz i włącz powiadomienia ponownie.');
-  }, 'Wysłano próbne powiadomienie');
-  return (
-    <div className="grid gap-3 rounded-2xl border border-line bg-card p-5" aria-busy={st === null}>
-      <h2 className="flex items-center gap-2 font-wide text-lg font-extrabold"><Bell className="h-5 w-5 text-action" weight="duotone" />Powiadomienia</h2>
-      {st === null ? <p className="text-sm text-ink-2">Sprawdzanie…</p>
-        : st === 'ios' ? <p className="text-sm">Na iPhonie: Udostępnij → Do ekranu początkowego, potem otwórz aplikację z ikony.</p>
-        : st === 'brak' ? <p className="text-sm text-ink-2">Ta przeglądarka nie obsługuje powiadomień. Otwórz aplikację w Chrome lub Safari na telefonie.</p>
-        : st === 'blad' ? <p className="text-sm text-ink-2">Nie udało się sprawdzić powiadomień. Sprawdź połączenie i otwórz ten ekran ponownie.</p>
-        : st === 'serwer' ? <p className="text-sm text-ink-2">Serwer nie ma włączonych powiadomień.</p>
-        : (
-          <>
-            <p className={cn('text-sm', st === 'wlaczone' ? 'font-semibold text-ok' : st === 'zablokowane' ? 'text-danger' : 'text-ink-2')} role="status">{STAN[st]}</p>
-            {st === 'wylaczone' && <Button onClick={() => void run(enablePush)} disabled={busy}><Bell className="h-5 w-5 shrink-0" /><span className="whitespace-normal leading-tight">Włącz powiadomienia na tym urządzeniu</span></Button>}
-            {st === 'wlaczone' && (
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => void sendTest()} disabled={busy}>Wyślij próbne powiadomienie</Button>
-                <Button variant="secondary" onClick={() => void run(disablePush)} disabled={busy}>Wyłącz</Button>
-              </div>
-            )}
-          </>
-        )}
-    </div>
-  );
-}
 
 const Tile = ({ href, icon: I, title, hint }: { href: string; icon: Icon; title: string; hint: string }) => (
   <a href={href} className="flex min-h-16 items-center gap-4 rounded-2xl border border-line bg-card px-5 py-4 hover:border-ink-2">
@@ -100,9 +10,8 @@ const Tile = ({ href, icon: I, title, hint }: { href: string; icon: Icon; title:
   </a>
 );
 
-/** Więcej: Leady, Zadania, Klienci (admin), Ustawienia (motyw), wylogowanie. */
+/** Więcej: Leady, Zadania, Klienci, Użytkownicy (admin), Ustawienia, wylogowanie. */
 export function More() {
-  const theme = useTheme();
   const { me } = useSession();
   return (
     <section className="mx-auto grid max-w-2xl gap-6 px-4 py-6">
@@ -111,23 +20,10 @@ export function More() {
           <Tile href="#leady" icon={Handshake} title="Leady" hint="Zapytania klientów, kontakty, zlecenie z leada" />
           <Tile href="#zad" icon={ListChecks} title="Zadania" hint="Sprawy biura: grupy, terminy, cykliczne" />
           <Tile href="#kl" icon={UsersThree} title="Klienci" hint="Kontakty, obiekty, leady i zlecenia klienta" />
+          <Tile href="#uz" icon={UserGear} title="Użytkownicy" hint="Konta, hasła, kolumny harmonogramu" />
         </div>
       )}
-      <div className="rounded-2xl border border-line bg-card p-5">
-        <h2 className="mb-1 font-wide text-lg font-extrabold">Ustawienia</h2>
-        <p className="mb-4 text-sm text-ink-2">Wygląd aplikacji na tym urządzeniu.</p>
-        <div role="radiogroup" aria-label="Motyw" className="grid grid-cols-3 gap-1 rounded-full border border-line p-1">
-          {opts.map(({ v, label, icon: I }) => (
-            <button key={v} role="radio" aria-checked={theme === v} onClick={() => setTheme(v)}
-              className={cn('flex h-11 items-center justify-center gap-2 rounded-full px-2 text-sm font-semibold transition-colors duration-200',
-                theme === v ? 'bg-ink text-bg' : 'text-ink-2 hover:text-ink')}>
-              <I className="h-5 w-5 shrink-0" /><span className="truncate">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <Notifications />
-      <ChangePassword />
+      <Tile href="#ust" icon={GearSix} title="Ustawienia" hint={me?.role === 'admin' ? 'Motyw, powiadomienia, hasło, słowniki, log błędów, kopie' : 'Motyw, powiadomienia, zmiana hasła'} />
       <div className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-card p-5">
         <div className="min-w-0">
           <p className="truncate font-semibold">{me?.name}</p>

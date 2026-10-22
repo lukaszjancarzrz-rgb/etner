@@ -6,7 +6,7 @@ import { hashToken, requireAdmin, revokeUser } from './auth.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { logError } from './errors.js';
 import { can } from './permissions.js';
-import { sessions, users } from './schema-base.js';
+import { sessions, settings, users } from './schema-base.js';
 
 const post = (app: ReturnType<typeof createApp>, path: string, body: unknown, cookie?: string) =>
   app.request(path, { method: 'POST', headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) });
@@ -215,6 +215,24 @@ describe('uprawnienia', () => {
     const res = await get(app, '/api/errors', a);
     expect(res.status).toBe(200);
     expect((await res.json())[0].message).toMatch(/boom/);
+  });
+
+  it('ustawienia: godzina rano (GET/PUT, walidacja) i stan kopii, tylko admin', async () => {
+    const { deps, app } = setup();
+    const w = await loginCookie(app, addUser(deps).login);
+    const a = await loginCookie(app, addUser(deps, { role: 'admin' }).login);
+    const put = (godzina: string, cookie: string) => app.request('/api/settings/rano', { method: 'PUT', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ godzina }) });
+    for (const p of ['/api/settings/rano', '/api/settings/kopie']) expect((await get(app, p, w)).status).toBe(403);
+    expect((await put('06:30', w)).status).toBe(403);
+    expect(await (await get(app, '/api/settings/rano', a)).json()).toEqual({ godzina: '07:00' });
+    expect((await put('6:30', a)).status).toBe(400);
+    expect((await put('24:00', a)).status).toBe(400);
+    expect((await put('06:30', a)).status).toBe(200);
+    expect(await (await get(app, '/api/settings/rano', a)).json()).toEqual({ godzina: '06:30' });
+    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ eksport: null, zdjecia: null });
+    const at = '2026-10-21T01:30:00.000Z';
+    deps.db.insert(settings).values({ key: 'kopia_eksport_at', value: at, updatedAt: at }).run();
+    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ eksport: at, zdjecia: null });
   });
 });
 

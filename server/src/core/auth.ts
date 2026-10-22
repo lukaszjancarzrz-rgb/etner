@@ -6,10 +6,12 @@ import { loginSchema, newId, ownPasswordSchema, type Me, type User } from '@etne
 import type { AppDeps } from '../app.js';
 import type { Db } from './db.js';
 import { body } from './body.js';
+import { z } from 'zod';
+import { rankoGodzina } from './cron.js';
 import { recentErrors } from './errors.js';
 import { MAX_PASSWORD, dummyVerify, hashPassword, verifyPassword } from './password.js';
 import { can } from './permissions.js';
-import { sessions, users } from './schema-base.js';
+import { sessions, settings, users } from './schema-base.js';
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -147,4 +149,16 @@ export function mountAuth(app: Hono, deps: AppDeps): void {
 
   app.get('/api/me', requireUser(db), (c) => c.json(toMe(c.get('user'))));
   app.get('/api/errors', requireAdmin(db), (c) => c.json(recentErrors(db, 200)));
+
+  // Ustawienia firmy (admin): godzina porannego przypomnienia i stan nocnych kopii.
+  const setting = (key: string) => db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? null;
+  app.get('/api/settings/rano', requireAdmin(db), (c) => c.json({ godzina: rankoGodzina(deps) }));
+  app.put('/api/settings/rano', requireAdmin(db), async (c) => {
+    const { godzina } = await body(c, z.object({ godzina: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Godzina w formacie GG:MM, np. 07:00') }));
+    const now = new Date().toISOString();
+    db.insert(settings).values({ key: 'rano_godzina', value: godzina, updatedAt: now })
+      .onConflictDoUpdate({ target: settings.key, set: { value: godzina, updatedAt: now } }).run();
+    return c.json({ godzina });
+  });
+  app.get('/api/settings/kopie', requireAdmin(db), (c) => c.json({ eksport: setting('kopia_eksport_at'), zdjecia: setting('kopia_zdjec_at') }));
 }
