@@ -206,3 +206,6 @@ Owner go for Task 19c (2026-10-22, "limit reset, continue").
 Task 19c-B: review — Important: template matching breaks on category rename; rano push opens tomorrow; fix round 1 dispatched (+ sharp pixel limit, old avatar delete, pointer:fine density, awaitingChannel cleanup, Pumble author→user avatar, 1100/1280 px check)
 Task 19c-B: fix round 1/5 (all addressed; 274b8c2) — complete (commits 60834a9..274b8c2)
 Task 19c-B: minor (deferred): matching lists not shown next to the day in the schedule (only in Na jutro); Pumble retry state in memory (admin button after restart)
+Task 19c-A: review — Important: lead numbers still in diary entry + push title; fix round 1 dispatched (+ leady_email to Ustawienia, idempotent deletes, once-per-day mail guard, SMTP log, soft-deleted client, types)
+Task 19c-A: fix round 1/5 (all addressed; 4862f36) — complete (commits 4df041e..4862f36)
+Task 19c: complete. Owner checkpoint.
