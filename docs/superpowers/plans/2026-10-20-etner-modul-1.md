@@ -658,7 +658,15 @@ Decyzje właściciela 2026-10-22:
 
 - [ ] **Step 1–5:** testy czystych funkcji „widziane przy wyjściu”, e2e: znacznik zostaje po 2 s na ekranie, znika po przejściu na inny ekran; zrzuty.
 
+### Task 18i: Pumble szybciej i pliki z kanału
+
+Decyzje właściciela 2026-10-22:
+- **Szybsze odświeżanie:** kanał zlecenia, którego karta jest otwarta u kogoś (sygnał „oglądam” z aplikacji co 15 s), odpytywany co ~3 s; pozostałe kanały co 30 s. Limit: najwyżej 20 „oglądanych” kanałów naraz, razem poniżej 1000 zapytań/min.
+- **Pliki z kanału:** wiadomości z załącznikami zapisują pełne dane plików z Pumble (`files`). Podgląd zdjęć i pobieranie plików w karcie zlecenia dokończone po sprawdzeniu na żywo, jak Pumble udostępnia pliki (dokumentacja tego nie opisuje); do tego czasu nazwa pliku zamiast „(plik)”.
+
 ### Task 19: Pozostałe ekrany
+
+(Wykonywane w dwóch częściach: 19a – Leady z „Zrób zlecenie”, Na jutro, Zadania; 19b – Użytkownicy z loginem, hasłem, e-mailem do Pumble i wierszem harmonogramu, Ustawienia. Z leada powstaje zlecenie: klient, obiekt, kategoria, opis → zakres, `lead_id`.)
 
 **Files:**
 - Create: `web/src/features/{leady,na-jutro,zadania,uzytkownicy,ustawienia}/*`, `web/e2e/full.spec.ts`

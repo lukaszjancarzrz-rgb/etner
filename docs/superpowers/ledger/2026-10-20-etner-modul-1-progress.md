@@ -183,3 +183,6 @@ Task 18h: BASE 9caa774; impl ee5a1eb; review: Important — viewed days stamped 
 Task 18h: fix round 1/5 (0143555) — finding 1 & 3 addressed; finding 2 'NOT ADDRESSED' was a controller wording error in the re-review prompt (implementation matches the original review: min-w-0 + truncate) → closed
 Task 18h: minor (deferred): change landing on a day while it is already on screen (after its 1 s stamp) stays „nowe” after leaving
 Task 18h: complete (commits 49185db..0143555, review clean)
+## Owner 2026-10-22: proceed to Task 19 (split 19a / 19b); lead → job emphasised; Task 18i Pumble faster refresh + channel files
+- Ruling R34: watched channels (job card open, client heartbeat every 15 s) polled every ~3 s, others every 30 s, max 20 watched — cost: ~400 req/min worst case.
+- Ruling R35: Pumble file schema/download auth undocumented and test key revoked → store raw `files` JSON now, show file names; finish image preview after a short live check with a temporary key from the owner — cost: one more owner step.
