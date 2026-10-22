@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
 import { addUser, loginCookie, testDeps } from '../../test-utils.js';
 import { modules } from '../index.js';
-import { admins, byScheduleCol, crewMembers } from './service.js';
+import { admins, byScheduleCol, createPerson, crewMembers, listPeople } from './service.js';
 
 async function setup() {
   const deps = testDeps();
@@ -109,6 +109,17 @@ describe('użytkownicy', () => {
       const ids = new Set([...ch.changes, ...snap.records].filter((c: any) => c.entity === 'users').map((c: any) => c.id));
       expect([...ids].sort()).toEqual(who === 'admin' ? [a.user.id, w.user.id].sort() : [w.user.id]);
     }
+  });
+
+  it('zmiana nazwy konta zmienia nazwę powiązanej kolumny harmonogramu, gdy była taka sama', async () => {
+    const { deps, app, admin, a, w } = await setup();
+    const p1 = createPerson(deps.db, a.user.id, { nazwa: 'Jan', userId: w.user.id });
+    const p2 = createPerson(deps.db, a.user.id, { nazwa: 'Szef (biuro)', userId: a.user.id });
+    expect((await send(app, 'PUT', `/api/users/${w.user.id}`, admin, { name: 'Jan Nowak' })).status).toBe(200);
+    expect((await send(app, 'PUT', `/api/users/${a.user.id}`, admin, { name: 'Szef Główny' })).status).toBe(200);
+    const byId = new Map(listPeople(deps.db).map((p) => [p.id, p.nazwa]));
+    expect(byId.get(p1.id)).toBe('Jan Nowak');
+    expect(byId.get(p2.id)).toBe('Szef (biuro)'); // nadana nazwa zostaje
   });
 
   it('schedule_people: pracownik czyta, admin zapisuje', async () => {

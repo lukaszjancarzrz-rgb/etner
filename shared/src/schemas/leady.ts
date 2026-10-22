@@ -17,7 +17,7 @@ const fields = {
   zrodlo: txt,
   opis: txt,
   /** Wartość w groszach. */
-  wartoscGr: z.number().int().min(0).nullish(),
+  wartoscGr: z.number().int().min(0).max(100_000_000_00, 'Maksymalnie 100 000 000,00 zł').nullish(),
   nastepny: day,
   uwagi: txt,
 };

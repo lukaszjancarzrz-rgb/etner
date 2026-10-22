@@ -4,6 +4,7 @@ import { revokeUser } from '../../core/auth.js';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import { users } from '../../core/schema-base.js';
+import { dictRefsFor } from '../../core/dict-refs.js';
 import { schedulePeople } from './schema.js';
 
 export type UserRow = typeof users.$inferSelect;
@@ -15,6 +16,9 @@ export const strip = <T extends { passwordHash?: unknown }>(r: T): Omit<T, 'pass
   const { passwordHash: _, ...rest } = r;
   return rest;
 };
+/** Słowniki: ekipa użytkownika (changes bez password_hash). */
+export const dictRefs = dictRefsFor('users', users, { ekipa: users.ekipa }, strip);
+
 const loginTaken = (db: Db, login: string, except?: string) => {
   const o = db.select({ id: users.id }).from(users).where(eq(users.login, login)).get();
   return !!o && o.id !== except;
@@ -54,6 +58,8 @@ export function update(db: Db, by: string, id: string, d: Partial<NewUser> & { a
   const row = db.update(users).set({ ...d, updatedAt: new Date().toISOString() }).where(eq(users.id, id)).returning().get();
   if (d.active === false) revokeUser(db, id);
   recordChange(db, by, 'users', id, 'update', strip(old), strip(row));
+  // kolumna harmonogramu nazwana jak konto idzie za zmianą nazwy (inaczej nadaną nazwę zostawiamy)
+  if (d.name && d.name !== old.name) for (const p of listPeople(db)) if (p.userId === id && p.nazwa === old.name) updatePerson(db, by, p.id, { nazwa: d.name });
   return strip(row);
 }
 

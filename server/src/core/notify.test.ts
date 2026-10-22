@@ -152,6 +152,17 @@ describe('zadanie rano', () => {
     expect(run).toHaveBeenCalledTimes(1);
     expect(deps.db.select().from(errors).all()[0]!.where).toBe('cron:r');
   });
+  it('tik rano najwyżej raz na dzień warszawski, także po przestawieniu godziny', async () => {
+    const deps = testDeps(); const run = vi.fn();
+    const defs = [{ name: 'r', schedule: 'rano', run }];
+    await rankoTick(deps, defs, at('2026-01-15T06:00:00Z'));
+    await rankoTick(deps, defs, at('2026-01-15T06:00:30Z'));
+    deps.db.insert(settings).values({ key: 'rano_godzina', value: '08:00', updatedAt: 'x' }).run();
+    await rankoTick(deps, defs, at('2026-01-15T07:00:00Z'));
+    expect(run).toHaveBeenCalledTimes(1);
+    await rankoTick(deps, defs, at('2026-01-16T07:00:00Z'));
+    expect(run).toHaveBeenCalledTimes(2);
+  });
   it('rano_godzina: zły format → 07:00', () => {
     const deps = testDeps();
     expect(rankoGodzina(deps)).toBe('07:00');

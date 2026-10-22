@@ -44,6 +44,7 @@ describe('leady', () => {
 
     const c3 = await (await app.request(`/api/leads/${l2.id}/contact`, req(admin, 'POST', { notatka: 'umówiony', nastepny: '2026-03-30' }))).json();
     expect(c3.lead.nastepny).toBe('2026-03-30');
+    expect((await app.request('/api/leads', req(admin, 'POST', { temat: 'Duży', wartoscGr: 100_000_000_01 }))).status).toBe(400);
     const full = await (await app.request(`/api/leads/${l2.id}`, req(admin, 'GET'))).json();
     expect(full.contacts).toHaveLength(2);
   });

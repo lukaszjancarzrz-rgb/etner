@@ -111,8 +111,11 @@ function UserForm({ user, onClose, onShow }: { user?: Rec; onClose: () => void; 
       const u = user ? await send('users', `/api/users/${user.id}`, 'PUT', { ...body, active: f.active })
         : (await api<{ user: Rec }>('/api/users', { method: 'POST', json: { ...body, haslo: f.haslo } })).user;
       store.put('users', u);
-      if (f.row && !linked) await send('schedule_people', '/api/schedule-people', 'POST', { nazwa: body.name, userId: u.id });
-      if (!f.row && linked) { await api(`/api/schedule-people/${linked.id}`, { method: 'DELETE' }); store.remove('schedule_people', linked.id); }
+      // konto już zapisane: błąd wiersza harmonogramu nie może ukryć hasła startowego
+      try {
+        if (f.row && !linked) await send('schedule_people', '/api/schedule-people', 'POST', { nazwa: body.name, userId: u.id });
+        if (!f.row && linked) { await api(`/api/schedule-people/${linked.id}`, { method: 'DELETE' }); store.remove('schedule_people', linked.id); }
+      } catch (x) { fail('Konto zapisane, ale wiersz harmonogramu nie')(x); }
       if (user) { toast('Zapisano', { tone: 'ok' }); onClose(); }
       else onShow({ title: 'Konto utworzone', name: body.name, login: body.login, haslo: f.haslo, note: 'Przekaż mu login i hasło. Hasło widać tylko teraz; może je zmienić w Ustawieniach.' });
     } catch (x) {
@@ -171,7 +174,8 @@ function UserForm({ user, onClose, onShow }: { user?: Rec; onClose: () => void; 
           )}
           {err.form && <p role="alert" className="text-sm font-semibold text-danger">{err.form}</p>}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-            {user ? <Button variant="ghost" onClick={() => setReset(true)}><Key className="h-5 w-5" />Ustaw nowe hasło</Button> : <span />}
+            {user && !self ? <Button variant="ghost" onClick={() => setReset(true)}><Key className="h-5 w-5" />Ustaw nowe hasło</Button>
+              : self ? <a href="#ust" onClick={onClose} className="text-sm font-semibold text-action">Własne hasło: Ustawienia → Zmień hasło</a> : <span />}
             <div className="flex gap-3">
               <Button variant="secondary" onClick={onClose}>Anuluj</Button>
               <Button type="submit" disabled={busy}>{busy ? 'Zapisywanie…' : user ? 'Zapisz' : 'Utwórz konto'}</Button>

@@ -9,7 +9,11 @@ import { firmy } from '../../core/schema-base.js';
 import * as klienci from '../klienci/service.js';
 import * as slowniki from '../slowniki/service.js';
 import * as zlecenia from '../zlecenia/service.js';
+import { dictRefsFor } from '../../core/dict-refs.js';
 import { leadContacts, leads } from './schema.js';
+
+/** Słowniki: wartości przechowywane w leadach. */
+export const dictRefs = dictRefsFor('leads', leads, { status_leada: leads.status, kategoria: leads.kategoria, zrodlo: leads.zrodlo });
 
 export type LeadRow = typeof leads.$inferSelect;
 export type ContactRow = typeof leadContacts.$inferSelect;

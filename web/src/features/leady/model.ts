@@ -4,7 +4,10 @@ import type { Rec } from '../../core/store.js';
 const MAX_GR = 100_000_000_00;
 /** Pole kwoty: grosze albo komunikat błędu. „12.500” (kropka + 3 cyfry) to prawie na pewno tysiące, nie grosze. */
 export function parseZl(text: string): { gr: number } | { error: string } {
-  if (/\.\d{3}(?!\d)/.test(text)) return { error: 'Użyj przecinka dla groszy, np. 12 500 albo 12500,00' };
+  if (/\.\d{3}(?!\d)/.test(text)) {
+    // „1.250,00” / „1.250.000”: kropki jako separator tysięcy
+    return { error: /[.,].*[.,]/.test(text) ? 'Nie używaj kropek w kwocie' : 'Użyj przecinka dla groszy, np. 12 500 albo 12500,00' };
+  }
   let gr: number;
   try { gr = toGr(text); } catch { return { error: 'Wpisz kwotę, np. 12 000 albo 12000,50' }; }
   if (gr < 0) return { error: 'Wpisz kwotę, np. 12 000 albo 12000,50' };

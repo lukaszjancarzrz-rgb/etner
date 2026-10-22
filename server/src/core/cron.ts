@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { eq } from 'drizzle-orm';
+import { dayOf } from '@etner/shared';
 import type { AppDeps } from '../app.js';
 import { logError } from './errors.js';
 import type { CronDef } from './registry.js';
@@ -20,9 +21,14 @@ const safe = (deps: AppDeps, d: CronDef) => async () => {
   try { await d.run(deps); } catch (e) { logError(deps.db, `cron:${d.name}`, e); }
 };
 
-/** Jeden tik zadań 'rano': uruchamia je, gdy w Warszawie jest godzina z ustawień. */
+/** Jeden tik zadań 'rano': uruchamia je, gdy w Warszawie jest godzina z ustawień, najwyżej raz na dzień (`rano_ostatnio`; np. po przestawieniu godziny na późniejszą). */
 export async function rankoTick(deps: AppDeps, defs: CronDef[], now = new Date()): Promise<void> {
   if (!rankoTeraz(now, rankoGodzina(deps))) return;
+  const day = dayOf(now);
+  if (deps.db.select().from(settings).where(eq(settings.key, 'rano_ostatnio')).get()?.value === day) return;
+  const at = now.toISOString();
+  // zapis przed uruchomieniem: błąd zadania nie powtarza całej serii tego dnia
+  deps.db.insert(settings).values({ key: 'rano_ostatnio', value: day, updatedAt: at }).onConflictDoUpdate({ target: settings.key, set: { value: day, updatedAt: at } }).run();
   for (const d of defs) await safe(deps, d)();
 }
 

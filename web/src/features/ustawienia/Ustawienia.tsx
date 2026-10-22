@@ -248,21 +248,23 @@ const DICT_LABEL: Record<string, string> = {
 const DICT_HINT: Record<string, string> = {
   status_leada: '4. wartość oznacza lead przyjęty („Zrób zlecenie” → Przyjęta).',
   status_zadania: '„Zrobione” zamyka zadanie; pierwsza wartość to status nowego zadania.',
-  status_zakupu: 'Ostatnia wartość = kupione.',
+  status_zakupu: 'Dokładnie dwie wartości: pierwsza = do kupienia, druga = kupione.',
   ekipa: '„mieszane” to zlecenie dla kilku ekip.',
   dzien_wolny: 'Dodatkowe dni wolne poza świętami, np. 2026-12-24.',
 };
 const GRUPA_LABEL: Record<string, string> = { aktualne: 'Aktualne', pozniej: 'Na później', zamkniete: 'Zamknięte' };
+/** „rekordzie / rekordach” po liczbie. */
+const recs = (n: number) => (n === 1 ? 'rekordzie' : 'rekordach');
 const WITH_GRUPA = new Set(['status_zlecenia', 'status_leada']);
 const WITH_KOLOR = new Set(['kategoria', 'kod_nieobecnosci']);
-type Item = { key: string; wartosc: string; grupa: string | null; kolor: string | null; platne: boolean | null };
+type Item = { key: string; id?: string; wartosc: string; grupa: string | null; kolor: string | null; platne: boolean | null };
 
 /** Edytor słowników: pełna lista wartości rodzaju, zapis jednym PUT (usunięte znikają miękko). */
 function Dictionaries() {
   const dict = useEntities('dict');
   const [rodzaj, setRodzaj] = useState<string>('kategoria');
   const saved = useMemo(() => dict.filter((d) => d.rodzaj === rodzaj).sort((a, b) => a.kolejnosc - b.kolejnosc)
-    .map((d): Item => ({ key: d.id, wartosc: d.wartosc, grupa: d.grupa ?? null, kolor: d.kolor ?? null, platne: d.platne ?? null })), [dict, rodzaj]);
+    .map((d): Item => ({ key: d.id, id: d.id, wartosc: d.wartosc, grupa: d.grupa ?? null, kolor: d.kolor ?? null, platne: d.platne ?? null })), [dict, rodzaj]);
   const [items, setItems] = useState<Item[] | null>(null); // null = bez zmian (pokazujemy zapisane)
   const [nowa, setNowa] = useState('');
   const [err, setErr] = useState('');
@@ -286,18 +288,21 @@ function Dictionaries() {
     if (new Set(vals).size !== vals.length) return setErr('Wartości w słowniku muszą być różne');
     setBusy(true);
     try {
-      const rows = await api<Rec[]>(`/api/dict/${rodzaj}`, { method: 'PUT', json: { items: list.map((x, i) => ({ wartosc: vals[i], grupa: x.grupa, kolor: x.kolor, platne: x.platne })) } });
+      const rows = await api<Rec[]>(`/api/dict/${rodzaj}`, { method: 'PUT', json: { items: list.map((x, i) => ({ id: x.id, wartosc: vals[i], grupa: x.grupa, kolor: x.kolor, platne: x.platne })) } });
       const keep = new Set(rows.map((r) => r.id));
       for (const d of dict) if (d.rodzaj === rodzaj && !keep.has(d.id)) store.remove('dict', d.id);
       for (const r of rows) store.put('dict', r);
       setItems(null);
       toast('Słownik zapisany', { tone: 'ok' });
-    } catch (x) { setErr(msg(x)); }
+    } catch (x) {
+      const b = x instanceof ApiError ? (x.body as { error?: string; value?: string; count?: number } | null) : null;
+      setErr(b?.error === 'WARTOSC_W_UZYCIU' ? `„${b.value}” jest używana w ${b.count} ${recs(b.count ?? 0)} – zmień nazwę zamiast usuwać` : msg(x));
+    }
     setBusy(false);
   }
 
   return (
-    <Card title="Słowniki" icon={BookOpen} hint="Listy wyboru w formularzach. Zmiana nazwy nie zmienia już zapisanych zleceń i leadów.">
+    <Card title="Słowniki" icon={BookOpen} hint="Listy wyboru w formularzach. Zmiana nazwy zmienia ją też we wszystkich zapisanych rekordach. Wartości w użyciu nie da się usunąć.">
       <Field label="Słownik">{(id) => <Select id={id} value={rodzaj} onValueChange={switchTo} options={DICT_RODZAJE.map((r) => ({ value: r, label: DICT_LABEL[r] ?? r }))} />}</Field>
       {DICT_HINT[rodzaj] && <p className="rounded-xl bg-action/8 px-3 py-2 text-sm">{DICT_HINT[rodzaj]}</p>}
       <ol className="grid gap-2" aria-label={`Wartości: ${DICT_LABEL[rodzaj]}`}>

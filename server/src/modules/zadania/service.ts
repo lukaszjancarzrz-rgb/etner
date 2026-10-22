@@ -4,7 +4,11 @@ import { newId, type TaskSaveInput } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import * as slowniki from '../slowniki/service.js';
+import { dictRefsFor } from '../../core/dict-refs.js';
 import { tasks } from './schema.js';
+
+/** Słowniki: status i grupa zadań. */
+export const dictRefs = dictRefsFor('tasks', tasks, { status_zadania: tasks.status, grupa_zadan: tasks.grupa });
 
 export type TaskRow = typeof tasks.$inferSelect;
 

@@ -15,6 +15,8 @@ export const dictRodzajSchema = z.enum(DICT_RODZAJE);
 export const dictPutSchema = z.object({
   opId: z.string().min(1).optional(),
   items: z.array(z.object({
+    /** Istniejący wiersz (zmiana nazwy po id); nowy bez id. */
+    id: z.string().min(1).optional(),
     wartosc: z.string().trim().min(1, 'Wartość nie może być pusta'),
     grupa: z.enum(DICT_GRUPY).nullish(),
     platne: z.boolean().nullish(),

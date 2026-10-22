@@ -4,7 +4,11 @@ import { newId, type ShoppingCreate, type ShoppingUpdate } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import * as slowniki from '../slowniki/service.js';
+import { dictRefsFor } from '../../core/dict-refs.js';
 import { shopping } from './schema.js';
+
+/** Słowniki: status zakupu. */
+export const dictRefs = dictRefsFor('shopping', shopping, { status_zakupu: shopping.status });
 
 export type ShoppingRow = typeof shopping.$inferSelect;
 

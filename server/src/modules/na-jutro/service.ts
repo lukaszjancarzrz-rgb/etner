@@ -2,7 +2,11 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 import { newId, type ChecklistCreate } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
+import { dictRefsFor } from '../../core/dict-refs.js';
 import { checklists } from './schema.js';
+
+/** Słowniki: ekipa w listach „na jutro”. */
+export const dictRefs = dictRefsFor('checklists', checklists, { ekipa: checklists.ekipa });
 
 export type ChecklistRow = typeof checklists.$inferSelect;
 

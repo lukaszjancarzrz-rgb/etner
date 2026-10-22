@@ -42,7 +42,8 @@ describe('jobPrefill', () => {
 describe('parseZl', () => {
   it('odrzuca „12.500”, ujemne i powyżej 100 mln; przyjmuje przecinek i kropkę z groszami', () => {
     expect(parseZl('12.500')).toEqual({ error: 'Użyj przecinka dla groszy, np. 12 500 albo 12500,00' });
-    expect(parseZl('1.250.000')).toHaveProperty('error');
+    expect(parseZl('1.250.000')).toEqual({ error: 'Nie używaj kropek w kwocie' });
+    expect(parseZl('1.250,00')).toEqual({ error: 'Nie używaj kropek w kwocie' });
     expect(parseZl('12 500')).toEqual({ gr: 1250000 });
     expect(parseZl('12500,00')).toEqual({ gr: 1250000 });
     expect(parseZl('12.5')).toEqual({ gr: 1250 });

@@ -9,7 +9,11 @@ import * as slowniki from '../slowniki/service.js';
 import * as users from '../uzytkownicy/service.js';
 import * as zlecenia from '../zlecenia/service.js';
 import type { Outbox } from '../zlecenia/service.js';
+import { dictRefsFor } from '../../core/dict-refs.js';
 import { scheduleDrafts, scheduleEntries, scheduleNotes } from './schema.js';
+
+/** Słowniki: kod nieobecności we wpisach harmonogramu. */
+export const dictRefs = dictRefsFor('schedule_entries', scheduleEntries, { kod_nieobecnosci: scheduleEntries.kod });
 
 export type EntryRow = typeof scheduleEntries.$inferSelect;
 export type DraftRow = typeof scheduleDrafts.$inferSelect;

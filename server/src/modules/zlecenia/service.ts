@@ -9,7 +9,11 @@ import type { Notification } from '../../core/notify.js';
 import * as klienci from '../klienci/service.js';
 import * as slowniki from '../slowniki/service.js';
 import * as users from '../uzytkownicy/service.js';
+import { dictRefsFor } from '../../core/dict-refs.js';
 import { jobs } from './schema.js';
+
+/** Słowniki: wartości przechowywane w zleceniach (zmiana nazwy, blokada usuwania). */
+export const dictRefs = dictRefsFor('jobs', jobs, { status_zlecenia: jobs.status, kategoria: jobs.kategoria, rodzaj_zlecenia: jobs.rodzaj, ekipa: jobs.ekipa });
 
 export type JobRow = typeof jobs.$inferSelect;
 /** Dla harmonogramu: nowe osoby zlecenia trafiają do jego kanału Pumble. */
