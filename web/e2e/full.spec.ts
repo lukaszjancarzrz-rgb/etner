@@ -141,3 +141,94 @@ test('zadania: admin dodaje zadanie, odhacza je; cykliczne wraca z datą „osta
   await expect(cyc).toContainText(`ostatnio ${fmt(dayOf(new Date()))}`);
   await expect(cyc.getByRole('checkbox')).toHaveAttribute('aria-checked', 'false');
 });
+
+test('użytkownicy: admin tworzy pracownika z wygenerowanym hasłem, ten się loguje; reset hasła wylogowuje starą sesję', async ({ page, browser }, info) => {
+  const login = `e2e${info.project.name.startsWith('iPhone') ? 'i' : 'd'}${Date.now() % 100000}`;
+  const name = `Testowy ${login}`;
+  await page.goto('/');
+  await page.getByRole('button', { name: /Tomasz Wrona/ }).click();
+  await page.goto('/#uz');
+  await page.getByRole('button', { name: 'Nowy użytkownik' }).click();
+  const f = page.getByRole('dialog', { name: 'Nowy użytkownik' });
+  await f.getByLabel('Imię i nazwisko').fill(name);
+  await f.getByLabel('Login').fill(login);
+  await f.getByRole('button', { name: 'Generuj' }).click();
+  const haslo = await f.getByLabel('Hasło startowe').inputValue();
+  expect(haslo).toMatch(/^[a-km-zA-HJ-NP-Z2-9]{12}$/);
+  await expect(f.getByRole('checkbox', { name: 'Wiersz w harmonogramie' })).toHaveAttribute('aria-checked', 'true'); // pracownik: domyślnie tak
+  await f.getByRole('button', { name: 'Utwórz konto' }).click();
+  const shown = page.getByRole('dialog', { name: 'Konto utworzone' });
+  await expect(shown.getByTestId('login')).toHaveText(login);
+  await expect(shown.getByTestId('haslo')).toHaveText(haslo);
+  await shown.getByRole('button', { name: 'Gotowe' }).click();
+  const row = page.getByRole('button', { name: new RegExp(`^${name}`) });
+  await expect(row).toContainText(`login: ${login}`);
+  await expect(row).toContainText('wiersz w harmonogramie');
+
+  // nowy pracownik loguje się w osobnym kontekście
+  const ctx = await browser.newContext({ ...info.project.use });
+  const w = await ctx.newPage();
+  await w.goto('/');
+  await w.getByLabel('Login').fill(login);
+  await w.getByLabel('Hasło', { exact: true }).fill(haslo);
+  await w.getByRole('button', { name: 'Zaloguj się' }).click();
+  await expect(w.getByRole('heading', { name: 'Harmonogram', level: 1 })).toBeVisible();
+
+  // admin ustawia nowe hasło: stara sesja pracownika kończy się
+  await row.click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Ustaw nowe hasło' }).click();
+  const r = page.getByRole('dialog', { name: 'Ustaw nowe hasło' });
+  await expect(r).toContainText('Wszystkie jego sesje zostaną zakończone');
+  await r.getByRole('button', { name: 'Ustaw hasło i wyloguj' }).click();
+  await expect(page.getByRole('dialog', { name: 'Nowe hasło ustawione' })).toContainText('Wylogowaliśmy go');
+  await expect(w.getByRole('button', { name: 'Zaloguj się ponownie' })).toBeVisible();
+  await ctx.close();
+});
+
+test('słowniki: admin dodaje rodzaj zlecenia, wartość jest w formularzu zlecenia', async ({ page }, info) => {
+  const val = `e2e rodzaj ${info.project.name}`;
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#ust');
+  const s = page.getByRole('region', { name: 'Słowniki' });
+  await s.getByRole('combobox', { name: 'Słownik' }).click();
+  await page.getByRole('option', { name: 'Rodzaje zleceń' }).click();
+  await s.getByLabel('Nowa wartość').fill(val);
+  await s.getByRole('button', { name: 'Dodaj' }).click();
+  await s.getByRole('button', { name: 'Zapisz słownik' }).click();
+  await expect(page.getByText('Słownik zapisany', { exact: true })).toBeVisible();
+  await page.goto('/#zl');
+  await page.getByRole('button', { name: 'Nowe zlecenie' }).click();
+  await page.getByRole('dialog', { name: 'Nowe zlecenie' }).getByLabel('Rodzaj').click();
+  await expect(page.getByRole('option', { name: val })).toBeVisible();
+});
+
+test('pracownik: bez Użytkowników, `#uz` pokazuje „Brak dostępu”; Ustawienia bez słowników', async ({ page }) => {
+  await login(page, 'Bartek Gawlik');
+  await page.goto('/#wiecej');
+  await expect(page.getByRole('link', { name: /Użytkownicy/ })).toHaveCount(0);
+  await page.goto('/#uz');
+  await expect(page.getByRole('heading', { name: 'Brak dostępu', level: 1 })).toBeVisible();
+  await page.goto('/#ust');
+  await expect(page.getByRole('heading', { name: 'Zmień hasło' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Słowniki' })).toHaveCount(0);
+});
+
+test('powiadomienia: `#zl/<id>~<wpis>` otwiera zlecenie i podświetla wpis, `#zakupy~<id>` podświetla zakup', async ({ page }, info) => {
+  await login(page, 'Tomasz Wrona');
+  const jobs = (await (await page.request.get('/api/jobs')).json()) as { id: string }[];
+  const job = jobs.at(-1)!;
+  const tekst = `E2E ${info.project.name} wpis do podświetlenia`;
+  const res = await page.request.post('/api/diary', { data: { owner_type: 'job', owner_id: job.id, tekst } });
+  const created = await res.json();
+  const entryId = (created.id ?? created.entry?.id) as string;
+  await page.goto('/#harm');
+  await page.goto(`/#zl/${job.id}~${entryId}`);
+  const entry = page.locator(`#e-${entryId}`);
+  await expect(entry).toContainText(tekst);
+  await expect(entry).toHaveClass(/ring-4/);
+  await expect(entry).toBeInViewport();
+
+  const shop = (await (await page.request.get('/api/shopping')).json()) as { id: string }[];
+  await page.goto(`/#zakupy~${shop[0]!.id}`);
+  await expect(page.locator(`#z-${shop[0]!.id}`)).toHaveClass(/ring-4/);
+});

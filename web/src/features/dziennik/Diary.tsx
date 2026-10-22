@@ -34,10 +34,16 @@ export function Diary({ ownerType, ownerId, highlight, disabled }: { ownerType: 
   const found = highlight && entries.some((e) => e.id === highlight);
   useEffect(() => {
     if (!found) return;
-    document.getElementById(`e-${highlight}`)?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    const el = () => document.getElementById(`e-${highlight}`);
+    el()?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     setFlash(highlight);
+    // Długa karta (zakres, zdjęcia) potrafi przerwać płynne przewijanie; wtedy dociągamy wpis od razu.
+    const again = setTimeout(() => {
+      const r = el()?.getBoundingClientRect();
+      if (r && (r.bottom < 0 || r.top > innerHeight)) el()?.scrollIntoView({ block: 'center' });
+    }, 700);
     const t = setTimeout(() => setFlash(undefined), 2500);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); clearTimeout(again); };
   }, [found, highlight]);
 
   return (
