@@ -664,6 +664,14 @@ Decyzje właściciela 2026-10-22:
 - **Szybsze odświeżanie:** kanał zlecenia, którego karta jest otwarta u kogoś (sygnał „oglądam” z aplikacji co 15 s), odpytywany co ~3 s; pozostałe kanały co 30 s. Limit: najwyżej 20 „oglądanych” kanałów naraz, razem poniżej 1000 zapytań/min.
 - **Pliki z kanału:** wiadomości z załącznikami zapisują pełne dane plików z Pumble (`files`). Podgląd zdjęć i pobieranie plików w karcie zlecenia dokończone po sprawdzeniu na żywo, jak Pumble udostępnia pliki (dokumentacja tego nie opisuje); do tego czasu nazwa pliku zamiast „(plik)”.
 
+### Task 18j (później, gdy właściciel poda listy): Listy predefiniowane pod rodzaj pracy
+
+Decyzja właściciela 2026-10-22 (do zbudowania, gdy poda pełny zestaw list):
+- Szablony list (np. „Klimatyzacja”, „Alarm”, „Reku – przygotówka”, „Montaż rekuperatora”): nazwa + pozycje + do jakich zleceń pasuje (kategoria i/lub rodzaj). Edytuje admin.
+- Odhaczanie tylko lokalne na urządzeniu: po wyjściu z listy wszystko znowu do odhaczenia (nic nie idzie na serwer).
+- Podpowiedź: w „Na jutro” (i przy dniu w harmonogramie) listy pasujące do zleceń, na które dana osoba jedzie danego dnia, są podświetlone i proponowane na górze.
+- Logika dopasowania: szablon ma `kategorie[]` i `rodzaje[]`; pasuje, gdy zlecenie dnia ma pasującą kategorię i (jeśli podano) rodzaj.
+
 ### Task 19: Pozostałe ekrany
 
 (Wykonywane w dwóch częściach: 19a – Leady z „Zrób zlecenie”, Na jutro, Zadania; 19b – Użytkownicy z loginem, hasłem, e-mailem do Pumble i wierszem harmonogramu, Ustawienia. Z leada powstaje zlecenie: klient, obiekt, kategoria, opis → zakres, `lead_id`.)
