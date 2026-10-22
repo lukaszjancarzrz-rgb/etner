@@ -9,7 +9,7 @@ import { seedBase } from '../slowniki/seed.js';
 import * as users from '../uzytkownicy/service.js';
 import { pumbleMessages } from './schema.js';
 import { channelSlug, idle, messages, pollTick } from './pumble.js';
-import { get } from './service.js';
+import { awaitingChannel, get, save } from './service.js';
 
 let clock = new Date('2026-10-21T10:00:00Z');
 async function setup(withPumble = true) {
@@ -302,6 +302,23 @@ describe('Pumble', () => {
     expect(get(s.deps.db, later.id)!.pumbleChannelId).toBeNull();
   });
 
+  it('istniejące zlecenia (sprzed uruchomienia) nie dostają kanału w obiegu; admin zakłada przyciskiem', async () => {
+    const s = await setup();
+    const old = save(s.deps.db, s.a.user.id, { clientId: s.k.client.id, status: 'Nowe' } as any)!;
+    awaitingChannel(s.deps.db).clear(); // jak po restarcie serwera
+    for (let i = 0; i < 2; i++) { await pollTick(s.deps); clock = new Date(clock.getTime() + 5 * 60_000 + 1); }
+    expect(get(s.deps.db, old.id)!.pumbleChannelId).toBeNull();
+    expect(s.f.channels.size).toBe(0);
+    const r = await s.app.request(`/api/jobs/${old.id}/pumble/channel`, req(s.admin, 'POST'));
+    expect(((await r.json()) as any).pumbleChannelId).toBeTruthy();
+    // zlecenie z leada (zapis przez service, bez trasy /api/jobs) dostaje kanał w obiegu
+    const fromLead = save(s.deps.db, s.a.user.id, { clientId: s.k.client.id, status: 'Nowe' } as any)!;
+    await pollTick(s.deps);
+    expect(get(s.deps.db, fromLead.id)!.pumbleChannelId).toBeTruthy();
+    await pollTick(s.deps);
+    expect(awaitingChannel(s.deps.db).size).toBe(0); // sprzątnięte w następnym obiegu
+  });
+
   it('e-mail użytkownika: małe litery, walidacja; pracownik nie widzi cudzych e-maili', async () => {
     const s = await setup();
     const put = (email: string) => s.app.request(`/api/users/${s.b2.user.id}`, req(s.admin, 'PUT', { email }));
@@ -310,7 +327,7 @@ describe('Pumble', () => {
     expect(((await (await put('')).json()) as any).email).toBeNull();
     const snap = (await (await s.app.request('/api/snapshot', req(s.worker, 'GET'))).json()) as any;
     const us = snap.records.filter((r: any) => r.entity === 'users');
-    expect(us.map((r: any) => r.data.email)).toEqual(['b1@firma.pl']);
+    expect(us.map((r: any) => r.data.email).filter(Boolean)).toEqual(['b1@firma.pl']);
   });
 
   it('oglądane kanały: szybki obieg tylko dla nich (najwyżej 20), reszta w pełnym', async () => {

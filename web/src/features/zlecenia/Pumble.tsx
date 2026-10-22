@@ -79,7 +79,10 @@ export function Pumble({ job }: { job: Rec }) {
       </div>
       {!ch ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-line p-4">
-          <p className="flex items-center gap-2 text-ink-2"><ChatsCircle className="h-6 w-6" weight="duotone" />Kanał jeszcze nie utworzony</p>
+          <div className="grid gap-0.5">
+            <p className="flex items-center gap-2 text-ink-2"><ChatsCircle className="h-6 w-6" weight="duotone" />Kanał jeszcze nie utworzony</p>
+            {admin && <p className="text-sm text-ink-2">Kanały zakładają się same tylko dla nowych zleceń.</p>}
+          </div>
           {admin && <Button size="sm" variant="secondary" disabled={creating || !online} onClick={() => void create()}><Plus className="h-5 w-5" weight="bold" />Utwórz kanał w Pumble</Button>}
         </div>
       ) : (

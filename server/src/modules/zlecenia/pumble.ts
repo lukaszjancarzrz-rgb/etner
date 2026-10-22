@@ -243,7 +243,7 @@ function trim(db: AppDeps['db'], jobId: string): void {
 }
 
 /**
- * Jeden obieg: ponowienie osób, kanały dla aktualnych zleceń bez kanału (do 5), nowe wiadomości (do 50 kanałów, po kolei w kółko).
+ * Jeden obieg: ponowienie osób, kanały dla nowych aktualnych zleceń bez kanału (do 5; po nieudanej próbie przy zapisie), nowe wiadomości (do 50 kanałów, po kolei w kółko).
  * Błąd całego Pumble przerywa obieg: jeden wpis w błędach i przerwa rosnąca od 1 min do 30 min. Błędy kanałów: jeden wpis na obieg.
  */
 export async function pollTick(deps: AppDeps, fast = false): Promise<void> {
@@ -271,7 +271,10 @@ export async function pollTick(deps: AppDeps, fast = false): Promise<void> {
       s.pending.delete(id);
     }
     const open = svc.list(deps.db).filter((j) => group(deps, j) !== 'zamkniete').sort((a, b) => a.numer.localeCompare(b.numer));
-    const todo = open.filter((j) => !j.pumbleChannelId && group(deps, j) === 'aktualne' && canTry(s, j.id, t)).slice(0, CREATE_PER_TICK);
+    // kanały tylko dla nowych zleceń (bez zakładania dla istniejących; te ręcznie przyciskiem admina)
+    const wait = svc.awaitingChannel(deps.db);
+    for (const id of [...wait]) if (svc.get(deps.db, id)?.pumbleChannelId !== null) wait.delete(id);
+    const todo = open.filter((j) => wait.has(j.id) && group(deps, j) === 'aktualne' && canTry(s, j.id, t)).slice(0, CREATE_PER_TICK);
     for (const j of todo) await one(`zlecenie ${j.numer}`, () => ensureChannel(deps, j.id));
     // świeży odczyt: kanały założone przed chwilą też są odpytywane w tym obiegu
     const withCh = open.map((j) => svc.get(deps.db, j.id) ?? j).filter((j) => j.pumbleChannelId);

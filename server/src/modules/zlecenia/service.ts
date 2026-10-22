@@ -77,6 +77,17 @@ function nextNumer(db: Db, firmaId: string): string {
 }
 
 /** Wywołuj w runOp/tx. Zwraca zlecenie; powiadomienia ląduje w `out` (wysyłka po commit). */
+const awaiting = new WeakMap<Db, Set<string>>();
+/**
+ * Zlecenia założone w tym procesie, które czekają na kanał Pumble: obieg zakłada kanały tylko im (nowe zlecenia, także z leada), nie starym.
+ * shortcut: w pamięci; po restarcie nieudane założenie zostaje dla przycisku admina „Utwórz kanał w Pumble”.
+ */
+export const awaitingChannel = (db: Db): Set<string> => {
+  let s = awaiting.get(db);
+  if (!s) awaiting.set(db, (s = new Set()));
+  return s;
+};
+
 export function save(db: Db, userId: string, input: JobSaveInput, out: Outbox = []): JobRow | undefined {
   const { id, newClient, newSite, ...rest } = input;
   const old = id ? get(db, id) : undefined;
@@ -105,6 +116,7 @@ export function save(db: Db, userId: string, input: JobSaveInput, out: Outbox = 
     const firmaId = defaultFirmaId(db);
     row = db.insert(jobs).values({ ...patch, id: newId(), firmaId, numer: nextNumer(db, firmaId), clientId, siteId, status, zamknieteAt, createdAt: now, createdBy: userId, updatedAt: now }).returning().get();
     recordChange(db, userId, 'jobs', row.id, 'create', null, row);
+    awaitingChannel(db).add(row.id);
   }
 
   // R18: klient i obiekt trafiają do pracowników dopiero gdy mają zlecenie; ponowna emisja po zmianie powiązania.
