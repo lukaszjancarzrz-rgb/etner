@@ -193,3 +193,5 @@ Task 18i: minor (deferred): per-mode dedup → up to 2 pumble:obieg rows/hour pe
 Task 18i: complete (commits b9e232b..8f14e8d, review clean)
 Task 19a: review Approved (commits 6ce1867..08530a3); minors folded into the first commit of 19b: leady→zlecenia scope import via zlecenia service (module boundary), „Zrób zlecenie” pending state + optimistic lead status, server 409 on second to-job for the same lead, money „12.500” guard; deferred: Zadania row double tab stop, #jutro~ to crew outside options, admin default crew, task text length client check, #zl~ e2e replaced by #ld~
 Task 19a: complete
+Task 19b: BASE 8c4676d; impl 9662fd8..e31b759; review: Important — dictionary rename/remove breaks records using the value; empty status list allowed
+- Ruling R36: real rename — PUT /api/dict items carry id; changed wartosc updates the dict row in place and cascades the new text to every referencing record (jobs, leads, users, checklists, schedule kod, tasks, shopping) in one tx with changes; removing a value in use → 409 WARTOSC_W_UZYCIU; empty status dictionaries rejected; status_zakupu exactly 2 values — cost: wider tx on rename (rare admin action).
