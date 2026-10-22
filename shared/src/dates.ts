@@ -23,3 +23,11 @@ export function addDays(day: string, n: number): string {
 export function mondayOf(day: string): string {
   return addDays(day, -((noon(day).getUTCDay() + 6) % 7));
 }
+
+/** Ten sam dzień za n miesięcy; gdy go nie ma (31 → luty), ostatni dzień miesiąca. */
+export function addMonths(day: string, n: number): string {
+  const [y, m, d] = day.split('-').map(Number) as [number, number, number];
+  const t = new Date(Date.UTC(y, m - 1 + n, 1));
+  t.setUTCDate(Math.min(d, new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate()));
+  return t.toISOString().slice(0, 10);
+}

@@ -106,6 +106,13 @@
       "when": 1792681437084,
       "tag": "0014_strong_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1792697771139,
+      "tag": "0015_zadania_cykl_klient",
+      "breakpoints": true
     }
   ]
 }

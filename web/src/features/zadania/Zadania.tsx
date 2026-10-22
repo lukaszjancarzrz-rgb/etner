@@ -1,8 +1,10 @@
-import { ArrowsClockwise, ListChecks, PencilSimple, Plus } from '@phosphor-icons/react';
+import { ArrowsClockwise, ListChecks, PencilSimple, Plus, User, X } from '@phosphor-icons/react';
+import { CYKLE, nextTermin, type Cykl } from '@etner/shared';
 import { useMemo, useState } from 'react';
 import { fmtDay, today, useDict, useLoading } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
-import { useEntities, type Rec } from '../../core/store.js';
+import { useEntities, useEntity, type Rec } from '../../core/store.js';
+import { Combobox } from '../../core/ui/combobox.js';
 import { Badge, Empty, SectionTitle, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
@@ -15,6 +17,8 @@ import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
 import { DONE, isDone, isLate, taskGroups } from './model.js';
 
+/** Optymistycznie jak serwer: cykliczne „Zrobione” wraca do pierwszego statusu, z cyklem termin = dziś + cykl. */
+const doneCyclic = (first: string | undefined, cykl: Cykl | null, day: string) => ({ status: first, ostatnio: day, ...(cykl && { termin: nextTermin(day, cykl) }) });
 const fail = (t: string) => (e: Error) => toast(t, { body: e.message, tone: 'error' });
 const NONE = '-';
 const put = (t: Rec, optimistic: Record<string, unknown>, body: Record<string, unknown>) =>
@@ -66,7 +70,7 @@ function AddForm() {
     if (!tekst) return setErr('Wpisz treść zadania');
     if (tekst.length > 500) return setErr('Tekst jest za długi');
     const body = { tekst, grupa: g };
-    void createVia('tasks', { kind: 'zadania', url: '/api/tasks', method: 'POST', body }, { ...body, status: first, priorytet: null, termin: null, cykliczne: false })
+    void createVia('tasks', { kind: 'zadania', url: '/api/tasks', method: 'POST', body }, { ...body, status: first, priorytet: null, termin: null, cykliczne: false, cykl: null, clientId: null })
       .catch((x: Error) => { setT((c) => c || tekst); setErr(x.message); });
     setT(''); setErr('');
   }
@@ -89,24 +93,28 @@ function Task({ t, onEdit }: { t: Rec; onEdit: () => void }) {
   const day = today();
   const done = isDone(t);
   const late = isLate(t, day);
+  const client = useEntity('clients', t.clientId ?? undefined);
   // cykliczne „Zrobione”: serwer wraca do pierwszego statusu i zapisuje `ostatnio`
-  const toggle = (v: boolean) => void put(t, v ? (t.cykliczne ? { status: first, ostatnio: day } : { status: DONE }) : { status: first }, { status: v ? DONE : first })
+  const toggle = (v: boolean) => void put(t, v ? (t.cykliczne ? doneCyclic(first, t.cykl, day) : { status: DONE }) : { status: first }, { status: v ? DONE : first })
     .then(() => v && t.cykliczne && toast('Zrobione, zadanie wraca na listę', { body: 'To zadanie cykliczne.', tone: 'ok' }), fail('Zmiana nie została zapisana'));
   return (
     <li className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card py-3 pr-3 pl-2', late ? 'border-danger/60' : 'border-line')}>
       <label className={cn('grid h-12 w-12 place-items-center rounded-xl', !t._tmp && 'cursor-pointer hover:bg-ok/10')}>
         <Checkbox checked={done} disabled={!!t._tmp} aria-label={`Zrobione: ${t.tekst}`} onCheckedChange={(v) => toggle(v === true)} className="h-8 w-8" />
       </label>
-      <button type="button" onClick={onEdit} disabled={!!t._tmp} className="min-w-0 text-left">
+      <div className="min-w-0">
+      <button type="button" onClick={onEdit} disabled={!!t._tmp} className="block w-full min-w-0 text-left">
         <span className={cn('block font-semibold leading-snug', done && 'text-ink-2 line-through decoration-2')}>{t.tekst}</span>
         <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
           {t.priorytet != null && <Badge tone={t.priorytet === 1 ? 'ink' : 'line'}>P{t.priorytet}</Badge>}
           {t.status !== first && !done && <Badge tone="action">{t.status}</Badge>}
           {t.termin && <span className={cn(late && 'font-bold text-danger')}>{late ? 'po terminie ' : 'termin '}{t.termin === day ? 'dziś' : fmtDay(t.termin)}</span>}
-          {t.cykliczne && <span className="inline-flex items-center gap-1"><ArrowsClockwise className="h-4 w-4" aria-hidden />cykliczne{t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}</span>}
+          {t.cykliczne && <span className="inline-flex items-center gap-1"><ArrowsClockwise className="h-4 w-4" aria-hidden />{t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne'}{t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}</span>}
           {t._tmp && <span>wysyłanie…</span>}
         </span>
       </button>
+      {client && <a href={`#kl/${client.id}`} className="mt-1 inline-flex min-h-8 items-center gap-1 text-sm font-semibold text-action"><User className="h-4 w-4" aria-hidden />{client.nazwa}</a>}
+      </div>
       <Button variant="ghost" size="sm" aria-label={`Edytuj: ${t.tekst}`} onClick={onEdit} disabled={!!t._tmp} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>
     </li>
   );
@@ -117,18 +125,20 @@ function TaskForm({ task, onClose }: { task: Rec; onClose: () => void }) {
   const statusy = useDict('status_zadania');
   const [f, setF] = useState({
     tekst: task.tekst as string, grupa: (task.grupa as string) || NONE, status: task.status as string, priorytet: task.priorytet == null ? NONE : String(task.priorytet),
-    termin: (task.termin as string | null) ?? '', cykliczne: !!task.cykliczne, uwagi: (task.uwagi as string) ?? '',
+    termin: (task.termin as string | null) ?? '', cykliczne: !!task.cykliczne, cykl: (task.cykl as string | null) ?? NONE, clientId: (task.clientId as string | null) ?? '', uwagi: (task.uwagi as string) ?? '',
   });
   const [err, setErr] = useState('');
   const [confirm, setConfirm] = useState(false);
   const set = (p: Partial<typeof f>) => setF((x) => ({ ...x, ...p }));
   const opts = (d: Rec[]) => d.map((x) => ({ value: x.wartosc as string, label: x.wartosc as string }));
+  const clients = useEntities('clients');
+  const clientOpts = useMemo(() => [...clients].sort((a, b) => a.nazwa.localeCompare(b.nazwa, 'pl')).map((c) => ({ value: c.id, label: c.nazwa as string })), [clients]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!f.tekst.trim()) return setErr('Wpisz treść zadania');
-    const body = { tekst: f.tekst.trim(), grupa: f.grupa === NONE ? '' : f.grupa, status: f.status, priorytet: f.priorytet === NONE ? null : Number(f.priorytet), termin: f.termin || null, cykliczne: f.cykliczne, uwagi: f.uwagi.trim() };
-    const optimistic = body.status === DONE && body.cykliczne ? { ...body, status: statusy[0]?.wartosc, ostatnio: today() } : body;
+    const body = { tekst: f.tekst.trim(), grupa: f.grupa === NONE ? '' : f.grupa, status: f.status, priorytet: f.priorytet === NONE ? null : Number(f.priorytet), termin: f.termin || null, cykliczne: f.cykliczne, cykl: f.cykliczne && f.cykl !== NONE ? f.cykl as Cykl : null, clientId: f.clientId || null, uwagi: f.uwagi.trim() };
+    const optimistic = body.status === DONE && body.cykliczne ? { ...body, ...doneCyclic(statusy[0]?.wartosc, body.cykl, today()) } : body;
     void put(task, optimistic, body).catch(fail('Zadanie nie zostało zapisane'));
     onClose();
   }
@@ -153,6 +163,19 @@ function TaskForm({ task, onClose }: { task: Rec; onClose: () => void }) {
             <Checkbox checked={f.cykliczne} onCheckedChange={(v) => set({ cykliczne: v === true })} aria-label="Cykliczne" />
             <span>Cykliczne <span className="block text-sm font-normal text-ink-2">Po oznaczeniu jako zrobione wraca na listę, zapisuje się data.</span></span>
           </label>
+          {f.cykliczne && (
+            <Field label="Cykl" hint={f.cykl === NONE ? 'Termin się nie zmienia.' : 'Po zrobieniu termin = dziś + cykl.'}>
+              {(id, d) => <Select id={id} aria-describedby={d} value={f.cykl} onValueChange={(cykl) => set({ cykl })} options={[{ value: NONE, label: 'Bez cyklu' }, ...Object.entries(CYKLE).map(([value, label]) => ({ value, label }))]} />}
+            </Field>
+          )}
+          <Field label="Klient">
+            {(id) => (
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <Combobox id={id} value={f.clientId} onValueChange={(clientId) => set({ clientId })} options={clientOpts} placeholder="Bez klienta" search="Nazwisko, firma" empty="Nie ma takiego klienta." />
+                {f.clientId && <Button variant="ghost" size="icon" aria-label="Usuń klienta z zadania" onClick={() => set({ clientId: '' })}><X className="h-5 w-5" /></Button>}
+              </div>
+            )}
+          </Field>
           {task.ostatnio && <p className="text-sm text-ink-2">Ostatnio zrobione: {fmtDay(task.ostatnio)}</p>}
           <Field label="Uwagi">{(id) => <Textarea id={id} value={f.uwagi} onChange={(e) => set({ uwagi: e.target.value })} className="min-h-20" />}</Field>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">

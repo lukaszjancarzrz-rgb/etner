@@ -1,6 +1,7 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
-import { newId, type TaskSaveInput } from '@etner/shared';
+import { newId, nextTermin, type TaskSaveInput } from '@etner/shared';
+import * as klienci from '../klienci/service.js';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import * as slowniki from '../slowniki/service.js';
@@ -17,7 +18,7 @@ export const get = (db: Db, id: string): TaskRow | undefined =>
 export const list = (db: Db): TaskRow[] =>
   db.select().from(tasks).where(isNull(tasks.deletedAt)).orderBy(asc(tasks.termin), asc(tasks.createdAt)).all();
 
-/** Wywołuj w runOp. Zadanie cykliczne ustawione na „Zrobione” wraca do pierwszego statusu, `ostatnio` = today. */
+/** Wywołuj w runOp. Zadanie cykliczne ustawione na „Zrobione” wraca do pierwszego statusu, `ostatnio` = today, a z cyklem termin = today + cykl. */
 export function save(db: Db, userId: string, input: TaskSaveInput, today: string): TaskRow | undefined {
   const { id, ...rest } = input;
   const old = id ? get(db, id) : undefined;
@@ -29,7 +30,11 @@ export function save(db: Db, userId: string, input: TaskSaveInput, today: string
   if (!slowniki.list(db, 'status_zadania').some((s) => s.wartosc === status)) throw new HTTPException(400, { message: 'Nieznany status zadania' });
   patch.status = status;
   // Literał 'Zrobione': seed słownika; wartość „ukończone” nie ma w słowniku osobnego znacznika.
-  if (status === 'Zrobione' && (patch.cykliczne ?? old?.cykliczne)) Object.assign(patch, { status: first, ostatnio: today });
+  if (status === 'Zrobione' && (patch.cykliczne ?? old?.cykliczne)) {
+    const cykl = (patch.cykl === undefined ? old?.cykl : patch.cykl) as Parameters<typeof nextTermin>[1] | null | undefined;
+    Object.assign(patch, { status: first, ostatnio: today }, cykl && { termin: nextTermin(today, cykl) });
+  }
+  if (patch.clientId && !klienci.get(db, patch.clientId as string)) throw new HTTPException(400, { message: 'Nie znaleziono klienta' });
   const now = new Date().toISOString();
   if (old) {
     const row = db.update(tasks).set({ ...patch, updatedAt: now }).where(eq(tasks.id, old.id)).returning().get();
