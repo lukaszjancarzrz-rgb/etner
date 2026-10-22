@@ -22,7 +22,7 @@ export function useBadges(): Record<string, number> {
   const me = useMe();
   const ver = useSeenVersion();
   const [day, setDay] = useState(today);
-  // przełom doby: „dziś i jutro” w Na jutro liczone od nowa
+  // przełom doby: „jutro” w Na jutro liczone od nowa
   useEffect(() => { const t = setInterval(() => setDay(today()), 60_000); return () => clearInterval(t); }, []);
   useEffect(() => { if (me) ensureSeenBase(me.id, ['harm']); }, [me]);
   const harm = useUnseenDays().length;

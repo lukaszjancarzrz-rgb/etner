@@ -23,15 +23,16 @@ describe('liczniki w menu', () => {
     expect(Object.fromEntries(freshByJob([], [], [], 'me', () => T1, false, pb))).toEqual({ j3: 1 });
   });
 
-  it('naJutroCount: dziś i jutro, niezabrane, ekipa pracownika; admin wszystkie', () => {
+  it('naJutroCount: tylko jutro, niezabrane, ekipa pracownika; admin wszystkie', () => {
     const items = [
       r({ dzien: '2026-10-21', ekipa: 'A', zabrane: false }), r({ dzien: '2026-10-22', ekipa: 'A', zabrane: false }),
       r({ dzien: '2026-10-22', ekipa: 'A', zabrane: true }), r({ dzien: '2026-10-23', ekipa: 'A', zabrane: false }),
       r({ dzien: '2026-10-20', ekipa: 'A', zabrane: false }), r({ dzien: '2026-10-21', ekipa: 'B', zabrane: false }),
     ];
-    expect(naJutroCount(items, '2026-10-21', { role: 'pracownik', ekipa: 'A' })).toBe(2);
+    expect(naJutroCount(items, '2026-10-21', { role: 'pracownik', ekipa: 'A' })).toBe(1);
     expect(naJutroCount(items, '2026-10-21', { role: 'pracownik', ekipa: null })).toBe(0);
-    expect(naJutroCount(items, '2026-10-21', { role: 'admin' })).toBe(3);
+    expect(naJutroCount(items, '2026-10-21', { role: 'admin' })).toBe(1);
+    expect(naJutroCount([...items, r({ dzien: '2026-10-22', ekipa: 'B', zabrane: false })], '2026-10-21', { role: 'admin' })).toBe(2);
     // przełom miesiąca: jutro to 1 listopada
     expect(naJutroCount([r({ dzien: '2026-11-01', ekipa: 'A', zabrane: false })], '2026-10-31', { role: 'pracownik', ekipa: 'A' })).toBe(1);
   });

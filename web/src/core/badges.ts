@@ -20,11 +20,11 @@ export function freshByJob(jobs: Rec[], entries: Rec[], scope: Rec[], meId: stri
   return m;
 }
 
-/** Na jutro: niezabrane na dziś i jutro (Warszawa); pracownik tylko swojej ekipy, admin wszystkich. */
+/** Na jutro: niezabrane na jutro (Warszawa, bez dzisiejszych); pracownik tylko swojej ekipy, admin wszystkich. */
 export function naJutroCount(items: Rec[], today: string, me: { role: string; ekipa?: string | null } | null | undefined): number {
   if (!me) return 0;
-  const days = new Set([today, addDays(today, 1)]);
-  return items.filter((i) => !i.zabrane && days.has(i.dzien) && (me.role === 'admin' || i.ekipa === me.ekipa)).length;
+  const jutro = addDays(today, 1);
+  return items.filter((i) => !i.zabrane && i.dzien === jutro && (me.role === 'admin' || i.ekipa === me.ekipa)).length;
 }
 
 /**
