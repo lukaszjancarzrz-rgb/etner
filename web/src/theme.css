@@ -11,6 +11,7 @@
   --action-ink: #ffffff;
   --ok: #00736b;
   --danger: #b3261e;
+  --new: #c62828; /* znaczniki „nowe”, biały tekst */
   --grid: rgb(10 34 64 / 0.035);
   --shadow: 0 1px 2px rgb(10 34 64 / 0.06), 0 4px 16px rgb(10 34 64 / 0.06);
   --crew-mix: 0%;
@@ -29,6 +30,7 @@
     --action-ink: #0a2240;
     --ok: #45cdbb;
     --danger: #ff8a80;
+  --new: #d32f2f;
     --grid: rgb(255 255 255 / 0.03);
     --shadow: 0 1px 2px rgb(0 8 20 / 0.3), 0 6px 20px rgb(0 8 20 / 0.25);
     --crew-mix: 50%;
@@ -47,6 +49,7 @@
   --action-ink: #0a2240;
   --ok: #45cdbb;
   --danger: #ff8a80;
+  --new: #d32f2f;
   --grid: rgb(255 255 255 / 0.03);
   --shadow: 0 1px 2px rgb(0 8 20 / 0.3), 0 6px 20px rgb(0 8 20 / 0.25);
   --crew-mix: 50%;
@@ -65,6 +68,7 @@
   --color-action-ink: var(--action-ink);
   --color-ok: var(--ok);
   --color-danger: var(--danger);
+  --color-new: var(--new);
   --shadow-card: var(--shadow);
   --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
   --breakpoint-desk: 1100px;

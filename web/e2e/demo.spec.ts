@@ -135,7 +135,7 @@ test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiers
 
   await page.getByRole('button', { name: 'Przejrzyj' }).click();
   const review = page.getByRole('dialog', { name: 'Szkice harmonogramu' });
-  await expect(review.getByText(numer).first()).toBeVisible();
+  await expect(review.getByText('Bukowski').first()).toBeVisible();
   await review.getByRole('button', { name: 'Zatwierdź i powiadom' }).click();
   await expect(review).toBeHidden();
   await page.reload();
@@ -200,10 +200,25 @@ test('harmonogram: zmieniony dzień ma „nowe”, licznik spada po obejrzeniu d
   const day = w.locator(`[data-day="${d1}"]`);
   await expect(day.getByText('nowe', { exact: true })).toBeVisible();
   await day.scrollIntoViewIfNeeded();
+  // dzień był widoczny >1 s, ale „nowe” zostaje, dopóki jesteśmy na ekranie
+  await w.waitForTimeout(2500);
+  await expect(day.getByText('nowe', { exact: true })).toBeVisible();
+  await expect(w.getByRole('link', { name: 'Harmonogram, 2 nowe' })).toBeVisible();
+  // wyjście na inny ekran zapisuje obejrzenie
+  await w.goto('/#zl');
   await expect(w.getByRole('link', { name: 'Harmonogram, 1 nowe' })).toBeVisible();
+  await w.goto(`/#harm/${d1}`);
+  await expect(day).toBeVisible();
   await expect(day.getByText('nowe', { exact: true })).toHaveCount(0);
   await w.reload(); // obejrzenie zapamiętane
   await expect(w.getByRole('link', { name: 'Harmonogram, 1 nowe' })).toBeVisible();
+  // dotknięcie zmienionego dnia zapisuje od razu
+  await w.goto(`/#harm/${d2}`);
+  const day2 = w.locator(`[data-day="${d2}"]`);
+  await expect(day2.getByText('nowe', { exact: true })).toBeVisible();
+  await w.locator(`[data-cell="${d2}|Bartek Gawlik"]`).click();
+  await expect(day2.getByText('nowe', { exact: true })).toHaveCount(0);
+  await expect(w.getByRole('link', { name: /^Harmonogram, \d+ nowe$/ })).toHaveCount(0);
   await ctx.close();
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { badgeText, changedDays, freshByJob, naJutroCount, staleDayKeys, unseenDays, zakupyCount } from './badges.js';
+import { badgeText, changedDays, freshByJob, naJutroCount, staleDayKeys, ViewedDays, unseenDays, zakupyCount } from './badges.js';
 
 const T0 = '2026-10-21T08:00:00.000Z', T1 = '2026-10-21T09:00:00.000Z', T2 = '2026-10-21T10:00:00.000Z';
 const r = (o: Record<string, unknown>) => ({ id: Math.random().toString(36), createdAt: T0, updatedAt: T0, ...o }) as any;
@@ -65,5 +65,18 @@ describe('liczniki w menu', () => {
     expect(zakupyCount(items, 'Do kupienia', true)).toBe(2);
     expect(zakupyCount(items, 'Do kupienia', false)).toBe(0);
     expect([badgeText(7), badgeText(99), badgeText(100)]).toEqual(['7', '99', '99+']);
+  });
+});
+
+describe('ViewedDays (widziane przy wyjściu)', () => {
+  it('nic nie zapisuje przed flush, potem zapisuje każdy dzień raz i czyści', () => {
+    const v = new ViewedDays();
+    const marked: string[] = [];
+    v.add('2026-08-12'); v.add('2026-08-10'); v.add('2026-08-12');
+    expect(marked).toEqual([]);
+    expect(v.flush((d) => marked.push(d))).toEqual(['2026-08-10', '2026-08-12']);
+    expect(marked).toEqual(['2026-08-10', '2026-08-12']);
+    expect(v.flush((d) => marked.push(d))).toEqual([]);
+    expect(marked).toHaveLength(2);
   });
 });

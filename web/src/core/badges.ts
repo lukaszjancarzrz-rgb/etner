@@ -49,6 +49,19 @@ export function changedDays(entries: Rec[], people: Rec[], me: { id: string; rol
 export const unseenDays = (changed: Map<string, string>, seen: (dzien: string) => string): string[] =>
   [...changed].filter(([d, at]) => at > seen(d)).map(([d]) => d).sort();
 
+/** Dni obejrzane na ekranie harmonogramu: zapis „widziane” dopiero przy wyjściu z ekranu (`flush`), żeby „nowe” zostało na ekranie. */
+export class ViewedDays {
+  private days = new Set<string>();
+  add(d: string) { this.days.add(d); }
+  /** Zapisuje obejrzane dni (`mark`) i czyści zbiór; zwraca zapisane. */
+  flush(mark: (d: string) => void): string[] {
+    const out = [...this.days].sort();
+    this.days.clear();
+    for (const d of out) mark(d);
+    return out;
+  }
+}
+
 /** Klucze `harm-day:<user>:<dzień>` z dniem przed `cut` (do usunięcia z localStorage). */
 export const staleDayKeys = (keys: string[], cut: string): string[] => keys.filter((k) => k.startsWith('harm-day:') && k.slice(-10) < cut);
 

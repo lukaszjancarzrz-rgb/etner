@@ -2,6 +2,7 @@ import { addDays, isWorkday, mondayOf, plHolidays } from '@etner/shared';
 import { CaretLeft, CaretRight, MapPin, NavigationArrow, Phone, Briefcase, CalendarBlank, NotePencil, PencilSimple } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { dayLong, dayShort, mapsUrl, markDaySeen, telHref, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe } from '../../core/data.js';
+import { ViewedDays } from '../../core/badges.js';
 import { useUnseenDays } from '../../core/layout/useBadges.js';
 import { CategoryLegend, catStripe, catTint, useCatColor } from '../../core/ui/category.js';
 import { useDesk } from '../../core/layout/status.js';
@@ -59,7 +60,18 @@ export function Harmonogram({ route }: { route: Route }) {
   const cat = useCatColor();
   const unseen = useUnseenDays();
   const fresh = useMemo(() => new Set(unseen), [unseen]);
-  const seen = useMemo(() => (me ? (d: string) => markDaySeen(me.id, d) : undefined), [me]);
+  // obejrzane dni (widoczne ≥1 s) zapisujemy dopiero przy wyjściu z ekranu / schowaniu aplikacji; dotknięcie zmienionego dnia zapisuje od razu
+  const viewed = useRef(new ViewedDays());
+  const seen = useMemo(() => (me ? (d: string) => viewed.current.add(d) : undefined), [me]);
+  const tap = useMemo(() => (me ? (d: string) => { if (fresh.has(d)) markDaySeen(me.id, d); } : undefined), [me, fresh]);
+  useEffect(() => {
+    if (!me) return;
+    const flush = () => { viewed.current.flush((d) => markDaySeen(me!.id, d)); };
+    const hide = () => { if (document.hidden) flush(); };
+    document.addEventListener('visibilitychange', hide);
+    addEventListener('pagehide', flush);
+    return () => { document.removeEventListener('visibilitychange', hide); removeEventListener('pagehide', flush); flush(); };
+  }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ctx: Ctx = useMemo(() => ({ jobs, codes: new Map(codesDict.map((d) => [d.wartosc, d.kolor ?? undefined])), crew, cat }), [jobs, codesDict, crew, cat]);
   const sorted = useMemo(() => [...people].sort((a, b) => a.kolejnosc - b.kolejnosc || a.nazwa.localeCompare(b.nazwa, 'pl')), [people]);
@@ -86,14 +98,14 @@ export function Harmonogram({ route }: { route: Route }) {
   useEffect(() => {
     if (!target || loading) return;
     setFlash(target);
-    if (me) markDaySeen(me.id, route.param!);
+    viewed.current.add(route.param!);
     requestAnimationFrame(() => document.querySelector(`[data-key="${CSS.escape(target)}"]`)?.scrollIntoView({ behavior: smooth(), block: 'center', inline: 'center' }));
     const tm = setTimeout(() => setFlash(undefined), 2500);
     return () => clearTimeout(tm);
   }, [target, loading]); // eslint-disable-line react-hooks/exhaustive-deps -- zmiana widoku nie podświetla drugi raz
 
   if (loading) return <HarmSkeleton />;
-  const props = { days, people: sorted, cells, draftMap, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t, fresh, seen, flash };
+  const props = { days, people: sorted, cells, draftMap, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t, fresh, seen, tap, flash };
 
   return (
     <section className="mx-auto grid max-w-[1400px] gap-4 px-4 py-4 desk:px-8 desk:py-6">
@@ -118,7 +130,7 @@ type ViewProps = {
   mine?: Rec; ctx: Ctx; open?: (dzien: string, person: Rec) => void; dayInfo: (d: string) => { wd: 0 | 1 | 2; info?: string };
   ekipaOf: Map<string, string | null>; today: string;
   /** Dni ze zmianą jeszcze nie obejrzaną („nowe”) i zapis obejrzenia dnia. */
-  fresh: Set<string>; seen?: (dzien: string) => void;
+  fresh: Set<string>; seen?: (dzien: string) => void; tap?: (dzien: string) => void;
   /** Komórka podświetlona po wejściu z powiadomienia (cellKey). */
   flash?: string;
 };
@@ -152,7 +164,7 @@ function useSeenRef(dzien: string, p: ViewProps) {
   return setEl;
 }
 
-const NewPill = () => <span className="shrink-0 rounded-full bg-danger px-1.5 text-[11px] font-bold leading-5 text-bg">nowe</span>;
+const NewPill = () => <span className="shrink-0 rounded-full bg-new px-2 text-xs font-bold leading-5 text-white">nowe</span>;
 
 function HarmSkeleton() {
   return (
@@ -270,7 +282,9 @@ function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { 
   const body = (
     <span className="min-w-0 pl-2.5">
       <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
-        <span className="shrink-0 font-semibold tabular-nums">{j?.numer ?? 'zlecenie'}</span>{slot.polDnia && <span className="shrink-0 font-bold" aria-label="pół dnia">½</span>}
+        <span className="sr-only">{j?.numer ?? 'zlecenie'}</span>
+        {j?.kategoria && <span className="flex min-w-0 shrink-0 items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span className="truncate">{j.kategoria}</span></span>}
+        {slot.polDnia && <span className="shrink-0 font-bold" aria-label="pół dnia">½</span>}
         {j?.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
       </span>
       <span className={cn('block truncate font-semibold leading-tight', compact ? 'text-sm' : 'text-[15px]')}>{j?.client?.nazwa ?? ''}</span>
@@ -314,7 +328,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   if (p.open && !hasJob) {
     return (
       <button type="button" data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
-        onClick={() => p.open!(dzien, person)} className={cn(cls, 'min-h-12 transition-colors duration-200 hover:bg-action/8')}>
+        onClick={() => { p.tap?.(dzien); p.open!(dzien, person); }} className={cn(cls, 'min-h-12 transition-colors duration-200 hover:bg-action/8')}>
         <CellView slots={shown} ctx={p.ctx} compact={compact} />{szkic}
       </button>
     );
@@ -322,11 +336,11 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   return (
     <div data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} role="group" aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
       // kliknięcie obok odnośnika (myszą) też otwiera edytor; z klawiatury i czytnika: przycisk ✎
-      onClick={p.open ? (e) => { if (!(e.target as Element).closest('a,button')) p.open!(dzien, person); } : undefined}
+      onClick={(e) => { p.tap?.(dzien); if (p.open && !(e.target as Element).closest('a,button')) p.open(dzien, person); }}
       className={cn(cls, p.open && 'min-h-12 cursor-pointer transition-colors duration-200 hover:bg-action/8', p.open && !compact && 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1')}>
       <CellView slots={shown} ctx={p.ctx} compact={compact} link reserve={!!p.open && compact} />
       {p.open && (
-        <button type="button" aria-label={`Edytuj komórkę ${person.nazwa} ${dayShort(dzien)}`} onClick={() => p.open!(dzien, person)}
+        <button type="button" aria-label={`Edytuj komórkę ${person.nazwa} ${dayShort(dzien)}`} onClick={() => { p.tap?.(dzien); p.open!(dzien, person); }}
           // tabela (komputer): w rogu nad paskiem numeru, żeby karta zlecenia miała całą szerokość
           className={cn('grid place-items-center rounded-lg text-ink-2 hover:bg-action/10 hover:text-action focus-visible:outline-2 focus-visible:outline-action',
             compact ? 'absolute top-1.5 right-1.5 h-6 w-6 rounded-md bg-card/90' : 'h-8 w-8')}>
@@ -362,14 +376,14 @@ function DayCard({ d, p }: { d: string; p: ViewProps }) {
   const fresh = p.fresh.has(d);
   if (wd !== 1 && !any && !note) {
     return (
-      <p ref={ref} data-day={d} className="flex scroll-mt-20 items-center justify-between gap-2 rounded-2xl border border-line/70 px-4 py-3 text-sm text-ink-2">
+      <p ref={ref} data-day={d} onClick={() => p.tap?.(d)} className="flex scroll-mt-20 items-center justify-between gap-2 rounded-2xl border border-line/70 px-4 py-3 text-sm text-ink-2">
         <span className="flex items-center gap-2 font-semibold">{dayLong(d)}{fresh && <NewPill />}</span><span>{info ?? 'Weekend'}</span>
       </p>
     );
   }
   return (
     <article ref={ref} id={`d-${d}`} data-day={d} className={cn('scroll-mt-20 overflow-hidden rounded-2xl border bg-card shadow-card', isToday ? 'border-action' : 'border-line')}>
-      <header className={cn('flex items-center justify-between gap-2 px-4 py-2.5', isToday ? 'bg-action/10' : 'border-b border-line')}>
+      <header onClick={() => p.tap?.(d)} className={cn('flex items-center justify-between gap-2 px-4 py-2.5', isToday ? 'bg-action/10' : 'border-b border-line')}>
         <h3 className="font-wide font-extrabold first-letter:uppercase">{dayLong(d)}</h3>
         <span className="flex items-center gap-1.5">{fresh && <NewPill />}{isToday && <Badge tone="action">dziś</Badge>}{info && <Badge tone="warn">{info}</Badge>}</span>
       </header>
@@ -396,7 +410,7 @@ function DayHead({ d, p, className }: { d: string; p: ViewProps; className?: str
   const isToday = d === p.today;
   const note = p.noteOf.get(d);
   return (
-    <th ref={ref} data-day={d} data-today={isToday || undefined} scope="col" className={cn('px-2 py-2 align-top', isToday && 'bg-action/10', wd !== 1 && 'bg-bg/60', className)}>
+    <th ref={ref} data-day={d} onClick={() => p.tap?.(d)} data-today={isToday || undefined} scope="col" className={cn('px-2 py-2 align-top', isToday && 'bg-action/10', wd !== 1 && 'bg-bg/60', className)}>
       <span className="flex items-center justify-between gap-1">
         <span className={cn('block font-wide text-sm font-extrabold first-letter:uppercase', isToday && 'text-action')}>{dayShort(d)}</span>
         {p.fresh.has(d) && <NewPill />}

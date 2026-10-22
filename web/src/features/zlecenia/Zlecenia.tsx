@@ -109,7 +109,7 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
           <span className="font-semibold tabular-nums text-ink-2">{j._tmp ? 'zapisywanie' : j.numer}</span>
           <span className="truncate text-ink-2">{j.status}</span>
           <span className="ml-auto flex shrink-0 gap-1.5">
-            {nowe > 0 && <Badge tone="ok">{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</Badge>}
+            {nowe > 0 && <Badge tone="new">{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</Badge>}
             {missing && <Badge tone="warn">brak w harmonogramie</Badge>}
           </span>
         </span>
