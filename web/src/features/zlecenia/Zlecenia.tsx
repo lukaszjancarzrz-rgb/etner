@@ -24,7 +24,7 @@ const GROUPS = [
 export function Zlecenia({ route }: { route: Route }) {
   const id = route.param;
   return (
-    <div className="mx-auto max-w-[1400px] desk:grid desk:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] desk:gap-6 desk:px-8 desk:py-6">
+    <div className="mx-auto max-w-[1400px] desk:grid desk:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)] desk:gap-6 desk:px-8 desk:py-6">
       <div className={cn('desk:sticky desk:top-22 desk:max-h-[calc(100dvh-7rem)] desk:self-start desk:overflow-y-auto desk:pr-1', id && 'hidden desk:block')}><JobList selected={id} /></div>
       <div className={cn(!id && 'hidden desk:block')}>
         {id ? <JobCard key={id} id={id} highlight={route.highlight} /> : (

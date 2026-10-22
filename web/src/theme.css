@@ -91,6 +91,12 @@
   :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 }
 
+/* Komputer (≥1100 px): wyraźnie gęściej. Rozmiary w rem i odstępy Tailwind (--spacing) maleją razem; telefon bez zmian (16 px, cele dotyku 44–48 px). */
+@media (min-width: 1100px) {
+  html { font-size: 87.5%; }
+  :root { --spacing: 0.22rem; }
+}
+
 @utility font-wide { font-variation-settings: "wdth" 125; }
 @utility font-narrow { font-variation-settings: "wdth" 75; }
 /* ukośne pasy „oklejenia busa”: tylko nagłówek i logowanie */

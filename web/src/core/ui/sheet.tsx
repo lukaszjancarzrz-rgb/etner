@@ -15,7 +15,7 @@ export function Sheet({ title, description, children, className }: { title: stri
       <D.Content
         className={cn(
           'fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] overflow-y-auto rounded-t-3xl border border-line bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-card',
-          'desk:inset-auto desk:top-1/2 desk:left-1/2 desk:w-[min(560px,92vw)] desk:-translate-x-1/2 desk:-translate-y-1/2 desk:rounded-3xl',
+          'desk:inset-auto desk:top-1/2 desk:left-1/2 desk:w-[min(36rem,92vw)] desk:-translate-x-1/2 desk:-translate-y-1/2 desk:rounded-3xl',
           className,
         )}
       >
