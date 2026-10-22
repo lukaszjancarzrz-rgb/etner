@@ -198,3 +198,4 @@ Task 19b: BASE 8c4676d; impl 9662fd8..e31b759; review: Important — dictionary 
 Task 19b: fix round 1/5 (all addressed; 2780673)
 Task 19b: minor (deferred): renamed kod stays inside unapproved schedule draft proposals; lead_contacts.status snapshot not renamed; no test for rename+reorder+add in one PUT; admin screens save without offline queue
 Task 19b: complete (commits 8c4676d..2780673, review clean). Task 19 done → owner checkpoint (plan STOP after 19).
+## Owner notes 2026-10-22 (14 points) recorded as Task 19c — WAITING for owner's go (do not start).

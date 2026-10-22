@@ -704,6 +704,24 @@ Decyzja właściciela 2026-10-22 (do zbudowania, gdy poda pełny zestaw list):
 - [ ] **Step 4:** PASS. Wdrożenie na Render.
 - [ ] **Step 5:** Commit. **STOP: właściciel sprawdza pełny moduł na Render.**
 
+### Task 19c: Uwagi właściciela po zadaniu 19 (CZEKA – start na sygnał właściciela)
+
+Zapisane 2026-10-22, do zrobienia dopiero gdy właściciel powie:
+1. **Pumble:** kanały tylko dla nowych zleceń (bez automatycznego zakładania dla istniejących); przy istniejącym zleceniu przycisk „Utwórz kanał w Pumble” (dla admina).
+2. **Komputer:** wszystko wyraźnie mniejsze (okna, czcionka, przyciski, odstępy), żeby więcej mieściło się na ekranie; telefon bez zmian.
+3. **Na jutro:** przy pozycji widać kto dodał i kto zabrał (i kiedy).
+4. **Licznik „Na jutro” w menu:** tylko niezabrane rzeczy na następny dzień (bez dzisiejszych).
+5. **Leady – kontakty:** grupowane według statusu; możliwość usunięcia pozycji kontaktu (do doprecyzowania z właścicielem: które statusy, kto usuwa).
+6. **Zaległe kontakty:** wyraźnie na czerwono + codziennie o 7:00 e-mail na etner@etner-instalacje.pl z listą zaległych kontaktów (wymaga skrzynki / usługi do wysyłki e-maili – sekret od właściciela).
+7. **Klient:** pole e-mail widoczne i edytowalne w formularzach (szczególnie przy leadach).
+8. **Następny kontakt:** przyciski +3 dni, +1 tydzień, +1 miesiąc liczone od dziś, wypełniają datę.
+9. **Zadania cykliczne:** wybór cyklu (np. co 1 tydz., 2 tyg., 1 mies., 3 mies., rok); po wykonaniu następny termin = dziś + cykl.
+10. **Listy predefiniowane (zadanie 18j):** pod elektrykę i fotowoltaikę: „Elektryka”, „Montaż fotowoltaiki”, „Alarm”, „Kamery”; pod rekuperację: „Reku przygotówka”, „Reku rozkładanie instalacji”, „Montaż rekuperatora”; pod klimatyzację: „Rozciąganie rur klimy”, „Montaż klimy”. Pozycje list dodaje admin w Ustawieniach.
+11. **Push o 7:00** z listą „na jutro” (sprawdzić, że działa; godzina z ustawień).
+12. **Zadania:** opcjonalne przypisanie do klienta (wybór klienta).
+13. **Leady:** bez numerów leadów w interfejsie.
+14. **Avatary użytkowników:** zdjęcie / inicjały, widoczne m.in. przy wpisach dziennika, w Pumble, harmonogramie.
+
 ### Task 20: Przegląd dostępności i szybkości
 
 **Files:**
