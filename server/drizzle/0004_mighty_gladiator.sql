@@ -1,0 +1,23 @@
+CREATE TABLE `jobs` (
+	`id` text PRIMARY KEY NOT NULL,
+	`created_at` text NOT NULL,
+	`created_by` text,
+	`updated_at` text NOT NULL,
+	`deleted_at` text,
+	`firma_id` text NOT NULL,
+	`numer` text NOT NULL,
+	`client_id` text NOT NULL,
+	`site_id` text,
+	`lead_id` text,
+	`rodzaj` text DEFAULT '' NOT NULL,
+	`status` text NOT NULL,
+	`kategoria` text DEFAULT '' NOT NULL,
+	`termin` text,
+	`ekipa` text,
+	`zakres` text DEFAULT '' NOT NULL,
+	`uwagi_admin` text DEFAULT '' NOT NULL,
+	`zamkniete_at` text,
+	FOREIGN KEY (`firma_id`) REFERENCES `firmy`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`site_id`) REFERENCES `sites`(`id`) ON UPDATE no action ON DELETE no action
+);

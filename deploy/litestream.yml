@@ -1,0 +1,13 @@
+# Ciągła kopia bazy do R2. Klucze i adres z zmiennych środowiska (nie wpisujemy ich tutaj).
+access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+
+dbs:
+  - path: ${DATA_DIR}/etner.db
+    replicas:
+      - type: s3
+        bucket: etner-backup
+        path: db
+        endpoint: ${R2_ENDPOINT}
+        region: auto
+        retention: 720h

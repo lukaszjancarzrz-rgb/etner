@@ -34,13 +34,17 @@
   `Claude-Session: https://claude.ai/code/session_01UAcYpC7hiQ88s85djQuEMk`
 - Nie wpisywać haseł ani kluczy za właściciela. Klucze (R2, Render, VAPID, konto usługi Google) wkleja właściciel jako sekrety.
 
+## Zmiana 2026-10-21: login i hasło zamiast linków
+
+Decyzja właściciela po zadaniu 18: logowanie loginem (imię lub krótka nazwa) i hasłem zamiast osobistych linków. Hasło startowe nadaje admin, pracownik może je zmienić sam, reset przez admina wylogowuje wszystkie urządzenia. Sesja na urządzeniu (cookie `etner_s`, 180 dni) bez zmian. Wykonuje to zadanie 18a. Wzmianki o linkach i tokenach linków w zadaniach 4, 8, 16, 18, 19, 22 i 23 czytać jako login i hasło.
+
 ## Review Focus
 
 1. **Kolejka offline po zamknięciu aplikacji.** Zapisy zrobione bez zasięgu, a potem zamknięcie aplikacji: po ponownym otwarciu muszą się wysłać, każdy dokładnie raz. Test w zadaniu 17.
 2. **Wyciek danych przez SSE / `changes`.** Pracownik nie może dostać zmiany leada, uwag admina ani szkicu harmonogramu, także przy pobieraniu „od numeru”. Test w zadaniu 5 i w każdym module (`visibleTo`).
 3. **Przełom doby i zmiana czasu.** Wpis dodany o 23:30 czasu polskiego trafia do właściwego dnia. Ostatnia niedziela marca i października nie przesuwa dni harmonogramu. Test w zadaniu 2.
 4. **Dwóch adminów edytuje tę samą komórkę harmonogramu.** Zatwierdzenie bierze tylko szkice, które admin widział (wartość „będzie” musi się zgadzać). Szkic zmieniony w międzyczasie zostaje do zatwierdzenia. Test w zadaniu 14.
-5. **Sesja wygasła lub link unieważniony, gdy telefon był offline.** Zapisy z kolejki dostają 401, aplikacja pokazuje „Zaloguj się ponownie”, a kolejka zostaje (nie jest kasowana). Test w zadaniu 17.
+5. **Sesja wygasła lub hasło zresetowane, gdy telefon był offline.** Zapisy z kolejki dostają 401, aplikacja pokazuje „Zaloguj się ponownie”, a kolejka zostaje (nie jest kasowana). Test w zadaniu 17.
 
 ---
 
@@ -577,7 +581,100 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
 - [ ] **Step 4:** e2e PASS. Wdrożenie na Render, sprawdzenie adresu na telefonie (zrzuty ekranu dla właściciela).
 - [ ] **Step 5:** Commit. **STOP: właściciel sprawdza wygląd i działanie na telefonie i komputerze. Poprawki przed dalszymi zadaniami.**
 
+### Task 18a: Login i hasło zamiast linków
+
+**Files:**
+- Modify: `server/src/core/auth.ts`, `core/schema-base.ts` (+ migracja), `modules/uzytkownicy/*`, `scripts/seed-demo.ts`, `scripts/export-sheets.ts`, `test-utils.ts`, `web/src/core/session.ts` + ekran logowania, `web/e2e/demo.spec.ts`, `README.md`
+
+**Interfaces:**
+- `users.login` (unikalny, bez rozróżniania wielkości liter), `users.password_hash` (scrypt z solą); kolumna tokenu linku usunięta.
+- `POST /api/login {login, haslo}` → cookie `etner_s` jak dotąd; zły login lub hasło → 401 `ZLE_DANE`; po 5 nieudanych próbach na login w 15 min → 429 `ZA_DUZO_PROB`.
+- `POST /api/me/haslo {stare, nowe}` – zmiana własnego hasła (min. 8 znaków), wylogowuje pozostałe urządzenia.
+- `POST /api/users` (admin) przyjmuje `login` i `haslo`; `POST /api/users/:id/haslo {haslo}` (admin) – reset, wylogowuje wszystkie urządzenia tej osoby. Trasa nowego linku znika.
+- Tryb demo: stałe hasło demo, `GET /api/demo/konta` (tylko DEMO=1), ekran logowania pokazuje konta demo do wyboru.
+
+- [ ] **Step 1: Testy:** dobre i złe hasło, wyłączony użytkownik, blokada po 5 próbach, reset przez admina unieważnia sesje, zmiana własnego hasła, skrót hasła nigdy w zmianach, snapshot ani eksporcie.
+- [ ] **Step 2:** FAIL. **Step 3:** Implementacja. **Step 4:** PASS + e2e. **Step 5:** Commit.
+
+### Task 18c: Harmonogram – kilka osób i dni naraz, widok miesiąca, bez wierszy adminów
+
+Decyzje właściciela 2026-10-21 po klikalnej wersji:
+- **Kilka osób i dni naraz:** edytor komórki (admin) pozwala wybrać kilka osób i zakres dni od–do (z „tylko dni robocze”) i zapisuje jeden szkic przez istniejące `POST /api/schedule/drafts` (`from`, `to`, `people`, `workdaysOnly`).
+- **Widok miesiąca na komputerze:** przełącznik Tydzień / Miesiąc; miesiąc jako zwarta tabela osoba × dzień z poprzedni / następny / bieżący miesiąc; komórka w miesiącu otwiera ten sam edytor.
+- **Bez harmonogramu dla adminów:** admini nie mają własnych kolumn (wierszy) harmonogramu – dane demo bez kolumn adminów; admin bez kolumny nie widzi „Gdzie jedziesz” ani „Ty”, ale nadal edytuje i zatwierdza harmonogram innych.
+
+- [ ] **Step 1: Testy:** jednostkowe dla wyliczenia dni i osób w szkicu zbiorczym; e2e: admin ustawia jedno zlecenie dwóm osobom na 3 dni robocze → szkic → zatwierdzenie → 6 komórek; widok miesiąca pokazuje bieżący miesiąc; admin nie ma wiersza.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
+### Task 18d: Edycja istniejących klientów
+
+Decyzja właściciela 2026-10-21: musi być możliwość edycji istniejących klientów.
+- Karta klienta (admin): „Edytuj” – typ, nazwa, telefony, e-maile, NIP, notatki; obiekty: dodaj i edytuj (nazwa, adres, miejscowość, mapa, opis). Serwer już ma `PUT /api/clients/:id`, `POST /api/clients/:id/sites`, `PUT /api/sites/:id`. Ostrzeżenie o duplikacie telefonu / e-maila jak przy zakładaniu. Pracownik nie widzi „Edytuj”.
+
+- [ ] **Step 1: Testy:** e2e: admin zmienia telefon klienta i adres obiektu, zmiana widoczna na karcie zlecenia; pracownik bez przycisku.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
+### Task 18e: Zakupy uproszczone, zakres prac ze zdjęciami, liczniki w menu
+
+Decyzje właściciela 2026-10-21:
+- **Zakupy:** pozycja = co + uwagi. Bez kwoty, sklepu i grupy (pola usunięte z ekranu, API i tabeli; słownik `grupa_zakupow` usunięty). Statusy tylko „Do kupienia” i „Kupione” (bez „Zamówione”); istniejące „Zamówione” → „Do kupienia” w migracji.
+- **Zakres prac w zleceniu:** lista punktów; punkt = tekst + zdjęcia (0..n), kolejność, dodaj / edytuj / usuń / przesuń. Edytuje tylko admin; pracownik widzi. Zdjęcia jak w dzienniku (zmniejszanie, kolejka offline, podgląd, „Pokaż klientowi”). Dotychczasowy tekst `zakres` zostaje jako pierwszy punkt (migracja).
+- **Liczniki w menu (dolny pasek i boczne menu):** Na jutro – liczba niezabranych rzeczy mojej ekipy na dziś i jutro (admin: wszystkich ekip); Harmonogram – liczba zmian w moim harmonogramie od ostatniego wejścia na ekran; Zlecenia – liczba zleceń z nowymi wpisami lub zmianami od ostatniego otwarcia; Zakupy – admin: liczba „Do kupienia”. Liczniki liczone na urządzeniu z danych zsynchronizowanych; „ostatnio widziane” w pamięci urządzenia.
+
+- [ ] **Step 1: Testy:** serwer – zakupy bez usuniętych pól i z dwoma statusami, punkty zakresu (admin zapisuje, pracownik 403, zdjęcia podpięte do punktu, widoczność jak zlecenia); web – wyliczenie liczników; e2e – admin dodaje punkt zakresu ze zdjęciem; licznik „Na jutro” pokazuje liczbę.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
+### Task 18f: Poprawki harmonogramu, zakupów, słowników; „nowe” do obejrzenia; włączanie push
+
+Decyzje właściciela 2026-10-21:
+- **Nawigacja tygodnia (telefon i komputer):** strzałki zawsze w tym samym miejscu; gdy pokazany jest inny tydzień niż bieżący, po lewej od strzałek pojawia się „Dziś”, które wraca do bieżącego tygodnia i przewija do dzisiejszego dnia.
+- **Widok miesiąca:** te same karty (rozmiar i treść jak w tygodniu: numer, miejscowość, klient, ½), przewijany w poziomie strzałkami lewo / prawo; bez skróconych etykiet.
+- **Kolor przy zleceniu w harmonogramie = kategoria zlecenia:** elektryka niebieski, fotowoltaika czerwony, rekuperacja zielony, klimatyzacja fioletowy, inne żółty (kolor w słowniku `kategoria`). Zastępuje kolor ekipy na kartach zleceń.
+- **Słowniki:** `kategoria` = Elektryka, Fotowoltaika, Rekuperacja, Klimatyzacja, Inne (Pompa ciepła i Serwis usunięte; istniejące zlecenia: Pompa ciepła → Inne, Serwis → Inne). `rodzaj_zlecenia` = montaż, przygotówka, serwis, inne (gwarancja usunięta; istniejące → inne).
+- **Zakupy:** usuwa tylko admin i autor pozycji. Zamiast listy statusów admin ma „ptaszek” (zaznaczone = Kupione, odznaczone = Do kupienia).
+- **„Nowe” zostaje do obejrzenia zmiany:** wejście na ekran nie kasuje znacznika. Harmonogram: zmieniony dzień ma znacznik „nowe”, który znika dopiero, gdy ten dzień był widoczny na ekranie; licznik w menu = liczba nieobejrzanych zmienionych dni. Zlecenia: znacznik przy zleceniu do czasu otwarcia jego karty; licznik w menu = liczba takich zleceń.
+- **Push:** w „Więcej” przycisk „Włącz powiadomienia na tym urządzeniu” (z instrukcją dla iPhone: najpierw „Do ekranu początkowego”), stan włączone / wyłączone, „Wyłącz”, oraz „Wyślij próbne powiadomienie” (`POST /api/push/test` do samego siebie).
+
+- [ ] **Step 1: Testy:** serwer – migracja słowników i zleceń, zakupy (usuwa autor / admin, inny pracownik 403), `/api/push/test`; web – licznik i znaczniki dni / zleceń jako czyste funkcje; e2e – „Dziś” wraca do bieżącego tygodnia, znacznik dnia znika po obejrzeniu, ptaszek kupione.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
+### Task 18g: Kanał Pumble przy zleceniu
+
+Decyzja właściciela 2026-10-21 (zmienia „bez Pumble” z projektu całości):
+- Przy utworzeniu zlecenia serwer zakłada **prywatny** kanał Pumble (nazwa z numeru, klienta i miejscowości, np. `z0012-kowalski-zawoja`), dodaje adminów i ekipę zlecenia (później także osoby z harmonogramu tego zlecenia i nową ekipę po zmianie). Id kanału w `jobs.pumble_channel_id`.
+- Karta zlecenia: sekcja „Pumble” z kilkoma ostatnimi wiadomościami, aktualizowanymi bez klikania (serwer odpytuje Pumble i rozsyła nowe wiadomości przez zmiany / SSE), pole „Napisz” (wiadomość idzie jako bot ETNER z imieniem autora) i przycisk „Przejdź do Pumble”.
+- API: dodatek Pumble „API Keys” (`https://pumble-api-keys.addons.marketplace.cake.com`, nagłówek `ApiKey`; `createChannel`, `addUsersToChannel`, `listMessages`, `sendMessage`, `listUsers`, `myInfo`). Klucz w sekrecie `PUMBLE_API_KEY` (wkleja właściciel). Brak klucza → funkcja wyłączona, sekcja ukryta. Pumble nie wysyła zdarzeń, więc nowe wiadomości są pobierane cyklicznie.
+- Dziennik zostaje bez zmian obok Pumble.
+
+- [ ] **Step 1: Testy (atrapa Pumble):** nowe zlecenie zakłada kanał i dodaje właściwe osoby; błąd Pumble nie psuje zapisu zlecenia (ponowienie później); odpytywanie zapisuje tylko nowe wiadomości i rozsyła je; pracownik widzi wiadomości zleceń jak zlecenia; wysyłka idzie jako bot z imieniem; bez klucza nic się nie dzieje.
+- [ ] **Step 2–5:** FAIL → implementacja → PASS → commit.
+
+### Task 18h: Wyraźniejsze „nowe”, harmonogram bez numerów
+
+Decyzje właściciela 2026-10-22:
+- **„Nowe” zostaje, dopóki użytkownik nie zmieni ekranu albo nie kliknie zmiany:** zmieniony dzień w harmonogramie ma znacznik przez cały pobyt na ekranie; obejrzane (widoczne) dni są oznaczane jako widziane dopiero przy wyjściu z ekranu harmonogramu albo po kliknięciu w zmienioną komórkę / dzień. Zlecenia bez zmian (znacznik do otwarcia karty).
+- **Znaczniki „nowe” na czerwono:** liczniki w menu, pigułki „nowe” na dniach, zleceniach i w Pumble – czerwone tło (#c62828), biały tekst, dobrze widoczne w jasnym i ciemnym motywie.
+- **Harmonogram bez numerów zleceń:** karta zlecenia w harmonogramie pokazuje kategorię (nazwa + kolor), miejscowość i klienta; numer ukryty (zostaje w nazwie dostępności i w karcie zlecenia).
+
+- [ ] **Step 1–5:** testy czystych funkcji „widziane przy wyjściu”, e2e: znacznik zostaje po 2 s na ekranie, znika po przejściu na inny ekran; zrzuty.
+
+### Task 18i: Pumble szybciej i pliki z kanału
+
+Decyzje właściciela 2026-10-22:
+- **Szybsze odświeżanie:** kanał zlecenia, którego karta jest otwarta u kogoś (sygnał „oglądam” z aplikacji co 15 s), odpytywany co ~3 s; pozostałe kanały co 30 s. Limit: najwyżej 20 „oglądanych” kanałów naraz, razem poniżej 1000 zapytań/min.
+- **Pliki z kanału:** wiadomości z załącznikami zapisują pełne dane plików z Pumble (`files`). Podgląd zdjęć i pobieranie plików w karcie zlecenia dokończone po sprawdzeniu na żywo, jak Pumble udostępnia pliki (dokumentacja tego nie opisuje); do tego czasu nazwa pliku zamiast „(plik)”.
+
+### Task 18j (później, gdy właściciel poda listy): Listy predefiniowane pod rodzaj pracy
+
+Decyzja właściciela 2026-10-22 (do zbudowania, gdy poda pełny zestaw list):
+- Szablony list (np. „Klimatyzacja”, „Alarm”, „Reku – przygotówka”, „Montaż rekuperatora”): nazwa + pozycje + do jakich zleceń pasuje (kategoria i/lub rodzaj). Edytuje admin.
+- Odhaczanie tylko lokalne na urządzeniu: po wyjściu z listy wszystko znowu do odhaczenia (nic nie idzie na serwer).
+- Podpowiedź: w „Na jutro” (i przy dniu w harmonogramie) listy pasujące do zleceń, na które dana osoba jedzie danego dnia, są podświetlone i proponowane na górze.
+- Logika dopasowania: szablon ma `kategorie[]` i `rodzaje[]`; pasuje, gdy zlecenie dnia ma pasującą kategorię i (jeśli podano) rodzaj.
+
 ### Task 19: Pozostałe ekrany
+
+(Wykonywane w dwóch częściach: 19a – Leady z „Zrób zlecenie”, Na jutro, Zadania; 19b – Użytkownicy z loginem, hasłem, e-mailem do Pumble i wierszem harmonogramu, Ustawienia. Z leada powstaje zlecenie: klient, obiekt, kategoria, opis → zakres, `lead_id`.)
 
 **Files:**
 - Create: `web/src/features/{leady,na-jutro,zadania,uzytkownicy,ustawienia}/*`, `web/e2e/full.spec.ts`
@@ -587,7 +684,7 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
   - **Leady:** lista „Na już / Na kiedyś / Zamknięte” z zaległymi kontaktami na górze, karta z historią kontaktów, „Zapisz kontakt” (notatka + następny termin), „Zrób zlecenie” (z „oznacz jako Przyjęta”).
   - **Na jutro:** wybór ekipy (pracownik: tylko swoja) i dnia, lista z odhaczaniem, szybkie dodawanie.
   - **Zadania:** grupy, priorytet, termin, cykliczne.
-  - **Użytkownicy:** lista, edycja, nowy link (pokazany raz, kopiuj / udostępnij), kolumny harmonogramu.
+  - **Użytkownicy:** lista, edycja, login, ustawienie / reset hasła, kolumny harmonogramu.
   - **Ustawienia:**
     - słowniki,
     - godzina porannego przypomnienia,
@@ -606,6 +703,24 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
 - [ ] **Step 3:** Implementacja.
 - [ ] **Step 4:** PASS. Wdrożenie na Render.
 - [ ] **Step 5:** Commit. **STOP: właściciel sprawdza pełny moduł na Render.**
+
+### Task 19c: Uwagi właściciela po zadaniu 19 (CZEKA – start na sygnał właściciela)
+
+Zapisane 2026-10-22, do zrobienia dopiero gdy właściciel powie:
+1. **Pumble:** kanały tylko dla nowych zleceń (bez automatycznego zakładania dla istniejących); przy istniejącym zleceniu przycisk „Utwórz kanał w Pumble” (dla admina).
+2. **Komputer:** wszystko wyraźnie mniejsze (okna, czcionka, przyciski, odstępy), żeby więcej mieściło się na ekranie; telefon bez zmian.
+3. **Na jutro:** przy pozycji widać kto dodał i kto zabrał (i kiedy).
+4. **Licznik „Na jutro” w menu:** tylko niezabrane rzeczy na następny dzień (bez dzisiejszych).
+5. **Leady – kontakty:** grupowane według statusu; możliwość usunięcia pozycji kontaktu (do doprecyzowania z właścicielem: które statusy, kto usuwa).
+6. **Zaległe kontakty:** wyraźnie na czerwono + codziennie o 7:00 e-mail na etner@etner-instalacje.pl z listą zaległych kontaktów (wymaga skrzynki / usługi do wysyłki e-maili – sekret od właściciela).
+7. **Klient:** pole e-mail widoczne i edytowalne w formularzach (szczególnie przy leadach).
+8. **Następny kontakt:** przyciski +3 dni, +1 tydzień, +1 miesiąc liczone od dziś, wypełniają datę.
+9. **Zadania cykliczne:** wybór cyklu (np. co 1 tydz., 2 tyg., 1 mies., 3 mies., rok); po wykonaniu następny termin = dziś + cykl.
+10. **Listy predefiniowane (zadanie 18j):** pod elektrykę i fotowoltaikę: „Elektryka”, „Montaż fotowoltaiki”, „Alarm”, „Kamery”; pod rekuperację: „Reku przygotówka”, „Reku rozkładanie instalacji”, „Montaż rekuperatora”; pod klimatyzację: „Rozciąganie rur klimy”, „Montaż klimy”. Pozycje list dodaje admin w Ustawieniach.
+11. **Push o 7:00** z listą „na jutro” (sprawdzić, że działa; godzina z ustawień).
+12. **Zadania:** opcjonalne przypisanie do klienta (wybór klienta).
+13. **Leady:** bez numerów leadów w interfejsie.
+14. **Avatary użytkowników:** zdjęcie / inicjały, widoczne m.in. przy wpisach dziennika, w Pumble, harmonogramie.
 
 ### Task 20: Przegląd dostępności i szybkości
 
@@ -661,7 +776,7 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
       - zgodne hasło → `zlecenie`,
       - reszta → `tekst` + „do przejrzenia”.
     - Załączniki z `dla_klienta=false`.
-    - Numery Z/L i tokeny linków bez zmian.
+    - Numery Z/L bez zmian. Logowanie: każdy dostaje login i hasło startowe (stare linki nie działają).
   - `apply(plan, deps)`; `report(plan, db)` → tabela źródło / baza / różnica + lista „do przejrzenia” (CSV i ekran w Ustawieniach).
   - CLI: `pnpm migrate-old --xlsx Firma.xlsx --appdb Aplikacja.xlsx --firestore <SA_PATH> --drive <folderId> [--dry-run]`.
 
@@ -693,5 +808,5 @@ Moduły (serwer i web): `slowniki`, `uzytkownicy`, `klienci`, `leady`, `zlecenia
 - [ ] **Step 1:** `setup.sh` jest idempotentny. Test: `bash -n` + `shellcheck` w CI.
 - [ ] **Step 2:** Uruchomienie na serwerze. `GET /api/health` z domeny → 200. Wymuszony `rollback` działa.
 - [ ] **Step 3:** Test odtworzenia: `litestream restore` na czysty katalog → aplikacja startuje z tymi samymi danymi.
-- [ ] **Step 4:** Przeniesienie danych na produkcji (Task 22). Raport do właściciela. Wyłączenie wyzwalaczy i wdrożenia Apps Script. Linki dla pracowników bez zmian, nowy adres.
+- [ ] **Step 4:** Przeniesienie danych na produkcji (Task 22). Raport do właściciela. Wyłączenie wyzwalaczy i wdrożenia Apps Script. Pracownicy dostają login i hasło startowe, nowy adres.
 - [ ] **Step 5:** Commit. **STOP: właściciel potwierdza raport przeniesienia i działanie na telefonach.**
