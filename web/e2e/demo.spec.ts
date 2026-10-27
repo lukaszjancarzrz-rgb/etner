@@ -376,11 +376,12 @@ test('harmonogram: link z powiadomienia `#harm/<dzień>~<osoba>` otwiera tamten 
   await loginAdmin(page);
   const people = (await (await page.request.get('/api/schedule-people')).json()) as { id: string; nazwa: string }[];
   const p = people[1]!;
-  const day = addDays(mondayOf(dayOf(new Date())), 16); // środa za dwa tygodnie
+  let day = addDays(mondayOf(dayOf(new Date())), 16); // środa za dwa tygodnie; święto (np. 11.11) na telefonie nie ma komórek
+  while (isWorkday(day, []) !== 1) day = addDays(day, 1);
   await page.goto(`/#harm/${day}~${p.id}`);
   const cell = page.locator(`[data-key="${day}|${p.id}"]`);
   await expect(cell).toHaveAttribute('data-flash', 'true');
   await expect(cell).toBeInViewport();
-  await expect(page.locator(`[data-day="${addDays(day, -2)}"]`)).toHaveCount(1); // poniedziałek tamtego tygodnia
+  await expect(page.locator(`[data-day="${mondayOf(day)}"]`)).toHaveCount(1); // poniedziałek tamtego tygodnia
   await expect(cell).not.toHaveAttribute('data-flash', 'true', { timeout: 5000 });
 });
