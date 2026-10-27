@@ -1,5 +1,5 @@
 import { PODMIEJSCA } from '@etner/shared';
-import { MagnifyingGlass, PencilSimple, Plus, Wrench, X } from '@phosphor-icons/react';
+import { MagnifyingGlass, PencilSimple, Plus, Wrench } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { matches, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
@@ -8,6 +8,7 @@ import { Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
 import { Field, Input } from '../../core/ui/input.js';
+import { Search } from '../../core/ui/search.js';
 import { Select } from '../../core/ui/select.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
@@ -90,17 +91,6 @@ export function Narzedzia() {
       )}
       {edit && <ToolForm tool={edit === 'new' ? undefined : edit} cars={cars} onClose={() => setEdit(null)} />}
     </section>
-  );
-}
-
-/** Pole wyszukiwania z ikoną i czyszczeniem (wspólne z Magazynem). */
-export function Search({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label: string; placeholder: string }) {
-  return (
-    <div className="relative">
-      <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-ink-2" aria-hidden />
-      <Input type="search" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="pr-12 pl-11 [&::-webkit-search-cancel-button]:hidden" />
-      {value && <button type="button" onClick={() => onChange('')} aria-label="Wyczyść wyszukiwanie" className="absolute top-1/2 right-1 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-ink-2 hover:bg-ink/5"><X className="h-5 w-5" /></button>}
-    </div>
   );
 }
 

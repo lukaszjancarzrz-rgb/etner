@@ -97,3 +97,42 @@ test('narzędzia: wyszukiwanie pokazuje wszystkie miejsca; dodanie, przeniesieni
   await page.getByRole('button', { name: 'Na pewno usunąć?' }).click();
   await expect(page.getByText(`${tag} szlifierka`)).toHaveCount(0);
 });
+
+test('magazyn: dodanie, Zabieram → Zabrane (kto), Zwracam z nową ilością, wyszukiwanie w obu listach, usunięcie', async ({ page }, info) => {
+  const tag = `E2E ${info.project.name}`;
+  await login(page, 'Kamil Zięba');
+  await page.goto('/#mag');
+  await expect(page.getByRole('list', { name: 'Zabrane' }).getByText(/^Zabrał /).first()).toBeVisible(); // demo
+  await page.getByLabel('Co leży').fill(`${tag} wkręty`);
+  await page.getByLabel('Ilość', { exact: true }).fill('pudełko');
+  await page.getByRole('button', { name: 'Dodaj' }).click();
+  const lying = page.getByRole('list', { name: 'Na magazynie' });
+  await expect(lying.locator('li', { hasText: `${tag} wkręty` })).toContainText('Dodał Kamil Zięba');
+
+  await lying.getByRole('button', { name: `Zabieram: ${tag} wkręty` }).click();
+  const taken = page.getByRole('list', { name: 'Zabrane' }).locator('li', { hasText: `${tag} wkręty` });
+  await expect(taken).toContainText('Zabrał Kamil Zięba, dziś');
+  await expect(lying.getByText(`${tag} wkręty`)).toHaveCount(0);
+  await page.reload();
+  await expect(taken).toContainText('Zabrał Kamil Zięba');
+
+  // wyszukiwanie filtruje obie listy
+  await page.getByLabel('Szukaj na magazynie').fill(`${tag} wkr`);
+  await expect(page.getByRole('list', { name: 'Zabrane' }).locator('li')).toHaveCount(1);
+  await expect(page.getByText('Na magazynie nic nie pasuje.')).toBeVisible();
+  await page.getByLabel('Szukaj na magazynie').fill('kolki');
+  await expect(page.locator('li', { hasText: 'Kołki rozporowe 8 mm' })).toHaveCount(1);
+  await expect(page.getByText('Pianka montażowa')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Wyczyść wyszukiwanie' }).click();
+
+  await taken.getByRole('button', { name: `Zwracam: ${tag} wkręty` }).click();
+  const dlg = page.getByRole('dialog', { name: 'Zwracam' });
+  await expect(dlg.getByLabel('Ilość')).toHaveValue('pudełko');
+  await dlg.getByLabel('Ilość').fill('pół pudełka');
+  await dlg.getByRole('button', { name: 'Zwracam' }).click();
+  await expect(dlg).toBeHidden();
+  const back = lying.locator('li', { hasText: `${tag} wkręty` });
+  await expect(back).toContainText('pół pudełka');
+  await back.getByRole('button', { name: `Usuń: ${tag} wkręty` }).click();
+  await expect(page.getByText(`${tag} wkręty`)).toHaveCount(0);
+});
