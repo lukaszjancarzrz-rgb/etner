@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { addDays, dayOf, isWorkday } from '@etner/shared';
+import { addDays, dayOf, nextWorkday } from '@etner/shared';
 
 async function login(page: Page, name: string) {
   await page.goto('/');
@@ -12,13 +12,12 @@ async function as(browser: Browser, name: string, info: { project: { use: object
   await login(page, name);
   return page;
 }
-const nextWd = (d: string) => { let x = addDays(d, 1); while (isWorkday(x, []) !== 1) x = addDays(x, 1); return x; };
 
 test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta ma dzień naprawy w harmonogramie', async ({ page, browser }, info) => {
   const tag = `E2E ${info.project.name}`;
   await login(page, 'Marek Pilch');
   // demo: Mała Toyota (ekipa Marek) w naprawie w drugi dzień roboczy od dziś
-  const rep = nextWd(nextWd(dayOf(new Date())));
+  const rep = nextWorkday(nextWorkday(dayOf(new Date())));
   await page.goto(`/#harm/${rep}`);
   await expect(page.locator(`[data-cell="${rep}|Marek Pilch"]`)).toContainText('Mała Toyota w naprawie');
   await expect(page.locator(`[data-cell="${rep}|Bartek Gawlik"]`)).not.toContainText('w naprawie');
@@ -34,7 +33,7 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   await expect(item).not.toContainText('wysyłanie');
 
   // admin: naprawa za 3 tygodnie (dzień roboczy)
-  const day = nextWd(addDays(dayOf(new Date()), info.project.name.startsWith('iPhone') ? 20 : 22));
+  const day = nextWorkday(addDays(dayOf(new Date()), info.project.name.startsWith('iPhone') ? 20 : 22));
   const admin = await as(browser, 'Tomasz Wrona', info);
   await admin.goto('/#auta');
   await admin.getByRole('button', { name: `Naprawa: ${tag}: pisk paska` }).click();

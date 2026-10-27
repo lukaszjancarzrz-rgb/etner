@@ -30,6 +30,8 @@ describe('magazyn', () => {
     expect(await (await app.request(`/api/warehouse/${it0.id}/take`, req(worker, 'POST', {}))).json()).toMatchObject({ zabraneBy: w2.user.id }); // już zabrane
     const back = await (await app.request(`/api/warehouse/${it0.id}/return`, req(worker, 'POST', { ilosc: 'pół opakowania' }))).json();
     expect(back).toMatchObject({ ilosc: 'pół opakowania', zabraneAt: null, zabraneBy: null });
+    // drugie „Zwracam” (np. z drugiego telefonu) nie nadpisuje ilości
+    expect(await (await app.request(`/api/warehouse/${it0.id}/return`, req(worker2, 'POST', { ilosc: 'pełne' }))).json()).toEqual(back);
     expect((await app.request('/api/warehouse/nie-ma/take', req(worker, 'POST', {}))).status).toBe(404);
     expect(await (await app.request('/api/warehouse', req(worker2, 'GET'))).json()).toHaveLength(1);
   });

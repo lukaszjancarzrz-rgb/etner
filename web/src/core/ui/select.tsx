@@ -4,12 +4,12 @@ import { cn } from './cn.js';
 
 export type Option = { value: string; label: string };
 
-export function Select({ value, onValueChange, options, placeholder, id, className, 'aria-label': label }: {
-  'aria-label'?: string; value?: string; onValueChange: (v: string) => void; options: Option[]; placeholder?: string; id?: string; className?: string;
+export function Select({ value, onValueChange, options, placeholder, id, className, 'aria-label': label, 'aria-describedby': describedBy, 'aria-invalid': invalid }: {
+  'aria-label'?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean; value?: string; onValueChange: (v: string) => void; options: Option[]; placeholder?: string; id?: string; className?: string;
 }) {
   return (
     <S.Root value={value} onValueChange={onValueChange}>
-      <S.Trigger id={id} aria-label={label} className={cn('flex h-12 w-full items-center justify-between gap-2 rounded-xl border border-line bg-card px-4 text-left text-base data-[placeholder]:text-ink-2', className)}>
+      <S.Trigger id={id} aria-label={label} aria-describedby={describedBy} aria-invalid={invalid || undefined} className={cn('flex h-12 w-full items-center justify-between gap-2 rounded-xl border border-line bg-card px-4 text-left text-base data-[placeholder]:text-ink-2 aria-invalid:border-danger', className)}>
         <S.Value placeholder={placeholder} />
         <S.Icon><CaretDown className="h-4 w-4 text-ink-2" /></S.Icon>
       </S.Trigger>

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
-import { addDays, dayOf, isWorkday, mondayOf, newId, nextWorkday, type ScheduleProposal } from '@etner/shared';
+import { addDays, dayOf, isWorkday, mondayOf, newId, nextWorkday, type Podmiejsce, type ScheduleProposal } from '@etner/shared';
 import { hashPassword } from '../core/password.js';
 import { tx, type Db } from '../core/db.js';
 import { makeVariants, type FileStore } from '../core/files.js';
@@ -166,8 +166,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
       });
     }
     harmonogram.approve(db, a1, undefined, now);
-    let next = addDays(today, 1);
-    while (isWorkday(next, []) !== 1) next = addDays(next, 1);
+    const next = nextWorkday(today);
     harmonogram.setDraft(db, a2, { from: next, to: next, people: [people.bartek!], value: [{ rodzaj: 'kod', kod: 'urlop', polDnia: false }], workdaysOnly: false });
     harmonogram.setDraft(db, a2, { from: next, to: next, people: ['uwagi'], value: { tekst: 'Przegląd samochodów dostawczych' }, workdaysOnly: false });
 
@@ -237,8 +236,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     if (duza && mala && ducato) {
       samochody.updateCar(db, a1, duza.id, { ekipa: BARTEK });
       samochody.updateCar(db, a1, mala.id, { ekipa: MAREK });
-      let rep = addDays(next, 1);
-      while (isWorkday(rep, []) !== 1) rep = addDays(rep, 1);
+      const rep = nextWorkday(next);
       const f1 = samochody.createFault(db, u.marek!.id, { carId: mala.id, opis: 'Zaświecił się check engine' });
       samochody.setRepair(db, a1, f1.id, rep);
       samochody.createFault(db, u.bartek!.id, { carId: duza.id, opis: 'Stuka zawieszenie z przodu' });
@@ -246,7 +244,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
       samochody.setRepair(db, a1, f3.id, addDays(today, -5));
 
       // Narzędzia: wkrętarka w dwóch autach (wyszukiwanie pokazuje oba miejsca), reszta w autach i Magazynie.
-      const tool = (nazwa: string, carId: string | null, podmiejsce: string | null = null) => narzedzia.create(db, u.bartek!.id, { nazwa, carId, podmiejsce: podmiejsce as never });
+      const tool = (nazwa: string, carId: string | null, podmiejsce: Podmiejsce | null = null) => narzedzia.create(db, u.bartek!.id, { nazwa, carId, podmiejsce });
       tool('Wkrętarka Makita', mala.id, 'Górna półka na regale');
       tool('Wkrętarka Makita', ducato.id, 'W kabinie');
       tool('Młotowiertarka', duza.id, 'Dolna półka');

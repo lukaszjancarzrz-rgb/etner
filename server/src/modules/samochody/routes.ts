@@ -39,11 +39,14 @@ export function routes(app: Hono, deps: AppDeps): void {
   // Termin naprawy (null = odwołana); nowy termin: push do wszystkich aktywnych (R41), po commit.
   app.put('/api/car-faults/:id', admin, async (c) => {
     const { opId, naprawaDzien } = await body(c, faultRepairSchema);
-    const old = svc.getFault(db, c.req.param('id'));
-    if (!old) throw notFound();
-    const { result, dup } = runOp(db, opId, me(c).id, () => svc.setRepair(db, me(c).id, old.id, naprawaDzien));
-    if (!result) throw notFound();
-    if (!dup && naprawaDzien && naprawaDzien !== old.naprawaDzien) {
+    // odczyt w op: powtórka z kolejki po usunięciu usterki dostaje zapisany wynik, nie 404
+    const { result: r, dup } = runOp(db, opId, me(c).id, () => {
+      const old = svc.getFault(db, c.req.param('id'));
+      if (!old) throw notFound();
+      return { row: svc.setRepair(db, me(c).id, old.id, naprawaDzien)!, before: old.naprawaDzien };
+    });
+    const result = r.row;
+    if (!dup && naprawaDzien && naprawaDzien !== r.before) {
       const car = svc.getCar(db, result.carId);
       await notify(deps, users.activeIds(db), { title: `🔧 ${car?.nazwa ?? 'Samochód'}: naprawa ${fmtDay(naprawaDzien)} – ${result.opis}`, body: '', url: `#auta~${result.id}`, tag: `auta-${result.id}` })
         .catch((e) => logError(db, 'push', e, me(c).id));

@@ -28,8 +28,9 @@ function set(db: Db, userId: string | null, old: ItemRow, patch: Partial<ItemRow
 /** Zabieram: już zabrana zostaje bez zmian (kto pierwszy, ten zabrał). */
 export const take = (db: Db, userId: string, old: ItemRow, now: Date): ItemRow =>
   old.zabraneAt ? old : set(db, userId, old, { zabraneAt: now.toISOString(), zabraneBy: userId });
-/** Zwracam: wraca na listę z nową ilością. */
-export const giveBack = (db: Db, userId: string, old: ItemRow, ilosc: string): ItemRow => set(db, userId, old, { ilosc, zabraneAt: null, zabraneBy: null });
+/** Zwracam: wraca na listę z nową ilością; niezabrana zostaje bez zmian (drugie „Zwracam” nie nadpisuje ilości). */
+export const giveBack = (db: Db, userId: string, old: ItemRow, ilosc: string): ItemRow =>
+  old.zabraneAt ? set(db, userId, old, { ilosc, zabraneAt: null, zabraneBy: null }) : old;
 export const remove = (db: Db, userId: string | null, old: ItemRow): void => { set(db, userId, old, { deletedAt: new Date().toISOString() }); };
 
 /** Sprzątanie: rzeczy zabrane dawniej niż ZABRANE_DNI dni temu (miękko, z wpisem w changes). Zwraca liczbę. */

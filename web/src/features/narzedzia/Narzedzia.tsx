@@ -141,7 +141,7 @@ function ToolForm({ tool, cars, onClose }: { tool?: Rec; cars: Rec[]; onClose: (
         <form onSubmit={submit} noValidate className="grid gap-4">
           <Field label="Nazwa" error={err.nazwa}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.nazwa} value={nazwa} onChange={(e) => setNazwa(e.target.value)} placeholder="np. Wkrętarka Makita" />}</Field>
           <Field label="Miejsce">{(id) => <Select id={id} value={miejsce} onValueChange={setMiejsce} options={[...cars.map((c) => ({ value: c.id as string, label: c.nazwa as string })), { value: MAGAZYN, label: 'Magazyn' }]} />}</Field>
-          {inCar && <Field label="Gdzie w samochodzie" error={err.pm}>{(id, d) => <Select id={id} value={pm || undefined} onValueChange={setPm} placeholder="Wybierz półkę" options={PODMIEJSCA.map((x) => ({ value: x, label: x }))} />}</Field>}
+          {inCar && <Field label="Gdzie w samochodzie" error={err.pm}>{(id, d) => <Select id={id} aria-describedby={d} aria-invalid={!!err.pm} value={pm || undefined} onValueChange={setPm} placeholder="Wybierz miejsce" options={PODMIEJSCA.map((x) => ({ value: x, label: x }))} />}</Field>}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             {tool && (tool.by === me?.id || admin) ? <Button variant={confirm ? 'danger' : 'ghost'} onClick={remove} className={cn(!confirm && 'text-danger')}>{confirm ? 'Na pewno usunąć?' : 'Usuń narzędzie'}</Button> : <span />}
             <div className="flex gap-3">

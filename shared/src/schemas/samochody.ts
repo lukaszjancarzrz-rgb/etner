@@ -19,5 +19,9 @@ export const faultCreateSchema = z.object({
 });
 export type FaultCreate = z.infer<typeof faultCreateSchema>;
 /** Dzień naprawy (admin); null = odwołana. */
-export const faultRepairSchema = z.object({ opId, naprawaDzien: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data w formacie RRRR-MM-DD').nullable() });
+const realDay = (d: string) => { const t = Date.parse(`${d}T12:00:00Z`); return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === d; };
+export const faultRepairSchema = z.object({
+  opId,
+  naprawaDzien: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data w formacie RRRR-MM-DD').refine(realDay, 'Nie ma takiego dnia').nullable(),
+});
 export type FaultRepair = z.infer<typeof faultRepairSchema>;

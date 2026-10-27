@@ -66,7 +66,15 @@ describe('samochody', () => {
     await app.request(`/api/car-faults/${f.id}`, req(admin, 'PUT', { naprawaDzien: '2026-11-05' })); // nowy dzień: push
     expect(pushed(push)).toHaveLength(3);
 
+    expect((await app.request(`/api/car-faults/${f.id}`, req(admin, 'PUT', { naprawaDzien: '2026-02-31' }))).status).toBe(400); // nie ma takiego dnia
+    expect((await app.request(`/api/car-faults/${f.id}`, req(admin, 'PUT', { naprawaDzien: '2026-13-01' }))).status).toBe(400);
     expect((await app.request(`/api/car-faults/${f.id}`, req(admin, 'DELETE'))).status).toBe(200);
+    push.mockClear();
+    const replay = await app.request(`/api/car-faults/${f.id}`, req(admin, 'PUT', { opId: 'op-n', naprawaDzien: '2026-11-03' })); // powtórka po usunięciu: zapisany wynik
+    expect(replay.status).toBe(200);
+    expect(await replay.json()).toMatchObject({ id: f.id, naprawaDzien: '2026-11-03' });
+    expect(push).not.toHaveBeenCalled();
+    expect((await app.request(`/api/car-faults/${f.id}`, req(admin, 'PUT', { naprawaDzien: '2026-11-04' }))).status).toBe(404); // nowy zapis po usunięciu
     expect((await app.request(`/api/car-faults/${f.id}`, req(admin, 'DELETE'))).status).toBe(200); // powtórka z kolejki
     expect((await app.request('/api/car-faults/nie-ma', req(admin, 'DELETE'))).status).toBe(404);
     expect(await (await app.request('/api/car-faults', req(admin, 'GET'))).json()).toEqual([]);
