@@ -11,6 +11,7 @@ import * as harmonogram from '../modules/harmonogram/service.js';
 import * as klienci from '../modules/klienci/service.js';
 import * as leady from '../modules/leady/service.js';
 import * as naJutro from '../modules/na-jutro/service.js';
+import * as samochody from '../modules/samochody/service.js';
 import * as uzytkownicy from '../modules/uzytkownicy/service.js';
 import * as zadania from '../modules/zadania/service.js';
 import * as zakupy from '../modules/zakupy/service.js';
@@ -227,6 +228,20 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
         const r = naJutro.create(db, who.id, { ekipa, dzien, tekst });
         if (i === 0 && dzien === today) naJutro.setZabrane(db, who.id, r.id, true);
       });
+    }
+
+    // Samochody (z seedBase): ekipy, usterki; jedna naprawa za dwa dni robocze (oznaczenie w harmonogramie), jedna już po naprawie.
+    const [duza, mala, ducato] = samochody.listCars(db);
+    if (duza && mala && ducato) {
+      samochody.updateCar(db, a1, duza.id, { ekipa: BARTEK });
+      samochody.updateCar(db, a1, mala.id, { ekipa: MAREK });
+      let rep = addDays(next, 1);
+      while (isWorkday(rep, []) !== 1) rep = addDays(rep, 1);
+      const f1 = samochody.createFault(db, u.marek!.id, { carId: mala.id, opis: 'Zaświecił się check engine' });
+      samochody.setRepair(db, a1, f1.id, rep);
+      samochody.createFault(db, u.bartek!.id, { carId: duza.id, opis: 'Stuka zawieszenie z przodu' });
+      const f3 = samochody.createFault(db, u.adam!.id, { carId: ducato.id, opis: 'Wymiana oleju' });
+      samochody.setRepair(db, a1, f3.id, addDays(today, -5));
     }
 
     // Zadania (jedno cykliczne).

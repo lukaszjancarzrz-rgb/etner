@@ -47,6 +47,8 @@ export const byScheduleCol = (db: Db): Record<string, PublicUser> =>
 /** Id aktywnych członków ekipy. */
 export const crewMembers = (db: Db, ekipa: string): string[] =>
   db.select({ id: users.id }).from(users).where(and(active, eq(users.ekipa, ekipa))).all().map((r) => r.id);
+/** Id wszystkich aktywnych użytkowników. */
+export const activeIds = (db: Db): string[] => db.select({ id: users.id }).from(users).where(active).all().map((r) => r.id);
 /** Id aktywnych adminów. */
 export const admins = (db: Db): string[] =>
   db.select({ id: users.id }).from(users).where(and(active, eq(users.role, 'admin'))).all().map((r) => r.id);

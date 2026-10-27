@@ -12,3 +12,4 @@ export * from './schemas/najutro.js';
 export * from './schemas/zakupy.js';
 export * from './schemas/zadania.js';
 export * from './schemas/harmonogram.js';
+export * from './schemas/samochody.js';

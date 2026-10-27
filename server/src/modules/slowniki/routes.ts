@@ -7,6 +7,7 @@ import { runOp } from '../../core/ops.js';
 import { dictRefs as harmonogram } from '../harmonogram/service.js';
 import { dictRefs as leady } from '../leady/service.js';
 import { dictRefs as naJutro, templateDictRefs as listy } from '../na-jutro/service.js';
+import { dictRefs as samochody } from '../samochody/service.js';
 import { dictRefs as zadania } from '../zadania/service.js';
 import { dictRefs as zakupy } from '../zakupy/service.js';
 import { dictRefs as zlecenia } from '../zlecenia/service.js';
@@ -14,7 +15,7 @@ import { dictRefs as uzytkownicy } from '../uzytkownicy/service.js';
 import { listAll, replace, ValueInUseError } from './service.js';
 
 // Moduły, których rekordy przechowują wartości słowników (zmiana nazwy idzie do nich, usunięcie używanej jest blokowane).
-const refs = [zlecenia, leady, uzytkownicy, naJutro, listy, harmonogram, zadania, zakupy];
+const refs = [zlecenia, leady, uzytkownicy, naJutro, listy, harmonogram, zadania, zakupy, samochody];
 const STATUSY = new Set(['status_zlecenia', 'status_leada', 'status_zadania', 'status_zakupu']);
 
 export function routes(app: Hono, { db }: AppDeps): void {

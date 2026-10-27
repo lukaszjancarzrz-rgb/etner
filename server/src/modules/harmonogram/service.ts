@@ -5,6 +5,7 @@ import { addDays, dayOf, isWorkday, newId, plHolidays, type ScheduleProposal, ty
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import * as klienci from '../klienci/service.js';
+import * as samochody from '../samochody/service.js';
 import * as slowniki from '../slowniki/service.js';
 import * as users from '../uzytkownicy/service.js';
 import * as zlecenia from '../zlecenia/service.js';
@@ -181,9 +182,19 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
   return { applied, skipped };
 }
 
-/** Dni z wpisami, świętami i uwagami; szkice tylko dla `withDrafts`. */
+/** Naprawy aut w dniach [from, to] jako nakładka na osoby harmonogramu z ekipy auta (R41; wpisów nie zmienia). */
+export function repairMarks(db: Db, from: string, to: string): { dzien: string; personId: string; tekst: string; faultId: string }[] {
+  const people = users.listPeople(db);
+  return samochody.repairsIn(db, from, to).flatMap((r) => {
+    const crew = new Set(users.crewMembers(db, r.ekipa));
+    return people.filter((p) => p.userId && crew.has(p.userId)).map((p) => ({ dzien: r.dzien, personId: p.id, tekst: `${r.auto} w naprawie`, faultId: r.faultId }));
+  });
+}
+
+/** Dni z wpisami, świętami, uwagami i naprawami aut (`naprawy`); szkice tylko dla `withDrafts`. */
 export function range(db: Db, from: string, to: string, withDrafts: boolean) {
   const list = daysIn(from, to);
+  const marks = repairMarks(db, from, to);
   const off = extraOff(db);
   const entries = db.select().from(scheduleEntries).where(and(live, gte(scheduleEntries.dzien, from), lte(scheduleEntries.dzien, to)))
     .orderBy(asc(scheduleEntries.personId), asc(scheduleEntries.slot)).all();
@@ -191,7 +202,7 @@ export function range(db: Db, from: string, to: string, withDrafts: boolean) {
   const days = list.map((dzien) => {
     const info = plHolidays(Number(dzien.slice(0, 4)))[dzien] ?? (off.includes(dzien) ? dzien : undefined);
     const note = notes.find((n) => n.dzien === dzien)?.tekst;
-    return { dzien, wd: isWorkday(dzien, off), ...(info && { info }), entries: entries.filter((e) => e.dzien === dzien), ...(note && { note }) };
+    return { dzien, wd: isWorkday(dzien, off), ...(info && { info }), entries: entries.filter((e) => e.dzien === dzien), ...(note && { note }), naprawy: marks.filter((m) => m.dzien === dzien) };
   });
   return withDrafts ? { days, drafts: drafts(db, from, to) } : { days };
 }
