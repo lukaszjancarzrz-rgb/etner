@@ -225,3 +225,5 @@ Task 19g: impl d620376..51e1c9d (migration 0019) + 50dc1e5 (e2e date fix: 11.11 
 Task 19f: review Approved; minors: Select aria-describedby, placeholder „Wybierz miejsce”, seed cast 'as never', rename test checks only carId, tools of soft-deleted car (no car delete yet) — 2,3 to fold into next fix round
 Task 19g: review Approved; minors: giveBack without 'is taken' guard (fold into fix round), cleanup boundary test, seed order, e2e extraOff [] — rest deferred
 Task 19e: review Approved; polish round dispatched with 19f/19g minors (fault replay 404, impossible dates, nextWorkday dup, giveBack guard, Select aria/placeholder, seed cast); deferred: repairs re-fetch whole /api/schedule, no web unit test for overlay
+Task 19e–19g: polish round 1/5 (all addressed; 50882d6) — complete
+Tasks 19d–19g: controller verification — shared 15, web 57, server 198, build clean, e2e 50 passed / 2 skipped. Owner checkpoint.
