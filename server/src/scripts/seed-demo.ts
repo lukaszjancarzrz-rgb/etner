@@ -10,6 +10,7 @@ import * as dziennik from '../modules/dziennik/service.js';
 import * as harmonogram from '../modules/harmonogram/service.js';
 import * as klienci from '../modules/klienci/service.js';
 import * as leady from '../modules/leady/service.js';
+import * as magazyn from '../modules/magazyn/service.js';
 import * as naJutro from '../modules/na-jutro/service.js';
 import * as narzedzia from '../modules/narzedzia/service.js';
 import * as samochody from '../modules/samochody/service.js';
@@ -255,6 +256,12 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
       tool('Drabina 3 m', null);
       tool('Odkurzacz przemysłowy', null);
     }
+
+    // Magazyn: nietypowe rzeczy, dwie zabrane (jedna wczoraj, jedna dziś).
+    for (const [nazwa, ilosc] of [['Kołki rozporowe 8 mm', 'opakowanie'], ['Opaski zaciskowe', 'garść'], ['Uszczelki do skroplin', 'pudełko'], ['Zawiesia do kanałów', '6 szt.'], ['Pianka montażowa', '2 puszki']]) magazyn.create(db, u.kamil!.id, { nazwa: nazwa!, ilosc: ilosc! });
+    const [k1, k2] = magazyn.list(db);
+    magazyn.take(db, u.marek!.id, k1!, new Date(now.getTime() - 86_400_000));
+    magazyn.take(db, u.piotr!.id, k2!, now);
 
     // Zadania (jedno cykliczne).
     const task = (tekst: string, priorytet: number | null, grupa: string, termin: string | null, status?: string, cykliczne = false) =>

@@ -14,3 +14,4 @@ export * from './schemas/zadania.js';
 export * from './schemas/harmonogram.js';
 export * from './schemas/samochody.js';
 export * from './schemas/narzedzia.js';
+export * from './schemas/magazyn.js';

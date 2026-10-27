@@ -11,6 +11,7 @@ import { zadania } from './zadania/index.js';
 import { harmonogram } from './harmonogram/index.js';
 import { samochody } from './samochody/index.js';
 import { narzedzia } from './narzedzia/index.js';
+import { magazyn } from './magazyn/index.js';
 
 /** Jedyne miejsce rejestracji modułów (createApp w main.ts i w testach). */
-export const modules: ModuleDef[] = [slowniki, uzytkownicy, klienci, zlecenia, leady, dziennik, naJutro, zakupy, zadania, harmonogram, samochody, narzedzia];
+export const modules: ModuleDef[] = [slowniki, uzytkownicy, klienci, zlecenia, leady, dziennik, naJutro, zakupy, zadania, harmonogram, samochody, narzedzia, magazyn];
