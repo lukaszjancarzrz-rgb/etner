@@ -1,6 +1,6 @@
 import { addDays, isWorkday, mondayOf, plHolidays } from '@etner/shared';
-import { CaretLeft, CaretRight, MapPin, NavigationArrow, Phone, Briefcase, CalendarBlank, NotePencil, PencilSimple } from '@phosphor-icons/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CaretLeft, CaretRight, MapPin, NavigationArrow, Phone, Briefcase, CalendarBlank, NotePencil, PencilSimple, Wrench } from '@phosphor-icons/react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { dayLong, dayShort, mapsUrl, markDaySeen, telHref, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { ViewedDays } from '../../core/badges.js';
 import { useUnseenDays } from '../../core/layout/useBadges.js';
@@ -17,6 +17,7 @@ import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
 import { cellKey, cellsOf, cellText, monthDays, slotLabel, type Slot } from './model.js';
 import { Avatar } from '../../core/ui/avatar.js';
+import { useRepairMarks, type RepairMark } from '../samochody/repairs.js';
 
 export type Ctx = {
   jobs: Map<string, JobView>;
@@ -77,6 +78,7 @@ export function Harmonogram({ route }: { route: Route }) {
   const ctx: Ctx = useMemo(() => ({ jobs, codes: new Map(codesDict.map((d) => [d.wartosc, d.kolor ?? undefined])), crew, cat }), [jobs, codesDict, crew, cat]);
   const sorted = useMemo(() => [...people].sort((a, b) => a.kolejnosc - b.kolejnosc || a.nazwa.localeCompare(b.nazwa, 'pl')), [people]);
   const cells = useMemo(() => cellsOf(entries.filter((e) => e.dzien >= days[0]! && e.dzien <= days.at(-1)!)), [entries, days]);
+  const repairs = useRepairMarks(days[0]!, days.at(-1)!);
   const draftMap = useMemo(() => new Map(admin ? drafts.map((d) => [cellKey(d.dzien, d.personId), d]) : []), [drafts, admin]);
   const noteOf = useMemo(() => new Map(notes.map((n) => [n.dzien, n.tekst as string])), [notes]);
   const ekipaOf = useMemo(() => new Map(users.map((u) => [u.id, u.ekipa as string | null])), [users]);
@@ -106,7 +108,7 @@ export function Harmonogram({ route }: { route: Route }) {
   }, [target, loading]); // eslint-disable-line react-hooks/exhaustive-deps -- zmiana widoku nie podświetla drugi raz
 
   if (loading) return <HarmSkeleton />;
-  const props = { days, people: sorted, cells, draftMap, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t, fresh, seen, tap, flash };
+  const props = { days, people: sorted, cells, draftMap, repairs, noteOf, mine, ctx, open, dayInfo, ekipaOf, today: t, fresh, seen, tap, flash };
 
   return (
     <section className="mx-auto grid max-w-[1400px] gap-4 px-4 py-4 desk:px-8 desk:py-6">
@@ -128,6 +130,8 @@ export function Harmonogram({ route }: { route: Route }) {
 
 type ViewProps = {
   days: string[]; people: Rec[]; cells: Map<string, Slot[]>; draftMap: Map<string, Rec>; noteOf: Map<string, string>;
+  /** Naprawy aut (nakładka, R41): cellKey → oznaczenie. */
+  repairs: Map<string, RepairMark>;
   mine?: Rec; ctx: Ctx; open?: (dzien: string, person: Rec) => void; dayInfo: (d: string) => { wd: 0 | 1 | 2; info?: string };
   ekipaOf: Map<string, string | null>; today: string;
   /** Dni ze zmianą jeszcze nie obejrzaną („nowe”) i zapis obejrzenia dnia. */
@@ -321,16 +325,18 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   const cur = p.cells.get(key) ?? [];
   const draft = p.draftMap.get(key);
   const shown = draft && Array.isArray(draft.proposal) ? (draft.proposal as Slot[]) : cur;
-  const label = `${person.nazwa}, ${dayShort(dzien)}: ${cellText(shown, p.ctx.jobs)}${draft ? ' (szkic)' : ''}`;
+  const rep = p.repairs.get(key);
+  const label = `${person.nazwa}, ${dayShort(dzien)}: ${rep ? `${rep.tekst}, ` : ''}${cellText(shown, p.ctx.jobs)}${draft ? ' (szkic)' : ''}`;
   const hasJob = shown.some((s) => s.rodzaj === 'zlecenie');
   const szkic = draft && <span className={cn('pointer-events-none absolute top-1 rounded-full', p.open && hasJob ? (compact ? 'right-8' : 'right-11') : 'right-1', ' bg-action px-1.5 text-xs font-bold leading-4 text-action-ink')}>szkic</span>;
   const cls = cn('relative block h-full w-full min-w-0 scroll-m-24 rounded-xl p-1.5 text-left transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none',
-    draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5', p.flash === key && 'bg-ok/10 ring-4 ring-ok/40');
+    draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5', rep && 'bg-danger/12 ring-2 ring-inset ring-danger/50', p.flash === key && 'bg-ok/10 ring-4 ring-ok/40');
+  const view = (v: ReactNode) => (rep ? <span className="grid min-w-0 gap-1"><RepairChip tekst={rep.tekst} reserve={!!p.open && compact} />{shown.length ? v : null}</span> : v);
   if (p.open && !hasJob) {
     return (
       <button type="button" data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
         onClick={() => { p.tap?.(dzien); p.open!(dzien, person); }} className={cn(cls, 'min-h-12 transition-colors duration-200 hover:bg-action/8')}>
-        <CellView slots={shown} ctx={p.ctx} compact={compact} />{szkic}
+        {view(<CellView slots={shown} ctx={p.ctx} compact={compact} />)}{szkic}
       </button>
     );
   }
@@ -339,7 +345,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
       // kliknięcie obok odnośnika (myszą) też otwiera edytor; z klawiatury i czytnika: przycisk ✎
       onClick={p.open || p.fresh.has(dzien) ? (e) => { p.tap?.(dzien); if (p.open && !(e.target as Element).closest('a,button')) p.open(dzien, person); } : undefined}
       className={cn(cls, p.open && 'min-h-12 cursor-pointer transition-colors duration-200 hover:bg-action/8', p.open && !compact && 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1')}>
-      <CellView slots={shown} ctx={p.ctx} compact={compact} link reserve={!!p.open && compact} />
+      {view(<CellView slots={shown} ctx={p.ctx} compact={compact} link reserve={!!p.open && compact} />)}
       {p.open && (
         <button type="button" aria-label={`Edytuj komórkę ${person.nazwa} ${dayShort(dzien)}`} onClick={() => { p.tap?.(dzien); p.open!(dzien, person); }}
           // tabela (komputer): w rogu nad paskiem numeru, żeby karta zlecenia miała całą szerokość
@@ -352,6 +358,11 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
     </div>
   );
 }
+
+/** Cały dzień osoby: auto jej ekipy w naprawie (czerwone, nie zmienia wpisów). */
+const RepairChip = ({ tekst, reserve }: { tekst: string; reserve?: boolean }) => (
+  <span title={tekst} className={cn('flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold text-danger', reserve && 'pr-6')}><Wrench className="h-4 w-4 shrink-0" weight="bold" aria-hidden /><span className="truncate">{tekst}</span></span>
+);
 
 function NameCell({ person, mine, color }: { person: Rec; mine: boolean; color?: string }) {
   return (
@@ -373,7 +384,7 @@ function DayCard({ d, p }: { d: string; p: ViewProps }) {
   const ref = useSeenRef(d, p);
   const { wd, info } = p.dayInfo(d);
   const note = p.noteOf.get(d);
-  const any = p.people.some((x) => p.cells.has(cellKey(d, x.id)) || p.draftMap.has(cellKey(d, x.id)));
+  const any = p.people.some((x) => p.cells.has(cellKey(d, x.id)) || p.draftMap.has(cellKey(d, x.id)) || p.repairs.has(cellKey(d, x.id)));
   const isToday = d === p.today;
   const fresh = p.fresh.has(d);
   if (wd !== 1 && !any && !note) {

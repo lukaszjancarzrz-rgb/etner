@@ -1,4 +1,4 @@
-import { Briefcase, CalendarDots, DotsThreeCircle, GearSix, Handshake, ListChecks, ShoppingCart, SunHorizon, UserGear, UsersThree, type Icon } from '@phosphor-icons/react';
+import { Briefcase, CalendarDots, DotsThreeCircle, GearSix, Handshake, ListChecks, ShoppingCart, SunHorizon, UserGear, UsersThree, Van, type Icon } from '@phosphor-icons/react';
 import { lazy, useSyncExternalStore, type ComponentType } from 'react';
 import { More } from './screens/More.js';
 
@@ -25,6 +25,7 @@ const Leady = lazy(() => import('./features/leady/Leady.js').then((m) => ({ defa
 const Zadania = lazy(() => import('./features/zadania/Zadania.js').then((m) => ({ default: m.Zadania })));
 const Uzytkownicy = lazy(() => import('./features/uzytkownicy/Uzytkownicy.js').then((m) => ({ default: m.Uzytkownicy })));
 const Ustawienia = lazy(() => import('./features/ustawienia/Ustawienia.js').then((m) => ({ default: m.Ustawienia })));
+const Samochody = lazy(() => import('./features/samochody/Samochody.js').then((m) => ({ default: m.Samochody })));
 const Klienci = lazy(() => import('./features/klienci/Klienci.js').then((m) => ({ default: m.Klienci })));
 
 /** Ekrany w kolejności menu. */
@@ -33,6 +34,7 @@ export const screens: Record<string, Screen> = {
   jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro },
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
   zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
+  auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side' },
   leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
   zad: { title: 'Zadania', icon: ListChecks, component: Zadania, nav: 'side', admin: true },
   uz: { title: 'Użytkownicy', icon: UserGear, component: Uzytkownicy, nav: 'side', admin: true },
