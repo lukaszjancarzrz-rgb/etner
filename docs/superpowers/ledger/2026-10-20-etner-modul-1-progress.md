@@ -215,3 +215,4 @@ Task 19c: complete. Owner checkpoint.
 - Ruling R41: repair mark is a schedule overlay computed from the car's current crew (not written into schedule entries); push „naprawa” goes to all active users — cost: crew reassignment moves past marks too.
 - Ruling R42: tool locations reference cars by id (+ Magazyn = no car), so renaming a car renames the location — cost: none.
 - Split: 19d (web na-jutro, badges) in parallel with 19e→19f→19g (one implementer, sequential, one migration per task to avoid drizzle journal clashes).
+Task 19d: BASE 2ba6107; impl 4f173a5 (nextWorkday in shared, Na jutro default day + badge, Listy on top); review dispatched; seed-demo next-workday fix handed to 19e implementer
