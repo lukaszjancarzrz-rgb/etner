@@ -11,6 +11,7 @@ import * as harmonogram from '../modules/harmonogram/service.js';
 import * as klienci from '../modules/klienci/service.js';
 import * as leady from '../modules/leady/service.js';
 import * as naJutro from '../modules/na-jutro/service.js';
+import * as narzedzia from '../modules/narzedzia/service.js';
 import * as samochody from '../modules/samochody/service.js';
 import * as uzytkownicy from '../modules/uzytkownicy/service.js';
 import * as zadania from '../modules/zadania/service.js';
@@ -242,6 +243,17 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
       samochody.createFault(db, u.bartek!.id, { carId: duza.id, opis: 'Stuka zawieszenie z przodu' });
       const f3 = samochody.createFault(db, u.adam!.id, { carId: ducato.id, opis: 'Wymiana oleju' });
       samochody.setRepair(db, a1, f3.id, addDays(today, -5));
+
+      // Narzędzia: wkrętarka w dwóch autach (wyszukiwanie pokazuje oba miejsca), reszta w autach i Magazynie.
+      const tool = (nazwa: string, carId: string | null, podmiejsce: string | null = null) => narzedzia.create(db, u.bartek!.id, { nazwa, carId, podmiejsce: podmiejsce as never });
+      tool('Wkrętarka Makita', mala.id, 'Górna półka na regale');
+      tool('Wkrętarka Makita', ducato.id, 'W kabinie');
+      tool('Młotowiertarka', duza.id, 'Dolna półka');
+      tool('Poziomica 2 m', duza.id, 'Nad kabiną');
+      tool('Zaciskarka do rur', duza.id, 'Środkowa półka na regale');
+      tool('Pompa próżniowa', mala.id, 'Dolna półka');
+      tool('Drabina 3 m', null);
+      tool('Odkurzacz przemysłowy', null);
     }
 
     // Zadania (jedno cykliczne).

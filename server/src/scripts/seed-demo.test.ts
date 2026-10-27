@@ -15,6 +15,7 @@ import { shopping } from '../modules/zakupy/schema.js';
 import { jobScopeItems } from '../modules/zlecenia/schema.js';
 import { tasks } from '../modules/zadania/schema.js';
 import { carFaults, cars } from '../modules/samochody/schema.js';
+import { tools } from '../modules/narzedzia/schema.js';
 import { jobs } from '../modules/zlecenia/schema.js';
 import { DEMO_PASSWORD, demoAccounts, seedDemo } from './seed-demo.js';
 
@@ -34,6 +35,7 @@ describe('seedDemo', () => {
     const { db } = deps;
     expect(added).toBe(true);
     expect(db.select().from(users).all().filter((u) => u.role === 'admin')).toHaveLength(2);
+    expect(n(db, tools)).toBe(8);
     const workers = db.select().from(users).all().filter((u) => u.role === 'pracownik');
     expect(workers).toHaveLength(5);
     expect(new Set(workers.map((w) => w.ekipa))).toEqual(new Set(['ekipa Bartek', 'ekipa Marek']));
