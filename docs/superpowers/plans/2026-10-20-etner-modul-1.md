@@ -722,6 +722,44 @@ Zapisane 2026-10-22, do zrobienia dopiero gdy właściciel powie:
 13. **Leady:** bez numerów leadów w interfejsie.
 14. **Avatary użytkowników:** zdjęcie / inicjały, widoczne m.in. przy wpisach dziennika, w Pumble, harmonogramie.
 
+### Task 19d: Listy na następny dzień roboczy
+
+Decyzja właściciela 2026-10-27:
+- W „Na jutro” sekcja list predefiniowanych jest **na samej górze ekranu** (nad rzeczami do zabrania), a listy pasujące do zleceń, na które oglądający (pracownik: on sam; admin: wybrana ekipa) jedzie **następnego dnia roboczego**, są podświetlone i pierwsze.
+- „Następny dzień roboczy” = najbliższy dzień po dziś, dla którego `isWorkday` (shared/src/dates.ts; pomija sob., niedz. i święta). W pt / sob / niedz. → poniedziałek (lub następny roboczy po święcie).
+- Ten sam dzień jest domyślnym dniem ekranu „Na jutro” i dniem licznika „Na jutro” w menu (`naJutroCount`), żeby lista, podświetlenie i licznik mówiły o tym samym dniu. Poranny push „Do zabrania dziś” bez zmian (dziś).
+- Test jednostkowy funkcji „następny dzień roboczy” (pt → pon, sob → pon, czw → pt, przed świętem).
+
+### Task 19e: Moduł „Utrzymanie samochodów”
+
+Decyzja właściciela 2026-10-27:
+- Samochody: na start trzy – „Nowa Duża Toyota”, „Mała Toyota”, „Stary Ducato” (wstawiane przy pierwszym uruchomieniu i w demo). Każdy przypisany do ekipy (wartość słownika `ekipa`) albo bez przypisania. Przypisanie (i nazwę, dodanie nowego auta) zmienia admin. Zmiana nazwy ekipy w słowniku przenosi się na auta (DictRefs, R36).
+- Usterki: każdy użytkownik zgłasza usterkę auta (opis, np. „zaświecił się check engine”); widać kto i kiedy. Lista usterek per auto widoczna dla wszystkich.
+- Admin: usuwa usterkę albo planuje naprawę na konkretny dzień (może zmienić dzień lub odwołać). Po zaplanowaniu wszyscy aktywni użytkownicy dostają push „🔧 <auto>: naprawa <dzień> – <opis>”, kliknięcie otwiera usterkę.
+- Harmonogram: w dniu naprawy członkowie ekipy przypisanej do auta (wg ekipy w chwili oglądania) mają cały dzień oznaczony na czerwono z opisem „<auto> w naprawie” (nakładka, nie zmienia wpisów harmonogramu). Auto bez ekipy → nikt nie oznaczony.
+- Usterka usunięta → oznaczenie znika. Usterka z naprawą w przeszłości zostaje na liście jako „po naprawie” do usunięcia przez admina.
+- Ekran „Samochody” w menu bocznym / Więcej.
+
+### Task 19f: Moduł „Stan narzędzi”
+
+Decyzja właściciela 2026-10-27:
+- Miejsca: każdy samochód z zadania 19e (lista samochodów, zmiana nazwy auta zmienia nazwę miejsca) + „Magazyn”.
+- Narzędzie: nazwa, miejsce, a w samochodzie dokładne miejsce z listy: „Górna półka na regale”, „Środkowa półka na regale”, „Nad kabiną”, „Dolna półka”, „W kabinie”. Magazyn ma jedną listę bez podmiejsc.
+- Ekran: pasek wyszukiwania na górze; wpisanie nazwy pokazuje wszystkie miejsca, gdzie narzędzie powinno być (np. wkrętarka w „Mała Toyota · Górna półka” i „Stary Ducato · W kabinie”); bez wyszukiwania – listy per miejsce (zakładki lub sekcje), w aucie pogrupowane wg podmiejsca.
+- Dodawanie / edycja / przeniesienie: każdy użytkownik; usuwanie: admin i autor.
+- Ekran „Narzędzia” w menu bocznym / Więcej.
+
+### Task 19g: „Nietypowe rzeczy na magazynie”
+
+Decyzja właściciela 2026-10-27:
+- Rzecz: nazwa + ilość jako dowolny tekst (np. „opakowanie”, „pudełko”, „garść”). Dodaje każdy użytkownik.
+- Pasek wyszukiwania na górze (filtruje obie listy).
+- Przycisk „Zabieram” przenosi rzecz do listy „Zabrane” pod spodem (inny kolor tła), z informacją kto i kiedy zabrał.
+- Na rzeczy z „Zabrane” przycisk „Zwracam” otwiera okno z polem ilości (wstępnie dotychczasowa); po zatwierdzeniu rzecz wraca na listę główną z nową ilością.
+- Rzeczy w „Zabrane” dłużej niż 7 dni są automatycznie usuwane (zadanie w tle raz dziennie).
+- Usuwanie ręczne: admin i autor.
+- Ekran „Magazyn” w menu bocznym / Więcej.
+
 ### Task 20: Przegląd dostępności i szybkości
 
 **Files:**

@@ -209,3 +209,9 @@ Task 19c-B: minor (deferred): matching lists not shown next to the day in the sc
 Task 19c-A: review — Important: lead numbers still in diary entry + push title; fix round 1 dispatched (+ leady_email to Ustawienia, idempotent deletes, once-per-day mail guard, SMTP log, soft-deleted client, types)
 Task 19c-A: fix round 1/5 (all addressed; 4862f36) — complete (commits 4df041e..4862f36)
 Task 19c: complete. Owner checkpoint.
+## Owner 2026-10-27: lists for the next working day + modules „Utrzymanie samochodów”, „Stan narzędzi”, „Nietypowe rzeczy na magazynie” → Tasks 19d, 19e, 19f, 19g
+- Ruling R39: „następny dzień” = next day with isWorkday (skips weekends and PL holidays); used as Na jutro default day, list highlight day and the Na jutro menu badge — cost: on Friday the badge counts Monday's items.
+- Ruling R40: cars/tools/items are visible and usable by every user; admin edits cars (name, crew), schedules/deletes repairs; tools: everyone adds/edits/moves, delete admin+author; magazyn items: everyone adds/takes/returns, delete admin+author — cost: none if owner agrees, small perm change otherwise.
+- Ruling R41: repair mark is a schedule overlay computed from the car's current crew (not written into schedule entries); push „naprawa” goes to all active users — cost: crew reassignment moves past marks too.
+- Ruling R42: tool locations reference cars by id (+ Magazyn = no car), so renaming a car renames the location — cost: none.
+- Split: 19d (web na-jutro, badges) in parallel with 19e→19f→19g (one implementer, sequential, one migration per task to avoid drizzle journal clashes).
