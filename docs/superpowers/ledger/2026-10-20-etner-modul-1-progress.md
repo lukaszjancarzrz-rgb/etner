@@ -216,3 +216,6 @@ Task 19c: complete. Owner checkpoint.
 - Ruling R42: tool locations reference cars by id (+ Magazyn = no car), so renaming a car renames the location — cost: none.
 - Split: 19d (web na-jutro, badges) in parallel with 19e→19f→19g (one implementer, sequential, one migration per task to avoid drizzle journal clashes).
 Task 19d: BASE 2ba6107; impl 4f173a5 (nextWorkday in shared, Na jutro default day + badge, Listy on top); review dispatched; seed-demo next-workday fix handed to 19e implementer
+Task 19d: review Approved (commit 4f173a5)
+Task 19d: minor (deferred): default day not recomputed past midnight while screen open; no component test for list order; e2e demo.spec.ts:375 (#harm/<dzień>~<osoba>, iPhone) failure to recheck after 19e
+Task 19d: complete
