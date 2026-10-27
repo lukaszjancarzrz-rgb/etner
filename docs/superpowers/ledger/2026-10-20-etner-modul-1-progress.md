@@ -223,3 +223,4 @@ Task 19e: impl db61cb6, b071b09 (seed nextWorkday), 42f5906 (migration 0017); re
 Task 19f: impl 4af475f..d5cd4e3 (migration 0018); review dispatched
 Task 19g: impl d620376..51e1c9d (migration 0019) + 50dc1e5 (e2e date fix: 11.11 holiday has no cells on phone); review dispatched
 Task 19f: review Approved; minors: Select aria-describedby, placeholder „Wybierz miejsce”, seed cast 'as never', rename test checks only carId, tools of soft-deleted car (no car delete yet) — 2,3 to fold into next fix round
+Task 19g: review Approved; minors: giveBack without 'is taken' guard (fold into fix round), cleanup boundary test, seed order, e2e extraOff [] — rest deferred
