@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, addMonths, dayOf, mondayOf } from './dates.js';
+import { addDays, addMonths, dayOf, mondayOf, nextWorkday } from './dates.js';
 import { nextTermin } from './schemas/zadania.js';
 
 describe('dates', () => {
@@ -14,6 +14,14 @@ describe('dates', () => {
     expect(addDays('2026-10-24', 2)).toBe('2026-10-26');
     expect(addDays('2026-10-26', -2)).toBe('2026-10-24');
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
+  });
+  it('nextWorkday: pomija weekend i święta', () => {
+    expect(nextWorkday('2026-10-22')).toBe('2026-10-23'); // czw → pt
+    expect(nextWorkday('2026-10-23')).toBe('2026-10-26'); // pt → pon
+    expect(nextWorkday('2026-10-24')).toBe('2026-10-26'); // sob → pon
+    expect(nextWorkday('2026-10-25')).toBe('2026-10-26'); // niedz → pon
+    expect(nextWorkday('2026-11-10')).toBe('2026-11-12'); // wt, środa 11.11 święto → czw
+    expect(nextWorkday('2026-10-27', ['2026-10-28'])).toBe('2026-10-29'); // dodatkowy dzień wolny
   });
   it('mondayOf', () => {
     expect(mondayOf('2026-10-21')).toBe('2026-10-19');

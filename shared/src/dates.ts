@@ -1,3 +1,5 @@
+import { isWorkday } from './holidays.js';
+
 const fmt = new Intl.DateTimeFormat('pl-PL', {
   timeZone: 'Europe/Warsaw',
   year: 'numeric',
@@ -30,4 +32,11 @@ export function addMonths(day: string, n: number): string {
   const t = new Date(Date.UTC(y, m - 1 + n, 1));
   t.setUTCDate(Math.min(d, new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate()));
   return t.toISOString().slice(0, 10);
+}
+
+/** Najbliższy dzień roboczy po `day` (pomija weekendy, święta i `extraOff`). */
+export function nextWorkday(day: string, extraOff: string[] = []): string {
+  let d = addDays(day, 1);
+  while (isWorkday(d, extraOff) !== 1) d = addDays(d, 1);
+  return d;
 }

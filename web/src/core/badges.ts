@@ -1,4 +1,4 @@
-import { addDays } from '@etner/shared';
+import { nextWorkday } from '@etner/shared';
 import type { Rec } from './store.js';
 
 /**
@@ -20,10 +20,10 @@ export function freshByJob(jobs: Rec[], entries: Rec[], scope: Rec[], meId: stri
   return m;
 }
 
-/** Na jutro: niezabrane na jutro (Warszawa, bez dzisiejszych); pracownik tylko swojej ekipy, admin wszystkich. */
-export function naJutroCount(items: Rec[], today: string, me: { role: string; ekipa?: string | null } | null | undefined): number {
+/** Na jutro: niezabrane na następny dzień roboczy (Warszawa); pracownik tylko swojej ekipy, admin wszystkich. */
+export function naJutroCount(items: Rec[], today: string, me: { role: string; ekipa?: string | null } | null | undefined, extraOff: string[] = []): number {
   if (!me) return 0;
-  const jutro = addDays(today, 1);
+  const jutro = nextWorkday(today, extraOff);
   return items.filter((i) => !i.zabrane && i.dzien === jutro && (me.role === 'admin' || i.ekipa === me.ekipa)).length;
 }
 

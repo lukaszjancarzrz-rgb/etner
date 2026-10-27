@@ -22,7 +22,7 @@ export function useBadges(): Record<string, number> {
   const me = useMe();
   const ver = useSeenVersion();
   const [day, setDay] = useState(today);
-  // przełom doby: „jutro” w Na jutro liczone od nowa
+  // przełom doby: następny dzień roboczy w Na jutro liczony od nowa
   useEffect(() => { const t = setInterval(() => setDay(today()), 60_000); return () => clearInterval(t); }, []);
   useEffect(() => { if (me) ensureSeenBase(me.id, ['harm']); }, [me]);
   const harm = useUnseenDays().length;
@@ -33,14 +33,15 @@ export function useBadges(): Record<string, number> {
   const pumble = useEntities('pumble_messages');
   const shopping = useEntities('shopping');
   const first = useDict('status_zakupu')[0]?.wartosc;
+  const off = useDict('dzien_wolny');
   return useMemo((): Record<string, number> => {
     if (!me) return {};
     const admin = me.role === 'admin';
     return {
-      jutro: naJutroCount(checklists, day, me),
+      jutro: naJutroCount(checklists, day, me, off.map((d) => d.wartosc as string)),
       harm,
       zl: freshByJob(jobs, entries, scope, me.id, seenAt, admin, pumble).size,
       zakupy: zakupyCount(shopping, first, admin),
     };
-  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, first]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
 }

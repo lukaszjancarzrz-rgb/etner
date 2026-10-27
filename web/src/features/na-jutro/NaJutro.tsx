@@ -1,5 +1,5 @@
 import { CaretLeft, CaretRight, Check, ListChecks, PencilSimple, Plus, SunHorizon, Trash, X } from '@phosphor-icons/react';
-import { addDays } from '@etner/shared';
+import { addDays, nextWorkday } from '@etner/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { dayLong, fmtWhen, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
@@ -25,7 +25,7 @@ const dayName = (d: string) => {
   return rel ? `${rel}, ${dayLong(d)}` : dayLong(d);
 };
 
-/** Na jutro: lista ekipy na dzień (domyślnie jutro). Pracownik: tylko swoja ekipa; admin: dowolna. `#jutro~<id>` podświetla rzecz. */
+/** Na jutro: lista ekipy na dzień (domyślnie następny dzień roboczy), nad nią listy predefiniowane. Pracownik: tylko swoja ekipa; admin: dowolna. `#jutro~<id>` podświetla rzecz. */
 export function NaJutro({ route }: { route: Route }) {
   const me = useMe();
   const admin = useIsAdmin();
@@ -33,8 +33,11 @@ export function NaJutro({ route }: { route: Route }) {
   const crews = useDict('ekipa').filter((d) => d.wartosc !== 'mieszane'); // „mieszane” to nie ekipa z własną listą
   const raw = useEntities('checklists');
   const items = useMemo(() => withoutEchoes(raw, ['ekipa', 'dzien', 'tekst']), [raw]);
+  const off = useDict('dzien_wolny');
+  const next = nextWorkday(today(), off.map((d) => d.wartosc as string));
   const [crewSel, setCrew] = useState<string>();
-  const [day, setDay] = useState(() => addDays(today(), 1));
+  const [picked, setDay] = useState<string>();
+  const day = picked ?? next; // bez wyboru: następny dzień roboczy (dni wolne mogą dojść po wczytaniu)
   const [flash, setFlash] = useState<string>();
   const hl = route.highlight;
   const hlItem = hl ? items.find((i) => i.id === hl) : undefined;
@@ -62,13 +65,15 @@ export function NaJutro({ route }: { route: Route }) {
           <Segmented label="Ekipa" value={ekipa} onChange={setCrew} options={crews.map((c) => ({ v: c.wartosc as string, label: c.wartosc as string }))} />
         ) : <p className="font-wide text-lg font-extrabold">{ekipa}</p>}
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="icon" aria-label="Poprzedni dzień" onClick={() => setDay((d) => addDays(d, -1))}><CaretLeft className="h-5 w-5" /></Button>
+          <Button variant="secondary" size="icon" aria-label="Poprzedni dzień" onClick={() => setDay(addDays(day, -1))}><CaretLeft className="h-5 w-5" /></Button>
           <p className="min-w-0 flex-1 text-center font-semibold first-letter:uppercase" aria-live="polite">{dayName(day)}</p>
-          <Button variant="secondary" size="icon" aria-label="Następny dzień" onClick={() => setDay((d) => addDays(d, 1))}><CaretRight className="h-5 w-5" /></Button>
+          <Button variant="secondary" size="icon" aria-label="Następny dzień" onClick={() => setDay(addDays(day, 1))}><CaretRight className="h-5 w-5" /></Button>
         </div>
-        {day !== addDays(today(), 1) && <Button variant="ghost" size="sm" className="justify-self-center text-action" onClick={() => setDay(addDays(today(), 1))}>Wróć do jutra</Button>}
-        <AddForm ekipa={ekipa} day={day} />
+        {day !== next && <Button variant="ghost" size="sm" className="justify-self-center text-action" onClick={() => setDay(undefined)}>{next === addDays(today(), 1) ? 'Wróć do jutra' : 'Wróć do następnego dnia roboczego'}</Button>}
       </div>
+
+      <Lists ekipa={ekipa} day={day} />
+      <AddForm ekipa={ekipa} day={day} />
 
       {!list.length && <Empty icon={SunHorizon} title="Nic do zabrania" hint="Dopisz, co ekipa ma zabrać. Pozostali z ekipy dostaną powiadomienie." />}
       {open.length > 0 && (
@@ -83,7 +88,6 @@ export function NaJutro({ route }: { route: Route }) {
           <ul className="grid gap-2">{taken.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>
         </div>
       )}
-      <Lists ekipa={ekipa} day={day} />
     </section>
   );
 }
