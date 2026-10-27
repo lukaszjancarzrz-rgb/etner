@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
-import { addDays, dayOf, isWorkday, mondayOf, newId, type ScheduleProposal } from '@etner/shared';
+import { addDays, dayOf, isWorkday, mondayOf, newId, nextWorkday, type ScheduleProposal } from '@etner/shared';
 import { hashPassword } from '../core/password.js';
 import { tx, type Db } from '../core/db.js';
 import { makeVariants, type FileStore } from '../core/files.js';
@@ -218,7 +218,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     buy('Rolka papieru do plotera', '', 'Kupione');
 
     // Listy „na jutro”.
-    const tomorrow = addDays(today, 1);
+    const tomorrow = nextWorkday(today); // jak ekran Na jutro (R39)
     for (const [ekipa, who, items] of [
       [BARTEK, u.bartek!, ['Centrala rekuperacji', 'Kanały 160 mm', 'Taśma aluminiowa', 'Wkrętarka i wiertła']],
       [MAREK, u.marek!, ['Jednostki wewnętrzne x3', 'Rury miedziane', 'Pompa skroplin', 'Drabina']],
