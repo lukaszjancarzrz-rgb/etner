@@ -54,3 +54,46 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   await expect(page.locator(`[data-cell="${day}|Marek Pilch"]`)).not.toContainText('w naprawie');
   await admin.context().close();
 });
+
+test('narzędzia: wyszukiwanie pokazuje wszystkie miejsca; dodanie, przeniesienie do Magazynu, usunięcie przez autora', async ({ page }, info) => {
+  const tag = `E2E ${info.project.name}`;
+  await login(page, 'Piotr Kuchta');
+  await page.goto('/#narz');
+  // bez wyszukiwania: sekcje miejsc, w aucie wg podmiejsca
+  await expect(page.getByRole('list', { name: 'Mała Toyota · Górna półka na regale' })).toContainText('Wkrętarka Makita');
+  await expect(page.getByRole('list', { name: 'Magazyn' })).toContainText('Drabina 3 m');
+  await page.getByLabel('Szukaj narzędzia').fill('wkretarka');
+  const res = page.getByRole('list', { name: 'Wyniki wyszukiwania' });
+  await expect(res.locator('li')).toHaveCount(2);
+  await expect(res).toContainText('Mała Toyota · Górna półka na regale');
+  await expect(res).toContainText('Stary Ducato · W kabinie');
+  await page.getByRole('button', { name: 'Wyczyść wyszukiwanie' }).click();
+
+  await page.getByRole('button', { name: 'Dodaj narzędzie' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Nowe narzędzie' });
+  await dlg.getByLabel('Nazwa').fill(`${tag} szlifierka`);
+  await dlg.getByLabel('Miejsce').click();
+  await page.getByRole('option', { name: 'Nowa Duża Toyota' }).click();
+  await dlg.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(dlg.getByText('Wybierz miejsce w samochodzie')).toBeVisible();
+  await dlg.getByLabel('Gdzie w samochodzie').click();
+  await page.getByRole('option', { name: 'Nad kabiną' }).click();
+  await dlg.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(dlg).toBeHidden();
+  await expect(page.getByRole('list', { name: 'Nowa Duża Toyota · Nad kabiną' })).toContainText(`${tag} szlifierka`);
+
+  await page.getByRole('button', { name: `Edytuj: ${tag} szlifierka` }).click();
+  const ed = page.getByRole('dialog', { name: 'Narzędzie' });
+  await ed.getByLabel('Miejsce').click();
+  await page.getByRole('option', { name: 'Magazyn' }).click();
+  await expect(ed.getByLabel('Gdzie w samochodzie')).toHaveCount(0);
+  await ed.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page.getByRole('list', { name: 'Magazyn' })).toContainText(`${tag} szlifierka`);
+  await page.reload();
+  await expect(page.getByRole('list', { name: 'Magazyn' })).toContainText(`${tag} szlifierka`);
+
+  await page.getByRole('button', { name: `Edytuj: ${tag} szlifierka` }).click();
+  await page.getByRole('button', { name: 'Usuń narzędzie' }).click();
+  await page.getByRole('button', { name: 'Na pewno usunąć?' }).click();
+  await expect(page.getByText(`${tag} szlifierka`)).toHaveCount(0);
+});

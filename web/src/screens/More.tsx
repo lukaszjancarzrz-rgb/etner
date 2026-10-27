@@ -1,4 +1,4 @@
-import { CaretRight, GearSix, Handshake, ListChecks, SignOut, UserGear, UsersThree, Van, type Icon } from '@phosphor-icons/react';
+import { CaretRight, GearSix, Handshake, ListChecks, SignOut, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
 import { logout, useSession } from '../core/session.js';
 import { Button } from '../core/ui/button.js';
 
@@ -10,13 +10,14 @@ const Tile = ({ href, icon: I, title, hint }: { href: string; icon: Icon; title:
   </a>
 );
 
-/** Więcej: Samochody; Leady, Zadania, Klienci, Użytkownicy (admin); Ustawienia, wylogowanie. */
+/** Więcej: Samochody, Narzędzia; Leady, Zadania, Klienci, Użytkownicy (admin); Ustawienia, wylogowanie. */
 export function More() {
   const { me } = useSession();
   return (
     <section className="mx-auto grid max-w-2xl gap-6 px-4 py-6">
       <div className="grid gap-3">
         <Tile href="#auta" icon={Van} title="Samochody" hint="Usterki aut, terminy napraw" />
+        <Tile href="#narz" icon={Wrench} title="Narzędzia" hint="Gdzie leży narzędzie: samochody i Magazyn" />
       </div>
       {me?.role === 'admin' && (
         <div className="grid gap-3">
