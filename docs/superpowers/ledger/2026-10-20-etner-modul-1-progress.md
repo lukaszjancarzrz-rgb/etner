@@ -219,3 +219,6 @@ Task 19d: BASE 2ba6107; impl 4f173a5 (nextWorkday in shared, Na jutro default da
 Task 19d: review Approved (commit 4f173a5)
 Task 19d: minor (deferred): default day not recomputed past midnight while screen open; no component test for list order; e2e demo.spec.ts:375 (#harm/<dzień>~<osoba>, iPhone) failure to recheck after 19e
 Task 19d: complete
+Task 19e: impl db61cb6, b071b09 (seed nextWorkday), 42f5906 (migration 0017); review dispatched
+Task 19f: impl 4af475f..d5cd4e3 (migration 0018); review dispatched
+Task 19g: impl d620376..51e1c9d (migration 0019) + 50dc1e5 (e2e date fix: 11.11 holiday has no cells on phone); review dispatched
