@@ -1,6 +1,16 @@
 import { z } from 'zod';
 
 const opId = z.string().min(1).optional();
+
+/** Małe litery bez diakrytyków (ł nie rozkłada się w NFD). */
+export const norm = (s: string): string =>
+  s.toLowerCase().replace(/ł/g, 'l').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim();
+
+/** Telefon jako same cyfry, bez prefiksu +48 / 0048. */
+export const phoneDigits = (s: string): string => {
+  const d = s.replace(/\D/g, '').replace(/^00/, '');
+  return d.length === 11 && d.startsWith('48') ? d.slice(2) : d;
+};
 const txt = z.string().trim();
 const list = z.array(txt.min(1)).default([]);
 
@@ -40,3 +50,6 @@ export const siteCreateSchema = siteInputSchema.extend({ opId });
 // Bez wartości domyślnych: pominięte pole nie może nadpisać zapisanego.
 export const siteUpdateSchema = z.object({ nazwa: txt, adres: txt, miejscowosc: txt, mapa: txt, opis: txt }).partial().extend({ opId });
 export type SiteUpdate = z.infer<typeof siteUpdateSchema>;
+
+/** Łączenie: klient z adresu jest główny, `from` (duplikat) przechodzi do niego i znika. */
+export const clientMergeSchema = z.object({ opId, from: z.string().min(1) });

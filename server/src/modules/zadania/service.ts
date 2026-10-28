@@ -10,6 +10,8 @@ import { tasks } from './schema.js';
 
 /** Słowniki: status i grupa zadań. */
 export const dictRefs = dictRefsFor('tasks', tasks, { status_zadania: tasks.status, grupa_zadan: tasks.grupa });
+/** Łączenie klientów (klienci.merge): przepina `client_id` z duplikatu na głównego klienta. */
+export const clientRefs = dictRefsFor('tasks', tasks, { clientId: tasks.clientId });
 
 export type TaskRow = typeof tasks.$inferSelect;
 

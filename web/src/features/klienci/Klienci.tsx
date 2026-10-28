@@ -1,5 +1,5 @@
 import { fmtZl } from '@etner/shared';
-import { ArrowLeft, Briefcase, EnvelopeSimple, MagnifyingGlass, MapPin, NavigationArrow, PencilSimple, Phone, Plus, UsersThree } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowsMerge, Briefcase, EnvelopeSimple, MagnifyingGlass, MapPin, NavigationArrow, PencilSimple, Phone, Plus, UsersThree } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { fmtDay, mapsUrl, matches, telHref, useIsAdmin, useLoading } from '../../core/data.js';
 import { useEntities, useEntity, type Rec } from '../../core/store.js';
@@ -11,6 +11,8 @@ import { Skeleton } from '../../core/ui/skeleton.js';
 import type { Route } from '../../routes.js';
 import { fmtTermin } from '../zlecenia/JobCard.js';
 import { ClientForm, SiteForm } from './ClientForms.js';
+import { duplicatePairs, type DupPair } from './forms.js';
+import { MergeDialog } from './Merge.js';
 
 export function Klienci({ route }: { route: Route }) {
   return route.param ? <ClientCard id={route.param} /> : <ClientList />;
@@ -22,6 +24,8 @@ function ClientList() {
   const clients = useEntities('clients');
   const sites = useEntities('sites');
   const loading = useLoading();
+  const admin = useIsAdmin();
+  const dups = useMemo(() => (admin ? duplicatePairs(clients as (Rec & { id: string; nazwa: string })[]) : []), [admin, clients]);
   const list = useMemo(() => {
     const bySite = new Map<string, string[]>();
     for (const s of sites) bySite.set(s.clientId, [...(bySite.get(s.clientId) ?? []), s.miejscowosc, s.adres]);
@@ -37,6 +41,7 @@ function ClientList() {
         <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-ink-2" />
         <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nazwisko, telefon, miejscowość" className="pl-11" />
       </label>
+      {admin && !q && dups.length > 0 && <Duplicates pairs={dups} />}
       {!list.length ? <Empty icon={UsersThree} title={q ? 'Nic nie znaleziono' : 'Brak klientów'} hint={q ? 'Spróbuj samego nazwiska albo numeru telefonu.' : 'Klient powstaje razem z nowym zleceniem.'} /> : (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
           {list.map(({ c, place }) => (
@@ -53,6 +58,35 @@ function ClientList() {
   );
 }
 
+const WHY = { nazwa: 'ta sama nazwa', telefon: 'ten sam telefon', 'e-mail': 'ten sam e-mail' } as const;
+
+/** Admin (R58): prawdopodobne duplikaty z akcją „Połącz”; nic nie łączy się samo. */
+function Duplicates({ pairs }: { pairs: DupPair<Rec & { id: string; nazwa: string }>[] }) {
+  const [open, setOpen] = useState(true);
+  const [merge, setMerge] = useState<DupPair<Rec & { id: string; nazwa: string }> | null>(null);
+  return (
+    <section className="grid gap-2" aria-label="Możliwe duplikaty">
+      <SectionTitle count={pairs.length} toggle={{ open, onToggle: () => setOpen(!open) }}>Możliwe duplikaty</SectionTitle>
+      {open && (
+        <ul className="grid gap-2">
+          {pairs.map((p) => (
+            <li key={`${p.a.id}|${p.b.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-line bg-card px-4 py-3">
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 font-semibold">
+                  <a href={`#kl/${p.a.id}`} className="truncate hover:underline">{p.a.nazwa}</a><span aria-hidden className="text-ink-2">+</span><span className="sr-only">i</span><a href={`#kl/${p.b.id}`} className="truncate hover:underline">{p.b.nazwa}</a>
+                </span>
+                <span className="text-sm text-ink-2">{p.why.map((w) => WHY[w]).join(', ')}</span>
+              </span>
+              <Button variant="secondary" size="sm" onClick={() => setMerge(p)} aria-label={`Połącz: ${p.a.nazwa} i ${p.b.nazwa}`}><ArrowsMerge className="h-4 w-4" />Połącz</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {merge && <MergeDialog a={merge.a} b={merge.b} onClose={() => setMerge(null)} />}
+    </section>
+  );
+}
+
 /** Karta klienta: kontakt, notatki (admin), obiekty, leady (admin), zlecenia. */
 function ClientCard({ id }: { id: string }) {
   const c = useEntity('clients', id);
@@ -62,7 +96,7 @@ function ClientCard({ id }: { id: string }) {
   const allJobs = useEntities('jobs');
   const allLeads = useEntities('leads');
   const sites = useMemo(() => withoutEchoes(allSites.filter((s) => s.clientId === id), ['nazwa', 'adres', 'miejscowosc']), [allSites, id]);
-  const [form, setForm] = useState<null | { kind: 'client' } | { kind: 'site'; site?: Rec }>(null);
+  const [form, setForm] = useState<null | { kind: 'client' } | { kind: 'site'; site?: Rec } | { kind: 'merge' }>(null);
   const jobs = useMemo(() => allJobs.filter((j) => j.clientId === id).sort((a, b) => String(b.numer).localeCompare(String(a.numer), 'pl', { numeric: true })), [allJobs, id]);
   const leads = useMemo(() => allLeads.filter((l) => l.clientId === id), [allLeads, id]);
 
@@ -86,6 +120,7 @@ function ClientCard({ id }: { id: string }) {
           {!c.telefony?.length && !c.emaile?.length && <p className="text-sm text-ink-2">Brak telefonu i e-maila.</p>}
         </div>
         {admin && c.notatki && <div className="rounded-xl bg-bg/70 p-3"><p className="text-sm font-semibold text-ink-2">Notatki</p><p className="mt-1 whitespace-pre-wrap">{c.notatki}</p></div>}
+        {admin && <Button variant="ghost" size="sm" className="-ml-2 justify-self-start text-ink-2" onClick={() => setForm({ kind: 'merge' })}><ArrowsMerge className="h-4 w-4" />Połącz z…</Button>}
       </div>
 
       <div className="grid gap-2">
@@ -112,6 +147,7 @@ function ClientCard({ id }: { id: string }) {
       </div>
 
       {form?.kind === 'client' && <ClientForm client={c} onClose={() => setForm(null)} />}
+      {form?.kind === 'merge' && <MergeDialog a={c} onClose={() => setForm(null)} />}
       {form?.kind === 'site' && <SiteForm clientId={id} site={form.site} onClose={() => setForm(null)} />}
 
       {admin && (

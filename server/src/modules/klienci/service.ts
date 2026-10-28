@@ -1,7 +1,8 @@
 import { and, asc, eq, isNull, like, or, sql } from 'drizzle-orm';
-import { newId, type ClientCreate, type ClientUpdate, type SiteInput, type SiteUpdate } from '@etner/shared';
+import { newId, norm, phoneDigits, type ClientCreate, type ClientUpdate, type SiteInput, type SiteUpdate } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
-import type { Db } from '../../core/db.js';
+import type { DictRefs } from '../../core/dict-refs.js';
+import { tx, type Db } from '../../core/db.js';
 import { defaultFirmaId } from '../../core/firma.js';
 import { clients, sites } from './schema.js';
 
@@ -9,15 +10,7 @@ export type ClientRow = typeof clients.$inferSelect;
 export type SiteRow = typeof sites.$inferSelect;
 export type ClientHit = Pick<ClientRow, 'id' | 'nazwa' | 'typ' | 'telefony' | 'emaile'>;
 
-/** Małe litery bez diakrytyków (ł nie rozkłada się w NFD). */
-export const norm = (s: string): string =>
-  s.toLowerCase().replace(/ł/g, 'l').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim();
-
-/** Telefon jako same cyfry, bez prefiksu +48 / 0048. */
-export const phoneDigits = (s: string): string => {
-  const d = s.replace(/\D/g, '').replace(/^00/, '');
-  return d.length === 11 && d.startsWith('48') ? d.slice(2) : d;
-};
+export { norm, phoneDigits };
 
 const activeSites = (db: Db, clientId: string): SiteRow[] =>
   db.select().from(sites).where(and(eq(sites.clientId, clientId), isNull(sites.deletedAt))).orderBy(asc(sites.createdAt)).all();
@@ -62,6 +55,41 @@ export function findDuplicates(db: Db, c: Pick<ClientRow, 'telefony' | 'emaile'>
   return db.select().from(clients).where(isNull(clients.deletedAt)).all()
     .filter((o) => o.id !== exceptId && (o.telefony.some((p) => ph.has(phoneDigits(p))) || o.emaile.some((e) => em.has(e.toLowerCase()))))
     .map(hit);
+}
+
+/**
+ * Łączy duplikat `dupId` z klientem głównym `mainId` (R58): obiekty i odwołania innych modułów (`refs`, kolumna `clientId`)
+ * przechodzą do głównego, puste pola głównego uzupełniane z duplikatu, telefony i e-maile sumowane, duplikat miękko usunięty.
+ * Jedna transakcja, każdy zmieniony wiersz w changes. Duplikat już usunięty = bez zmian (powtórka).
+ */
+export function merge(db: Db, userId: string, mainId: string, dupId: string, refs: DictRefs[]): ClientRow | undefined {
+  return tx(db, () => {
+    const main = get(db, mainId);
+    if (!main) return undefined;
+    const dup = db.select().from(clients).where(eq(clients.id, dupId)).get();
+    if (!dup || mainId === dupId) return undefined;
+    if (dup.deletedAt) return main;
+    const now = new Date().toISOString();
+    for (const s of activeSites(db, dupId)) {
+      const row = db.update(sites).set({ clientId: mainId, updatedAt: now }).where(eq(sites.id, s.id)).returning().get();
+      recordChange(db, userId, 'sites', s.id, 'update', s, row);
+    }
+    for (const r of refs) r.rename(db, userId, 'clientId', dupId, mainId);
+    const union = (a: string[], b: string[], key: (x: string) => string) => [...a, ...b.filter((x) => !a.some((y) => key(y) === key(x)))];
+    const merged = {
+      ...main,
+      telefony: union(main.telefony, dup.telefony, phoneDigits),
+      emaile: union(main.emaile, dup.emaile, (e) => e.toLowerCase()),
+      nip: main.nip || dup.nip,
+      notatki: main.notatki || dup.notatki,
+    };
+    // zawsze z wpisem w changes: pracownik dostaje głównego klienta, gdy właśnie przeszły do niego zlecenia
+    const row = db.update(clients).set({ ...merged, szukaj: clientText(merged, activeSites(db, mainId)), updatedAt: now }).where(eq(clients.id, mainId)).returning().get();
+    recordChange(db, userId, 'clients', mainId, 'update', main, row);
+    const gone = db.update(clients).set({ deletedAt: now, updatedAt: now }).where(eq(clients.id, dupId)).returning().get();
+    recordChange(db, userId, 'clients', dupId, 'delete', dup, gone);
+    return row;
+  });
 }
 
 export function addSite(db: Db, userId: string, clientId: string, input: Partial<SiteInput>): SiteRow | undefined {

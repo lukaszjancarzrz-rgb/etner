@@ -1,4 +1,4 @@
-import { clientCreateSchema, clientUpdateSchema, siteCreateSchema, siteUpdateSchema } from '@etner/shared';
+import { clientCreateSchema, clientMergeSchema, clientUpdateSchema, siteCreateSchema, siteUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -6,6 +6,9 @@ import { body } from '../../core/body.js';
 import { requireAdmin, requireUser } from '../../core/auth.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
+import { clientRefs as leady } from '../leady/service.js';
+import { clientRefs as zadania } from '../zadania/service.js';
+import { clientRefs as zlecenia } from '../zlecenia/service.js';
 import * as svc from './service.js';
 
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
@@ -42,6 +45,14 @@ export function routes(app: Hono, deps: AppDeps): void {
     const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
     const contact = !old || !same(old.telefony, result.telefony) || !same(old.emaile, result.emaile);
     return c.json({ ...result, duplicates: contact ? svc.findDuplicates(db, result, result.id) : [] });
+  });
+
+  // R58: tylko admin; wszystkie tabele z client_id (zlecenia, leady z kontaktami, zadania; obiekty w samym klienci.merge)
+  app.post('/api/clients/:id/merge', admin, async (c) => {
+    const { opId, from } = await body(c, clientMergeSchema);
+    const { result } = runOp(db, opId, me(c), () => svc.merge(db, me(c), c.req.param('id'), from, [zlecenia, leady, zadania]));
+    if (!result) throw notFound();
+    return c.json(result);
   });
 
   app.post('/api/clients/:id/sites', admin, async (c) => {
