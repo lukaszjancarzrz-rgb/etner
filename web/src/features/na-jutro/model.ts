@@ -8,16 +8,16 @@ export function fits(t: Rec, job: Rec): boolean {
 }
 
 /**
- * Zlecenia, na które jedzie ekipa danego dnia (harmonogram): wpisy „zlecenie” tego dnia, gdy zlecenie jest tej ekipy,
- * wpis jest w moim wierszu albo w wierszu członka ekipy (`ekipaOf` zna ekipy tylko adminowi).
+ * Zlecenia dnia z harmonogramu (R45): wpisy „zlecenie” tego dnia w wierszach osób, dla których `who(userId)` jest prawdą
+ * (pracownik: tylko on sam; admin: członkowie wybranej ekipy). Ekipa zlecenia nie ma znaczenia.
  */
-export function dayJobIds(entries: Rec[], people: Rec[], day: string, ekipa: string | undefined, meId: string | undefined, jobs: Map<string, Rec>, ekipaOf: (userId: string) => string | null | undefined): string[] {
+export function dayJobIds(entries: Rec[], people: Rec[], day: string, jobs: Map<string, Rec>, who: (userId: string) => boolean): string[] {
   const person = new Map(people.map((p) => [p.id, p]));
   const out = new Set<string>();
   for (const e of entries) {
     if (e.dzien !== day || e.rodzaj !== 'zlecenie' || !e.jobId) continue;
     const j = jobs.get(e.jobId), uid = person.get(e.personId)?.userId as string | undefined;
-    if (j && ((ekipa && j.ekipa === ekipa) || (uid && (uid === meId || (ekipa && ekipaOf(uid) === ekipa))))) out.add(j.id);
+    if (j && uid && who(uid)) out.add(j.id);
   }
   return [...out];
 }

@@ -22,13 +22,15 @@ describe('listy predefiniowane: dopasowanie', () => {
     expect(r[3]!.jobs).toEqual([]);
   });
 
-  it('zlecenia dnia: zlecenie ekipy, mój wiersz albo członek ekipy; inne dni i kody pomijane', () => {
+  it('zlecenia dnia (R45): pracownik tylko swój wiersz, admin członkowie wybranej ekipy; ekipa zlecenia bez znaczenia', () => {
     const jobs = new Map([job('j1', 'Elektryka', 'montaż', 'A'), job('j2', 'Klimatyzacja', 'montaż', 'B'), job('j3', 'Rekuperacja', 'montaż', 'B'), job('j4', 'Inne', 'montaż', 'B')].map((j) => [j.id, j]));
-    const people = [{ id: 'p1', userId: 'me' }, { id: 'p2', userId: 'kolega' }, { id: 'p3', userId: 'obcy' }];
+    const people = [{ id: 'p1', userId: 'me' }, { id: 'p2', userId: 'kolega' }, { id: 'p3', userId: 'obcy' }, { id: 'p4', userId: null }];
     const e = (personId: string, jobId: string | null, dzien = '2026-10-23', rodzaj = 'zlecenie') => ({ id: `${personId}${jobId}${dzien}`, personId, jobId, dzien, rodzaj });
-    const entries = [e('p3', 'j1'), e('p1', 'j2'), e('p2', 'j3'), e('p3', 'j4'), e('p3', 'j1', '2026-10-24'), e('p1', null, '2026-10-23', 'kod')];
-    const ek = (u: string) => (u === 'kolega' ? 'A' : u === 'obcy' ? 'B' : undefined);
-    expect(dayJobIds(entries, people, '2026-10-23', 'A', 'me', jobs, ek).sort()).toEqual(['j1', 'j2', 'j3']);
-    expect(dayJobIds(entries, people, '2026-10-23', 'A', 'me', jobs, () => undefined).sort()).toEqual(['j1', 'j2']); // pracownik nie zna cudzych ekip
+    // j1 to zlecenie ekipy A, ale jedzie na nie ktoś z B – nie podświetla się dla A
+    const entries = [e('p3', 'j1'), e('p1', 'j2'), e('p2', 'j3'), e('p3', 'j4'), e('p4', 'j4'), e('p1', 'j1', '2026-10-24'), e('p1', null, '2026-10-23', 'kod')];
+    const ek: Record<string, string> = { me: 'A', kolega: 'A', obcy: 'B' };
+    expect(dayJobIds(entries, people, '2026-10-23', jobs, (u) => u === 'me')).toEqual(['j2']); // pracownik: tylko swoje
+    expect(dayJobIds(entries, people, '2026-10-23', jobs, (u) => ek[u] === 'A').sort()).toEqual(['j2', 'j3']); // admin, ekipa A
+    expect(dayJobIds(entries, people, '2026-10-23', jobs, (u) => ek[u] === 'B').sort()).toEqual(['j1', 'j4']); // admin, ekipa B
   });
 });

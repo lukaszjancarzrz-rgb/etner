@@ -170,9 +170,10 @@ function Who({ verb, id, at, name }: { verb: string; id?: string | null; at?: st
   return <p className="flex min-w-0 items-center gap-1.5"><Avatar userId={id} name={name} size="xs" /><span className="min-w-0">{verb} {name}{at ? ` · ${fmtWhen(at)}` : ''}</span></p>;
 }
 
-/** Listy predefiniowane (18j): pasujące do zleceń ekipy tego dnia na górze. Odhaczanie tylko w oknie; zamknięcie zeruje (nic nie idzie na serwer). */
+/** Listy predefiniowane (18j): pasujące do zleceń dnia na górze (R45: pracownik – jego wiersz, admin – osoby z wybranej ekipy). Odhaczanie tylko w oknie; zamknięcie zeruje (nic nie idzie na serwer). */
 function Lists({ ekipa, day }: { ekipa: string; day: string }) {
   const me = useMe();
+  const admin = useIsAdmin();
   const templates = useEntities('checklist_templates');
   const entries = useEntities('schedule_entries');
   const people = useEntities('schedule_people');
@@ -181,9 +182,9 @@ function Lists({ ekipa, day }: { ekipa: string; day: string }) {
   const [open, setOpen] = useState<string>();
   const ranked = useMemo(() => {
     const ek = new Map(users.map((u) => [u.id, u.ekipa as string | null | undefined]));
-    const ids = dayJobIds(entries, people, day, ekipa, me?.id, jobs, (u) => ek.get(u));
+    const ids = dayJobIds(entries, people, day, jobs, admin ? (u) => ek.get(u) === ekipa : (u) => u === me?.id);
     return rankTemplates(templates, ids.map((id) => jobs.get(id)!));
-  }, [templates, entries, people, users, jobs, day, ekipa, me?.id]);
+  }, [templates, entries, people, users, jobs, day, ekipa, me?.id, admin]);
   if (!templates.length) return null;
   const cur = ranked.find((x) => x.t.id === open);
   const where = (j: JobView) => [j.client?.nazwa, j.site?.miejscowosc].filter(Boolean).join(' – ');
