@@ -37,11 +37,13 @@ function patch<T extends typeof leads | typeof jobs | typeof shopping | typeof l
 export const author = (db: Db): string | undefined =>
   db.select({ id: users.id }).from(users).where(and(eq(users.role, 'admin'), eq(users.active, true))).limit(1).get()?.id;
 
+export class NotEmptyError extends Error {}
+
 /** Baza docelowa musi być bez danych firmy (dopuszczalne: słowniki, administratorzy). */
 export function assertEmpty(db: Db): void {
   const busy = zlecenia.list(db).length + leady.list(db).length + uzytkownicy.listPeople(db).length + zadania.list(db).length + zakupy.list(db).length
     + db.select({ n: count() }).from(clients).get()!.n;
-  if (busy) throw new Error('Baza nie jest pusta (są zlecenia, leady, klienci, osoby harmonogramu, zadania albo zakupy). Przeniesienie tylko do nowej bazy.');
+  if (busy) throw new NotEmptyError('Baza nie jest pusta (są zlecenia, leady, klienci, osoby harmonogramu, zadania albo zakupy). Przeniesienie tylko do nowej bazy.');
 }
 
 /**
