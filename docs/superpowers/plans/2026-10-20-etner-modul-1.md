@@ -886,3 +886,17 @@ Zmiana 2026-10-28 (właściciel): zamiast Hetznera – Render, budżet < 10 USD/
 - [ ] **Step 1:** Testy: start z pustą bazą + `ADMIN_*` → jest admin; drugi start → bez zmian; import przez endpoint na fixturze (dry-run nic nie zapisuje, apply odmawia na niepustej bazie, 403 dla pracownika); `render.yaml` poprawny (parsowanie YAML w teście).
 - [ ] **Step 2:** FAIL. **Step 3:** Implementacja. **Step 4:** PASS.
 - [ ] **Step 5:** Commit. Utworzenie gałęzi `produkcja`. **STOP: właściciel wdraża Blueprint, wkleja sekrety, przenosi dane i sprawdza na telefonach.**
+
+### Task 24: Uwagi właściciela po starcie produkcji (2026-10-28)
+
+Aplikacja działa na produkcji z prawdziwymi danymi – zmiany bazy tylko dodające (migracje bez kasowania danych), wydanie od razu na `produkcja` (R56).
+- **24-A (web, PWA, harmonogram, zlecenia):**
+  - (3) „Gdzie jedziesz” w harmonogramie: od 16:00 pokazuje „Jutro” i dane następnego dnia roboczego (jak R39; gdy to nie jutro – nazwa dnia, np. „Poniedziałek”); przed 16:00 – dziś.
+  - (4) Powiadomienia: ikonka aplikacji na pasku zamiast białego kwadratu – `badge` (monochromatyczny PNG z przezroczystością, 96×96, z logo) i `icon` w `showNotification` (`web/public/push-sw.js`).
+  - (5) Kliknięcie powiadomienia otwiera zainstalowaną aplikację, nie przeglądarkę: `notificationclick` – `clients.matchAll({type:'window', includeUncontrolled:true})` → fokus + nawigacja istniejącego okna, inaczej `openWindow` z adresem w zakresie aplikacji (`scope`/`start_url`); manifest z `id` i `scope: '/'`.
+  - (8) Licznik „Zlecenia” u admina pokazuje 16 mimo braku nowości: znaleźć przyczynę (np. zlecenia z przeniesienia lub zmiany sprzed pierwszej synchronizacji liczone jako nowe) i naprawić – „nowe” tylko dla zmian innych osób po tym, jak urządzenie pierwszy raz zsynchronizowało dane; zmiany z przeniesienia nie są „nowe”.
+  - (10) Zlecenia na komputerze: mniejsze, czytelniejsze kafelki – zwarta lista (wiersz: klient, miejscowość, kategoria, status, termin), więcej zleceń na ekranie; telefon bez zmian.
+- **24-B (dziennik, klienci):**
+  - (1) Zdjęcie → „Oryginał” na telefonie: wyjście z oryginału wraca do aplikacji (oryginał w podglądzie w aplikacji z przyciskiem zamknięcia / „wstecz” zamyka podgląd; ewentualnie pobranie w nowej karcie), nie wychodzi z aplikacji.
+  - (9) Usuwanie wpisów dziennika (i ich zdjęć/załączników) przez admina i autora wpisu, z potwierdzeniem; miękkie usunięcie, synchronizacja na inne urządzenia.
+  - (11) Łączenie zdublowanych klientów (admin): w Klientach lista prawdopodobnych duplikatów (ta sama nazwa po normalizacji lub ten sam telefon/e-mail) i akcja „Połącz” (wybór klienta głównego; zlecenia, leady, obiekty i kontakty przechodzą do niego, brakujące pola uzupełniane, duplikat miękko usunięty); pojedyncze ręczne „Połącz z…” na karcie klienta.

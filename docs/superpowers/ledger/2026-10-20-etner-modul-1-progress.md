@@ -269,3 +269,7 @@ Task 23: fix round 1/5 (274f703..9176084); re-review dispatched
 Task 23: re-review clean; controller folded the 2 restore-swap minors (timestamped aside copy, SQLite header check). Verification: shared 15, web 61, server 227, build clean, e2e 56 passed / 2 skipped. Task 23 code complete. Branch `produkcja` not yet created (needs owner's explicit go — first production release). Then STOP: owner deploys the Blueprint, pastes secrets, imports the workbook, checks phones.
 - Ruling R55 (owner can't run npx): VAPID keys auto-generated once into DATA_DIR/vapid.json in every mode (prod disk is persistent); VAPID_* removed from prod render.yaml; env still overrides — cost: losing the disk means re-enabling push on phones.
 ## Owner 2026-10-28: „puszczaj na produkcję”; app not in use yet → every finished change goes to `produkcja` immediately (Ruling R56, until the owner says otherwise); owner creates a fresh Blueprint, old ones unused.
+## Owner 2026-10-28: production live; 12 notes → Task 24 (points 2 data check, 6 dictionary change are owner actions in the app; 7 and 12 incomplete – asked)
+- Ruling R57: „Gdzie jedziesz” switches at 16:00 to the next working day (R39), labelled „Jutro” or the weekday name.
+- Ruling R58: duplicate clients merged by an admin action (suggested pairs + manual), moving jobs/leads/sites/contacts, soft-deleting the duplicate — not an automatic merge.
+- Split: 24-A (push-sw, manifest, harmonogram, zlecenia list, badges) and 24-B (dziennik viewer + delete, klienci merge) in parallel, disjoint files.
