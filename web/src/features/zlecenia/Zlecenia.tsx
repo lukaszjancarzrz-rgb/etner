@@ -9,8 +9,9 @@ import { CategoryPill, useCatColor } from '../../core/ui/category.js';
 import { cn } from '../../core/ui/cn.js';
 import { Input } from '../../core/ui/input.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
+import { useDesk } from '../../core/layout/status.js';
 import type { Route } from '../../routes.js';
-import { JobCard } from './JobCard.js';
+import { fmtTermin, JobCard } from './JobCard.js';
 import { JobForm } from './JobForm.js';
 import { useJobs, type JobView } from './jobs.js';
 
@@ -45,6 +46,7 @@ function JobList({ selected }: { selected?: string }) {
   const jobs = useJobs();
   const group = useStatusGroup();
   const crew = useCrewColor();
+  const desk = useDesk();
   const entries = useEntities('diary_entries');
   const sched = useEntities('schedule_entries');
 
@@ -87,8 +89,8 @@ function JobList({ selected }: { selected?: string }) {
           <div key={g} className="grid gap-2">
             <SectionTitle count={items.length} toggle={g === 'zamkniete' && !q ? { open: !collapsed, onToggle: () => setClosedOpen((o) => !o) } : undefined}>{title}</SectionTitle>
             {!collapsed && (
-              <ul className="grid gap-2">
-                {items.map((j) => <JobRow key={j.id} j={j} on={j.id === selected} nowe={fresh.get(j.id) ?? 0} missing={g === 'aktualne' && !planned.has(j.id)} color={crew(j.ekipa)} />)}
+              <ul className={desk ? 'divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card' : 'grid gap-2'}>
+                {items.map((j) => <JobRow key={j.id} desk={desk} j={j} on={j.id === selected} nowe={fresh.get(j.id) ?? 0} missing={g === 'aktualne' && !planned.has(j.id)} color={crew(j.ekipa)} />)}
               </ul>
             )}
           </div>
@@ -99,8 +101,30 @@ function JobList({ selected }: { selected?: string }) {
   );
 }
 
-function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe: number; missing: boolean; color?: string }) {
+function JobRow({ j, on, nowe, missing, color, desk }: { j: JobView; on: boolean; nowe: number; missing: boolean; color?: string; desk: boolean }) {
   const cat = useCatColor();
+  const nazwa = j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient';
+  // komputer: zwarty wiersz (klient, miejscowość, kategoria, status, termin), więcej zleceń na ekranie obok karty
+  if (desk) return (
+    <li>
+      <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined}
+        className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-l-4 px-3 py-2 transition-colors duration-200', on ? 'border-l-action bg-action/8' : 'border-l-transparent hover:bg-bg')}>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color ?? 'var(--line)' }} title={j.ekipa ?? undefined} aria-hidden />
+          <span className="truncate font-semibold">{nazwa}</span>
+          {nowe > 0 && <Badge tone="new" className="h-5 px-2">{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</Badge>}
+        </span>
+        <span className="truncate text-right text-sm text-ink-2">{j.status}</span>
+        <span className="flex min-w-0 items-center gap-1.5 text-sm text-ink-2">
+          <span className="shrink-0 tabular-nums">{j._tmp ? 'zapisywanie' : j.numer}</span>
+          {j.site?.miejscowosc && <><span aria-hidden>·</span><span className="truncate">{j.site.miejscowosc}</span></>}
+          <span aria-hidden>·</span><span className="shrink-0">{fmtTermin(j.termin)}</span>
+          {missing && <Badge tone="warn" className="h-5 px-2">brak w harmonogramie</Badge>}
+        </span>
+        <span className="flex justify-end">{j.kategoria && <CategoryPill name={j.kategoria} color={cat(j.kategoria)} className="max-w-[9rem]" />}</span>
+      </a>
+    </li>
+  );
   return (
     <li>
       <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined}
@@ -113,7 +137,7 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
             {missing && <Badge tone="warn">brak w harmonogramie</Badge>}
           </span>
         </span>
-        <span className="truncate font-wide text-lg font-extrabold leading-tight">{j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient'}</span>
+        <span className="truncate font-wide text-lg font-extrabold leading-tight">{nazwa}</span>
         <span className="flex items-end gap-2 text-sm text-ink-2">
           {j.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
           <span className="ml-auto flex shrink-0 flex-col items-end gap-1">
