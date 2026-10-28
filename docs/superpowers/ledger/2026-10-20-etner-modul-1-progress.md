@@ -236,3 +236,4 @@ Task 19h: impl A 63a8721..7da214d (migration 0020), B 1a6dca8..c632b29; push roo
 Task 19h: polish round dispatched (desktop double auta badge + aria, More.tsx dup, reschedule missed repair from history, shortcut comment NOT_FROM_LEAD, VAPID warning both keys)
 Task 19h: polish round 1/5 (all addressed; c639fd6) — complete. Controller verification: shared 15, web 58, server 199, build clean, e2e 50 passed / 2 skipped.
 ## Owner 2026-10-28: proceed to Task 20 (a11y and performance).
+Task 20: impl 5d124ff..de24149 (axe 0 serious/critical all screens light+dark; JS 248.2 kB gzip; warm LCP 740–892 ms; cold 7.8 s — no compression); review dispatched
