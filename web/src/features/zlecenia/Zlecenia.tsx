@@ -113,13 +113,13 @@ function JobRow({ j, on, nowe, missing, color, desk }: { j: JobView; on: boolean
           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color ?? 'var(--line)' }} title={j.ekipa ?? undefined} aria-hidden />
           <span className="truncate font-semibold">{nazwa}</span>
           {nowe > 0 && <Badge tone="new" className="h-5 px-2">{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</Badge>}
+          {missing && <Badge tone="warn" className="h-5 px-2">brak w harmonogramie</Badge>}
         </span>
         <span className="truncate text-right text-sm text-ink-2">{j.status}</span>
         <span className="flex min-w-0 items-center gap-1.5 text-sm text-ink-2">
           <span className="shrink-0 tabular-nums">{j._tmp ? 'zapisywanie' : j.numer}</span>
           {j.site?.miejscowosc && <><span aria-hidden>·</span><span className="truncate">{j.site.miejscowosc}</span></>}
           <span aria-hidden>·</span><span className="shrink-0">{fmtTermin(j.termin)}</span>
-          {missing && <Badge tone="warn" className="h-5 px-2">brak w harmonogramie</Badge>}
         </span>
         <span className="flex justify-end">{j.kategoria && <CategoryPill name={j.kategoria} color={cat(j.kategoria)} className="max-w-[9rem]" />}</span>
       </a>
