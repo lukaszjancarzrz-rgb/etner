@@ -234,3 +234,5 @@ Tasks 19d–19g: controller verification — shared 15, web 57, server 198, buil
 - Split: 19h-A (points 2,3,4,6,7,9 – samochody, narzędzia, magazyn, badges) and 19h-B (points 1,5,8,10 – na-jutro, harmonogram, leady) in parallel, disjoint files.
 Task 19h: impl A 63a8721..7da214d (migration 0020), B 1a6dca8..c632b29; push root cause = Render demo (DATA_DIR /tmp + no fixed VAPID) → render.yaml VAPID secrets sync:false + README; review Approved
 Task 19h: polish round dispatched (desktop double auta badge + aria, More.tsx dup, reschedule missed repair from history, shortcut comment NOT_FROM_LEAD, VAPID warning both keys)
+Task 19h: polish round 1/5 (all addressed; c639fd6) — complete. Controller verification: shared 15, web 58, server 199, build clean, e2e 50 passed / 2 skipped.
+## Owner 2026-10-28: proceed to Task 20 (a11y and performance).
