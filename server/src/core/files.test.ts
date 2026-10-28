@@ -22,6 +22,12 @@ describe('makeVariants', () => {
     expect([thumb.format, thumb.height, thumb.width]).toEqual(['webp', 320, 240]);
   });
 
+  it('kilka zdjęć naraz idzie po kolei; zły plik nie blokuje kolejki', async () => {
+    const jpg = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#468' } }).jpeg().toBuffer();
+    const r = await Promise.allSettled([makeVariants(jpg), makeVariants(Buffer.from('to nie zdjęcie')), makeVariants(jpg)]);
+    expect(r.map((x) => x.status)).toEqual(['fulfilled', 'rejected', 'fulfilled']);
+  });
+
   it('PNG z przezroczystością nie wywala się', async () => {
     const png = await sharp({ create: { width: 50, height: 40, channels: 4, background: { r: 1, g: 2, b: 3, alpha: 0.5 } } }).png().toBuffer();
     const v = await makeVariants(png);

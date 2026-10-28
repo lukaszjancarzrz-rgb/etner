@@ -93,11 +93,26 @@ export function fileStoreFromEnv(env: Record<string, string | undefined>): FileS
 /** Górna granica pikseli wejścia (bomba dekompresyjna); 40 Mpx mieści każde zdjęcie z telefonu. */
 export const MAX_PIXELS = 40e6;
 
-export async function makeVariants(input: Buffer): Promise<{ orig: Buffer; view: Buffer; thumb: Buffer; w: number; h: number }> {
+// Pamięć (Render 512 MB): bez pamięci podręcznej libvips, jeden wątek, zdjęcia po kolei – kilka dużych zdjęć naraz nie wysadza instancji.
+sharp.cache(false);
+sharp.concurrency(1);
+let queue: Promise<unknown> = Promise.resolve();
+
+export function makeVariants(input: Buffer): Promise<{ orig: Buffer; view: Buffer; thumb: Buffer; w: number; h: number }> {
+  const run = queue.then(() => variants(input));
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+async function variants(input: Buffer) {
   const base = () => sharp(input, { limitInputPixels: MAX_PIXELS }).rotate(); // EXIF
   const resize = (px: number, quality: number) =>
     base().resize(px, px, { fit: 'inside', withoutEnlargement: true }).webp({ quality }).toBuffer();
-  const { info } = await base().toBuffer({ resolveWithObject: true });
-  const [view, thumb] = await Promise.all([resize(1600, 80), resize(320, 70)]);
-  return { orig: input, view, thumb, w: info.width, h: info.height };
+  // wymiary z nagłówka, bez dekodowania całego zdjęcia do pamięci; orientacja 5–8 = obrót o 90°
+  const m = await sharp(input).metadata();
+  if (!m.width || !m.height || m.width * m.height > MAX_PIXELS) throw new Error('Za duże albo nieczytelne zdjęcie');
+  const [w, h] = (m.orientation ?? 1) >= 5 ? [m.height, m.width] : [m.width, m.height];
+  const view = await resize(1600, 80);
+  const thumb = await resize(320, 70);
+  return { orig: input, view, thumb, w, h };
 }

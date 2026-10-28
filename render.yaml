@@ -72,6 +72,9 @@ services:
         value: "22"
       - key: DATA_DIR
         value: /var/data
+      # glibc: mniej rozdrobnionej pamięci przy przetwarzaniu zdjęć (sharp) na instancji 512 MB
+      - key: MALLOC_ARENA_MAX
+        value: "2"
       - key: APP_SECRET
         generateValue: true
       # Pierwszy administrator: zakładany przy starcie tylko na pustej bazie (potem zmienne są pomijane).
