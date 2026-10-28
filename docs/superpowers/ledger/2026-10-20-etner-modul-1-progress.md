@@ -281,3 +281,5 @@ Task 24-A: minor (deferred): SW focuses the first in-scope window (tab vs PWA); 
 Task 24-A: fix round 1/5 (8ee1f1f) — clock-driven „Gdzie jedziesz”, long category wrap — complete. Task 24 controller verification: shared 15, web 66, server 234, build clean, e2e 63 passed / 3 skipped. Released to produkcja (R56).
 ## Owner 2026-10-28: point 7 = P1 task badge; 12 = nothing; absence codes „na żądanie”, „okolicznościowy” removed, „bezpłatny” unpaid → Task 25
 - Ruling R59: removing a dictionary value in use offers „Zamień na…” (cascade like rename R36, then delete) — owner removes the two codes himself in Ustawienia → Słowniki (no direct production DB access) — cost: one dialog + one endpoint option.
+Task 25: impl 774a287, 7d0d4a8; review Approved; controller folded minors 1 (Object.hasOwn) and 5 (doc) — complete. Tests shared 15, web 67, server 236, build clean; e2e 65/3 skipped (implementer run). Released to produkcja.
+Task 25: minor (deferred): soft-deleted rows / lead_contacts.status snapshot / unapproved schedule drafts keep the removed value (drafts fail loudly on approval); core→features import of isDone; no test for chain A→B with B removed
