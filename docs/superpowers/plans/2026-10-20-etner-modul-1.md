@@ -905,3 +905,11 @@ Aplikacja działa na produkcji z prawdziwymi danymi – zmiany bazy tylko dodaj�
 
 - **Zadania – licznik w menu (admin):** jak przy Zakupach/Samochodach – liczba otwartych (niewykonanych, nieusuniętych) zadań z priorytetem 1, na pozycji „Zadania” w menu bocznym i w „Więcej” (telefon); opis dla czytnika „N z priorytetem 1”.
 - **Słowniki – usunięcie wartości w użyciu:** zamiast samego błędu 409 („wartość w użyciu”) okno „Zamień na…”: admin wybiera inną wartość tego samego słownika, wszystkie rekordy używające starej wartości dostają nową (ten sam mechanizm co zmiana nazwy, R36 – jedna transakcja, wpisy w changes), potem stara wartość jest usuwana. Potrzebne na produkcji do usunięcia kodów nieobecności „na żądanie” i „okolicznościowy” (decyzja właściciela: usuwamy; „bezpłatny” = niepłatny – już tak jest po przeniesieniu, sprawdzić).
+
+### Task 26: „Nowe” przy konkretnych wpisach i zmianach na karcie zlecenia (2026-10-28)
+
+Właściciel: nowy wpis w dzienniku zlecenia ma znacznik „nowe”, dopóki oglądający nie zobaczy karty i jej nie zamknie; tak samo zmiany w zleceniu (np. opis, dane kontaktowe).
+- Karta zlecenia zapamiętuje przy otwarciu „ostatnio widziane” tego użytkownika (`seenFor(me)(jobId)`) i trzyma je do zamknięcia karty (oznaczenie „widziane” przy zamknięciu – jak dziś).
+- Dziennik: wpis innej osoby utworzony po „ostatnio widziane” → czerwony znacznik „nowe” przy wpisie (kolor `--new`), z opisem dla czytnika. To samo dla punktów zakresu prac zmienionych przez inną osobę i wiadomości Pumble innej osoby.
+- Zmiany pól: sklep na urządzeniu zapamiętuje kilka poprzednich wersji rekordów `jobs`, `clients`, `sites` przy zmianach z serwera (`_hist`, najwyżej 5, bez zagnieżdżeń, z `updatedAt` i `_by`). Karta porównuje obecną wersję z wersją widzianą (ostatnia z `_hist` sprzed „ostatnio widziane”) i przy zmienionych polach (opis, status, termin, kategoria, rodzaj, ekipa, uwagi; klient: nazwa, telefony, e-maile, NIP; obiekt: nazwa, adres, miejscowość, mapa) pokazuje „nowe” – tylko gdy zmienił je ktoś inny. Po świeżym logowaniu (snapshot) historii nie ma – wtedy bez znaczników pól.
+- Testy: jednostkowe porównanie wersji i wybór wersji widzianej; e2e: drugi admin widzi „nowe” przy wpisie i przy zmienionym opisie, po zamknięciu i ponownym otwarciu karty znacznik znika.
