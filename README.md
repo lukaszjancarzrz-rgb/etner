@@ -28,14 +28,11 @@ Nie są częścią `pnpm test`, żeby testy jednostkowe w CI zostały szybkie.
 
 ## Wersja testowa na Render
 
-Usługa `etner-demo` z pliku `render.yaml` ma dane przykładowe (tryb demo). Dane leżą w `/tmp/etner`, więc po każdym wdrożeniu lub uśpieniu darmowej usługi wracają do stanu początkowego. Ten sam Blueprint zakłada też produkcję – zakłada się go raz (zob. „Produkcja na Render”).
+Usługa `etner-demo` z pliku `render.yaml` ma dane przykładowe (tryb demo). Dane leżą w `/tmp/etner`, więc po każdym wdrożeniu lub uśpieniu darmowej usługi wracają do stanu początkowego. Zakłada ją ten sam Blueprint co produkcję (zob. „Produkcja na Render”, krok 2).
 
-1. Na [dashboard.render.com](https://dashboard.render.com) wybierz **New → Blueprint** (tylko gdy Blueprintu jeszcze nie ma).
-2. Wskaż repozytorium ETNER (gałąź `modul-1`).
-3. Render pokaże usługi `etner-demo` i `etner` i zapyta o zmienne oznaczone jako sekrety. W `etner-demo` `R2_*` można zostawić puste (zdjęcia zapiszą się wtedy na dysku usługi). Kliknij **Apply**.
+1. Po założeniu Blueprintu otwórz adres usługi (np. `https://etner-demo.onrender.com`). W `etner-demo` zmienne `R2_*` można zostawić puste (zdjęcia zapiszą się wtedy na dysku usługi).
    Jeśli budowanie zatrzyma się na `corepack enable`, w ustawieniach usługi (Settings → Build Command) wpisz: `npx pnpm@10.28.0 install --frozen-lockfile && npx pnpm@10.28.0 build` i wdroż ponownie.
-4. Po zakończeniu budowania otwórz adres usługi (np. `https://etner-demo.onrender.com`).
-5. Otwórz adres usługi. Ekran logowania w wersji demo pokazuje listę „Konta demo” (administratorzy: tomek, anna; pracownicy: bartek, piotr, kamil, marek, adam). Dotknij konta, żeby się zalogować; wspólne hasło wszystkich kont to `demo1234`. Loginy i hasło są też w logu usługi przy starcie.
+2. Ekran logowania w wersji demo pokazuje listę „Konta demo” (administratorzy: tomek, anna; pracownicy: bartek, piotr, kamil, marek, adam). Dotknij konta, żeby się zalogować; wspólne hasło wszystkich kont to `demo1234`. Loginy i hasło są też w logu usługi przy starcie.
 
 Darmowa usługa usypia się po kwadransie bez ruchu; pierwsze wejście po przerwie trwa około minuty.
 
@@ -78,39 +75,50 @@ Bez `ADMIN_PASSWORD` skrypt zapyta o hasło w terminalu. Odmówi, gdy login już
 Plik `render.yaml` to jeden Blueprint z dwiema usługami:
 
 - **`etner-demo`** – wersja do oglądania nowych zmian, dane przykładowe, darmowa (gałąź `modul-1`).
-- **`etner`** – wersja z prawdziwymi danymi firmy (gałąź `produkcja`): plan Starter (7 USD/mies.) i trwały dysk 1 GB na bazę (0,25 USD/mies.). Plan i dysk są wpisane w `render.yaml`, nic nie trzeba wybierać ręcznie.
+- **`etner`** – wersja z prawdziwymi danymi firmy (gałąź `produkcja`): instancja 0,5 CPU / 512 MB (dawniej „Starter”, ok. 7 USD/mies.), region Frankfurt i trwały dysk 1 GB na bazę (0,25 USD/mies.). Plan, region i dysk są wpisane w `render.yaml`, nic nie trzeba wybierać ręcznie.
 
-Zdjęcia i kopie leżą w Cloudflare R2 (darmowe do 10 GB). Razem wychodzi poniżej 10 USD miesięcznie.
+Zdjęcia i ciągła kopia bazy leżą w Cloudflare R2 (darmowe do 10 GB). Razem wychodzi poniżej 10 USD miesięcznie. Usługa `etner` jest płatna, więc Render poprosi o kartę płatniczą (w ustawieniach konta, Billing).
 
 ### 1. Przygotuj sekrety
 
-Zanim połączysz Blueprint, zbierz wartości z listy niżej (wklejasz je w panelu Render, nigdzie indziej ich nie zapisuj):
+Zbierz wartości z listy niżej, zanim założysz Blueprint. Wklejasz je tylko w panelu Render, nigdzie indziej ich nie zapisuj. Nazwy przycisków w Cloudflare i Render mogą się trochę różnić od opisanych.
+
+**Wymagane:**
 
 | Zmienna | Skąd wziąć |
 |---|---|
-| `ADMIN_LOGIN`, `ADMIN_NAME`, `ADMIN_PASSWORD` | wymyśl: Twój login (małe litery), imię i nazwisko, hasło (min. 8 znaków) |
-| `R2_BUCKET` | Cloudflare → **R2** → **Create bucket**, np. `etner-pliki` (bucket produkcyjny, inny niż testowy wersji demo) |
-| `R2_BACKUP_BUCKET` | drugi bucket w R2, np. `etner-backup` – nocna kopia zdjęć i ciągła kopia bazy |
-| `R2_ENDPOINT` | Cloudflare → R2 → **Overview**: adres „S3 API”, `https://<numer konta>.r2.cloudflarestorage.com` (bez nazwy bucketu na końcu) |
-| `R2_KEY`, `R2_SECRET` | Cloudflare → R2 → **Manage API tokens** → **Create API token**, uprawnienie „Object Read & Write” do obu bucketów; „Access Key ID” i „Secret Access Key” |
-| `LITESTREAM_ACCESS_KEY_ID`, `LITESTREAM_SECRET_ACCESS_KEY` | te same dwie wartości co `R2_KEY` i `R2_SECRET` (albo osobny token tylko do `etner-backup`) |
+| `ADMIN_LOGIN`, `ADMIN_PASSWORD` | wymyśl: Twój login (małe litery) i hasło (min. 8 znaków); `ADMIN_NAME` (opcjonalnie) = imię i nazwisko |
+| `R2_BUCKET` | Cloudflare → **R2** → **Create bucket**, np. `etner-pliki` – bucket produkcyjny (zdjęcia i kopia bazy pod `db/`), inny niż testowy wersji demo |
+| `R2_ENDPOINT` | Cloudflare → R2: adres „S3 API” konta, `https://<numer konta>.r2.cloudflarestorage.com` (bez nazwy bucketu na końcu) |
+| `R2_KEY`, `R2_SECRET` | Cloudflare → R2 → **Manage API tokens** → **Create API token**, uprawnienie „Object Read & Write”; „Access Key ID” i „Secret Access Key” |
 | `VAPID_PUBLIC`, `VAPID_PRIVATE` | na komputerze z Node.js: `npx web-push generate-vapid-keys` („Public Key”, „Private Key”); inne niż w wersji demo |
+
+**Opcjonalne** (puste = funkcja wyłączona, można dopisać później):
+
+| Zmienna | Skąd wziąć |
+|---|---|
 | `PUMBLE_API_KEY` | Pumble → **Apps** → dodatek **„API Keys”** → nowy klucz (zob. „Pumble” wyżej) |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | dane serwera poczty od dostawcy skrzynki (np. home.pl, Gmail z hasłem aplikacji); `MAIL_FROM` = adres nadawcy. Puste = bez e-maili |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | dane serwera poczty od dostawcy skrzynki (np. home.pl, Gmail z hasłem aplikacji); `MAIL_FROM` = adres nadawcy |
 | `BASE_URL` | własna domena aplikacji, np. `https://app.etner-instalacje.pl` (krok 6); puste = adres `onrender.com` |
-| `SHEETS_ID`, `GOOGLE_SA_JSON` | opcjonalnie, nocny eksport tabel do arkusza Google (`deploy/README-odtworzenie.md`) |
+| `SHEETS_ID`, `GOOGLE_SA_JSON` | nocny eksport tabel do arkusza Google (`deploy/README-odtworzenie.md`) |
+| `R2_BACKUP_BUCKET` | drugi bucket w R2 na nocną kopię zdjęć, np. `etner-backup` (ten sam token musi mieć do niego dostęp) |
 
-`APP_SECRET` Render losuje sam. Brakujące wartości można dopisać później: usługa `etner` → **Environment** → **Add Environment Variable**, potem **Save Changes** (Render wdraża ponownie).
+`APP_SECRET` Render losuje sam.
 
-### 2. Jeden Blueprint
+### 2. Jeden nowy Blueprint
 
-Blueprint zakłada się **tylko raz**. Później każda zmiana `render.yaml` przychodzi do Render sama.
+Wcześniej powstało kilka Blueprintów z wersją demo. Zamiast je poprawiać, zakładamy **jeden nowy** i usuwamy stare.
 
-- **Nie masz jeszcze Blueprintu:** [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint** → repozytorium ETNER, gałąź `modul-1` → Render pokaże usługi `etner-demo` i `etner` i zapyta o sekrety → wklej je → **Apply**.
-- **Masz już Blueprint (z wersji demo):** nie zakładaj nowego. Render po zmianie `render.yaml` sam doda usługę `etner`. Sprawdź w **Blueprints** → Twój Blueprint: jeśli widać przycisk **Manual Sync**, kliknij go. Jeśli Render nie zapytał o sekrety, wpisz je w usłudze `etner` → **Environment** (krok 1).
-- **Sprzątanie:** jeśli wcześniej powstało kilka Blueprintów, w **Blueprints** zostaw jeden, a w liście usług usuń zdublowane stare usługi (np. drugą `etner-demo-xxxx`): usługa → **Settings** → **Delete Web Service**. Nigdy nie usuwaj usługi `etner` z prawdziwymi danymi.
+1. [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint** → repozytorium ETNER, gałąź `modul-1` (z niej Render czyta `render.yaml`, także polecenia budowania i startu produkcji).
+2. Render pokaże usługi `etner-demo` i `etner` i zapyta o sekrety. Wklej wymagane, opcjonalne możesz pominąć. Kliknij **Apply** (nazwa może się różnić). Pierwsze budowanie trwa kilka minut.
+3. Region i dysku produkcji nie da się później zmienić bez zakładania usługi od nowa – dlatego są wpisane w `render.yaml`.
+4. Usuń stare usługi z poprzednich Blueprintów (np. `etner-demo-xxxx`): usługa → **Settings** → na dole **Delete Web Service**. Potem usuń same stare Blueprinty: **Blueprints** → stary Blueprint → **Settings** → **Delete Blueprint** (nazwy mogą się różnić). Zostaje tylko nowy Blueprint z `etner-demo` i `etner`. Nigdy nie usuwaj usługi `etner` z prawdziwymi danymi.
 
-Pierwsze budowanie trwa kilka minut. Gałąź `produkcja` przygotowuje Claude, zanim połączysz Blueprint.
+Później nie zakładasz już żadnego Blueprintu: zmiany `render.yaml` Render stosuje sam.
+
+**Gdy jakaś zmienna została pominięta albo trzeba ją zmienić:** usługa `etner` → **Environment** → dodaj zmienną (nazwa i wartość) → **Save** → jeśli Render nie wdroży sam, **Manual Deploy → Deploy latest commit** (nazwy mogą się różnić).
+
+Gałąź `produkcja` przygotowuje Claude, zanim założysz Blueprint.
 
 ### 3. Pierwsze logowanie
 
@@ -141,10 +149,12 @@ Na każdym telefonie otwórz adres produkcji, zaloguj się, dodaj aplikację do 
 - **Demo** (`etner-demo`) aktualizuje się samo po każdej zmianie na gałęzi `modul-1` – tam oglądasz nowości.
 - **Produkcja** (`etner`) zmienia się tylko wtedy, gdy powiesz Claude „wydaj na produkcję”: Claude wypycha sprawdzoną wersję na gałąź `produkcja`, a Render sam ją wdraża. W trakcie wdrożenia aplikacja jest niedostępna przez około minutę (usługa z dyskiem); zapisy z telefonów czekają w kolejce i wysyłają się same.
 
+- **Ustawienia usług** (plik `render.yaml`, m.in. polecenia budowania i startu produkcji) Render bierze z gałęzi `modul-1`, z której założono Blueprint – nawet dla usługi `etner`. Kod aplikacji produkcji pochodzi z gałęzi `produkcja`.
+
 Nowych Blueprintów nie zakładasz.
 
 ### Kopie
 
-- **Baza na bieżąco:** Litestream (uruchamiany razem z aplikacją, gdy ustawione są `LITESTREAM_*`) kopiuje każdą zmianę bazy do bucketu `R2_BACKUP_BUCKET`, ścieżka `db`, przez 30 dni. Bez kluczy w logu przy starcie jest „Ciągła kopia bazy wyłączona”. Dodatkowo Render robi codzienną migawkę dysku.
-- **Zdjęcia co noc** do `R2_BACKUP_BUCKET` (prefiks `files/`), **tabele co noc** do arkusza Google (jeśli ustawiony). Stan widać w Ustawieniach („Stan kopii”).
-- Odtworzenie: `deploy/README-odtworzenie.md` (z pomocą Claude, przez **Shell** usługi `etner` w Render).
+- **Baza na bieżąco:** Litestream (uruchamiany razem z aplikacją, gdy ustawiony jest `R2_BUCKET`) kopiuje każdą zmianę bazy do bucketu `R2_BUCKET` pod `db/`, przez 30 dni; osobne klucze nie są potrzebne. Bez R2 w logu przy starcie jest „Ciągła kopia bazy wyłączona”. Dodatkowo Render robi codzienną migawkę dysku.
+- **Zdjęcia co noc** do `R2_BACKUP_BUCKET` (jeśli ustawiony, prefiks `files/`), **tabele co noc** do arkusza Google (jeśli ustawiony). Stan widać w Ustawieniach („Stan kopii”).
+- Odtworzenie: `deploy/README-odtworzenie.md` (z pomocą Claude).
