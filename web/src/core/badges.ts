@@ -75,7 +75,7 @@ export const zakupyCount = (items: Rec[], firstStatus: string | undefined, admin
 export const autaCount = (faults: Rec[]): number => faults.filter((f) => !f.naprawaDzien && !f.naprawioneAt).length;
 
 /** Opis licznika dla czytnika ekranu: Samochody (i Więcej, gdzie są na telefonie) liczą usterki bez terminu, reszta nowości. */
-/** Dopisek dla czytnika po nazwie pozycji menu (nazwa z treści, bez aria-label: widoczny tekst = nazwa dostępna). */
+/** Dopisek licznika do nazwy pozycji menu dla czytnika (cała nazwa w sr-only: bez aria-label niezgodnego z widocznym tekstem i bez spacji przed przecinkiem). */
 export const badgeLabel = (screen: string, n: number) => `, ${n} ${screen === 'auta' || screen === 'wiecej' ? 'bez terminu naprawy' : 'nowe'}`;
 
 /** „99+” powyżej 99. */

@@ -144,7 +144,7 @@ test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiers
     await expect(cellOf(d, w)).not.toHaveAttribute('aria-label', /, szkic$/);
   }
   // zlecenie w komórce prowadzi do karty zlecenia
-  await cellOf(work[0]!, a).getByRole('link', { name: new RegExp(`^Zlecenie ${numer}, Józef Bukowski`) }).click();
+  await cellOf(work[0]!, a).getByRole('link', { name: new RegExp(`^Zlecenie ${numer} .*Józef Bukowski`) }).click();
   await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
 });
 

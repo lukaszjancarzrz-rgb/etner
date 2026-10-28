@@ -21,7 +21,7 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
             <li key={k}>
               <a href={`#${k}`} aria-current={on ? 'page' : undefined}
                 className={cn('flex h-12 items-center gap-3 rounded-full px-4 font-semibold transition-colors duration-200', on ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/5 hover:text-ink')}>
-                <I className="h-5 w-5" weight={on ? 'fill' : 'regular'} />{s.title}{n > 0 && <span className="sr-only">{badgeLabel(k, n)}</span>}
+                <I className="h-5 w-5" weight={on ? 'fill' : 'regular'} /><span aria-hidden={n > 0 || undefined}>{s.title}</span>{n > 0 && <span className="sr-only">{s.title}{badgeLabel(k, n)}</span>}
                 {n > 0 && <span aria-hidden className="ml-auto min-w-6 rounded-full bg-new px-2 py-0.5 text-center text-xs font-bold tabular-nums text-white">{badgeText(n)}</span>}
               </a>
             </li>
