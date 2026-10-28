@@ -25,7 +25,7 @@ const dayName = (d: string) => {
   return rel ? `${rel}, ${dayLong(d)}` : dayLong(d);
 };
 
-/** Na jutro: lista ekipy na dzień (domyślnie następny dzień roboczy), nad nią listy predefiniowane. Pracownik: tylko swoja ekipa; admin: dowolna. `#jutro~<id>` podświetla rzecz. */
+/** Na jutro: lista ekipy na dzień (domyślnie następny dzień roboczy), pod nią listy predefiniowane. Pracownik: tylko swoja ekipa; admin: dowolna. `#jutro~<id>` podświetla rzecz. */
 export function NaJutro({ route }: { route: Route }) {
   const me = useMe();
   const admin = useIsAdmin();
@@ -72,22 +72,20 @@ export function NaJutro({ route }: { route: Route }) {
         {day !== next && <Button variant="ghost" size="sm" className="justify-self-center text-action" onClick={() => setDay(undefined)}>{next === addDays(today(), 1) ? 'Wróć do jutra' : 'Wróć do następnego dnia roboczego'}</Button>}
       </div>
 
-      <Lists ekipa={ekipa} day={day} />
-      <AddForm ekipa={ekipa} day={day} />
-
-      {!list.length && <Empty icon={SunHorizon} title="Nic do zabrania" hint="Dopisz, co ekipa ma zabrać. Pozostali z ekipy dostaną powiadomienie." />}
-      {open.length > 0 && (
-        <div className="grid gap-2">
-          <SectionTitle count={open.length}>Do zabrania</SectionTitle>
-          <ul className="grid gap-2">{open.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>
-        </div>
-      )}
+      <div className="grid gap-2">
+        <SectionTitle count={open.length || undefined}>Do zabrania</SectionTitle>
+        <AddForm ekipa={ekipa} day={day} />
+        {!list.length && <Empty icon={SunHorizon} title="Nic do zabrania" hint="Dopisz, co ekipa ma zabrać. Pozostali z ekipy dostaną powiadomienie." />}
+        {open.length > 0 && <ul className="grid gap-2">{open.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>}
+      </div>
       {taken.length > 0 && (
         <div className="grid gap-2">
           <SectionTitle count={taken.length}>Zabrane</SectionTitle>
           <ul className="grid gap-2">{taken.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>
         </div>
       )}
+
+      <Lists ekipa={ekipa} day={day} />
     </section>
   );
 }
