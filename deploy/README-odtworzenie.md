@@ -22,7 +22,7 @@ Klucze wkleja właściciel jako sekrety środowiska. Brak `GOOGLE_SA_JSON` / `SH
 
 ## Odtworzenie bazy
 
-Aplikacja przy starcie (i `startCommand` przed Litestream) sprawdza, czy w `DATA_DIR` leży `restore.db`. Jeśli tak, przenosi bieżącą bazę na bok jako `etner.db.przed-odtworzeniem` (z `-wal` / `-shm`) i wstawia `restore.db` na miejsce `etner.db`. Dzięki temu odtworzenie nie wymaga zatrzymywania działającej aplikacji.
+Aplikacja przy starcie (i `startCommand` przed Litestream) sprawdza, czy w `DATA_DIR` leży `restore.db`. Jeśli tak, sprawdza, że to baza SQLite (inaczej odkłada plik jako `restore.db.niepoprawny` i nic nie zmienia), przenosi bieżącą bazę na bok jako `etner.db.przed-odtworzeniem-<data i godzina>` (z `-wal` / `-shm`; kolejne odtworzenie jej nie nadpisze) i wstawia `restore.db` na miejsce `etner.db`. Dzięki temu odtworzenie nie wymaga zatrzymywania działającej aplikacji.
 
 ### Na Render (usługa `etner`)
 
@@ -35,7 +35,7 @@ Stan z dowolnej chwili z ostatnich 30 dni (Litestream), najlepiej z pomocą Clau
    `./bin/litestream restore -config deploy/litestream.yml -o /var/data/restore.db /var/data/etner.db`
    Stan z chwili w przeszłości: dodaj `-timestamp 2026-10-20T08:00:00Z` (czas UTC, w zakresie 720 h).
 3. Uruchom usługę ponownie: **Manual Deploy → Restart service** albo **Deploy latest commit** (nazwa może się różnić). Przy starcie w logu pojawi się „Odtworzona baza (restore.db) podmieniona na etner.db.”, a Litestream zacznie nową serię kopii.
-4. Sprawdź `/api/health` i ostatnie wpisy w aplikacji. Plik `etner.db.przed-odtworzeniem` można usunąć, gdy wszystko się zgadza.
+4. Sprawdź `/api/health` i ostatnie wpisy w aplikacji. Pliki `etner.db.przed-odtworzeniem-…` można usunąć, gdy wszystko się zgadza.
 
 ### Na innym serwerze
 
