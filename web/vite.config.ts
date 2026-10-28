@@ -13,12 +13,14 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'push-sw.js'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'badge-96.png', 'push-sw.js'],
       manifest: {
         name: 'ETNER',
         short_name: 'ETNER',
         description: 'Harmonogram, zlecenia i zakupy ETNER',
         lang: 'pl',
+        id: '/',
+        scope: '/',
         start_url: '/#harm',
         display: 'standalone',
         background_color: '#ffffff',
