@@ -254,3 +254,4 @@ Task 21: impl e3d9953; Task 22: impl aa71dc6 (real-file dry-run local: diff 0 on
 Task 21–22: review — Needs fixes: silent longest-hasło wins + substring matches; 222 text cells hidden behind grouped review rows; >2-part cells lose text; contact status at contact time dropped (R37); review screen missing
 - Ruling R51: „do przejrzenia” stored in a DB table (admin-only), shown in Ustawienia with a „przejrzane” tick, filled by the migration in the same transaction — cost: one table + one screen section.
 Task 21–22: fix round 1 dispatched (Important 1–3, R51, R37 + minors 4–15)
+Task 21–22: fix round 1/5 (ba09de8; migration 0021 przeniesienie); controller privacy check clean; re-review dispatched. Real dry-run: diff 0, entries zlecenie/kod/tekst 383/79/257, 420 review items.
