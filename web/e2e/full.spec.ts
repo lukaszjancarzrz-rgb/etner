@@ -256,6 +256,56 @@ test('słowniki: admin dodaje rodzaj zlecenia, wartość jest w formularzu zlece
   await expect(page.getByRole('option', { name: val })).toBeVisible();
 });
 
+test('słowniki: usunięcie grupy zadań w użyciu → „Zamień na”, zadanie dostaje nową grupę; licznik P1 w menu', async ({ page }, info) => {
+  const phone = info.project.name.startsWith('iPhone');
+  const grupa = `e2e grupa ${info.project.name}`;
+  const tag = `E2E ${info.project.name} P1`;
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#ust');
+  const s = page.getByRole('region', { name: 'Słowniki' });
+  const pick = async () => { await s.getByRole('combobox', { name: 'Słownik' }).click(); await page.getByRole('option', { name: 'Grupy zadań' }).click(); };
+  await pick();
+  await s.getByLabel('Nowa wartość').fill(grupa);
+  await s.getByRole('button', { name: 'Dodaj' }).click();
+  await s.getByRole('button', { name: 'Zapisz słownik' }).click();
+  await expect(page.getByText('Słownik zapisany', { exact: true })).toBeVisible();
+
+  await page.goto('/#zad');
+  await page.getByLabel('Nowe zadanie').fill(tag);
+  await page.getByLabel('Nowe zadanie').press('Enter');
+  const task = page.locator('li', { hasText: tag });
+  await expect(task).not.toContainText('wysyłanie');
+  await task.getByRole('button', { name: `Edytuj: ${tag}` }).click();
+  const form = page.getByRole('dialog', { name: 'Zadanie' });
+  await form.getByRole('combobox', { name: 'Grupa' }).click();
+  await page.getByRole('option', { name: grupa }).click();
+  await form.getByRole('combobox', { name: 'Priorytet' }).click();
+  await page.getByRole('option', { name: '1 (najważniejsze)' }).click();
+  await form.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(task).not.toContainText('wysyłanie');
+  // licznik P1: menu boczne (komputer) albo kafelek w Więcej (telefon)
+  if (phone) await page.goto('/#wiecej');
+  await expect(page.getByRole('link', { name: /Zadania.*z priorytetem 1/ })).toBeVisible();
+
+  await page.goto('/#ust');
+  await pick();
+  await s.getByRole('button', { name: `Usuń: ${grupa}` }).click();
+  await s.getByRole('button', { name: 'Zapisz słownik' }).click();
+  const d = page.getByRole('dialog', { name: 'Wartość w użyciu' });
+  await expect(d).toContainText(`Wartość „${grupa}” jest użyta w 1 miejscu`);
+  await d.getByRole('combobox', { name: 'Zamień na' }).click();
+  await page.getByRole('option', { name: 'Firma', exact: true }).click();
+  await d.getByRole('button', { name: 'Zamień i usuń' }).click();
+  await expect(page.getByText('Słownik zapisany', { exact: true }).last()).toBeVisible();
+  await expect(s.locator(`input[value="${grupa}"]`)).toHaveCount(0);
+
+  await page.goto('/#zad');
+  await task.getByRole('button', { name: `Edytuj: ${tag}` }).click();
+  await expect(form.getByRole('combobox', { name: 'Grupa' })).toHaveText('Firma');
+  await page.keyboard.press('Escape');
+  await task.getByRole('checkbox', { name: `Zrobione: ${tag}` }).click(); // sprzątanie: licznik P1 wraca
+});
+
 test('pracownik: bez Użytkowników, `#uz` pokazuje „Brak dostępu”; Ustawienia bez słowników', async ({ page }) => {
   await login(page, 'Bartek Gawlik');
   await page.goto('/#wiecej');

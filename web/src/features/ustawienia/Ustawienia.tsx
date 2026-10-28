@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Bell, BookOpen, Bug, Clock, Copy, Desktop, Database, Key, Moon, Plus, Sun, Trash, UserCircle } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { DICT_GRUPY, DICT_RODZAJE } from '@etner/shared';
+import { DICT_GRUPY, DICT_RODZAJE, newId } from '@etner/shared';
 import { disablePush, enablePush, pushState, testPush, type PushState } from '../../core/push.js';
 import { ApiError, api } from '../../core/api.js';
 import { fmtWhen, useIsAdmin, useMe } from '../../core/data.js';
@@ -11,6 +11,7 @@ import { Checkbox } from '../../core/ui/checkbox.js';
 import { cn } from '../../core/ui/cn.js';
 import { Field, Input } from '../../core/ui/input.js';
 import { Select } from '../../core/ui/select.js';
+import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { move } from '../uzytkownicy/model.js';
@@ -265,8 +266,6 @@ const DICT_HINT: Record<string, string> = {
   dzien_wolny: 'Dodatkowe dni wolne poza świętami, np. 2026-12-24.',
 };
 const GRUPA_LABEL: Record<string, string> = { aktualne: 'Aktualne', pozniej: 'Na później', zamkniete: 'Zamknięte' };
-/** „rekordzie / rekordach” po liczbie. */
-const recs = (n: number) => (n === 1 ? 'rekordzie' : 'rekordach');
 const WITH_GRUPA = new Set(['status_zlecenia', 'status_leada']);
 const WITH_KOLOR = new Set(['kategoria', 'kod_nieobecnosci']);
 type Item = { key: string; id?: string; wartosc: string; grupa: string | null; kolor: string | null; platne: boolean | null };
@@ -281,10 +280,13 @@ function Dictionaries() {
   const [nowa, setNowa] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  // 409: usuwana wartość w użyciu → okno „Zamień na” (`zamien` = wybrane już zamiany tego zapisu)
+  const [swap, setSwap] = useState<{ value: string; count: number; zamien: Record<string, string> } | null>(null);
+  const [na, setNa] = useState('');
   const list = items ?? saved;
   const edit = (next: Item[]) => { setItems(next); setErr(''); };
   const patch = (i: number, p: Partial<Item>) => edit(list.map((x, k) => (k === i ? { ...x, ...p } : x)));
-  const switchTo = (r: string) => { setRodzaj(r); setItems(null); setErr(''); setNowa(''); };
+  const switchTo = (r: string) => { setRodzaj(r); setItems(null); setErr(''); setNowa(''); setSwap(null); };
 
   function add(e: FormEvent) {
     e.preventDefault();
@@ -294,27 +296,31 @@ function Dictionaries() {
     edit([...list, { key: `n${Date.now()}`, wartosc: w, grupa: WITH_GRUPA.has(rodzaj) ? 'aktualne' : null, kolor: WITH_KOLOR.has(rodzaj) ? '#8896a5' : null, platne: rodzaj === 'kod_nieobecnosci' ? true : null }]);
     setNowa('');
   }
-  async function save() {
+  async function save(zamien: Record<string, string> = {}) {
     const vals = list.map((x) => x.wartosc.trim());
     if (vals.some((v) => !v)) return setErr('Wartość nie może być pusta');
     if (new Set(vals).size !== vals.length) return setErr('Wartości w słowniku muszą być różne');
     setBusy(true);
     try {
-      const rows = await api<Rec[]>(`/api/dict/${rodzaj}`, { method: 'PUT', json: { items: list.map((x, i) => ({ id: x.id, wartosc: vals[i], grupa: x.grupa, kolor: x.kolor, platne: x.platne })) } });
+      const rows = await api<Rec[]>(`/api/dict/${rodzaj}`, { method: 'PUT', json: { opId: newId(), zamien, items: list.map((x, i) => ({ id: x.id, wartosc: vals[i], grupa: x.grupa, kolor: x.kolor, platne: x.platne })) } });
       const keep = new Set(rows.map((r) => r.id));
       for (const d of dict) if (d.rodzaj === rodzaj && !keep.has(d.id)) store.remove('dict', d.id);
       for (const r of rows) store.put('dict', r);
       setItems(null);
+      setSwap(null);
       toast('Słownik zapisany', { tone: 'ok' });
     } catch (x) {
       const b = x instanceof ApiError ? (x.body as { error?: string; value?: string; count?: number } | null) : null;
-      setErr(b?.error === 'WARTOSC_W_UZYCIU' ? `„${b.value}” jest używana w ${b.count} ${recs(b.count ?? 0)} – zmień nazwę zamiast usuwać` : msg(x));
+      if (b?.error === 'WARTOSC_W_UZYCIU' && b.value) {
+        setSwap({ value: b.value, count: b.count ?? 0, zamien });
+        setNa('');
+      } else { setSwap(null); setErr(msg(x)); }
     }
     setBusy(false);
   }
 
   return (
-    <Card title="Słowniki" icon={BookOpen} hint="Listy wyboru w formularzach. Zmiana nazwy zmienia ją też we wszystkich zapisanych rekordach. Wartości w użyciu nie da się usunąć.">
+    <Card title="Słowniki" icon={BookOpen} hint="Listy wyboru w formularzach. Zmiana nazwy zmienia ją też we wszystkich zapisanych rekordach. Usuwając wartość w użyciu, wybierasz, na co ją zamienić.">
       <Field label="Słownik">{(id) => <Select id={id} value={rodzaj} onValueChange={switchTo} options={DICT_RODZAJE.map((r) => ({ value: r, label: DICT_LABEL[r] ?? r }))} />}</Field>
       {DICT_HINT[rodzaj] && <p className="rounded-xl bg-action/8 px-3 py-2 text-sm">{DICT_HINT[rodzaj]}</p>}
       <ol className="grid gap-2" aria-label={`Wartości: ${DICT_LABEL[rodzaj]}`}>
@@ -355,6 +361,20 @@ function Dictionaries() {
         {items && <Button variant="secondary" onClick={() => switchTo(rodzaj)}>Cofnij zmiany</Button>}
         <Button onClick={() => void save()} disabled={!items || busy}>{busy ? 'Zapisywanie…' : 'Zapisz słownik'}</Button>
       </div>
+      {swap && (
+        <Dialog open onOpenChange={(o) => !o && setSwap(null)}>
+          <Sheet title="Wartość w użyciu" description={`Wartość „${swap.value}” jest użyta w ${swap.count} ${swap.count === 1 ? 'miejscu' : 'miejscach'}. Wszędzie dostanie wybraną wartość, potem zostanie usunięta.`}>
+            <form onSubmit={(e) => { e.preventDefault(); if (na) void save({ ...swap.zamien, [swap.value]: na }); }} className="grid gap-4">
+              <Field label="Zamień na">{(id) => <Select id={id} value={na || undefined} onValueChange={setNa} placeholder="Wybierz wartość"
+                options={list.map((x) => x.wartosc.trim()).filter((v) => v && v !== swap.value).map((v) => ({ value: v, label: v }))} />}</Field>
+              <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-4">
+                <Button variant="secondary" onClick={() => setSwap(null)}>Anuluj</Button>
+                <Button type="submit" variant="danger" disabled={!na || busy}>{busy ? 'Zapisywanie…' : 'Zamień i usuń'}</Button>
+              </div>
+            </form>
+          </Sheet>
+        </Dialog>
+      )}
     </Card>
   );
 }

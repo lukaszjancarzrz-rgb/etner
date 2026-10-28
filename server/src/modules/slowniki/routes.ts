@@ -33,7 +33,7 @@ export function routes(app: Hono, { db }: AppDeps): void {
     if (rodzaj.data === 'status_zakupu' && values.length !== 2) throw new HTTPException(400, { message: 'Statusy zakupów: dokładnie dwie wartości (do kupienia, kupione)' });
     const user = c.get('user');
     try {
-      return c.json(runOp(db, body.data.opId, user.id, () => replace(db, user.id, rodzaj.data, body.data.items, refs)).result);
+      return c.json(runOp(db, body.data.opId, user.id, () => replace(db, user.id, rodzaj.data, body.data.items, refs, body.data.zamien)).result);
     } catch (e) {
       if (e instanceof ValueInUseError) return c.json({ error: 'WARTOSC_W_UZYCIU', value: e.value, count: e.count }, 409);
       throw e;

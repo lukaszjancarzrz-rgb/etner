@@ -14,5 +14,7 @@ export const dictPutSchema = z.object({
     platne: z.boolean().nullish(),
     kolor: z.string().trim().min(1).nullish(),
   })),
+  /** Usuwana wartość w użyciu → wartość z `items`, którą dostają jej rekordy (stara → nowa). */
+  zamien: z.record(z.string(), z.string().trim().min(1)).optional(),
 });
 export type DictPut = z.infer<typeof dictPutSchema>;

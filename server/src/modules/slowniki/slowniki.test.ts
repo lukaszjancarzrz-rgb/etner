@@ -21,8 +21,8 @@ async function setup() {
   const w = addUser(deps);
   return { deps, app, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
 }
-const put = (app: any, rodzaj: string, cookie: string, items: unknown[]) =>
-  app.request(`/api/dict/${rodzaj}`, { method: 'PUT', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ items }) });
+const put = (app: any, rodzaj: string, cookie: string, items: unknown[], extra: object = {}) =>
+  app.request(`/api/dict/${rodzaj}`, { method: 'PUT', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ items, ...extra }) });
 
 describe('seed', () => {
   it('jest idempotentny i tworzy firmę ETNER', async () => {
@@ -124,5 +124,53 @@ describe('słowniki', () => {
     for (const r of ['status_zlecenia', 'status_leada', 'status_zadania', 'status_zakupu']) expect((await put(app, r, admin, [])).status).toBe(400);
     expect((await put(app, 'status_zakupu', admin, [{ wartosc: 'Do kupienia' }, { wartosc: 'Zamówione' }, { wartosc: 'Kupione' }])).status).toBe(400);
     expect((await put(app, 'grupa_zadan', admin, [])).status).toBe(200);
+  });
+
+  it('usunięcie z zamianą (R59): rekordy wszystkich modułów dostają nową wartość w jednej transakcji, wpisy w changes, opId', async () => {
+    const { deps, app, admin, worker } = await setup();
+    const db = deps.db;
+    const w = addUser(deps, { ekipa: 'ekipa Bartek' });
+    const k = newClient(db, w.user.id, { typ: 'osoba', nazwa: 'Nowak', telefony: [], emaile: [], nip: '', notatki: '', site: undefined });
+    const job = saveJob(db, w.user.id, { clientId: k.client.id, status: 'Nowe', kategoria: 'Elektryka', ekipa: 'ekipa Bartek', rodzaj: 'serwis' })!;
+    const p = createPerson(db, w.user.id, { nazwa: 'Bartek', userId: w.user.id });
+    const t = new Date().toISOString();
+    const entryId = newId();
+    db.insert(scheduleEntries).values({ id: entryId, dzien: '2026-10-22', personId: p.id, rodzaj: 'kod', kod: 'UŻ', createdAt: t, updatedAt: t }).run();
+    const without = (rodzaj: string, v: string) => list(db, rodzaj as never).filter((r) => r.wartosc !== v).map((r) => ({ id: r.id, wartosc: r.wartosc, platne: r.platne, kolor: r.kolor }));
+    const kody = without('kod_nieobecnosci', 'UŻ');
+
+    // cel spoza słownika albo ta sama wartość: 400, nic się nie zmienia
+    expect((await put(app, 'kod_nieobecnosci', admin, kody, { zamien: { UŻ: 'nie ma' } })).status).toBe(400);
+    expect((await put(app, 'kod_nieobecnosci', admin, kody, { zamien: { UŻ: 'UŻ' } })).status).toBe(400);
+    expect((await put(app, 'kod_nieobecnosci', worker, kody, { zamien: { UŻ: 'urlop' } })).status).toBe(403);
+    expect(db.select().from(scheduleEntries).where(eq(scheduleEntries.id, entryId)).get()!.kod).toBe('UŻ');
+
+    const opId = newId();
+    const res = await put(app, 'kod_nieobecnosci', admin, kody, { zamien: { UŻ: 'urlop' }, opId });
+    expect(res.status).toBe(200);
+    expect(list(db, 'kod_nieobecnosci').map((r) => r.wartosc)).not.toContain('UŻ');
+    expect(db.select().from(scheduleEntries).where(eq(scheduleEntries.id, entryId)).get()!.kod).toBe('urlop');
+    // powtórka tego samego opId (np. z kolejki): ten sam wynik, bez drugiej zmiany
+    const n = ((await (await app.request('/api/changes?since=0', { headers: { cookie: admin } })).json()) as any).changes.length;
+    expect((await put(app, 'kod_nieobecnosci', admin, kody, { zamien: { UŻ: 'urlop' }, opId })).status).toBe(200);
+    expect(((await (await app.request('/api/changes?since=0', { headers: { cookie: admin } })).json()) as any).changes.length).toBe(n);
+
+    // ekipa: użytkownik i zlecenie
+    const bartek = list(db, 'ekipa').find((r) => r.wartosc === 'ekipa Bartek')!.id;
+    expect((await put(app, 'ekipa', admin, without('ekipa', 'ekipa Bartek'), { zamien: { 'ekipa Bartek': 'ekipa Marek' } })).status).toBe(200);
+    expect(getUser(db, w.user.id)!.ekipa).toBe('ekipa Marek');
+    expect(getJob(db, job.id)!.ekipa).toBe('ekipa Marek');
+    const ch = (await (await app.request('/api/changes?since=0', { headers: { cookie: worker } })).json()) as any;
+    expect(ch.changes.some((c: any) => c.entity === 'schedule_entries' && c.id === entryId && c.data?.kod === 'urlop')).toBe(true);
+    expect(ch.changes.some((c: any) => c.entity === 'jobs' && c.data?.ekipa === 'ekipa Marek')).toBe(true);
+    expect(ch.changes.some((c: any) => c.entity === 'dict' && c.action === 'delete' && c.id === bartek)).toBe(true);
+  });
+
+  it('zamiana na wartość, która w tym samym zapisie zmienia nazwę: rekordy dostają nową nazwę', async () => {
+    const { deps, app, admin } = await setup();
+    const w = addUser(deps, { ekipa: 'ekipa Bartek' });
+    const items = list(deps.db, 'ekipa').filter((r) => r.wartosc !== 'ekipa Bartek').map((r) => ({ id: r.id, wartosc: r.wartosc === 'ekipa Marek' ? 'ekipa Marka' : r.wartosc }));
+    expect((await put(app, 'ekipa', admin, items, { zamien: { 'ekipa Bartek': 'ekipa Marka' } })).status).toBe(200);
+    expect(getUser(deps.db, w.user.id)!.ekipa).toBe('ekipa Marka');
   });
 });

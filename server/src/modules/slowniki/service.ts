@@ -24,9 +24,10 @@ export class ValueInUseError extends Error {
 /**
  * Podmienia pełną listę rodzaju (wywołuj w transakcji). Element z `id` to istniejący wiersz: zmiana `wartosc` = zmiana nazwy,
  * także we wszystkich rekordach (`refs`). Bez `id`: dopasowanie po tekście (wróciłe się wskrzeszają), inaczej nowy wiersz.
- * Usunięcie wartości używanej w rekordach → ValueInUseError.
+ * Usunięcie wartości używanej w rekordach → ValueInUseError, chyba że `zamien[stara]` wskazuje wartość z `items`: wtedy jej rekordy
+ * dostają tę wartość (jak przy zmianie nazwy), a stara jest usuwana.
  */
-export function replace(db: Db, userId: string, rodzaj: DictRodzaj, items: DictPut['items'], refs: DictRefs[] = []): DictRow[] {
+export function replace(db: Db, userId: string, rodzaj: DictRodzaj, items: DictPut['items'], refs: DictRefs[] = [], zamien: Record<string, string> = {}): DictRow[] {
   const now = new Date().toISOString();
   const all = db.select().from(dict).where(eq(dict.rodzaj, rodzaj)).all();
   const live = all.filter((r) => !r.deletedAt);
@@ -34,10 +35,15 @@ export function replace(db: Db, userId: string, rodzaj: DictRodzaj, items: DictP
   const kept = new Set(matched.filter(Boolean).map((r) => r!.id));
   const uses = (v: string) => refs.reduce((n, r) => n + r.count(db, rodzaj, v), 0);
 
+  const swaps: [string, string][] = [];
   for (const old of live) {
     if (kept.has(old.id)) continue;
     const n = uses(old.wartosc);
-    if (n) throw new ValueInUseError(old.wartosc, n);
+    if (!n) continue;
+    const to = zamien[old.wartosc];
+    if (to === undefined) throw new ValueInUseError(old.wartosc, n);
+    if (to === old.wartosc || !items.some((it) => it.wartosc === to)) throw new HTTPException(400, { message: `Wartości „${to}” nie ma w słowniku` });
+    swaps.push([old.wartosc, to]);
   }
   items.forEach((it, i) => {
     const old = matched[i];
@@ -47,6 +53,8 @@ export function replace(db: Db, userId: string, rodzaj: DictRodzaj, items: DictP
       for (const r of refs) r.rename(db, userId, rodzaj, old.wartosc, it.wartosc);
     }
   });
+  // po zmianach nazw: `to` to już nazwa docelowa
+  for (const [from, to] of swaps) for (const r of refs) r.rename(db, userId, rodzaj, from, to);
 
   items.forEach((it, kolejnosc) => {
     const vals = { wartosc: it.wartosc, kolejnosc, grupa: it.grupa ?? null, platne: it.platne ?? null, kolor: it.kolor ?? null };
