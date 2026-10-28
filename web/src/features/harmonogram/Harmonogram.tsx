@@ -15,7 +15,7 @@ import type { Route } from '../../routes.js';
 import { useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
-import { cellKey, cellsOf, cellText, monthDays, whereDay, type Slot } from './model.js';
+import { cellKey, cellsOf, cellText, monthDays, whereDay, whereFrom, type Slot } from './model.js';
 import { Avatar } from '../../core/ui/avatar.js';
 import { useRepairMarks, type RepairMark } from '../samochody/repairs.js';
 
@@ -229,14 +229,26 @@ function MonthNav({ day, today: t }: { day: string; today: string }) {
   return <NavRow slot="w-32" back={isNow ? 'Dziś' : 'Ten miesiąc'} here={isNow} prev={`#harm/${prev}`} next={`#harm/${next}`} labels={['Poprzedni miesiąc', 'Następny miesiąc']} title={monthName(day)} sub={isNow ? 'Ten miesiąc' : 'Miesiąc'} />;
 }
 
-/** „Gdzie jedziesz”: pierwszy dzień z wpisami użytkownika – od dziś, a od 16:00 od jutra (R57, `whereDay`). */
+/** Dziś i dzień, od którego szuka „Gdzie jedziesz”; przeliczane co minutę i po powrocie aplikacji z tła (16:00, północ). */
+function useWhereClock(): [string, string] {
+  const [k, setK] = useState(() => `${today()}|${whereFrom()}`);
+  useEffect(() => {
+    const tick = () => setK(`${today()}|${whereFrom()}`); // ten sam tekst = bez renderu
+    const id = setInterval(tick, 60_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+  }, []);
+  return k.split('|') as [string, string];
+}
+
+/** „Gdzie jedziesz”: pierwszy dzień z wpisami użytkownika – od dziś, a od 16:00 od jutra (R57, `whereFrom`). */
 function WhereNext({ person, entries, ctx }: { person: Rec; entries: Rec[]; ctx: Ctx }) {
-  const t = today();
+  const [t, from] = useWhereClock();
   const next = useMemo(() => {
     const mine = entries.filter((e) => e.personId === person.id);
-    const d = whereDay(mine.map((e) => e.dzien as string));
+    const d = whereDay(mine.map((e) => e.dzien as string), from);
     return d ? { dzien: d, slots: cellsOf(mine.filter((e) => e.dzien === d)).get(cellKey(d, person.id)) ?? [] } : undefined;
-  }, [entries, person.id, t]);
+  }, [entries, person.id, from]);
   const long = next && dayLong(next.dzien);
   const when = next && (next.dzien === t ? 'Dziś' : next.dzien === addDays(t, 1) ? 'Jutro' : long!.charAt(0).toUpperCase() + long!.slice(1));
   return (
@@ -300,7 +312,7 @@ function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { 
     <span className="min-w-0 pl-2.5">
       <span className={cn('flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
         <span className="sr-only">{j ? `Zlecenie ${j.numer}` : 'zlecenie'}</span>
-        {j?.kategoria && <span className="flex items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span>{j.kategoria}</span></span>}
+        {j?.kategoria && <span className="flex min-w-0 items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span className="min-w-0 [overflow-wrap:anywhere]">{j.kategoria}</span></span>}
         {slot.polDnia && <span className="shrink-0 font-bold"><span aria-hidden>½</span><span className="sr-only">pół dnia</span></span>}
       </span>
       <span className={cn('flex min-w-0 items-baseline gap-1 leading-tight', compact ? 'text-sm' : 'text-[15px]')}>

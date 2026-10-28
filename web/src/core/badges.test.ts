@@ -28,10 +28,10 @@ describe('liczniki w menu', () => {
     const jobs = [
       r({ id: 'mig', createdBy: 'me', createdAt: T0, updatedAt: T2, _by: 'me' }), // import / zmiana z drugiego urządzenia
       r({ id: 'snap', createdBy: 'w', updatedAt: T2 }), // ze snapshotu (bez _by)
-      r({ id: 'sys', updatedAt: T2, _by: 'w' }), // zmiana pracownika po wizycie: nowa
+      r({ id: 'cudze', updatedAt: T2, _by: 'w' }), // zmiana pracownika po wizycie: nowa
     ];
     const scope = [r({ jobId: 'mig', createdBy: 'w', updatedAt: T2, _by: 'me' }), r({ jobId: 'snap', createdBy: 'w', updatedAt: T2 })];
-    expect(Object.fromEntries(freshByJob(jobs, [], scope, 'me', () => T1))).toEqual({ sys: 1 });
+    expect(Object.fromEntries(freshByJob(jobs, [], scope, 'me', () => T1))).toEqual({ cudze: 1 });
   });
 
   it('naJutroCount: tylko następny dzień roboczy, niezabrane, ekipa pracownika; admin wszystkie', () => {

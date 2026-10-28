@@ -87,9 +87,10 @@ const hourFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Warsaw', ho
  * „Gdzie jedziesz” (R57): od 16:00 czasu polskiego dzisiejszy dzień się kończy – pierwszy dzień z wpisami od jutra
  * (puste weekendy i święta wypadają, więc to następny dzień roboczy; sobota z wpisami zostaje), wcześniej od dziś.
  */
-export function whereDay(days: Iterable<string>, now: Date = new Date()): string | undefined {
-  const t = dayOf(now);
-  const from = Number(hourFmt.format(now)) >= 16 ? addDays(t, 1) : t;
+export const whereFrom = (now: Date = new Date()): string => (Number(hourFmt.format(now)) >= 16 ? addDays(dayOf(now), 1) : dayOf(now));
+
+/** Pierwszy dzień z `days` nie wcześniejszy niż `from` (`whereFrom`). */
+export function whereDay(days: Iterable<string>, from: string): string | undefined {
   let m: string | undefined;
   for (const d of days) if (d >= from && (!m || d < m)) m = d;
   return m;

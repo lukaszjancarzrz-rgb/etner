@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../core/api.js';
-import { cellKey, cellsOf, errText, komorek, monthDays, overwriteCount, rangeDays, sameCell, whereDay } from './model.js';
+import { cellKey, cellsOf, errText, komorek, monthDays, overwriteCount, rangeDays, sameCell, whereDay, whereFrom } from './model.js';
 
 it('cellsOf: sloty po kolei w komórce dzień|osoba, sameCell bez względu na kolejność kluczy', () => {
   const m = cellsOf([
@@ -59,12 +59,16 @@ describe('overwriteCount', () => {
   });
 });
 
-it('whereDay: przed 16:00 od dziś, od 16:00 czasu polskiego od jutra (pusty weekend → poniedziałek)', () => {
+it('whereFrom/whereDay: przed 16:00 od dziś, od 16:00 czasu polskiego od jutra (pusty weekend → poniedziałek)', () => {
+  expect(whereFrom(new Date('2026-10-30T14:59:00Z'))).toBe('2026-10-30'); // pt 15:59 (CET)
+  expect(whereFrom(new Date('2026-10-30T15:00:00Z'))).toBe('2026-10-31'); // pt 16:00
+  expect(whereFrom(new Date('2026-10-02T13:59:00Z'))).toBe('2026-10-02'); // 15:59 CEST
+  expect(whereFrom(new Date('2026-10-02T14:00:00Z'))).toBe('2026-10-03'); // 16:00 CEST
+  expect(whereFrom(new Date('2026-10-30T22:30:00Z'))).toBe('2026-10-31'); // 23:30 – nadal jutro
+  expect(whereFrom(new Date('2026-10-30T23:00:00Z'))).toBe('2026-10-31'); // północ: ten sam dzień od rana
   const days = ['2026-10-30', '2026-11-02', '2026-10-27'];
-  expect(whereDay(days, new Date('2026-10-30T14:59:00Z'))).toBe('2026-10-30'); // pt 15:59 (CET)
-  expect(whereDay(days, new Date('2026-10-30T15:00:00Z'))).toBe('2026-11-02'); // pt 16:00 → pon.
-  expect(whereDay([...days, '2026-10-31'], new Date('2026-10-30T15:00:00Z'))).toBe('2026-10-31'); // sobota z wpisem zostaje
-  expect(whereDay(days, new Date('2026-10-02T13:59:00Z'))).toBe('2026-10-27'); // 15:59 CEST, pierwszy dzień z wpisami
-  expect(whereDay(['2026-10-02', '2026-10-05'], new Date('2026-10-02T14:00:00Z'))).toBe('2026-10-05'); // 16:00 CEST
-  expect(whereDay(['2026-10-30'], new Date('2026-10-30T22:30:00Z'))).toBeUndefined(); // 23:30 – nic dalej
+  expect(whereDay(days, '2026-10-30')).toBe('2026-10-30');
+  expect(whereDay(days, '2026-10-31')).toBe('2026-11-02'); // pusty weekend → pon.
+  expect(whereDay([...days, '2026-10-31'], '2026-10-31')).toBe('2026-10-31'); // sobota z wpisem zostaje
+  expect(whereDay(['2026-10-30'], '2026-10-31')).toBeUndefined();
 });
