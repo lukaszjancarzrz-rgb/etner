@@ -1,5 +1,5 @@
 import { PODMIEJSCA } from '@etner/shared';
-import { MagnifyingGlass, PencilSimple, Plus, Wrench } from '@phosphor-icons/react';
+import { Check, MagnifyingGlass, PencilSimple, Plus, Wrench } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { matches, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
@@ -23,12 +23,14 @@ const byName = (a: Rec, b: Rec) => a.nazwa.localeCompare(b.nazwa, 'pl');
 /** Miejsce narzędzia: „Mała Toyota · Górna półka na regale” albo „Magazyn” (R42: nazwa auta z listy aut). */
 const placeOf = (t: Rec, cars: Map<string, Rec>) => (t.carId ? `${cars.get(t.carId)?.nazwa ?? 'Samochód'} · ${t.podmiejsce}` : 'Magazyn');
 
-/** Stan narzędzi: wyszukiwanie po wszystkich miejscach, bez niego sekcje per miejsce (w aucie wg podmiejsca). */
+/** Stan narzędzi: wyszukiwanie po wszystkich miejscach, bez niego sekcje per miejsce (w aucie wg podmiejsca). Zmiany tylko admin, w trybie „Edytuj listy” (R43). */
 export function Narzedzia() {
   const carsList = useEntities('cars');
   const raw = useEntities('tools');
   const tools = useMemo(() => withoutEchoes(raw, ['nazwa', 'carId', 'podmiejsce', 'by']), [raw]);
   const loading = useLoading();
+  const admin = useIsAdmin();
+  const [editing, setEditing] = useState(false);
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState<Rec | 'new' | null>(null);
   const cars = useMemo(() => [...carsList].filter((c) => !c._tmp).sort((a, b) => a.kolejnosc - b.kolejnosc || a.createdAt.localeCompare(b.createdAt)), [carsList]);
@@ -37,22 +39,26 @@ export function Narzedzia() {
 
   if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true" aria-label="Wczytywanie narzędzi"><Skeleton className="h-12" />{[0, 1, 2].map((i) => <Skeleton key={i} className="h-40" />)}</div>;
 
-  const open = (t: Rec) => setEdit(t);
+  const open = admin && editing ? (t: Rec) => setEdit(t) : undefined;
   return (
     <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-        <Search value={q} onChange={setQ} label="Szukaj narzędzia" placeholder="Szukaj, np. wkrętarka" />
-        <Button onClick={() => setEdit('new')} aria-label="Dodaj narzędzie"><Plus className="h-5 w-5" weight="bold" /><span className="hidden min-[560px]:inline">Dodaj</span></Button>
-      </div>
+      <Search value={q} onChange={setQ} label="Szukaj narzędzia" placeholder="Szukaj, np. wkrętarka" />
+      {open && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-action/40 bg-action/5 px-4 py-2">
+          <p className="mr-auto text-sm font-semibold">Edycja list: dodaj, popraw, przenieś albo usuń narzędzie.</p>
+          <Button size="sm" onClick={() => setEdit('new')}><Plus className="h-4 w-4" weight="bold" />Dodaj narzędzie</Button>
+          <Button size="sm" variant="secondary" onClick={() => setEditing(false)}><Check className="h-4 w-4" weight="bold" />Gotowe</Button>
+        </div>
+      )}
       {found ? (
         found.length ? (
           <div className="grid gap-2">
             <SectionTitle count={found.length}>Gdzie szukać</SectionTitle>
             <ul className="grid gap-2" aria-label="Wyniki wyszukiwania">{found.map((t) => <ToolRow key={t.id} t={t} place={placeOf(t, carMap)} onEdit={open} />)}</ul>
           </div>
-        ) : <Empty icon={MagnifyingGlass} title="Nie ma takiego narzędzia" hint="Sprawdź pisownię albo dodaj narzędzie do miejsca, w którym leży." />
+        ) : <Empty icon={MagnifyingGlass} title="Nie ma takiego narzędzia" hint={admin ? 'Sprawdź pisownię albo dodaj narzędzie w trybie „Edytuj listy”.' : 'Sprawdź pisownię. Brakujące narzędzie dopisuje administrator.'} />
       ) : !tools.length ? (
-        <Empty icon={Wrench} title="Lista narzędzi jest pusta" hint="Dodaj narzędzia z samochodów i Magazynu, żeby każdy wiedział, gdzie ich szukać." />
+        <Empty icon={Wrench} title="Lista narzędzi jest pusta" hint={admin ? 'Dodaj narzędzia z samochodów i Magazynu w trybie „Edytuj listy”, żeby każdy wiedział, gdzie ich szukać.' : 'Administrator dopisze narzędzia z samochodów i Magazynu.'} />
       ) : (
         <>
           {cars.map((c) => {
@@ -89,12 +95,13 @@ export function Narzedzia() {
           })()}
         </>
       )}
+      {admin && !editing && <div className="flex justify-center"><Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-ink-2"><PencilSimple className="h-4 w-4" />Edytuj listy</Button></div>}
       {edit && <ToolForm tool={edit === 'new' ? undefined : edit} cars={cars} onClose={() => setEdit(null)} />}
     </section>
   );
 }
 
-function ToolRow({ t, place, flat, onEdit }: { t: Rec; place?: string; flat?: boolean; onEdit: (t: Rec) => void }) {
+function ToolRow({ t, place, flat, onEdit }: { t: Rec; place?: string; flat?: boolean; onEdit?: (t: Rec) => void }) {
   return (
     <li className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 pr-2 pl-4', !flat && 'rounded-2xl border border-line bg-card')}>
       <div className="min-w-0">
@@ -102,14 +109,13 @@ function ToolRow({ t, place, flat, onEdit }: { t: Rec; place?: string; flat?: bo
         {place && <p className="text-sm text-ink-2">{place}</p>}
       </div>
       {t._tmp ? <span className="px-2 text-sm text-ink-2">wysyłanie…</span>
-        : <Button variant="ghost" size="sm" aria-label={`Edytuj: ${t.nazwa}${place ? `, ${place}` : ''}`} onClick={() => onEdit(t)} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>}
+        : onEdit && <Button variant="ghost" size="sm" aria-label={`Edytuj: ${t.nazwa}${place ? `, ${place}` : ''}`} onClick={() => onEdit(t)} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>}
     </li>
   );
 }
 
 function ToolForm({ tool, cars, onClose }: { tool?: Rec; cars: Rec[]; onClose: () => void }) {
   const me = useMe();
-  const admin = useIsAdmin();
   const [nazwa, setNazwa] = useState<string>(tool?.nazwa ?? '');
   const [miejsce, setMiejsce] = useState<string>(tool ? tool.carId ?? MAGAZYN : cars[0]?.id ?? MAGAZYN);
   const [pm, setPm] = useState<string>(tool?.podmiejsce ?? '');
@@ -143,7 +149,7 @@ function ToolForm({ tool, cars, onClose }: { tool?: Rec; cars: Rec[]; onClose: (
           <Field label="Miejsce">{(id) => <Select id={id} value={miejsce} onValueChange={setMiejsce} options={[...cars.map((c) => ({ value: c.id as string, label: c.nazwa as string })), { value: MAGAZYN, label: 'Magazyn' }]} />}</Field>
           {inCar && <Field label="Gdzie w samochodzie" error={err.pm}>{(id, d) => <Select id={id} aria-describedby={d} aria-invalid={!!err.pm} value={pm || undefined} onValueChange={setPm} placeholder="Wybierz miejsce" options={PODMIEJSCA.map((x) => ({ value: x, label: x }))} />}</Field>}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-            {tool && (tool.by === me?.id || admin) ? <Button variant={confirm ? 'danger' : 'ghost'} onClick={remove} className={cn(!confirm && 'text-danger')}>{confirm ? 'Na pewno usunąć?' : 'Usuń narzędzie'}</Button> : <span />}
+            {tool ? <Button variant={confirm ? 'danger' : 'ghost'} onClick={remove} className={cn(!confirm && 'text-danger')}>{confirm ? 'Na pewno usunąć?' : 'Usuń narzędzie'}</Button> : <span />}
             <div className="flex gap-3">
               <Button variant="secondary" onClick={onClose}>Anuluj</Button>
               <Button type="submit">Zapisz</Button>

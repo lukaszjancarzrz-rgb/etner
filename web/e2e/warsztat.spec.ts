@@ -62,9 +62,15 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   await admin.context().close();
 });
 
-test('narzędzia: wyszukiwanie pokazuje wszystkie miejsca; dodanie, przeniesienie do Magazynu, usunięcie przez autora', async ({ page }, info) => {
+test('narzędzia: pracownik tylko szuka (wszystkie miejsca); admin w „Edytuj listy” dodaje, przenosi do Magazynu, usuwa', async ({ page, browser }, info) => {
   const tag = `E2E ${info.project.name}`;
-  await login(page, 'Piotr Kuchta');
+  const worker = await as(browser, 'Piotr Kuchta', info);
+  await worker.goto('/#narz');
+  await expect(worker.getByRole('list', { name: 'Magazyn' })).toContainText('Drabina 3 m');
+  await expect(worker.getByRole('button', { name: /^Edytuj|Dodaj narzędzie/ })).toHaveCount(0); // R43: bez zmian
+  await worker.context().close();
+
+  await login(page, 'Tomasz Wrona');
   await page.goto('/#narz');
   // bez wyszukiwania: sekcje miejsc, w aucie wg podmiejsca
   await expect(page.getByRole('list', { name: 'Mała Toyota · Górna półka na regale' })).toContainText('Wkrętarka Makita');
@@ -76,6 +82,8 @@ test('narzędzia: wyszukiwanie pokazuje wszystkie miejsca; dodanie, przeniesieni
   await expect(res).toContainText('Stary Ducato · W kabinie');
   await page.getByRole('button', { name: 'Wyczyść wyszukiwanie' }).click();
 
+  await expect(page.getByRole('button', { name: /^Edytuj:|Dodaj narzędzie/ })).toHaveCount(0); // na co dzień tylko wyszukiwanie
+  await page.getByRole('button', { name: 'Edytuj listy' }).click();
   await page.getByRole('button', { name: 'Dodaj narzędzie' }).click();
   const dlg = page.getByRole('dialog', { name: 'Nowe narzędzie' });
   await dlg.getByLabel('Nazwa').fill(`${tag} szlifierka`);
@@ -99,6 +107,7 @@ test('narzędzia: wyszukiwanie pokazuje wszystkie miejsca; dodanie, przeniesieni
   await page.reload();
   await expect(page.getByRole('list', { name: 'Magazyn' })).toContainText(`${tag} szlifierka`);
 
+  await page.getByRole('button', { name: 'Edytuj listy' }).click(); // po odświeżeniu tryb edycji wyłączony
   await page.getByRole('button', { name: `Edytuj: ${tag} szlifierka` }).click();
   await page.getByRole('button', { name: 'Usuń narzędzie' }).click();
   await page.getByRole('button', { name: 'Na pewno usunąć?' }).click();
