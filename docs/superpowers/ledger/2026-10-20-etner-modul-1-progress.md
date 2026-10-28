@@ -227,3 +227,8 @@ Task 19g: review Approved; minors: giveBack without 'is taken' guard (fold into 
 Task 19e: review Approved; polish round dispatched with 19f/19g minors (fault replay 404, impossible dates, nextWorkday dup, giveBack guard, Select aria/placeholder, seed cast); deferred: repairs re-fetch whole /api/schedule, no web unit test for overlay
 Task 19e–19g: polish round 1/5 (all addressed; 50882d6) — complete
 Tasks 19d–19g: controller verification — shared 15, web 57, server 198, build clean, e2e 50 passed / 2 skipped. Owner checkpoint.
+## Owner 2026-10-28: 10 notes after 19d–19g → Task 19h; then Task 20
+- Ruling R43: tools are admin-only for writes (supersedes R40 for narzędzia); workers search only.
+- Ruling R44: repair history = faults with naprawione_at set (admin „Naprawione”) or repair day before today; never auto-deleted; badge „Samochody” = active faults without repair day, for everyone.
+- Ruling R45: list highlight for a worker = jobs of his own schedule row that day (not crew-wide); admin = members of the selected crew.
+- Split: 19h-A (points 2,3,4,6,7,9 – samochody, narzędzia, magazyn, badges) and 19h-B (points 1,5,8,10 – na-jutro, harmonogram, leady) in parallel, disjoint files.

@@ -760,6 +760,20 @@ Decyzja właściciela 2026-10-27:
 - Usuwanie ręczne: admin i autor.
 - Ekran „Magazyn” w menu bocznym / Więcej.
 
+### Task 19h: Uwagi właściciela po 19d–19g
+
+Decyzje właściciela 2026-10-28:
+1. **Na jutro:** sekcja „Do zabrania” nad listami predefiniowanymi (kolejność: wybór ekipy/dnia → Do zabrania → Listy).
+2. **Samochody – licznik w menu:** jak przy Zakupach – liczba usterek zgłoszonych, a bez wyznaczonego terminu naprawy (dla wszystkich).
+3. **Magazyn → „Rzeczy nietypowe”:** zmiana nazwy ekranu, menu, kafelka w Więcej (adres i dane bez zmian).
+4. **Push o naprawie nie dotarł do użytkownika:** znaleźć przyczynę (np. kto jest odbiorcą, czy push działa w ogóle dla innych zdarzeń, subskrypcja urządzenia, konfiguracja VAPID na Render) i naprawić; jeśli przyczyna leży w konfiguracji po stronie właściciela – opisać krok.
+5. **Harmonogram – „Dziś”:** przycisk widoczny także w bieżącym tygodniu / miesiącu; kliknięcie przewija do dzisiejszego dnia.
+6. **Narzędzia – dodawanie schowane:** bez dużego przycisku „+” przy wyszukiwarce; dodawanie i edycja w trybie „Edytuj listy” dostępnym tylko dla admina (np. mały przycisk na dole ekranu). Na co dzień ekran służy do wyszukiwania.
+7. **Narzędzia – tylko admin edytuje:** pracownik nie dodaje, nie zmienia, nie przenosi i nie usuwa narzędzi (serwer 403, w interfejsie brak przycisków). Zmienia R40.
+8. **Listy predefiniowane – podświetlenie tylko dla zleceń danej osoby:** pracownik widzi podświetlone listy tylko dla zleceń, na które sam jedzie danego dnia (jego wiersz w harmonogramie), nie dla zleceń innych osób czy drugiej ekipy. Admin: zlecenia osób z wybranej ekipy.
+9. **Historia napraw:** usterki po naprawie (dzień naprawy minął lub admin oznaczył „Naprawione”) trafiają na szarą listę „Historia napraw” pod spodem, jak „Zabrane” w Rzeczach nietypowych. Nie są usuwane automatycznie.
+10. **Zlecenie z leada:** usunąć bezsensowne statusy „nowe” i „do wyceny” z wyboru przy tworzeniu zlecenia z leada (zlecenie dostaje pierwszy sensowny status).
+
 ### Task 20: Przegląd dostępności i szybkości
 
 **Files:**
