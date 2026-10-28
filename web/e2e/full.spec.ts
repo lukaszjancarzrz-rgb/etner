@@ -68,7 +68,12 @@ test('leady: nowy lead, kontakt, „Zrób zlecenie” → karta zlecenia z klien
   await expect(jf.getByText(who)).toBeVisible();
   await expect(jf.getByLabel('Zakres prac (punkt 1)')).toHaveValue(`${tag}: dwie jednostki w salonie`);
   await expect(jf.getByRole('checkbox', { name: 'Oznacz lead jako Przyjęta' })).toHaveAttribute('aria-checked', 'true');
-  await expect(jf.getByLabel('Status')).toHaveText('Nowe');
+  await expect(jf.getByLabel('Status')).toHaveText('Zaplanowane'); // „Nowe” i „Do wyceny” nie dla zlecenia z leada
+  await jf.getByLabel('Status').click();
+  await expect(page.getByRole('option', { name: 'W realizacji' })).toBeVisible();
+  await expect(page.getByRole('option', { name: /^(Nowe|Do wyceny)$/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(jf).toBeVisible();
   await expect(jf.getByLabel('Kategoria')).toHaveText('Klimatyzacja');
   await jf.getByRole('button', { name: 'Zapisz' }).click();
   await expect(jf).toBeHidden();

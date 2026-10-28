@@ -45,3 +45,7 @@ export const leadToJobSchema = z.object({
   scope: txt.max(5000, 'Tekst jest za długi').default(''),
 });
 export type LeadToJob = z.infer<typeof leadToJobSchema>;
+
+/** Statusy zlecenia bez sensu dla zlecenia z leada (lead już wyceniony); słownik zostaje, znika tylko z wyboru. */
+const NOT_FROM_LEAD = ['nowe', 'do wyceny'];
+export const jobStatusFromLead = (status: string): boolean => !NOT_FROM_LEAD.includes(status.trim().toLowerCase());

@@ -28,14 +28,14 @@ describe('nextAfterContact', () => {
 });
 
 describe('jobPrefill', () => {
-  const statusy = [{ id: 'a', wartosc: 'Nowe', grupa: 'aktualne' }, { id: 'b', wartosc: 'Na później', grupa: 'pozniej' }];
-  it('klient, obiekt, kategoria, opis jako punkt zakresu, pierwszy status aktualne', () => {
+  const statusy = [{ id: 'a', wartosc: 'Nowe', grupa: 'aktualne' }, { id: 'd', wartosc: 'Do wyceny', grupa: 'aktualne' }, { id: 'b', wartosc: 'Na później', grupa: 'pozniej' }, { id: 'c', wartosc: 'Zaplanowane', grupa: 'aktualne' }];
+  it('klient, obiekt, kategoria, opis jako punkt zakresu, pierwszy status aktualne poza Nowe i Do wyceny', () => {
     expect(jobPrefill({ id: 'x', clientId: 'c', siteId: 's', kategoria: 'Klimatyzacja', temat: 'Klima', opis: ' Dwie jednostki ' }, statusy))
-      .toEqual({ clientId: 'c', siteId: 's', kategoria: 'Klimatyzacja', status: 'Nowe', scope: 'Dwie jednostki' });
+      .toEqual({ clientId: 'c', siteId: 's', kategoria: 'Klimatyzacja', status: 'Zaplanowane', scope: 'Dwie jednostki' });
   });
   it('bez opisu: temat; bez klienta: puste', () => {
     expect(jobPrefill({ id: 'x', clientId: null, siteId: null, kategoria: '', temat: 'Klima', opis: '' }, [...statusy].reverse()))
-      .toEqual({ clientId: '', siteId: '', kategoria: '', status: 'Nowe', scope: 'Klima' });
+      .toEqual({ clientId: '', siteId: '', kategoria: '', status: 'Zaplanowane', scope: 'Klima' });
   });
 });
 

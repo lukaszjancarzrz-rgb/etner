@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
-import { newId, type JobSaveInput, type LeadSaveInput, type LeadToJob } from '@etner/shared';
+import { jobStatusFromLead, newId, type JobSaveInput, type LeadSaveInput, type LeadToJob } from '@etner/shared';
 import type { Diary } from '../../app.js';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
@@ -139,6 +139,7 @@ export function toJob(db: Db, userId: string, leadId: string, job: LeadToJob['jo
   const lead = get(db, leadId);
   if (!lead) return undefined;
   if (zlecenia.leadHasJob(db, leadId)) throw new HTTPException(409, { message: 'LEAD_MA_ZLECENIE' });
+  if (job.status !== undefined && !jobStatusFromLead(job.status)) throw bad(`Zlecenie z leada nie może mieć statusu „${job.status}”`);
   const input: JobSaveInput = { ...job, leadId };
   if (lead.clientId) { input.clientId = lead.clientId; input.siteId = lead.siteId; delete input.newClient; delete input.newSite; }
   const row = zlecenia.save(db, userId, input, out)!;

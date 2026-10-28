@@ -1,4 +1,4 @@
-import { addDays, addMonths, toGr } from '@etner/shared';
+import { addDays, addMonths, jobStatusFromLead, toGr } from '@etner/shared';
 import type { Rec } from '../../core/store.js';
 
 const MAX_GR = 100_000_000_00;
@@ -43,13 +43,13 @@ export function leadSections(leads: Rec[], group: (status: string) => string, to
 /** Termin po zapisaniu kontaktu (jak serwer): nowy termin, inaczej minięty jest czyszczony, przyszły zostaje. */
 export const nextAfterContact = (old: string, next: string, today: string) => next || (old && old <= today ? '' : old);
 
-/** „Zrób zlecenie”: klient, obiekt i kategoria z leada, opis (albo temat) → pierwszy punkt zakresu, pierwszy status „aktualne”. */
+/** „Zrób zlecenie”: klient, obiekt i kategoria z leada, opis (albo temat) → pierwszy punkt zakresu, pierwszy status „aktualne” poza „Nowe” i „Do wyceny”. */
 export function jobPrefill(lead: Rec, statusy: Rec[]) {
   return {
     clientId: (lead.clientId as string | null) ?? '',
     siteId: (lead.siteId as string | null) ?? '',
     kategoria: (lead.kategoria as string) ?? '',
-    status: (statusy.find((s) => (s.grupa ?? 'aktualne') === 'aktualne')?.wartosc as string | undefined) ?? '',
+    status: (statusy.find((s) => (s.grupa ?? 'aktualne') === 'aktualne' && jobStatusFromLead(s.wartosc))?.wartosc as string | undefined) ?? '',
     scope: String(lead.opis || lead.temat || '').trim(),
   };
 }

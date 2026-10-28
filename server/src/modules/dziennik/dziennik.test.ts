@@ -134,7 +134,7 @@ describe('dziennik', () => {
 
   it('leady.toJob tworzy dwa wpisy systemowe', async () => {
     const s = await setup();
-    const res = await s.app.request(`/api/leads/${s.lead.id}/to-job`, json(s.admin, 'POST', { job: { status: 'Nowe' }, accept: false }));
+    const res = await s.app.request(`/api/leads/${s.lead.id}/to-job`, json(s.admin, 'POST', { job: { status: 'Zaplanowane' }, accept: false }));
     expect(res.status).toBe(200);
     const rows = s.deps.db.$client.prepare('select owner_type, author_id, tekst from diary_entries order by owner_type').all();
     expect(rows).toEqual([

@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { jobStatusFromLead } from '@etner/shared';
 import { go } from '../../routes.js';
 import { useDict } from '../../core/data.js';
 import { store, useEntity, type Rec } from '../../core/store.js';
@@ -22,7 +23,8 @@ const opts = (d: Rec[]) => d.map((x) => ({ value: x.wartosc as string, label: x.
  * `lead`: zlecenie z leada (POST /api/leads/:id/to-job), pola wypełnione z leada, pierwszy punkt zakresu i „Przyjęta”.
  */
 export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose: () => void }) {
-  const statusy = useDict('status_zlecenia');
+  const allStatusy = useDict('status_zlecenia');
+  const statusy = lead ? allStatusy.filter((s) => jobStatusFromLead(s.wartosc)) : allStatusy; // z leada: bez „Nowe” i „Do wyceny”
   const ekipy = useDict('ekipa');
   const rodzaje = useDict('rodzaj_zlecenia');
   const kategorie = useDict('kategoria');

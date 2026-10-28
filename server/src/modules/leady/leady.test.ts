@@ -52,7 +52,7 @@ describe('leady', () => {
   it('to-job z accept: klient leada, status Przyjęta, grupa zamknięte, wpisy dziennika', async () => {
     const { app, admin, k, deps, diary } = await setup();
     const l = await (await app.request('/api/leads', req(admin, 'POST', { clientId: k.client.id, siteId: k.site!.id, temat: 'Klima' }))).json();
-    const res = await app.request(`/api/leads/${l.id}/to-job`, req(admin, 'POST', { accept: true, job: { status: 'Nowe', kategoria: 'Klimatyzacja' }, scope: 'Montaż 2 jednostek' }));
+    const res = await app.request(`/api/leads/${l.id}/to-job`, req(admin, 'POST', { accept: true, job: { status: 'Zaplanowane', kategoria: 'Klimatyzacja' }, scope: 'Montaż 2 jednostek' }));
     expect(res.status).toBe(200);
     const { lead, job } = await res.json();
     expect(getJob(deps.db, job.id)).toMatchObject({ clientId: k.client.id, siteId: k.site!.id, leadId: l.id, kategoria: 'Klimatyzacja' });
@@ -63,13 +63,16 @@ describe('leady', () => {
     expect(diary.addSystem).toHaveBeenCalledWith({ type: 'job', id: job.id }, 'Z leada: Nowak – Klima');
     // bez accept status leada bez zmian
     const l2 = await (await app.request('/api/leads', req(admin, 'POST', { clientId: k.client.id, temat: 'Inny' }))).json();
-    const r2 = await (await app.request(`/api/leads/${l2.id}/to-job`, req(admin, 'POST', { job: { status: 'Nowe' } }))).json();
+    const r2 = await (await app.request(`/api/leads/${l2.id}/to-job`, req(admin, 'POST', { job: { status: 'Zaplanowane' } }))).json();
     expect(r2.lead.status).toBe('Nowy');
     expect(itemsOf(deps.db, r2.job.id)).toEqual([]); // bez scope: bez punktu
     // drugie zlecenie z tego samego leada: 409
-    const r3 = await app.request(`/api/leads/${l2.id}/to-job`, req(admin, 'POST', { job: { status: 'Nowe' } }));
+    const r3 = await app.request(`/api/leads/${l2.id}/to-job`, req(admin, 'POST', { job: { status: 'Zaplanowane' } }));
     expect(r3.status).toBe(409);
     expect(await r3.json()).toEqual({ error: 'LEAD_MA_ZLECENIE' });
+    // „Nowe” i „Do wyceny” nie dla zlecenia z leada
+    const l3 = await (await app.request('/api/leads', req(admin, 'POST', { clientId: k.client.id, temat: 'Trzeci' }))).json();
+    for (const status of ['Nowe', 'Do wyceny']) expect((await app.request(`/api/leads/${l3.id}/to-job`, req(admin, 'POST', { job: { status } }))).status, status).toBe(400);
   });
 
   it('pracownik: 403 na trasach i brak zmian leada w feedzie', async () => {
