@@ -1,6 +1,8 @@
-# Render Blueprint: wersja testowa (demo) do sprawdzenia przez właściciela.
-# Dane w /tmp/etner znikają przy każdym wdrożeniu lub uśpieniu (plan free) i wracają jako dane demo.
+# Render Blueprint ETNER: jeden plik, dwie usługi. Tworzy się go raz (New → Blueprint); kolejne zmiany tego pliku Render stosuje sam.
+# etner-demo – wersja testowa z danymi przykładowymi (gałąź modul-1), etner – produkcja z prawdziwymi danymi (gałąź produkcja).
+# Sekrety (sync: false) wkleja właściciel w panelu Render; w tym pliku nie ma żadnych kluczy ani haseł.
 services:
+  # Dane w /tmp/etner znikają przy każdym wdrożeniu lub uśpieniu (plan free) i wracają jako dane demo.
   - type: web
     name: etner-demo
     runtime: node
@@ -37,4 +39,83 @@ services:
         value: mailto:etner@etner-instalacje.pl
       # Pumble: klucz z dodatku „API Keys”; puste = kanały zleceń wyłączone.
       - key: PUMBLE_API_KEY
+        sync: false
+
+  # Produkcja: Starter (7 USD/mies.) + dysk 1 GB na bazę. Wdraża się po każdym pushu na gałąź produkcja (robi to Claude na polecenie właściciela).
+  # Usługa z dyskiem nie ma wdrożeń bez przerwy: przy nowej wersji aplikacja jest niedostępna przez około minutę.
+  - type: web
+    name: etner
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: produkcja
+    autoDeploy: true
+    # Litestream (ciągła kopia bazy do R2) jako jeden plik wykonywalny w bin/ – runtime node go nie ma.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build && mkdir -p bin && curl -fsSL https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz | tar -xz -C bin litestream
+    # Z kluczem LITESTREAM_* aplikacja startuje pod Litestream (kopia każdej zmiany bazy); bez niego sama, z ostrzeżeniem w logu.
+    startCommand: >-
+      export NODE_ENV=production;
+      if [ -n "$LITESTREAM_ACCESS_KEY_ID" ]; then exec ./bin/litestream replicate -config deploy/litestream.yml -exec "node server/dist/main.js";
+      else echo "Ciągła kopia bazy wyłączona: brak LITESTREAM_ACCESS_KEY_ID."; exec node server/dist/main.js; fi
+    healthCheckPath: /api/health
+    disk:
+      name: etner-dane
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /var/data
+      - key: APP_SECRET
+        generateValue: true
+      # Pierwszy administrator: zakładany przy starcie tylko na pustej bazie (potem zmienne są pomijane).
+      - key: ADMIN_LOGIN
+        sync: false
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Produkcyjny bucket R2 na zdjęcia (osobny od testowego).
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_KEY
+        sync: false
+      - key: R2_SECRET
+        sync: false
+      # Bucket kopii: nocna kopia zdjęć (prefiks files/) i ciągła kopia bazy Litestream (prefiks db/).
+      - key: R2_BACKUP_BUCKET
+        sync: false
+      - key: LITESTREAM_ACCESS_KEY_ID
+        sync: false
+      - key: LITESTREAM_SECRET_ACCESS_KEY
+        sync: false
+      - key: VAPID_PUBLIC
+        sync: false
+      - key: VAPID_PRIVATE
+        sync: false
+      - key: VAPID_SUBJECT
+        value: mailto:etner@etner-instalacje.pl
+      - key: PUMBLE_API_KEY
+        sync: false
+      # E-mail (np. zaległe kontakty z leadami); puste SMTP_HOST lub MAIL_FROM = e-maile wyłączone.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # Własna domena (np. https://app.etner-instalacje.pl); puste = adres onrender.com.
+      - key: BASE_URL
+        sync: false
+      # Opcjonalnie: nocny eksport tabel do arkusza Google.
+      - key: SHEETS_ID
+        sync: false
+      - key: GOOGLE_SA_JSON
         sync: false
