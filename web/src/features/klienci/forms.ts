@@ -48,5 +48,5 @@ export function duplicatePairs<T extends C>(clients: T[]): DupPair<T>[] {
 /** Klient główny po połączeniu (jak serwer, do podglądu od razu): telefony i e-maile razem, puste pola z duplikatu. */
 export function mergedClient<T extends C>(main: T, dup: C): T {
   const union = (a: string[] = [], b: string[] = [], key: (x: string) => string) => [...a, ...b.filter((x) => !a.some((y) => key(y) === key(x)))];
-  return { ...main, telefony: union(main.telefony, dup.telefony, phoneDigits), emaile: union(main.emaile, dup.emaile, (e) => e.toLowerCase()), nip: main.nip || dup.nip || '', notatki: main.notatki || dup.notatki || '' };
+  return { ...main, telefony: union(main.telefony, dup.telefony, phoneDigits), emaile: union(main.emaile, dup.emaile, (e) => e.toLowerCase()), nip: main.nip || dup.nip || '', notatki: main.notatki && dup.notatki && main.notatki !== dup.notatki ? `${main.notatki}\n${dup.notatki}` : main.notatki || dup.notatki || '' };
 }

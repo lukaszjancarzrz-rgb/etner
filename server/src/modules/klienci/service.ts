@@ -74,6 +74,7 @@ export function merge(db: Db, userId: string, mainId: string, dupId: string, ref
       const row = db.update(sites).set({ clientId: mainId, updatedAt: now }).where(eq(sites.id, s.id)).returning().get();
       recordChange(db, userId, 'sites', s.id, 'update', s, row);
     }
+    // tylko żywe wiersze: usunięte (zlecenia, leady, zadania, obiekty) zostają przy starym id duplikatu
     for (const r of refs) r.rename(db, userId, 'clientId', dupId, mainId);
     const union = (a: string[], b: string[], key: (x: string) => string) => [...a, ...b.filter((x) => !a.some((y) => key(y) === key(x)))];
     const merged = {
@@ -81,7 +82,7 @@ export function merge(db: Db, userId: string, mainId: string, dupId: string, ref
       telefony: union(main.telefony, dup.telefony, phoneDigits),
       emaile: union(main.emaile, dup.emaile, (e) => e.toLowerCase()),
       nip: main.nip || dup.nip,
-      notatki: main.notatki || dup.notatki,
+      notatki: main.notatki && dup.notatki && main.notatki !== dup.notatki ? `${main.notatki}\n${dup.notatki}` : main.notatki || dup.notatki,
     };
     // zawsze z wpisem w changes: pracownik dostaje głównego klienta, gdy właśnie przeszły do niego zlecenia
     const row = db.update(clients).set({ ...merged, szukaj: clientText(merged, activeSites(db, mainId)), updatedAt: now }).where(eq(clients.id, mainId)).returning().get();

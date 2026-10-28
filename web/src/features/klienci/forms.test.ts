@@ -27,5 +27,5 @@ it('duplicatePairs: nazwa po normalizacji (kolejność słów, diakrytyki), tele
 it('mergedClient: uzupełnia puste pola, sumuje kontakty bez powtórek', () => {
   const m = mergedClient({ id: 'a', nazwa: 'A', telefony: ['727728903'], emaile: ['a@x.pl'], nip: '', notatki: 'x' },
     { id: 'b', nazwa: 'B', telefony: ['+48 727 728 903', '600100100'], emaile: ['A@x.pl', 'b@x.pl'], nip: '9', notatki: 'y' });
-  expect(m).toMatchObject({ nazwa: 'A', telefony: ['727728903', '600100100'], emaile: ['a@x.pl', 'b@x.pl'], nip: '9', notatki: 'x' });
+  expect(m).toMatchObject({ nazwa: 'A', telefony: ['727728903', '600100100'], emaile: ['a@x.pl', 'b@x.pl'], nip: '9', notatki: 'x\ny' });
 });

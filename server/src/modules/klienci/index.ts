@@ -13,6 +13,8 @@ export const klienci: ModuleDef = {
     if (can(user, 'admin')) return true;
     const a = ch.after;
     if (!a) return false;
+    // usunięty klient (np. duplikat po łączeniu) znika też z telefonów; tylko id, bez danych
+    if (ch.entity === 'clients' && ch.action === 'delete') return { ...ch, before: null, after: { id: ch.entityId, deletedAt: a.deletedAt } };
     const clientId = ch.entity === 'sites' ? (a.clientId as string) : ch.entityId;
     if (!deps.clientHasJobs?.(clientId)) return false;
     return { ...ch, before: null, after: ch.entity === 'sites' ? siteForWorker(a) : clientForWorker(a) };

@@ -115,7 +115,7 @@ describe('klienci: łączenie duplikatów (R58)', () => {
   async function two() {
     const s = await setup();
     const { db, uid } = s;
-    const main = create(db, uid, { ...base, nazwa: 'Jan Kowalski', telefony: ['727728903'], site: { nazwa: '', adres: 'Długa 5', miejscowosc: 'Zawoja', mapa: '', opis: '' } });
+    const main = create(db, uid, { ...base, nazwa: 'Jan Kowalski', telefony: ['727728903'], notatki: 'z głównego', site: { nazwa: '', adres: 'Długa 5', miejscowosc: 'Zawoja', mapa: '', opis: '' } });
     const dup = create(db, uid, { ...base, nazwa: 'Kowalski Jan', telefony: ['+48 727 728 903', '600100100'], emaile: ['jan@x.pl'], nip: '123', notatki: 'z duplikatu', site: { nazwa: '', adres: 'Krótka 1', miejscowosc: 'Sucha', mapa: '', opis: '' } });
     const job = zlecenia.save(db, uid, { clientId: dup.client.id, siteId: dup.site!.id, status: 'Nowe' } as never)!;
     const lead = leady.save(db, uid, { clientId: dup.client.id, siteId: dup.site!.id, temat: 'Klima' } as never)!;
@@ -139,7 +139,7 @@ describe('klienci: łączenie duplikatów (R58)', () => {
     const before = changesSince(s.db, 0, 10_000).length;
     const res = await mergeReq(s, s.admin, { opId: 'm1' });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ id: s.main.id, nazwa: 'Jan Kowalski', telefony: ['727728903', '600100100'], emaile: ['jan@x.pl'], nip: '123', notatki: 'z duplikatu' });
+    expect(await res.json()).toMatchObject({ id: s.main.id, nazwa: 'Jan Kowalski', telefony: ['727728903', '600100100'], emaile: ['jan@x.pl'], nip: '123', notatki: 'z głównego\nz duplikatu' });
     expect(zlecenia.get(s.db, s.job.id)).toMatchObject({ clientId: s.main.id, siteId: s.dupSite.id });
     expect(leady.get(s.db, s.lead.id)).toMatchObject({ clientId: s.main.id, siteId: s.dupSite.id });
     expect(leady.contactsOf(s.db, s.lead.id).map((c) => c.id)).toEqual([s.kontakt.id]); // kontakty idą z leadem
@@ -158,6 +158,20 @@ describe('klienci: łączenie duplikatów (R58)', () => {
     expect((await mergeReq(s, s.admin, { opId: 'm1' })).status).toBe(200);
     expect((await mergeReq(s, s.admin)).status).toBe(200);
     expect(changesSince(s.db, 0, 10_000)).toHaveLength(n);
+  });
+
+  it('pracownik dostaje usunięcie duplikatu (samo id), notatki takie same nie są dublowane', async () => {
+    const s = await two();
+    s.deps.clientHasJobs = (id) => zlecenia.clientHasJobs(s.db, id);
+    await mergeReq(s, s.admin);
+    const feed = (await (await s.app.request('/api/changes?since=0', json(s.worker, 'GET'))).json()).changes as any[];
+    const del = feed.filter((c) => c.entity === 'clients' && c.id === s.dup.id && c.action === 'delete');
+    expect(del).toHaveLength(1);
+    expect(Object.keys(del[0].data ?? {}).sort()).toEqual(['deletedAt', 'id']);
+    expect(JSON.stringify(del)).not.toMatch(/z duplikatu|123/);
+    const m = create(s.db, s.uid, { ...base, nazwa: 'X', notatki: 'to samo' }).client;
+    const d = create(s.db, s.uid, { ...base, nazwa: 'Y', notatki: 'to samo' }).client;
+    expect(merge(s.db, s.uid, m.id, d.id, [])!.notatki).toBe('to samo');
   });
 
   it('błąd w środku: nic nie zmienione (jedna transakcja)', async () => {
