@@ -71,5 +71,8 @@ export const staleDayKeys = (keys: string[], cut: string): string[] => keys.filt
 export const zakupyCount = (items: Rec[], firstStatus: string | undefined, admin: boolean): number =>
   admin && firstStatus ? items.filter((i) => i.status === firstStatus).length : 0;
 
+/** Samochody (R44): usterki bez dnia naprawy i nieoznaczone „Naprawione”, dla wszystkich. */
+export const autaCount = (faults: Rec[]): number => faults.filter((f) => !f.naprawaDzien && !f.naprawioneAt).length;
+
 /** „99+” powyżej 99. */
 export const badgeText = (n: number) => (n > 99 ? '99+' : String(n));

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { changedDays, freshByJob, naJutroCount, unseenDays, zakupyCount } from '../badges.js';
+import { autaCount, changedDays, freshByJob, naJutroCount, unseenDays, zakupyCount } from '../badges.js';
 import { addDays } from '@etner/shared';
 import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenAt, today, useDict, useMe, useSeenVersion } from '../data.js';
 import { useEntities } from '../store.js';
+import { withoutEchoes } from '../write.js';
 
 /** Dni harmonogramu ze zmianą, której użytkownik jeszcze nie widział na ekranie (posortowane). */
 export function useUnseenDays(): string[] {
@@ -32,16 +33,20 @@ export function useBadges(): Record<string, number> {
   const scope = useEntities('job_scope_items');
   const pumble = useEntities('pumble_messages');
   const shopping = useEntities('shopping');
+  const faults = useEntities('car_faults');
   const first = useDict('status_zakupu')[0]?.wartosc;
   const off = useDict('dzien_wolny');
   return useMemo((): Record<string, number> => {
     if (!me) return {};
     const admin = me.role === 'admin';
+    const auta = autaCount(withoutEchoes(faults, ['carId', 'opis', 'by'])); // tymczasowa kopia wysłanej usterki liczyłaby się podwójnie
     return {
       jutro: naJutroCount(checklists, day, me, off.map((d) => d.wartosc as string)),
       harm,
       zl: freshByJob(jobs, entries, scope, me.id, seenAt, admin, pumble).size,
       zakupy: zakupyCount(shopping, first, admin),
+      auta,
+      wiecej: auta, // telefon: Samochody są w Więcej
     };
-  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, faults, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
 }
