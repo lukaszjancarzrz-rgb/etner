@@ -40,7 +40,7 @@ if (demo && (await seedDemo(db, files))) console.log('Dane demo załadowane.');
 
 const vapid = vapidFromEnv(process.env, dataDir);
 if (!vapid) console.warn('Push wyłączony: brak VAPID_PUBLIC / VAPID_PRIVATE.');
-else if (!process.env.VAPID_PUBLIC) console.warn(`Push: klucze VAPID z ${dataDir}; po utracie katalogu powstaną nowe i urządzenia trzeba włączyć od nowa (ustaw VAPID_PUBLIC / VAPID_PRIVATE).`);
+else if (!(process.env.VAPID_PUBLIC && process.env.VAPID_PRIVATE)) console.warn(`Push: klucze VAPID z ${dataDir}; po utracie katalogu powstaną nowe i urządzenia trzeba włączyć od nowa (ustaw VAPID_PUBLIC / VAPID_PRIVATE).`);
 let pumble: PumbleClient | undefined = process.env.PUMBLE_API_KEY ? pumbleClient(process.env.PUMBLE_API_KEY) : undefined;
 // Tylko wersja demo (DEMO=1, nie produkcja): atrapa Pumble w pamięci, żeby było widać sekcję na karcie zlecenia.
 if (!pumble && demo && process.env.PUMBLE_FAKE === '1' && process.env.NODE_ENV !== 'production') {

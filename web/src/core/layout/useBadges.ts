@@ -46,7 +46,6 @@ export function useBadges(): Record<string, number> {
       zl: freshByJob(jobs, entries, scope, me.id, seenAt, admin, pumble).size,
       zakupy: zakupyCount(shopping, first, admin),
       auta,
-      wiecej: auta, // telefon: Samochody są w Więcej
     };
   }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, faults, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
 }

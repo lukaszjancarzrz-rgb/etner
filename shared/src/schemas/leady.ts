@@ -47,5 +47,6 @@ export const leadToJobSchema = z.object({
 export type LeadToJob = z.infer<typeof leadToJobSchema>;
 
 /** Statusy zlecenia bez sensu dla zlecenia z leada (lead już wyceniony); słownik zostaje, znika tylko z wyboru. */
+// shortcut: dopasowanie po nazwie wartości słownika; po zmianie nazwy statusu filtr przestaje działać – przejść na flagę w słowniku, gdy statusy będą zmieniane
 const NOT_FROM_LEAD = ['nowe', 'do wyceny'];
 export const jobStatusFromLead = (status: string): boolean => !NOT_FROM_LEAD.includes(status.trim().toLowerCase());

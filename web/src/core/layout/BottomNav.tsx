@@ -1,5 +1,5 @@
 import { screens, type Route } from '../../routes.js';
-import { badgeText } from '../badges.js';
+import { badgeLabel, badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
 
 export function BottomNav({ route, badges }: { route: Route; badges: Record<string, number> }) {
@@ -9,10 +9,10 @@ export function BottomNav({ route, badges }: { route: Route; badges: Record<stri
         {Object.entries(screens).filter(([, s]) => s.nav === undefined).map(([k, s]) => {
           const on = route.screen === k || (k === 'wiecej' && screens[route.screen]?.nav !== undefined); // ekrany spoza paska są w Więcej
           const I = s.icon;
-          const n = badges[k] ?? 0;
+          const n = (k === 'wiecej' ? badges.auta : badges[k]) ?? 0; // telefon: Samochody są w Więcej
           return (
             <li key={k}>
-              <a href={`#${k}`} aria-current={on ? 'page' : undefined} aria-label={n ? `${s.title}, ${n} nowe` : undefined}
+              <a href={`#${k}`} aria-current={on ? 'page' : undefined} aria-label={n ? badgeLabel(k, s.title, n) : undefined}
                 className={cn('flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold leading-none transition-colors duration-200', on ? 'text-action' : 'text-ink-2')}>
                 <span className={cn('relative grid h-8 w-14 place-items-center rounded-full transition-colors duration-200', on && 'bg-action/12')}>
                   <I className="h-6 w-6" weight={on ? 'fill' : 'regular'} />

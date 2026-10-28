@@ -110,14 +110,15 @@ function Fault({ f, flash, onRepair, past }: { f: Rec; flash: boolean; onRepair?
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
           <span>{names(f.by)}, {f._tmp ? 'wysyłanie…' : fmtWhen(f.createdAt)}</span>
           {past
-            ? <Badge tone="ok">naprawione {dayShort(fixedOn(f))}</Badge>
+            ? <Badge tone="ok">{f.naprawioneAt ? 'naprawione' : 'po naprawie'} {dayShort(fixedOn(f))}</Badge>
             : f.naprawaDzien && <Badge tone="warn"><Wrench className="h-3.5 w-3.5" weight="bold" aria-hidden />naprawa {f.naprawaDzien === t ? 'dziś' : dayShort(f.naprawaDzien)}</Badge>}
         </p>
       </div>
       {onRepair && !f._tmp && (
         <span className="flex gap-1">
-          {past
-            ? f.naprawioneAt && <Button variant="ghost" size="sm" onClick={() => fixed(false)} aria-label={`Cofnij naprawione: ${f.opis}`} className="w-10 px-0 text-ink-2"><ArrowCounterClockwise className="h-5 w-5 shrink-0" /></Button>
+          {/* dzień naprawy minął bez „Naprawione”: admin może przełożyć albo potwierdzić */}
+          {f.naprawioneAt
+            ? <Button variant="ghost" size="sm" onClick={() => fixed(false)} aria-label={`Cofnij naprawione: ${f.opis}`} className="w-10 px-0 text-ink-2"><ArrowCounterClockwise className="h-5 w-5 shrink-0" /></Button>
             : <>
               <Button variant="ghost" size="sm" onClick={() => onRepair(f)} aria-label={`Naprawa: ${f.opis}`} className="text-action"><CalendarCheck className="h-5 w-5 shrink-0" /><span className="hidden min-[560px]:inline">Naprawa</span></Button>
               <Button variant="ghost" size="sm" onClick={() => fixed(true)} aria-label={`Naprawione: ${f.opis}`} className="text-ok"><CheckCircle className="h-5 w-5 shrink-0" /><span className="hidden min-[560px]:inline">Naprawione</span></Button>

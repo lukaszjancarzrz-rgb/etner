@@ -1,8 +1,7 @@
 import { CaretRight, GearSix, Handshake, ListChecks, Package, SignOut, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
-import { autaCount, badgeText } from '../core/badges.js';
+import { badgeText } from '../core/badges.js';
+import { useBadges } from '../core/layout/useBadges.js';
 import { logout, useSession } from '../core/session.js';
-import { useEntities } from '../core/store.js';
-import { withoutEchoes } from '../core/write.js';
 import { Button } from '../core/ui/button.js';
 
 const Tile = ({ href, icon: I, title, hint, count = 0 }: { href: string; icon: Icon; title: string; hint: string; count?: number }) => (
@@ -17,11 +16,11 @@ const Tile = ({ href, icon: I, title, hint, count = 0 }: { href: string; icon: I
 /** Więcej: Samochody, Narzędzia, Rzeczy nietypowe; Leady, Zadania, Klienci, Użytkownicy (admin); Ustawienia, wylogowanie. */
 export function More() {
   const { me } = useSession();
-  const faults = useEntities('car_faults');
+  const badges = useBadges();
   return (
     <section className="mx-auto grid max-w-2xl gap-6 px-4 py-6">
       <div className="grid gap-3">
-        <Tile href="#auta" icon={Van} title="Samochody" hint="Usterki aut, terminy napraw" count={autaCount(withoutEchoes(faults, ['carId', 'opis', 'by']))} />
+        <Tile href="#auta" icon={Van} title="Samochody" hint="Usterki aut, terminy napraw" count={badges.auta} />
         <Tile href="#narz" icon={Wrench} title="Narzędzia" hint="Gdzie leży narzędzie: samochody i Magazyn" />
         <Tile href="#mag" icon={Package} title="Rzeczy nietypowe" hint="Co leży na magazynie, kto zabrał" />
       </div>

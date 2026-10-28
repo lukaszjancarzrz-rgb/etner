@@ -37,6 +37,10 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   const day = nextWorkday(addDays(dayOf(new Date()), info.project.name.startsWith('iPhone') ? 20 : 22));
   const admin = await as(browser, 'Tomasz Wrona', info);
   await admin.goto('/#auta');
+  // demo: dzień naprawy minął bez „Naprawione” – w historii, admin może przełożyć albo potwierdzić
+  const oil = admin.getByRole('list', { name: 'Historia napraw: Stary Ducato' });
+  await expect(oil.getByRole('button', { name: 'Naprawa: Wymiana oleju' })).toBeVisible();
+  await expect(oil.getByRole('button', { name: 'Naprawione: Wymiana oleju' })).toBeVisible();
   await admin.getByRole('button', { name: `Naprawa: ${tag}: pisk paska` }).click();
   const dlg = admin.getByRole('dialog', { name: 'Naprawa' });
   await dlg.getByLabel('Dzień naprawy').fill(day);
