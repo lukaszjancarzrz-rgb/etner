@@ -3,6 +3,7 @@ import { tx, type Db } from '../../core/db.js';
 import { hashPassword } from '../../core/password.js';
 import * as slowniki from '../../modules/slowniki/service.js';
 import * as uzytkownicy from '../../modules/uzytkownicy/service.js';
+import * as zlecenia from '../../modules/zlecenia/service.js';
 import { apply, author } from './apply.js';
 import type { OldData } from './old-data.js';
 import { report, type Report } from './report.js';
@@ -21,8 +22,12 @@ export type Konto = { nazwa: string; login: string; haslo: string };
 export async function migrate(db: Db, old: OldData, o: { dryRun: boolean; now?: Date }): Promise<{ report: Report; konta: Konto[] }> {
   const plan = transform(old, slowniki.listAll(db));
   const hasla = plan.osoby.map(() => randomBytes(9).toString('base64url'));
-  const hashes = await Promise.all(hasla.map(hashPassword));
+  // próba: bez kosztownego scrypt (konta i tak wycofane)
+  const hashes = o.dryRun ? hasla.map(() => '!') : await Promise.all(hasla.map(hashPassword));
   let out: { report: Report; logins: string[] };
+  // zlecenia z arkusza to stare zlecenia: bez automatycznego kanału Pumble (zostaje przycisk admina)
+  const waiting = zlecenia.awaitingChannel(db);
+  const before = new Set(waiting);
   try {
     out = tx(db, () => {
       // próba bez administratora (np. na pustej kopii bazy): tymczasowy admin, wycofany razem z resztą
@@ -35,6 +40,8 @@ export async function migrate(db: Db, old: OldData, o: { dryRun: boolean; now?: 
   } catch (e) {
     if (!(e instanceof DryRun)) throw e;
     out = e.out;
+  } finally {
+    for (const id of [...waiting]) if (!before.has(id)) waiting.delete(id);
   }
   return { report: out.report, konta: plan.osoby.map((p, i) => ({ nazwa: p.nazwa, login: out.logins[i]!, haslo: o.dryRun ? '' : hasla[i]! })) };
 }

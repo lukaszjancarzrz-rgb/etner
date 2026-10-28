@@ -236,3 +236,15 @@ describe('migrate (atrapa)', () => {
     expect([clients, users, changes].map((t) => n(db, t))).toEqual(before);
   });
 });
+
+describe('migrate – Pumble', () => {
+  it('zlecenia z arkusza nie czekają na kanał Pumble (próba i zapis); inne oczekujące zostają', async () => {
+    const db = fresh();
+    zlecenia.awaitingChannel(db).add('inne');
+    await migrate(db, oldFixture(), { dryRun: true, now: NOW });
+    expect([...zlecenia.awaitingChannel(db)]).toEqual(['inne']);
+    await migrate(db, oldFixture(), { dryRun: false, now: NOW });
+    expect(zlecenia.list(db).length).toBeGreaterThan(0);
+    expect([...zlecenia.awaitingChannel(db)]).toEqual(['inne']);
+  });
+});
