@@ -1,0 +1,37 @@
+import { randomBytes } from 'node:crypto';
+import { tx, type Db } from '../../core/db.js';
+import { hashPassword } from '../../core/password.js';
+import * as slowniki from '../../modules/slowniki/service.js';
+import { apply } from './apply.js';
+import type { OldData } from './old-data.js';
+import { report, type Report } from './report.js';
+import { transform } from './transform.js';
+
+class DryRun extends Error {
+  constructor(public out: { report: Report; logins: string[] }) { super('dry-run'); }
+}
+
+export type Konto = { nazwa: string; login: string; haslo: string };
+
+/**
+ * Przekształca dane arkusza i zapisuje je w jednej transakcji. `dryRun`: pełny zapis z raportem, potem wycofanie (baza bez zmian).
+ * Hasła startowe zwracane tylko przy prawdziwym zapisie – do pokazania w konsoli, nigdzie nie są zapisywane.
+ */
+export async function migrate(db: Db, old: OldData, o: { dryRun: boolean; now?: Date }): Promise<{ report: Report; konta: Konto[] }> {
+  const plan = transform(old, slowniki.listAll(db));
+  const hasla = plan.osoby.map(() => randomBytes(9).toString('base64url'));
+  const hashes = await Promise.all(hasla.map(hashPassword));
+  let out: { report: Report; logins: string[] };
+  try {
+    out = tx(db, () => {
+      const { logins } = apply(db, plan, { hashes, now: o.now ?? new Date() });
+      const r = { report: report(plan, db), logins };
+      if (o.dryRun) throw new DryRun(r);
+      return r;
+    });
+  } catch (e) {
+    if (!(e instanceof DryRun)) throw e;
+    out = e.out;
+  }
+  return { report: out.report, konta: plan.osoby.map((p, i) => ({ nazwa: p.nazwa, login: out.logins[i]!, haslo: o.dryRun ? '' : hasla[i]! })) };
+}

@@ -156,6 +156,7 @@ function writeTable<T>(ws: ExcelJS.Worksheet, cols: Cols, tb: Table<T>): void {
   for (const s of tb.secs) {
     ws.getCell(s.row, tb.col - 1).value = formula(`"${s.marker}"`, s.marker); // w oryginale formuła składa znacznik z Parametrów
     ws.getCell(s.row, tb.col).value = s.title;
+    ws.mergeCells(s.row, tb.col, s.row, tb.col + tb.headers.length - 1); // tytuł sekcji scalony na szerokość tabeli, jak w oryginale
     tb.headers.forEach((h, i) => { ws.getCell(s.row + 1, tb.col + i).value = h; });
     ws.getCell(s.end, tb.col - 1).value = '@koniec';
     s.rows.forEach((r, n) => {
