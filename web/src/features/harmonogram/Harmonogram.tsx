@@ -15,7 +15,7 @@ import type { Route } from '../../routes.js';
 import { useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
-import { cellKey, cellsOf, cellText, monthDays, type Slot } from './model.js';
+import { cellKey, cellsOf, cellText, monthDays, whereDay, type Slot } from './model.js';
 import { Avatar } from '../../core/ui/avatar.js';
 import { useRepairMarks, type RepairMark } from '../samochody/repairs.js';
 
@@ -229,15 +229,16 @@ function MonthNav({ day, today: t }: { day: string; today: string }) {
   return <NavRow slot="w-32" back={isNow ? 'Dziś' : 'Ten miesiąc'} here={isNow} prev={`#harm/${prev}`} next={`#harm/${next}`} labels={['Poprzedni miesiąc', 'Następny miesiąc']} title={monthName(day)} sub={isNow ? 'Ten miesiąc' : 'Miesiąc'} />;
 }
 
-/** „Gdzie jedziesz”: pierwszy dzień od dziś z wpisami użytkownika. */
+/** „Gdzie jedziesz”: pierwszy dzień z wpisami użytkownika – od dziś, a od 16:00 od jutra (R57, `whereDay`). */
 function WhereNext({ person, entries, ctx }: { person: Rec; entries: Rec[]; ctx: Ctx }) {
   const t = today();
   const next = useMemo(() => {
-    const mine = entries.filter((e) => e.personId === person.id && e.dzien >= t);
-    const d = mine.reduce<string | undefined>((m, e) => (!m || e.dzien < m ? e.dzien : m), undefined);
+    const mine = entries.filter((e) => e.personId === person.id);
+    const d = whereDay(mine.map((e) => e.dzien as string));
     return d ? { dzien: d, slots: cellsOf(mine.filter((e) => e.dzien === d)).get(cellKey(d, person.id)) ?? [] } : undefined;
   }, [entries, person.id, t]);
-  const when = next && (next.dzien === t ? 'Dziś' : next.dzien === addDays(t, 1) ? 'Jutro' : dayLong(next.dzien));
+  const long = next && dayLong(next.dzien);
+  const when = next && (next.dzien === t ? 'Dziś' : next.dzien === addDays(t, 1) ? 'Jutro' : long!.charAt(0).toUpperCase() + long!.slice(1));
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
       <div className="flex items-center justify-between gap-3 bg-[#0a2240] px-4 py-2.5 text-white">

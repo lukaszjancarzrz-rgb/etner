@@ -1,4 +1,4 @@
-import { addDays, isWorkday } from '@etner/shared';
+import { addDays, dayOf, isWorkday } from '@etner/shared';
 import { ApiError } from '../../core/api.js';
 import type { Rec } from '../../core/store.js';
 import type { JobView } from '../zlecenia/jobs.js';
@@ -81,3 +81,16 @@ export function overwriteCount(days: string[], people: string[], value: Slot[], 
 
 /** „1 komórkę”, „3 komórki”, „5 komórek”. */
 export const komorek = (n: number) => `${n} ${n === 1 ? 'komórkę' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'komórki' : 'komórek'}`;
+
+const hourFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Warsaw', hour: '2-digit', hourCycle: 'h23' });
+/**
+ * „Gdzie jedziesz” (R57): od 16:00 czasu polskiego dzisiejszy dzień się kończy – pierwszy dzień z wpisami od jutra
+ * (puste weekendy i święta wypadają, więc to następny dzień roboczy; sobota z wpisami zostaje), wcześniej od dziś.
+ */
+export function whereDay(days: Iterable<string>, now: Date = new Date()): string | undefined {
+  const t = dayOf(now);
+  const from = Number(hourFmt.format(now)) >= 16 ? addDays(t, 1) : t;
+  let m: string | undefined;
+  for (const d of days) if (d >= from && (!m || d < m)) m = d;
+  return m;
+}
