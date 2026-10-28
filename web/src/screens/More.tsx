@@ -1,19 +1,19 @@
-import { CaretRight, GearSix, Handshake, ListChecks, Package, SignOut, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
-import { badgeText } from '../core/badges.js';
+import { CaretRight, GearSix, Handshake, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
+import { badgeLabel, badgeText } from '../core/badges.js';
 import { useBadges } from '../core/layout/useBadges.js';
 import { logout, useSession } from '../core/session.js';
 import { Button } from '../core/ui/button.js';
 
-const Tile = ({ href, icon: I, title, hint, count = 0 }: { href: string; icon: Icon; title: string; hint: string; count?: number }) => (
+const Tile = ({ href, icon: I, title, hint, count = 0, sr = ' bez terminu naprawy' }: { href: string; icon: Icon; title: string; hint: string; count?: number; sr?: string }) => (
   <a href={href} className="flex min-h-16 items-center gap-4 rounded-2xl border border-line bg-card px-5 py-4 hover:border-ink-2">
     <I className="h-7 w-7 text-action" weight="duotone" />
     <span className="min-w-0 flex-1"><span className="block font-wide text-lg font-extrabold">{title}</span><span className="block text-sm text-ink-2">{hint}</span></span>
-    {count > 0 && <span className="min-w-6 rounded-full bg-new px-2 py-0.5 text-center text-xs font-bold tabular-nums text-white">{badgeText(count)}<span className="sr-only"> bez terminu naprawy</span></span>}
+    {count > 0 && <span className="min-w-6 rounded-full bg-new px-2 py-0.5 text-center text-xs font-bold tabular-nums text-white">{badgeText(count)}<span className="sr-only">{sr}</span></span>}
     <CaretRight className="h-5 w-5 text-ink-2" />
   </a>
 );
 
-/** Więcej: Samochody, Narzędzia, Rzeczy nietypowe; Leady, Zadania, Klienci, Użytkownicy (admin); Ustawienia, wylogowanie. */
+/** Więcej: Samochody, Narzędzia, Rzeczy nietypowe; Leady, Zadania, Klienci, Użytkownicy (admin); Ustawienia; Na jutro (admin, poza dolnym paskiem); wylogowanie. */
 export function More() {
   const { me } = useSession();
   const badges = useBadges();
@@ -33,6 +33,7 @@ export function More() {
         </div>
       )}
       <Tile href="#ust" icon={GearSix} title="Ustawienia" hint={me?.role === 'admin' ? 'Motyw, powiadomienia, hasło, słowniki, log błędów, kopie' : 'Motyw, powiadomienia, zmiana hasła'} />
+      {me?.role === 'admin' && <Tile href="#jutro" icon={SunHorizon} title="Na jutro" hint="Co ekipy biorą na następny dzień roboczy" count={badges.jutro} sr={badgeLabel('jutro', badges.jutro ?? 0).replace(',', '')} />}
       <div className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-card p-5">
         <div className="min-w-0">
           <p className="truncate font-semibold">{me?.name}</p>

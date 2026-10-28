@@ -13,7 +13,8 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
         <Logo />
       </div>
       <ul className="grid gap-1 px-3 py-2">
-        {Object.entries(screens).filter(([, s]) => s.nav !== false && (!s.admin || me?.role === 'admin')).map(([k, s]) => {
+        {Object.entries(screens).filter(([, s]) => s.nav !== false && (!s.admin || me?.role === 'admin'))
+          .sort(([, a], [, b]) => (me?.role === 'admin' ? Number(!!a.adminEnd) - Number(!!b.adminEnd) : 0)).map(([k, s]) => {
           const on = navKey(route.screen) === k;
           const I = s.icon;
           const n = badges[k] ?? 0;

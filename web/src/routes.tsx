@@ -13,8 +13,11 @@ export function parseHash(hash: string): Route {
   return { screen: screen && screens[screen] ? screen : 'harm', ...(param && { param }), ...(highlight && { highlight }) };
 }
 
-/** `nav`: brak = dolny pasek i menu boczne; 'side' = tylko menu boczne i kafelek w Więcej; false = poza menu. `admin` = tylko admin (inni: „Brak dostępu”). */
-export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true };
+/**
+ * `nav`: brak = dolny pasek i menu boczne; 'side' = tylko menu boczne i kafelek w Więcej; false = poza menu. `admin` = tylko admin (inni: „Brak dostępu”).
+ * `adminEnd`: u admina poza dolnym paskiem, na końcu menu bocznego i kafelków Więcej (pracownik bez zmian).
+ */
+export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true; adminEnd?: true };
 
 // Ekrany ładowane osobno (mniejszy pierwszy pakiet JS); `preload` = pobranie pakietu bez renderu.
 const lazyScreen = (f: () => Promise<{ default: ComponentType<{ route: Route }> }>) => Object.assign(lazy(f), { preload: f });
@@ -34,7 +37,7 @@ const Klienci = lazyScreen(() => import('./features/klienci/Klienci.js').then((m
 /** Ekrany w kolejności menu. */
 export const screens: Record<string, Screen> = {
   harm: { title: 'Harmonogram', icon: CalendarDots, component: Harmonogram },
-  jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro },
+  jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true }, // admin rzadko: koniec menu
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
   zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
   auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side' },
@@ -59,6 +62,9 @@ const snapshot = () => {
 };
 export const useRoute = (): Route =>
   useSyncExternalStore((f) => { addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, snapshot);
+
+/** Czy ekran jest w dolnym pasku telefonu (reszta: w Więcej). */
+export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.nav === undefined && !(admin && screens[k]!.adminEnd);
 
 /** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `kl` → Więcej. */
 export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'kl' ? 'wiecej' : screen);

@@ -359,6 +359,23 @@ test('licznik „Na jutro” w menu pokazuje niezabrane rzeczy pracownika', asyn
   await expect(page.getByRole('link', { name: 'Zakupy', exact: true })).toBeVisible(); // pracownik: bez licznika zakupów
 });
 
+test('admin: Na jutro poza głównym menu (koniec menu bocznego / kafelek w Więcej), adres #jutro działa', async ({ page }, info) => {
+  const phone = info.project.name.startsWith('iPhone');
+  await loginAdmin(page);
+  const nav = page.getByRole('navigation', { name: 'Menu' }).filter({ visible: true });
+  if (phone) {
+    await expect(nav.getByRole('link', { name: /^Na jutro/ })).toHaveCount(0);
+    await expect(nav.getByRole('listitem')).toHaveCount(4);
+    await nav.getByRole('link', { name: /^Więcej/ }).click();
+    await page.getByRole('link', { name: /^Na jutro/ }).click();
+  } else {
+    await expect(nav.getByRole('listitem').last().getByRole('link')).toHaveText(/^Na jutro/);
+    await nav.getByRole('link', { name: /^Na jutro/ }).click();
+  }
+  await expect(page.getByRole('heading', { name: 'Na jutro', level: 1 })).toBeVisible();
+  if (phone) await expect(nav.getByRole('link', { name: /^Więcej/ })).toHaveAttribute('aria-current', 'page');
+});
+
 test('Pumble (atrapa): sekcja na karcie zlecenia, wysłanie dodaje wiadomość', async ({ page }, info) => {
   await loginAdmin(page);
   await page.goto('/#zl');

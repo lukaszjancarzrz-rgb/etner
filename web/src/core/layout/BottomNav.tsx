@@ -1,13 +1,16 @@
-import { screens, type Route } from '../../routes.js';
+import { inBottomBar, screens, type Route } from '../../routes.js';
+import { useIsAdmin } from '../data.js';
 import { badgeLabel, badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
 
 export function BottomNav({ route, badges }: { route: Route; badges: Record<string, number> }) {
+  const admin = useIsAdmin();
+  const items = Object.entries(screens).filter(([k]) => inBottomBar(k, admin));
   return (
     <nav aria-label="Menu" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] desk:hidden">
-      <ul className="grid grid-cols-5">
-        {Object.entries(screens).filter(([, s]) => s.nav === undefined).map(([k, s]) => {
-          const on = route.screen === k || (k === 'wiecej' && screens[route.screen]?.nav !== undefined); // ekrany spoza paska są w Więcej
+      <ul className={cn('grid', items.length === 4 ? 'grid-cols-4' : 'grid-cols-5')}>
+        {items.map(([k, s]) => {
+          const on = route.screen === k || (k === 'wiecej' && !!screens[route.screen] && !inBottomBar(route.screen, admin)); // ekrany spoza paska są w Więcej
           const I = s.icon;
           const n = (k === 'wiecej' ? badges.auta : badges[k]) ?? 0; // telefon: Samochody są w Więcej
           return (
