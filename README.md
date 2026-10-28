@@ -40,11 +40,9 @@ Darmowa usługa usypia się po kwadransie bez ruchu; pierwsze wejście po przerw
 
 Serwer wysyła push tylko na urządzenia zapisane w swojej bazie. W wersji demo baza leży w `/tmp/etner`, więc po każdym wdrożeniu lub uśpieniu lista urządzeń jest pusta. Telefon zapisuje się ponownie dopiero, gdy ktoś otworzy na nim aplikację (i zaloguje się, bo sesje też znikają). Kto po uśpieniu usługi nie otworzył aplikacji, ten nie dostanie powiadomienia, np. o naprawie auta.
 
-Bez kluczy `VAPID_PUBLIC` / `VAPID_PRIVATE` serwer losuje nowe klucze przy każdym starcie. Ustaw je raz jako sekrety, żeby subskrypcje w telefonach zostały ważne:
+Klucze VAPID (podpis powiadomień) serwer tworzy sam przy pierwszym starcie i zapisuje w `DATA_DIR/vapid.json` – nic nie trzeba ustawiać. W wersji demo plik znika razem z `/tmp`, więc po uśpieniu powiadomienia trzeba na telefonie włączyć od nowa. Na produkcji plik leży na trwałym dysku. (Zmienne `VAPID_PUBLIC` / `VAPID_PRIVATE`, jeśli ustawione, mają pierwszeństwo.)
 
-1. Na komputerze z Node.js uruchom `npx web-push generate-vapid-keys`.
-2. Na Render w ustawieniach usługi (Environment) wklej „Public Key” jako `VAPID_PUBLIC`, „Private Key” jako `VAPID_PRIVATE` i wdroż ponownie.
-3. Na każdym telefonie otwórz aplikację, w Ustawieniach sprawdź „Powiadomienia” i wyślij próbne powiadomienie.
+Na każdym telefonie otwórz aplikację, w Ustawieniach włącz „Powiadomienia” i wyślij próbne powiadomienie.
 
 W produkcji (usługa `etner`, „Produkcja na Render”) baza leży na trwałym dysku, więc zapisane urządzenia nie znikają. Nieudane wysyłki widać w Ustawieniach, w logu błędów (miejsce „push”).
 
@@ -91,7 +89,6 @@ Zbierz wartości z listy niżej, zanim założysz Blueprint. Wklejasz je tylko w
 | `R2_BUCKET` | Cloudflare → **R2** → **Create bucket**, np. `etner-pliki` – bucket produkcyjny (zdjęcia i kopia bazy pod `db/`), inny niż testowy wersji demo |
 | `R2_ENDPOINT` | Cloudflare → R2: adres „S3 API” konta, `https://<numer konta>.r2.cloudflarestorage.com` (bez nazwy bucketu na końcu) |
 | `R2_KEY`, `R2_SECRET` | Cloudflare → R2 → **Manage API tokens** → **Create API token**, uprawnienie „Object Read & Write”; „Access Key ID” i „Secret Access Key” |
-| `VAPID_PUBLIC`, `VAPID_PRIVATE` | na komputerze z Node.js: `npx web-push generate-vapid-keys` („Public Key”, „Private Key”); inne niż w wersji demo |
 
 **Opcjonalne** (puste = funkcja wyłączona, można dopisać później):
 

@@ -14,10 +14,9 @@ export type PushSub = { endpoint: string; keys: { p256dh: string; auth: string }
 export type PushSender = (sub: PushSub, payload: string, opts: { TTL: number }) => Promise<{ statusCode: number }>;
 export type Notification = { title: string; body: string; url: string; tag: string };
 
-/** Klucze VAPID z env; w trybie demo (DEMO=1) generowane i zapisane w DATA_DIR. Brak = null (push wyłączony). */
-export function vapidFromEnv(env: NodeJS.ProcessEnv, dataDir: string): { publicKey: string; privateKey: string } | null {
+/** Klucze VAPID z env; bez nich generowane raz i zapisane w DATA_DIR/vapid.json (na produkcji trwały dysk – właściciel nic nie ustawia). */
+export function vapidFromEnv(env: NodeJS.ProcessEnv, dataDir: string): { publicKey: string; privateKey: string } {
   if (env.VAPID_PUBLIC && env.VAPID_PRIVATE) return { publicKey: env.VAPID_PUBLIC, privateKey: env.VAPID_PRIVATE };
-  if (env.DEMO !== '1') return null;
   const file = join(dataDir, 'vapid.json');
   if (!existsSync(file)) writeFileSync(file, JSON.stringify(webpush.generateVAPIDKeys()), { mode: 0o600 });
   return JSON.parse(readFileSync(file, 'utf8')) as { publicKey: string; privateKey: string };

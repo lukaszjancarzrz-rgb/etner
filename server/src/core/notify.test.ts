@@ -4,7 +4,7 @@ import { newId } from '@etner/shared';
 import { createApp } from '../app.js';
 import { addUser, loginCookie, testDeps } from '../test-utils.js';
 import { rankoGodzina, rankoTick, registerCron, rankoTeraz } from './cron.js';
-import { notify, type PushSender } from './notify.js';
+import { notify, vapidFromEnv, type PushSender } from './notify.js';
 import { errors, pushSubscriptions, settings } from './schema-base.js';
 
 const n = { title: 'T', body: 'B', url: '/x', tag: 't' };
@@ -178,5 +178,18 @@ describe('zadanie rano', () => {
       { name: 'r', schedule: 'rano', run() {} },
     ]);
     stop();
+  });
+});
+
+describe('vapidFromEnv', () => {
+  it('bez zmiennych: klucze powstają raz w DATA_DIR i są potem te same; zmienne mają pierwszeństwo', async () => {
+    const { mkdtempSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const d = mkdtempSync(join(tmpdir(), 'etner-vapid-'));
+    const a = vapidFromEnv({}, d);
+    expect(a.publicKey.length).toBeGreaterThan(40);
+    expect(vapidFromEnv({}, d)).toEqual(a);
+    expect(vapidFromEnv({ VAPID_PUBLIC: 'p', VAPID_PRIVATE: 'q' }, d)).toEqual({ publicKey: 'p', privateKey: 'q' });
   });
 });

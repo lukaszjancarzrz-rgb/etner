@@ -93,10 +93,7 @@ services:
       # Opcjonalnie: drugi bucket na nocną kopię zdjęć (prefiks files/).
       - key: R2_BACKUP_BUCKET
         sync: false
-      - key: VAPID_PUBLIC
-        sync: false
-      - key: VAPID_PRIVATE
-        sync: false
+      # Push: klucze VAPID powstają same przy pierwszym starcie i leżą na dysku (DATA_DIR/vapid.json).
       - key: VAPID_SUBJECT
         value: mailto:etner@etner-instalacje.pl
       - key: PUMBLE_API_KEY
