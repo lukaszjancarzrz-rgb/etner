@@ -150,7 +150,9 @@ describe('na jutro', () => {
     const items = kat.map((d) => ({ id: d.id, wartosc: d.wartosc === 'Fotowoltaika' ? 'PV' : d.wartosc, grupa: d.grupa, kolor: d.kolor, platne: d.platne }));
     expect((await app.request('/api/dict/kategoria', req(admin, 'PUT', { items }))).status).toBe(200);
     const ts = (await (await app.request('/api/checklist-templates', req(admin, 'GET'))).json()) as { nazwa: string; kategorie: string[] }[];
-    expect(ts.find((t) => t.nazwa === 'Kamery')!.kategorie).toEqual(['Elektryka', 'PV']);
+    expect(ts.find((t) => t.nazwa === 'Kamery')!.kategorie).toEqual(['Elektryka', 'PV', 'Alarmy i monitoring']);
+    expect(ts.find((t) => t.nazwa === 'Elektryka')!.kategorie).toEqual(['Elektryka', 'PV', 'Smart home']);
+    expect(ts.find((t) => t.nazwa === 'Montaż fotowoltaiki')!.kategorie).toEqual(['Elektryka', 'PV']);
     // usunięcie wartości użytej w liście: odmowa
     const r = await app.request('/api/dict/kategoria', req(admin, 'PUT', { items: items.filter((i) => i.wartosc !== 'Klimatyzacja') }));
     expect(r.status).toBe(409);

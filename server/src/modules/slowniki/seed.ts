@@ -26,7 +26,8 @@ export const SEED: Record<DictRodzaj, Item[]> = {
   ],
   ekipa: ['ekipa Bartek', 'ekipa Marek', 'mieszane'],
   // R30: kolor kategorii = kolor zlecenia w harmonogramie
-  kategoria: [kol('Elektryka', '#0070ab'), kol('Fotowoltaika', '#c62828'), kol('Rekuperacja', '#2e7d32'), kol('Klimatyzacja', '#7b1fa2'), kol('Inne', '#f9a825')],
+  kategoria: [kol('Elektryka', '#0070ab'), kol('Fotowoltaika', '#c62828'), kol('Rekuperacja', '#2e7d32'), kol('Klimatyzacja', '#7b1fa2'),
+    kol('Alarmy i monitoring', '#455a64'), kol('Smart home', '#00838f'), kol('Sprzedaż', '#6d4c41'), kol('Inne', '#f9a825')],
   rodzaj_zlecenia: ['montaż', 'przygotówka', 'serwis', 'inne'],
   zrodlo: ['Polecenie', 'Strona www', 'Facebook', 'Telefon', 'Inne'],
   kod_nieobecnosci: [kod('urlop', true, '#00736b'), kod('L4', true, '#c0392b'), kod('szkolenie', true, '#0070ab'), kod('wolne', false, '#8896a5'), kod('UŻ', true, '#b9770e')],

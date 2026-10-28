@@ -34,6 +34,10 @@ describe('seed', () => {
     expect(f).toHaveLength(1);
     expect(f[0]).toMatchObject({ skrot: 'ETNER', prefiksZ: 'Z', prefiksL: 'L' });
     expect(list(deps.db, 'status_leada')[3]!.wartosc).toBe('Przyjęta');
+    // 19i: kategorie z arkusza Firma_2026, każda z kolorem (legenda harmonogramu)
+    expect(list(deps.db, 'kategoria').map((r) => [r.wartosc, r.kolor])).toEqual([
+      ['Elektryka', '#0070ab'], ['Fotowoltaika', '#c62828'], ['Rekuperacja', '#2e7d32'], ['Klimatyzacja', '#7b1fa2'],
+      ['Alarmy i monitoring', '#455a64'], ['Smart home', '#00838f'], ['Sprzedaż', '#6d4c41'], ['Inne', '#f9a825']]);
   });
 });
 

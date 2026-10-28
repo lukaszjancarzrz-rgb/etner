@@ -84,7 +84,9 @@ export const templateDictRefs: DictRefs = {
 };
 
 const SEED_TEMPLATES: [string[], string[]][] = [
-  [['Elektryka', 'Fotowoltaika'], ['Elektryka', 'Montaż fotowoltaiki', 'Alarm', 'Kamery']],
+  [['Elektryka', 'Fotowoltaika', 'Smart home'], ['Elektryka']],
+  [['Elektryka', 'Fotowoltaika'], ['Montaż fotowoltaiki']],
+  [['Elektryka', 'Fotowoltaika', 'Alarmy i monitoring'], ['Alarm', 'Kamery']],
   [['Rekuperacja'], ['Reku przygotówka', 'Reku rozkładanie instalacji', 'Montaż rekuperatora']],
   [['Klimatyzacja'], ['Rozciąganie rur klimy', 'Montaż klimy']],
 ];

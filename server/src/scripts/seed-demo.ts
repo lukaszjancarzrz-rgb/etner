@@ -59,9 +59,9 @@ const JOBS: [number, string, string | null, string, string, number, string][] = 
   [5, 'Zaplanowane', MAREK, 'przygotówka', 'Elektryka', 0, 'Przygotowanie okablowania gabinetów pod rozdzielnicę.'],
   [9, 'Zaplanowane', MAREK, 'montaż', 'Klimatyzacja', 1, 'Klimatyzacja sali konferencyjnej.'],
   [1, 'Do dokończenia', BARTEK, 'montaż', 'Rekuperacja', 0, 'Brakuje regulacji przepływów i protokołu.'],
-  [4, 'Nowe', null, 'montaż', 'Klimatyzacja', 2, 'Klient prosi o wizję lokalną.'],
+  [4, 'Nowe', null, 'montaż', 'Alarmy i monitoring', 2, 'Alarm i cztery kamery wokół domu, klient prosi o wizję lokalną.'],
   [6, 'Nowe', null, 'serwis', 'Klimatyzacja', 1, 'Przegląd roczny klimatyzacji.'],
-  [7, 'Do wyceny', null, 'przygotówka', 'Elektryka', 2, 'Dom 140 m2, nowa rozdzielnica i okablowanie.'],
+  [7, 'Do wyceny', null, 'przygotówka', 'Smart home', 2, 'Dom 140 m2, okablowanie pod sterowanie oświetleniem i roletami.'],
   [8, 'W realizacji', BARTEK, 'serwis', 'Klimatyzacja', 0, 'Hałas jednostki zewnętrznej, reklamacja.'],
   [10, 'Na później', null, 'montaż', 'Rekuperacja', 4, 'Inwestycja po sezonie, klient wróci jesienią.'],
   [11, 'Zakończone', MAREK, 'montaż', 'Klimatyzacja', -1, 'Zamontowano dwie jednostki, odbiór bez uwag.'],
@@ -74,7 +74,7 @@ const LEADS: [number | null, string, string, string, string, number | null, stri
   [8, 'W kontakcie', 'Fotowoltaika z magazynem energii', 'Strona www', 'Fotowoltaika', 0, 'Zapytanie z formularza.'],
   [6, 'Wycena wysłana', 'Klimatyzacja w pensjonacie', 'Telefon', 'Klimatyzacja', 5, 'Wycena wysłana e-mailem.'],
   [10, 'Przyjęta', 'Rekuperacja z odzyskiem', 'Polecenie', 'Rekuperacja', null, 'Przyjęta, czeka na termin.'],
-  [7, 'Odrzucona', 'Klimatyzacja w sypialni', 'Facebook', 'Klimatyzacja', null, 'Wybrał tańszą ofertę.'],
+  [7, 'Odrzucona', 'Magazyn energii bez montażu', 'Facebook', 'Sprzedaż', null, 'Wybrał tańszą ofertę.'],
   [11, 'Na kiedyś', 'Instalacja elektryczna w garażu', 'Inne', 'Elektryka', 60, 'Wróci do tematu na wiosnę.'],
 ];
 
