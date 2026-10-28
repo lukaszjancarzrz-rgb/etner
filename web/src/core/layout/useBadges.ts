@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { autaCount, changedDays, freshByJob, naJutroCount, unseenDays, zakupyCount } from '../badges.js';
+import { autaCount, changedDays, freshByJob, naJutroCount, unseenDays, zadaniaCount, zakupyCount } from '../badges.js';
 import { addDays } from '@etner/shared';
 import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenAt, today, useDict, useMe, useSeenVersion } from '../data.js';
 import { useEntities } from '../store.js';
@@ -34,6 +34,7 @@ export function useBadges(): Record<string, number> {
   const pumble = useEntities('pumble_messages');
   const shopping = useEntities('shopping');
   const faults = useEntities('car_faults');
+  const tasks = useEntities('tasks');
   const first = useDict('status_zakupu')[0]?.wartosc;
   const off = useDict('dzien_wolny');
   return useMemo((): Record<string, number> => {
@@ -46,6 +47,7 @@ export function useBadges(): Record<string, number> {
       zl: freshByJob(jobs, entries, scope, me.id, seenAt, admin, pumble).size,
       zakupy: zakupyCount(shopping, first, admin),
       auta,
+      zad: zadaniaCount(tasks, admin),
     };
-  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, faults, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, faults, tasks, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
 }

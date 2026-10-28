@@ -50,7 +50,7 @@ export function More() {
       {groups.map((g) => (
         <div key={g[0]!.k} className="grid gap-3">
           {g.map((t) => <Tile key={t.k} href={`#${t.k}`} icon={t.icon} title={t.title} hint={typeof t.hint === 'string' ? t.hint : t.hint(admin)}
-            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
+            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'zad' && { count: badges.zad, sr: badgeLabel('zad', badges.zad ?? 0).replace(',', '') })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
         </div>
       ))}
       {!desk && (

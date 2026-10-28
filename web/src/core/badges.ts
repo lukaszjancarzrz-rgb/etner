@@ -1,5 +1,6 @@
 import { nextWorkday } from '@etner/shared';
 import type { Rec } from './store.js';
+import { isDone } from '../features/zadania/model.js';
 
 /**
  * „Nowe” w zleceniach (jedno źródło dla listy i menu): wpisy dziennika innych osób, wiadomości Pumble innych osób, punkty
@@ -76,9 +77,12 @@ export const zakupyCount = (items: Rec[], firstStatus: string | undefined, admin
 /** Samochody (R44): usterki bez dnia naprawy i nieoznaczone „Naprawione”, dla wszystkich. */
 export const autaCount = (faults: Rec[]): number => faults.filter((f) => !f.naprawaDzien && !f.naprawioneAt).length;
 
-/** Opis licznika dla czytnika ekranu: Samochody (i Więcej, gdzie są na telefonie) liczą usterki bez terminu, reszta nowości. */
+/** Zadania (admin): otwarte z priorytetem 1. */
+export const zadaniaCount = (tasks: Rec[], admin: boolean): number => (admin ? tasks.filter((t) => t.priorytet === 1 && !isDone(t)).length : 0);
+
+/** Opis licznika dla czytnika ekranu: Samochody (i Więcej, gdzie są na telefonie) liczą usterki bez terminu, Zadania priorytet 1, reszta nowości. */
 /** Dopisek licznika do nazwy pozycji menu dla czytnika (cała nazwa w sr-only: bez aria-label niezgodnego z widocznym tekstem i bez spacji przed przecinkiem). */
-export const badgeLabel = (screen: string, n: number) => `, ${n} ${screen === 'auta' || screen === 'wiecej' ? 'bez terminu naprawy' : 'nowe'}`;
+export const badgeLabel = (screen: string, n: number) => `, ${n} ${screen === 'auta' || screen === 'wiecej' ? 'bez terminu naprawy' : screen === 'zad' ? 'z priorytetem 1' : 'nowe'}`;
 
 /** „99+” powyżej 99. */
 export const badgeText = (n: number) => (n > 99 ? '99+' : String(n));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autaCount, badgeText, changedDays, freshByJob, naJutroCount, staleDayKeys, ViewedDays, unseenDays, zakupyCount } from './badges.js';
+import { autaCount, badgeText, changedDays, freshByJob, naJutroCount, staleDayKeys, ViewedDays, unseenDays, zadaniaCount, zakupyCount, badgeLabel } from './badges.js';
 
 const T0 = '2026-10-21T08:00:00.000Z', T1 = '2026-10-21T09:00:00.000Z', T2 = '2026-10-21T10:00:00.000Z';
 const r = (o: Record<string, unknown>) => ({ id: Math.random().toString(36), createdAt: T0, updatedAt: T0, ...o }) as any;
@@ -81,6 +81,13 @@ describe('liczniki w menu', () => {
     expect(zakupyCount(items, 'Do kupienia', true)).toBe(2);
     expect(zakupyCount(items, 'Do kupienia', false)).toBe(0);
     expect([badgeText(7), badgeText(99), badgeText(100)]).toEqual(['7', '99', '99+']);
+  });
+
+  it('zadaniaCount: otwarte z priorytetem 1, tylko admin', () => {
+    const t = [r({ priorytet: 1, status: 'Do zrobienia' }), r({ priorytet: 1, status: 'Zrobione' }), r({ priorytet: 1, status: 'Zrobione', cykliczne: true }), r({ priorytet: 2, status: 'W toku' }), r({ priorytet: null, status: 'W toku' })];
+    expect(zadaniaCount(t, true)).toBe(2);
+    expect(zadaniaCount(t, false)).toBe(0);
+    expect(badgeLabel('zad', 2)).toBe(', 2 z priorytetem 1');
   });
 
   it('autaCount: tylko usterki bez dnia naprawy i bez „Naprawione”', () => {
