@@ -268,3 +268,4 @@ Task 23: fix round 1 dispatched
 Task 23: fix round 1/5 (274f703..9176084); re-review dispatched
 Task 23: re-review clean; controller folded the 2 restore-swap minors (timestamped aside copy, SQLite header check). Verification: shared 15, web 61, server 227, build clean, e2e 56 passed / 2 skipped. Task 23 code complete. Branch `produkcja` not yet created (needs owner's explicit go — first production release). Then STOP: owner deploys the Blueprint, pastes secrets, imports the workbook, checks phones.
 - Ruling R55 (owner can't run npx): VAPID keys auto-generated once into DATA_DIR/vapid.json in every mode (prod disk is persistent); VAPID_* removed from prod render.yaml; env still overrides — cost: losing the disk means re-enabling push on phones.
+## Owner 2026-10-28: „puszczaj na produkcję”; app not in use yet → every finished change goes to `produkcja` immediately (Ruling R56, until the owner says otherwise); owner creates a fresh Blueprint, old ones unused.
