@@ -125,3 +125,47 @@ test('wpis jednego admina jest „nowy” dla drugiego admina na tym samym urzą
   await page.goto('/#zl');
   await expect(page.getByRole('link', { name: /Józef Bukowski/ }).first()).toContainText(/nowy|nowe/);
 });
+
+test('karta zlecenia: „nowe” przy cudzym wpisie i zmienionym polu po świeżym logowaniu na innym komputerze; po ponownym otwarciu znika (Task 26)', async ({ page, browser }, info) => {
+  const tag = `E2E 26 ${info.project.name} ${Date.now() % 100000}`;
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#zl');
+  await page.getByRole('link', { name: /Józef Bukowski/ }).first().click();
+  await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
+  const card = new URL(page.url()).hash;
+  await page.getByPlaceholder('Co zrobiono, czego brakuje').fill(tag);
+  await page.getByRole('button', { name: 'Dodaj wpis' }).click();
+  await expect(page.locator('li[id^="e-"]', { hasText: tag })).not.toContainText('wysyłanie');
+  await page.getByRole('button', { name: 'Edytuj' }).first().click();
+  await page.getByLabel('Uwagi admina').fill(`Uwagi ${tag}`);
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.locator('p', { hasText: `Uwagi ${tag}` })).toBeVisible();
+  await expect.poll(() => page.evaluate(async (id) => (await (await fetch(`/api/jobs/${id}`)).json()).uwagiAdmin, card.split('/')[1])).toBe(`Uwagi ${tag}`);
+
+  // drugi admin na innym komputerze, świeże logowanie (bez historii w telefonie): znaczniki z serwera
+  const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
+  const b = await ctx.newPage();
+  await login(b, 'Anna Syrek');
+  await b.goto(`/${card}`);
+  const entry = b.locator('li[id^="e-"]', { hasText: tag });
+  const uwagi = b.locator('p', { hasText: 'Uwagi admina' });
+  await expect(entry.getByText('nowe', { exact: true })).toBeVisible();
+  await expect(entry).toContainText('nowy wpis od ostatniej wizyty');
+  await expect(uwagi.getByText('nowe', { exact: true })).toBeVisible();
+  // własny wpis A nie jest „nowy” dla A
+  await expect(page.locator('li[id^="e-"]', { hasText: tag }).getByText('nowe', { exact: true })).toHaveCount(0);
+  await entry.scrollIntoViewIfNeeded();
+  await b.screenshot({ path: `${shots}task26-${phone(info) ? 'phone' : 'desktop'}-wpis.png` });
+  await uwagi.scrollIntoViewIfNeeded();
+  await b.screenshot({ path: `${shots}task26-${phone(info) ? 'phone' : 'desktop'}-pole.png` });
+
+  // wyjście z karty i powrót: obejrzane, znaczniki znikają
+  await b.goto('/#zl');
+  await expect(b.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeHidden(); // karta zamknięta: markSeen
+  await b.goto(`/${card}`);
+  await expect(entry).toBeVisible();
+  await expect(entry.getByText('nowe', { exact: true })).toHaveCount(0);
+  await expect(uwagi.getByText('nowe', { exact: true })).toHaveCount(0);
+  await ctx.close();
+});

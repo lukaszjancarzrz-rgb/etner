@@ -1,5 +1,6 @@
 import { ArrowLeft, CalendarCheck, MapPin, NavigationArrow, PencilSimple, Phone, User } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
+import { api } from '../../core/api.js';
 import { fmtDay, mapsUrl, markSeen, seenFor, telHref, useCrewColor, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { useEntities, useEntity } from '../../core/store.js';
 import { Badge, Empty, NewMark } from '../../core/ui/bits.js';
@@ -15,6 +16,8 @@ import { fmtDni, jobDays } from './jobs.js';
 
 const MON = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 export const fmtTermin = (t?: string | null) => (t ? `${MON[Number(t.slice(5, 7)) - 1]} ${t.slice(0, 4)}` : 'bez terminu');
+
+type Zmiany = { jobs: string[]; clients: string[]; sites: string[] };
 
 export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const job = useEntity('jobs', id);
@@ -32,9 +35,20 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const me = useMe();
   // „ostatnio widziane” z chwili otwarcia, do zamknięcia karty: znaczniki „nowe” nie znikają od markSeen przy otwarciu
   const since = useMemo(() => (me ? seenFor(me.id)(id) : undefined), [id, me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  const fj = useMemo(() => changedFields(job, since ?? '\uffff', me?.id, JOB_FIELDS), [job, since, me?.id]);
-  const fc = useMemo(() => changedFields(client, since ?? '\uffff', me?.id, CLIENT_FIELDS), [client, since, me?.id]);
-  const fs = useMemo(() => changedFields(site, since ?? '\uffff', me?.id, SITE_FIELDS), [site, since, me?.id]);
+  // pola: z serwera przy otwarciu (działa po świeżym logowaniu) plus historia w telefonie (bez sieci i zmiany przy otwartej karcie)
+  const [srv, setSrv] = useState<Zmiany | null>(null);
+  const tmp = !!job?._tmp;
+  useEffect(() => {
+    setSrv(null);
+    if (!since || tmp) return;
+    let live = true;
+    void api<Zmiany>(`/api/jobs/${id}/zmiany?since=${encodeURIComponent(since)}`).then((r) => live && setSrv(r), () => { /* bez sieci: tylko historia lokalna */ });
+    return () => { live = false; };
+  }, [id, since, tmp]);
+  const merge = (local: Set<string>, remote: string[] | undefined) => new Set([...local, ...(remote ?? [])]);
+  const fj = useMemo(() => merge(changedFields(job, since ?? '\uffff', me?.id, JOB_FIELDS), srv?.jobs), [job, since, me?.id, srv]);
+  const fc = useMemo(() => merge(changedFields(client, since ?? '\uffff', me?.id, CLIENT_FIELDS), srv?.clients), [client, since, me?.id, srv]);
+  const fs = useMemo(() => merge(changedFields(site, since ?? '\uffff', me?.id, SITE_FIELDS), srv?.sites?.filter((f) => (SITE_FIELDS as readonly string[]).includes(f))), [site, since, me?.id, srv]);
   useEffect(() => { if (me) markSeen(me.id, id); if (!highlight) scrollTo(0, 0); return () => { if (me) markSeen(me.id, id); }; }, [id, me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!job) {
