@@ -2,7 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { tx, type Db } from '../../core/db.js';
 import { hashPassword } from '../../core/password.js';
 import * as slowniki from '../../modules/slowniki/service.js';
-import { apply } from './apply.js';
+import * as uzytkownicy from '../../modules/uzytkownicy/service.js';
+import { apply, author } from './apply.js';
 import type { OldData } from './old-data.js';
 import { report, type Report } from './report.js';
 import { transform } from './transform.js';
@@ -14,7 +15,7 @@ class DryRun extends Error {
 export type Konto = { nazwa: string; login: string; haslo: string };
 
 /**
- * Przekształca dane arkusza i zapisuje je w jednej transakcji. `dryRun`: pełny zapis z raportem, potem wycofanie (baza bez zmian).
+ * Przekształca dane arkusza i zapisuje je w jednej transakcji (autor = pierwszy administrator bazy). `dryRun`: pełny zapis z raportem, potem wycofanie (baza bez zmian).
  * Hasła startowe zwracane tylko przy prawdziwym zapisie – do pokazania w konsoli, nigdzie nie są zapisywane.
  */
 export async function migrate(db: Db, old: OldData, o: { dryRun: boolean; now?: Date }): Promise<{ report: Report; konta: Konto[] }> {
@@ -24,6 +25,8 @@ export async function migrate(db: Db, old: OldData, o: { dryRun: boolean; now?: 
   let out: { report: Report; logins: string[] };
   try {
     out = tx(db, () => {
+      // próba bez administratora (np. na pustej kopii bazy): tymczasowy admin, wycofany razem z resztą
+      if (o.dryRun && !author(db)) uzytkownicy.create(db, 'cli', { login: 'proba-przeniesienia', name: 'Próba przeniesienia', role: 'admin', perms: [], passwordHash: '!' });
       const { logins } = apply(db, plan, { hashes, now: o.now ?? new Date() });
       const r = { report: report(plan, db), logins };
       if (o.dryRun) throw new DryRun(r);

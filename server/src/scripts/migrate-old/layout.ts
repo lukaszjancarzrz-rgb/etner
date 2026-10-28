@@ -17,7 +17,7 @@ export const COLS = {
   zlecenia: {
     kat: ['Kat.', 't'], status: ['Status', 't'], termin: ['Termin (miesiąc)', 't'], ekipa: ['Ekipa', 't'], lokalizacja: ['Lokalizacja', 't'],
     klient: ['Inwestor / klient', 't'], zakres: ['Zakres prac', 't'], kontakt: ['Kontakt (tel. / e-mail)', 't'], uwagi: ['Uwagi', 't'],
-    haslo: ['Hasło w harmonogramie', 't'], zamknieto: ['Zamknięto', 'd'],
+    haslo: ['Hasło w harmonogramie', 't'], zamknieto: ['Zamknięto', 'd'], dni: ['Dni w harmono-gramie', 'n'], od: ['Od', 'd'],
   },
   wyceny: {
     dodano: ['Data dodania', 'd'], kat: ['Kat.', 't'], status: ['Status', 't'], temat: ['Temat / lokalizacja', 't'], klient: ['Klient', 't'],

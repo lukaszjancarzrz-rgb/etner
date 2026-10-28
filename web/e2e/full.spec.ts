@@ -265,6 +265,13 @@ test('pracownik: bez Użytkowników, `#uz` pokazuje „Brak dostępu”; Ustawie
   await page.goto('/#ust');
   await expect(page.getByRole('heading', { name: 'Zmień hasło' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Słowniki' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Do przejrzenia po przeniesieniu' })).toHaveCount(0);
+});
+
+test('admin: Ustawienia mają listę „do przejrzenia” po przeniesieniu (w demo pustą)', async ({ page }) => {
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#ust');
+  await expect(page.getByRole('region', { name: 'Do przejrzenia po przeniesieniu' })).toContainText('Brak pozycji');
 });
 
 test('powiadomienia: `#zl/<id>~<wpis>` otwiera zlecenie i podświetla wpis, `#zakupy~<id>` podświetla zakup', async ({ page }, info) => {

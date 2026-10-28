@@ -10,6 +10,8 @@ const at = { wiersz: z.number().int().positive(), sekcja: txt };
 
 export const oldJobSchema = z.object({
   ...at, kat: txt, status: txt, termin: txt, ekipa: txt, lokalizacja: txt, klient: txt, zakres: txt, kontakt: txt, uwagi: txt, haslo: txt, zamknieto: day,
+  /** „Dni w harmonogramie” i „Od” – wyliczone przez arkusz z hasła (do sprawdzenia przeniesienia i kolejności numerów). */
+  dni: z.number().nullable(), od: day,
 });
 export const oldLeadSchema = z.object({
   ...at, dodano: day, kat: txt, status: txt, temat: txt, klient: txt, kontakt: txt, zrodlo: txt, opis: txt, wartosc: z.number().nullable(),

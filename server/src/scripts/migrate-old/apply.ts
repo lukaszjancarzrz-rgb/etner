@@ -1,11 +1,13 @@
-import { count, eq } from 'drizzle-orm';
-import { dayOf, type DictRodzaj, type ScheduleSlot } from '@etner/shared';
+import { and, count, eq } from 'drizzle-orm';
+import { dayOf, dictPutSchema, type DictRodzaj, type ScheduleSlot } from '@etner/shared';
+import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import { users } from '../../core/schema-base.js';
 import * as harmonogram from '../../modules/harmonogram/service.js';
 import { clients } from '../../modules/klienci/schema.js';
 import * as klienci from '../../modules/klienci/service.js';
-import { leads } from '../../modules/leady/schema.js';
+import { leadContacts, leads } from '../../modules/leady/schema.js';
+import * as przeniesienie from '../../modules/przeniesienie/service.js';
 import * as leady from '../../modules/leady/service.js';
 import * as slowniki from '../../modules/slowniki/service.js';
 import * as uzytkownicy from '../../modules/uzytkownicy/service.js';
@@ -21,6 +23,20 @@ const site = (miejscowosc: string) => ({ nazwa: '', adres: '', miejscowosc, mapa
 /** Chwila dla daty z arkusza (południe UTC = ten sam dzień w Polsce). */
 const at = (d: string) => `${d}T12:00:00.000Z`;
 
+/**
+ * Daty z arkusza w polach, które serwisy ustawiają same (chwila zapisu): zamknięcie leada/zlecenia, zakup, status i plan kontaktu.
+ * shortcut: wprost w tabeli + wpis w changes; gdyby serwisy dostały takie pola, przejść na nie.
+ */
+function patch<T extends typeof leads | typeof jobs | typeof shopping | typeof leadContacts>(db: Db, by: string, table: T, entity: string, id: string, set: Partial<T['$inferInsert']>): void {
+  const old = db.select().from(table as typeof leads).where(eq((table as typeof leads).id, id)).get();
+  const row = db.update(table as typeof leads).set({ ...set, updatedAt: new Date().toISOString() } as never).where(eq((table as typeof leads).id, id)).returning().get();
+  recordChange(db, by, entity, id, 'update', old, row);
+}
+
+/** Pierwszy aktywny administrator = autor zapisów przeniesienia (created_by wskazuje istniejące konto). */
+export const author = (db: Db): string | undefined =>
+  db.select({ id: users.id }).from(users).where(and(eq(users.role, 'admin'), eq(users.active, true))).limit(1).get()?.id;
+
 /** Baza docelowa musi być bez danych firmy (dopuszczalne: słowniki, administratorzy). */
 export function assertEmpty(db: Db): void {
   const busy = zlecenia.list(db).length + leady.list(db).length + uzytkownicy.listPeople(db).length + zadania.list(db).length + zakupy.list(db).length
@@ -34,14 +50,16 @@ export function assertEmpty(db: Db): void {
  */
 export function apply(db: Db, plan: Plan, o: { hashes: string[]; now: Date }): { logins: string[] } {
   assertEmpty(db);
-  const by = db.select({ id: users.id }).from(users).where(eq(users.role, 'admin')).limit(1).get()?.id ?? 'migracja';
+  const by = author(db);
+  if (!by) throw new Error('W bazie nie ma administratora. Najpierw: pnpm --filter @etner/server create-admin --login … --name …');
   const today = dayOf(o.now);
 
   // Słowniki: dopisane wartości na końcu list (istniejące zostają bez zmian).
   const rodzaje = [...new Set(plan.slowniki.map((s) => s.rodzaj))] as DictRodzaj[];
   for (const r of rodzaje) {
     const have = slowniki.list(db, r).map(({ id, wartosc, grupa, platne, kolor }) => ({ id, wartosc, grupa, platne, kolor }));
-    slowniki.replace(db, by, r, [...have, ...plan.slowniki.filter((s) => s.rodzaj === r).map(({ wartosc, grupa, platne }) => ({ wartosc, grupa, platne }))] as never);
+    const { items } = dictPutSchema.parse({ items: [...have, ...plan.slowniki.filter((s) => s.rodzaj === r).map(({ wartosc, grupa, platne }) => ({ wartosc, grupa, platne }))] });
+    slowniki.replace(db, by, r, items);
   }
 
   // Osoby z listy płac: konto pracownika + kolumna harmonogramu w kolejności arkusza.
@@ -77,10 +95,12 @@ export function apply(db: Db, plan: Plan, o: { hashes: string[]; now: Date }): {
       clientId: c?.id ?? null, siteId: (l.obiekt && c?.sites.get(l.obiekt)) || null, status: l.status, kategoria: l.kategoria, temat: l.temat,
       zrodlo: l.zrodlo, opis: l.opis, wartoscGr: l.wartoscGr, nastepny: '', uwagi: l.uwagi,
     })!;
-    for (const k of l.kontakty) leady.contact(db, by, row.id, k.notatka, k.nastepny || undefined, k.dzien);
+    for (const k of l.kontakty) {
+      const { contact } = leady.contact(db, by, row.id, k.notatka, k.nastepny || undefined, k.dzien)!;
+      patch(db, by, leadContacts, 'lead_contacts', contact.id, { status: k.status, plan: k.plan, ...(k.zapisano && { createdAt: k.zapisano }) });
+    }
     leady.save(db, by, { id: row.id, nastepny: l.nastepny });
-    // shortcut: data zamknięcia wprost w tabeli (serwis wpisuje chwilę zapisu); bez wpisu w changes – przeniesienie idzie do nowej bazy
-    if (l.zamknieto && leady.get(db, row.id)?.zamknieteAt) db.update(leads).set({ zamknieteAt: at(l.zamknieto) }).where(eq(leads.id, row.id)).run();
+    if (l.zamknieto && leady.get(db, row.id)?.zamknieteAt) patch(db, by, leads, 'leads', row.id, { zamknieteAt: at(l.zamknieto) });
     return row.id;
   });
 
@@ -92,7 +112,7 @@ export function apply(db: Db, plan: Plan, o: { hashes: string[]; now: Date }): {
       status: z.status, kategoria: z.kategoria, termin: z.termin, ekipa: z.ekipa, rodzaj: '', uwagiAdmin: z.uwagiAdmin,
     })!;
     if (z.zakres) zakres.create(db, by, row.id, { tekst: z.zakres.slice(0, 5000), uploads: [] });
-    if (z.zamknieto && row.zamknieteAt) db.update(jobs).set({ zamknieteAt: at(z.zamknieto) }).where(eq(jobs.id, row.id)).run(); // jak w leadach
+    if (z.zamknieto && row.zamknieteAt) patch(db, by, jobs, 'jobs', row.id, { zamknieteAt: at(z.zamknieto) });
     return row.id;
   });
 
@@ -110,7 +130,23 @@ export function apply(db: Db, plan: Plan, o: { hashes: string[]; now: Date }): {
     const r = zakupy.create(db, by, { co: z.co, uwagi: z.uwagi });
     if (!z.kupione) continue;
     zakupy.update(db, by, r.id, { status: 'Kupione' });
-    if (z.kupiono) db.update(shopping).set({ kupioneAt: at(z.kupiono) }).where(eq(shopping.id, r.id)).run(); // jak w leadach
+    if (z.kupiono) patch(db, by, shopping, 'shopping', r.id, { kupioneAt: at(z.kupiono) });
   }
+
+  przeniesienie.add(db, by, plan.doPrzejrzenia.map(({ co, arkusz, wiersz, dzien, osoba, tekst, opis, ile, pominiete }) => ({ co, arkusz, wiersz, dzien, osoba, tekst, opis, ile, pominiete })));
+  checkDict(db, plan);
   return { logins };
+}
+
+/** Każda wartość słownikowa zapisana w rekordach musi być w słowniku (inaczej transakcja się wycofuje). */
+function checkDict(db: Db, plan: Plan): void {
+  const used: [DictRodzaj, string | null][] = [
+    ...plan.zlecenia.flatMap((z): [DictRodzaj, string | null][] => [['status_zlecenia', z.status], ['kategoria', z.kategoria], ['ekipa', z.ekipa]]),
+    ...plan.leady.flatMap((l): [DictRodzaj, string | null][] => [['status_leada', l.status], ['kategoria', l.kategoria], ['zrodlo', l.zrodlo], ...l.kontakty.map((k): [DictRodzaj, string] => ['status_leada', k.status])]),
+    ...plan.osoby.map((o): [DictRodzaj, string | null] => ['ekipa', o.ekipa]),
+    ...plan.harmonogram.flatMap((h) => h.sloty.flatMap((s): [DictRodzaj, string][] => (s.rodzaj === 'kod' ? [['kod_nieobecnosci', s.kod]] : []))),
+    ...plan.zadania.flatMap((t): [DictRodzaj, string][] => [['grupa_zadan', t.grupa], ['status_zadania', t.status]]),
+  ];
+  const missing = [...new Set(used.filter(([r, v]) => v && !slowniki.list(db, r).some((d) => d.wartosc === v)).map(([r, v]) => `${r}: ${v}`))];
+  if (missing.length) throw new Error(`Wartości spoza słowników: ${missing.join(', ')}`);
 }

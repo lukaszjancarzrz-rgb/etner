@@ -13,7 +13,7 @@ type Sec<T> = { marker: string; title: string; row: number; end: number; rows: R
 type Table<T> = { col: number; headers: string[]; secs: Sec<T>[]; extra?: Record<string, string | boolean> };
 
 const j = (o: Partial<Row<OldJob>>): Row<OldJob> => ({
-  kat: '', status: '', termin: '', ekipa: '', lokalizacja: '', klient: '', zakres: '', kontakt: '', uwagi: '', haslo: '', zamknieto: null, ...o,
+  kat: '', status: '', termin: '', ekipa: '', lokalizacja: '', klient: '', zakres: '', kontakt: '', uwagi: '', haslo: '', zamknieto: null, dni: null, od: null, ...o,
 });
 const l = (o: Partial<Row<OldLead>>): Row<OldLead> => ({
   dodano: null, kat: '', status: '', temat: '', klient: '', kontakt: '', zrodlo: '', opis: '', wartosc: null, nastepny: null, ustalono: '', ostatni: null, uwagi: '', zamknieto: null, ...o,
@@ -30,10 +30,10 @@ const BUY_H = ['Lp.', 'Co', 'Sklep', 'Grupa', 'Status', 'Kwota (zł)', 'Lista (z
 const ZLECENIA = {
   left: [
     { marker: '@AKTUALNE|s|Planowane;W realizacji', title: 'AKTUALNE – teraz i najbliższe tygodnie', row: 6, end: 53, rows: [
-      j({ kat: 'E', status: 'W realizacji', termin: 'październik 2026', ekipa: 'ekipa Adam', lokalizacja: 'Zawoja', klient: 'Jan Kowalski', zakres: 'elektryka – dom, rozdzielnica', kontakt: '727 728 903', haslo: 'Kowalski' }),
+      j({ kat: 'E', status: 'W realizacji', termin: 'październik 2026', ekipa: 'ekipa Adam', lokalizacja: 'Zawoja', klient: 'Jan Kowalski', zakres: 'elektryka – dom, rozdzielnica', kontakt: '727 728 903', haslo: 'Kowalski', dni: 6, od: '2026-10-05' }),
       j({ kat: 'RW', status: 'W realizacji', termin: 'październik 2026', ekipa: 'ekipa Bartek', lokalizacja: 'Stryszawa', klient: 'Nowak', zakres: 'rekuperacja – kanały + centrala', uwagi: 'klucz u sąsiada', haslo: 'Nowak' }),
       j({ kat: 'K', status: 'Planowane', termin: 'listopad 2026', ekipa: 'ekipa Adam', lokalizacja: 'Zawoja', klient: 'Jan Kowalski', zakres: 'klima – 2 split', kontakt: '+48727728903', haslo: 'Zawoja klima' }),
-      j({ kat: 'H', status: 'Planowane', termin: 'grudzień 2026', ekipa: 'mieszane', lokalizacja: 'Budzów', klient: 'Anna Wiśniewska', zakres: 'hydraulika – kotłownia', haslo: 'Wiśniewska' }),
+      j({ kat: 'H', status: 'Planowane', termin: 'grudzień 2026', ekipa: 'mieszane', lokalizacja: 'Budzów', klient: 'Anna Wiśniewska', zakres: 'hydraulika – kotłownia', haslo: 'Wiśniewska', dni: 1, od: '2026-10-06' }),
       j({ kat: 'SH', status: 'Planowane', termin: 'kiedyś', ekipa: 'ekipa Bartek', lokalizacja: 'Jordanów', klient: 'Piotr Zieliński', zakres: 'smart home – sterowanie roletami', kontakt: 'tel. 600 111 222; p.zielinski@example.com', haslo: 'Zieliński' }),
       j({ kat: 'E', status: 'W realizacji', termin: 'październik 2026', ekipa: 'ekipa Bartek', lokalizacja: 'Maków Podhalański', klient: 'Marek Wójcik', zakres: 'elektryka – warsztat', haslo: 'Wójcik' }),
     ] },
@@ -43,8 +43,8 @@ const ZLECENIA = {
     ] },
   ],
   archive: { marker: '@ZAKOŃCZONE|s|Do rozliczenia;Rozliczone;Anulowane', title: 'ZAKOŃCZONE – archiwum', row: 6, end: 158, rows: [
-    j({ kat: 'K', status: 'Rozliczone', termin: 'wrzesień 2026', ekipa: 'ekipa Adam', lokalizacja: 'Skawica', klient: 'Tomasz Lis', zakres: 'klima – 2 split', haslo: 'Lis', zamknieto: '2026-09-30' }),
-    j({ kat: 'E', status: 'Do rozliczenia', termin: 'październik 2026', ekipa: 'ekipa Bartek', lokalizacja: 'Białka', klient: 'Józef Dudek', zakres: 'elektryka – garaż', haslo: 'Dudek', zamknieto: '2026-10-20' }),
+    j({ kat: 'K', status: 'Rozliczone', termin: 'wrzesień 2026', ekipa: 'ekipa Adam', lokalizacja: 'Skawica', klient: 'Tomasz Lis', zakres: 'klima – 2 split', haslo: 'Lis', zamknieto: '2026-09-30', dni: 3, od: '2026-10-08' }),
+    j({ kat: 'E', status: 'Do rozliczenia', termin: 'październik 2026', ekipa: 'ekipa Bartek', lokalizacja: 'Białka', klient: 'Józef Dudek', zakres: 'elektryka – garaż', haslo: 'Dudek', zamknieto: '2026-10-20', dni: 1, od: '2026-10-09' }),
     j({ kat: 'I', status: 'Anulowane', termin: 'sierpień 2026', lokalizacja: 'Zembrzyce', klient: 'Ewa Kamińska', zakres: 'przegląd instalacji', zamknieto: '2026-08-12' }),
   ] },
 };
@@ -55,6 +55,8 @@ const WYCENY = {
     { marker: '@NA JUŻ|s|Do wyceny;Wycena wysłana', title: 'NA JUŻ – do wyceny i wysłane', row: 6, end: 38, rows: [
       l({ kat: 'K', status: 'Do wyceny', temat: 'Sucha – klimatyzacja biura', klient: 'Mazur', kontakt: '501 202 303 / mazur@example.com', zrodlo: 'polecenie', opis: 'biuro 3 pokoje', nastepny: '2026-11-05', ostatni: '2026-10-10' }),
       l({ kat: 'E', status: 'Wycena wysłana', temat: 'Jordanów / instalacja w garażu', klient: 'Zieliński', kontakt: '600111222', zrodlo: 'google', nastepny: '2026-10-30' }),
+      // telefon Kowalskiego, e-mail Zielińskiego
+      l({ kat: 'E', status: 'Do wyceny', temat: 'Garaż – gniazdka', klient: 'Kowalski', kontakt: '727728903; p.zielinski@example.com' }),
     ] },
     { marker: '@NA KIEDYŚ|s|Na później', title: 'NA KIEDYŚ – wrócić do tematu później', row: 40, end: 62, rows: [
       l({ kat: 'RW', status: 'Na później', temat: 'Rekuperacja w nowym domu', klient: 'Pająk', zrodlo: 'oferteo', opis: 'stan surowy, wiosna', nastepny: '2027-03-01', ustalono: 'zadzwoni po zimie', ostatni: '2026-09-02' }),
@@ -106,6 +108,7 @@ const ZAKUPY = {
   ],
   archive: { marker: '@KUPIONE|s|Kupione', title: 'KUPIONE – archiwum', row: 6, end: 108, rows: [
     b({ co: 'Klucz dynamometryczny', sklep: 'Castorama', grupa: 'Narzędzia klima', status: 'Kupione', kwota: 180, lista: 'Narzędzia', kupiono: '2026-09-15' }),
+    b({ co: 'Wiertła do betonu', grupa: 'Inne', status: 'Kupione' }),
   ] },
 };
 
@@ -122,6 +125,8 @@ const DAYS: { dzien: string; komorki: Record<string, string>; uwagi?: string }[]
   { dzien: '2026-10-07', komorki: { E: 'Kowalski / Nowak', F: 'szkolenie', G: 'x', H: 'urlop okolicznościowy' } },
   { dzien: '2026-10-08', komorki: { E: 'urlop', F: 'Nowk', G: 'Lis', H: 'magazyn' } },
   { dzien: '2026-10-09', komorki: { E: 'urlop n', F: 'L4', G: 'wolne', H: 'Dudek / Wójcik' } },
+  // trzy wpisy w dniu, „A / B” bez żadnego hasła, hasło „Lis” tylko wewnątrz słowa, dwa hasła w jednym wpisie
+  { dzien: '2026-10-12', komorki: { E: 'Kowalski / Nowak / Lis', F: 'magazyn / biuro', G: 'Kalisz', H: 'Nowak Kowalski' } },
 ];
 
 const KODY = ['urlop', 'na żądanie', 'L4', 'okolicznościowy', 'bezpłatny', 'wolne'];
