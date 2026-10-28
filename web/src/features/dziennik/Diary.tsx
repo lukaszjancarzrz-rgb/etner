@@ -71,7 +71,7 @@ export function Diary({ ownerType, ownerId, highlight, disabled }: { ownerType: 
                       <button type="button" onClick={() => setView(photos.indexOf(a))} className="block w-full overflow-hidden rounded-xl bg-line/50" aria-label={`Zdjęcie ${a.nazwa ?? ''}, powiększ`}>
                         <img src={fileUrl(a, 'thumb')} alt="" loading="lazy" decoding="async" width={160} height={160} className="aspect-square h-auto w-full object-cover" />
                       </button>
-                      {admin && a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-white" title="Widoczne dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>}
+                      {admin && a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-ok-ink" title="Widoczne dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>}
                     </li>
                   ))}
                 </ul>
@@ -96,7 +96,7 @@ export function Diary({ ownerType, ownerId, highlight, disabled }: { ownerType: 
 export function KlientToggle({ on, onChange, dark }: { on: boolean; onChange: (v: boolean) => void; dark?: boolean }) {
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)}
-      className={cn('inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors duration-200', on ? (dark ? 'bg-ok text-white' : 'bg-ok/12 text-ok') : dark ? 'text-white/85 hover:bg-white/10' : 'text-ink-2 hover:bg-ink/5')}>
+      className={cn('inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors duration-200', on ? (dark ? 'bg-ok text-ok-ink' : 'bg-ok/12 text-ok') : dark ? 'text-white/85 hover:bg-white/10' : 'text-ink-2 hover:bg-ink/5')}>
       {on ? <Eye className="h-5 w-5" weight="bold" aria-hidden /> : <EyeSlash className="h-5 w-5" aria-hidden />}
       Pokaż klientowi
     </button>

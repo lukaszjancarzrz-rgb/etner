@@ -21,7 +21,7 @@ export function Mark({ className = 'h-9 w-9' }: { className?: string }) {
 export function Logo({ className, size = 'md' }: { className?: string; size?: 'md' | 'lg' }) {
   const lg = size === 'lg';
   return (
-    <span className={cn('inline-flex items-center gap-3', className)} role="img" aria-label="ETNER, inteligentny wybór">
+    <span className={cn('inline-flex items-center gap-3', className)} role="img" aria-label="ETNER, inteligentny wybór" data-logo>
       <Mark className={lg ? 'h-14 w-14' : 'h-10 w-10'} />
       <span className="grid leading-none" aria-hidden>
         <span className={cn('font-wide font-black tracking-tight', lg ? 'text-4xl' : 'text-2xl')}>

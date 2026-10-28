@@ -15,7 +15,7 @@ import type { Route } from '../../routes.js';
 import { useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
-import { cellKey, cellsOf, cellText, monthDays, slotLabel, type Slot } from './model.js';
+import { cellKey, cellsOf, cellText, monthDays, type Slot } from './model.js';
 import { Avatar } from '../../core/ui/avatar.js';
 import { useRepairMarks, type RepairMark } from '../samochody/repairs.js';
 
@@ -297,9 +297,9 @@ function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { 
   const body = (
     <span className="min-w-0 pl-2.5">
       <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
-        <span className="sr-only">{j?.numer ?? 'zlecenie'}</span>
+        <span className="sr-only">Zlecenie {j?.numer ?? ''}</span>
         {j?.kategoria && <span className="flex min-w-0 items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span className="truncate">{j.kategoria}</span></span>}
-        {slot.polDnia && <span className="shrink-0 font-bold" aria-label="pół dnia">½</span>}
+        {slot.polDnia && <span className="shrink-0 font-bold"><span aria-hidden>½</span><span className="sr-only">pół dnia</span></span>}
         {j?.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
       </span>
       <span className={cn('block truncate font-semibold leading-tight', compact ? 'text-sm' : 'text-[15px]')}>{j?.client?.nazwa ?? ''}</span>
@@ -309,7 +309,7 @@ function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { 
   const style = { background: catTint(c), boxShadow: `inset 4px 0 0 ${catStripe(c)}` };
   if (!link) return <span className={cls} style={style}>{body}</span>;
   return (
-    <a href={`#zl/${slot.jobId}`} aria-label={`Zlecenie ${slotLabel(slot, ctx.jobs)}${slot.polDnia ? ', pół dnia' : ''}`} style={style}
+    <a href={`#zl/${slot.jobId}`} style={style}
       className={cn(cls, 'decoration-1 underline-offset-2 transition-[outline-color] duration-200 outline-1 outline-transparent hover:underline hover:outline-ink-2/50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action')}>{body}</a>
   );
 }
@@ -321,7 +321,7 @@ function CodeChip({ slot, ctx }: { slot: Exclude<Slot, { rodzaj: 'zlecenie' }>; 
       style={color ? { background: `${color}26`, color: 'var(--ink)', boxShadow: `inset 0 0 0 1px ${color}80` } : undefined}>
       {color && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />}
       <span className="truncate">{slot.rodzaj === 'kod' ? slot.kod : slot.tekst}</span>
-      {slot.polDnia && <span className="text-ink-2" aria-label="pół dnia">½</span>}
+      {slot.polDnia && <span className="text-ink-2"><span aria-hidden>½</span><span className="sr-only">pół dnia</span></span>}
     </span>
   );
 }
@@ -336,7 +336,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   const draft = p.draftMap.get(key);
   const shown = draft && Array.isArray(draft.proposal) ? (draft.proposal as Slot[]) : cur;
   const rep = p.repairs.get(key);
-  const label = `${person.nazwa}, ${dayShort(dzien)}: ${rep ? `${rep.tekst}, ` : ''}${cellText(shown, p.ctx.jobs)}${draft ? ' (szkic)' : ''}`;
+  const label = `${person.nazwa}, ${dayShort(dzien)}: ${rep ? `${rep.tekst}, ` : ''}${cellText(shown, p.ctx.jobs)}${draft ? ', szkic' : ''}`;
   const hasJob = shown.some((s) => s.rodzaj === 'zlecenie');
   const szkic = draft && <span className={cn('pointer-events-none absolute top-1 rounded-full', p.open && hasJob ? (compact ? 'right-8' : 'right-11') : 'right-1', ' bg-action px-1.5 text-xs font-bold leading-4 text-action-ink')}>szkic</span>;
   const cls = cn('relative block h-full w-full min-w-0 scroll-m-24 rounded-xl p-1.5 text-left transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none',
@@ -346,7 +346,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
     return (
       <button type="button" data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
         onClick={() => { p.tap?.(dzien); p.open!(dzien, person); }} className={cn(cls, 'min-h-12 transition-colors duration-200 hover:bg-action/8')}>
-        {view(<CellView slots={shown} ctx={p.ctx} compact={compact} />)}{szkic}
+        {view(<CellView slots={shown} ctx={p.ctx} compact={compact} />)}{' '/* widoczny tekst „urlop szkic” zawarty w nazwie „…: urlop, szkic” (axe: bez nawiasów) */}{szkic}
       </button>
     );
   }
@@ -408,7 +408,7 @@ function DayCard({ d, p }: { d: string; p: ViewProps }) {
     <article ref={ref} id={`d-${d}`} data-day={d} className={cn('scroll-mt-20 overflow-hidden rounded-2xl border bg-card shadow-card', isToday ? 'border-action' : 'border-line')}>
       <header onClick={() => p.tap?.(d)} className={cn('flex items-center justify-between gap-2 px-4 py-2.5', isToday ? 'bg-action/10' : 'border-b border-line')}>
         <h3 className="font-wide font-extrabold first-letter:uppercase">{dayLong(d)}</h3>
-        <span className="flex items-center gap-1.5">{fresh && <NewPill />}{isToday && <Badge tone="action">dziś</Badge>}{info && <Badge tone="warn">{info}</Badge>}</span>
+        <span className="flex items-center gap-1.5">{fresh && <NewPill />}{isToday && <Badge tone="ink">dziś</Badge>}{info && <Badge tone="warn">{info}</Badge>}</span>
       </header>
       {note && <p className="flex gap-2 border-b border-line bg-bg/60 px-4 py-2 text-sm"><NotePencil className="mt-0.5 h-4 w-4 shrink-0 text-ink-2" />{note}</p>}
       <ul className="divide-y divide-line/70">

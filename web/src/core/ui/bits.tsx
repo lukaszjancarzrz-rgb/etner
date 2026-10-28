@@ -29,7 +29,7 @@ export const Empty = ({ icon: I, title, hint, children }: { icon: Icon; title: s
 export const Badge = ({ children, tone = 'line', className }: { children: ReactNode; tone?: 'line' | 'ok' | 'action' | 'warn' | 'ink' | 'new'; className?: string }) => (
   <span className={cn('inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold whitespace-nowrap', {
     line: 'border border-line text-ink-2',
-    ok: 'bg-ok text-white',
+    ok: 'bg-ok text-ok-ink',
     action: 'bg-action/12 text-action',
     warn: 'border border-danger/50 text-danger',
     ink: 'bg-ink text-bg',

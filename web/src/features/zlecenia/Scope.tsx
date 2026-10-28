@@ -70,7 +70,7 @@ export function Scope({ jobId, disabled }: { jobId: string; disabled?: boolean }
                           <button type="button" onClick={() => setView(photos.indexOf(a))} className="block w-full overflow-hidden rounded-xl bg-line/50" aria-label={`Zdjęcie do punktu ${i + 1}, powiększ`}>
                             <img src={fileUrl(a, 'thumb')} alt="" loading="lazy" decoding="async" width={160} height={160} className="aspect-square h-auto w-full object-cover" />
                           </button>
-                          {admin && a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-white" title="Widoczne dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>}
+                          {admin && a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-ok-ink" title="Widoczne dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>}
                         </li>
                       ))}
                     </ul>

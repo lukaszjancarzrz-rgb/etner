@@ -37,7 +37,7 @@ export function slotLabel(s: Slot, jobs: Map<string, JobView>): string {
   return j ? [j.numer, j.client?.nazwa, j.site?.miejscowosc].filter(Boolean).join(', ') : 'Zlecenie';
 }
 export const cellText = (slots: Slot[], jobs: Map<string, JobView>) =>
-  slots.length ? slots.map((s) => `${slotLabel(s, jobs)}${s.polDnia ? ' (pół dnia)' : ''}`).join(' + ') : 'pusto';
+  slots.length ? slots.map((s) => `${slotLabel(s, jobs)}${s.polDnia ? ', pół dnia' : ''}`).join(' + ') : 'pusto';
 
 /** Treść błędu: sesja (401), serwer (5xx), brak sieci albo komunikat serwera. */
 export function errText(e: unknown): string {

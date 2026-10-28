@@ -66,14 +66,14 @@ test('demo: zlecenie, dziennik ze zdjęciem, harmonogram, zakupy', async ({ page
   await page.getByLabel('Tekst').fill(tag);
   await page.getByRole('button', { name: 'Zapisz szkic' }).click();
   await expect(cell).toContainText(tag);
-  await expect(cell).toHaveAttribute('aria-label', /\(szkic\)$/);
+  await expect(cell).toHaveAttribute('aria-label', /, szkic$/);
   await page.getByRole('button', { name: 'Przejrzyj' }).click();
   const review = page.getByRole('dialog', { name: 'Szkice harmonogramu' });
   await expect(review.getByText(tag)).toBeVisible();
   await review.getByRole('button', { name: 'Zatwierdź i powiadom' }).click();
   await expect(review).toBeHidden();
   await expect(cell).toContainText(tag);
-  await expect(cell).not.toHaveAttribute('aria-label', /\(szkic\)$/);
+  await expect(cell).not.toHaveAttribute('aria-label', /, szkic$/);
   await page.reload();
   await expect(page.locator(`[data-cell$="|${who}"]`).first()).toContainText(tag);
 
@@ -130,7 +130,7 @@ test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiers
   await expect(ed).toBeHidden();
   for (const d of work) for (const w of [a, b]) {
     await expect(cellOf(d, w)).toContainText(numer);
-    await expect(cellOf(d, w)).toHaveAttribute('aria-label', /\(szkic\)$/);
+    await expect(cellOf(d, w)).toHaveAttribute('aria-label', /, szkic$/);
   }
 
   await page.getByRole('button', { name: 'Przejrzyj' }).click();
@@ -141,7 +141,7 @@ test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiers
   await page.reload();
   for (const d of work) for (const w of [a, b]) {
     await expect(cellOf(d, w)).toContainText(numer);
-    await expect(cellOf(d, w)).not.toHaveAttribute('aria-label', /\(szkic\)$/);
+    await expect(cellOf(d, w)).not.toHaveAttribute('aria-label', /, szkic$/);
   }
   // zlecenie w komórce prowadzi do karty zlecenia
   await cellOf(work[0]!, a).getByRole('link', { name: new RegExp(`^Zlecenie ${numer}, Józef Bukowski`) }).click();
@@ -191,7 +191,7 @@ test('harmonogram: zmieniony dzień ma „nowe”, licznik spada po obejrzeniu d
     await page.getByRole('radio', { name: 'Tekst' }).click();
     await page.getByLabel('Tekst').fill(`Magazyn ${d}`);
     await page.getByRole('button', { name: 'Zapisz szkic' }).click();
-    await expect(page.locator(`[data-cell="${d}|Bartek Gawlik"]`)).toHaveAttribute('aria-label', /\(szkic\)$/);
+    await expect(page.locator(`[data-cell="${d}|Bartek Gawlik"]`)).toHaveAttribute('aria-label', /, szkic$/);
   }
   await page.getByRole('button', { name: 'Przejrzyj' }).click();
   const review = page.getByRole('dialog', { name: 'Szkice harmonogramu' });
