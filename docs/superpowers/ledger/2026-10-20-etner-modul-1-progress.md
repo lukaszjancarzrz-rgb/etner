@@ -266,3 +266,4 @@ Task 23: review — Needs fixes: real import would queue Pumble channels for eve
 - Ruling R54: Litestream kept with zero extra secrets — reuses R2_KEY/R2_SECRET/R2_ENDPOINT and the photo bucket under prefix `db/`; tarball sha256-pinned; owner creates ONE fresh Blueprint (prompted for secrets) and deletes earlier ones — cost: DB copy shares the photo bucket.
 Task 23: fix round 1 dispatched
 Task 23: fix round 1/5 (274f703..9176084); re-review dispatched
+Task 23: re-review clean; controller folded the 2 restore-swap minors (timestamped aside copy, SQLite header check). Verification: shared 15, web 61, server 227, build clean, e2e 56 passed / 2 skipped. Task 23 code complete. Branch `produkcja` not yet created (needs owner's explicit go — first production release). Then STOP: owner deploys the Blueprint, pastes secrets, imports the workbook, checks phones.
