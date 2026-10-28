@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { autaCount, changedDays, freshByJob, naJutroCount, unseenDays, zadaniaCount, zakupyCount } from '../badges.js';
+import { autaCount, changedDays, freshByJob, leadyCount, naJutroCount, unseenDays, zadaniaCount, zakupyCount } from '../badges.js';
 import { addDays } from '@etner/shared';
-import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenFor, today, uploadSeen, useDict, useMe, useSeenVersion } from '../data.js';
+import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenFor, today, uploadSeen, useDict, useMe, useSeenVersion, useStatusGroup } from '../data.js';
 import { useEntities } from '../store.js';
 import { withoutEchoes } from '../write.js';
 
@@ -42,6 +42,8 @@ export function useBadges(): Record<string, number> {
   const shopping = useEntities('shopping');
   const faults = useEntities('car_faults');
   const tasks = useEntities('tasks');
+  const leads = useEntities('leads');
+  const leadGroup = useStatusGroup('status_leada');
   const first = useDict('status_zakupu')[0]?.wartosc;
   const off = useDict('dzien_wolny');
   return useMemo((): Record<string, number> => {
@@ -55,6 +57,7 @@ export function useBadges(): Record<string, number> {
       zakupy: zakupyCount(shopping, first, admin),
       auta,
       zad: zadaniaCount(tasks, admin),
+      leady: leadyCount(leads, leadGroup, day, admin),
     };
-  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, faults, tasks, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, faults, tasks, leads, leadGroup, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
 }

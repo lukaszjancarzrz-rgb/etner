@@ -1,6 +1,7 @@
 import { nextWorkday } from '@etner/shared';
 import type { Rec } from './store.js';
 import { isDone } from '../features/zadania/model.js';
+import { isOverdue } from '../features/leady/model.js';
 
 /** Zmiana przez inną osobę (`_by` ze strumienia zmian); bez `_by` (snapshot) nie jest nowa. Też dla wersji z `_hist` na karcie. */
 export const byOther = (r: Rec, meId: string | undefined) => !r._tmp && !!r._by && r._by !== meId;
@@ -86,8 +87,14 @@ export const autaCount = (faults: Rec[]): number => faults.filter((f) => !f.napr
 /** Zadania (admin): otwarte z priorytetem 1. */
 export const zadaniaCount = (tasks: Rec[], admin: boolean): number => (admin ? tasks.filter((t) => t.priorytet === 1 && !isDone(t)).length : 0);
 
-/** Dopisek licznika do nazwy pozycji menu dla czytnika (cała nazwa w sr-only, bez spacji przed przecinkiem): Samochody i Więcej – usterki bez terminu, Zadania – priorytet 1, reszta – nowości. */
-export const badgeLabel = (screen: string, n: number) => `, ${n} ${screen === 'auta' || screen === 'wiecej' ? 'bez terminu naprawy' : screen === 'zad' ? 'z priorytetem 1' : 'nowe'}`;
+/** Leady (admin): zaległe kontakty, ta sama reguła co sekcja „Zaległe kontakty” na ekranie Leady. */
+export const leadyCount = (leads: Rec[], group: (status: string) => string, today: string, admin: boolean): number =>
+  admin ? leads.filter((l) => isOverdue(l, group(l.status), today)).length : 0;
+
+const zaleglych = (n: number) => (n === 1 ? 'zaległy kontakt' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zaległe kontakty' : 'zaległych kontaktów');
+
+/** Dopisek licznika do nazwy pozycji menu dla czytnika (cała nazwa w sr-only, bez spacji przed przecinkiem): Samochody i Więcej – usterki bez terminu, Zadania – priorytet 1, Leady – zaległe kontakty, reszta – nowości. */
+export const badgeLabel = (screen: string, n: number) => `, ${n} ${screen === 'auta' || screen === 'wiecej' ? 'bez terminu naprawy' : screen === 'zad' ? 'z priorytetem 1' : screen === 'leady' ? zaleglych(n) : 'nowe'}`;
 
 /** „99+” powyżej 99. */
 export const badgeText = (n: number) => (n > 99 ? '99+' : String(n));

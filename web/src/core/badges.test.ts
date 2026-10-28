@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autaCount, badgeText, changedDays, freshByJob, naJutroCount, staleDayKeys, ViewedDays, unseenDays, zadaniaCount, zakupyCount, badgeLabel } from './badges.js';
+import { autaCount, badgeText, changedDays, freshByJob, leadyCount, naJutroCount, staleDayKeys, ViewedDays, unseenDays, zadaniaCount, zakupyCount, badgeLabel } from './badges.js';
 
 const T0 = '2026-10-21T08:00:00.000Z', T1 = '2026-10-21T09:00:00.000Z', T2 = '2026-10-21T10:00:00.000Z';
 const r = (o: Record<string, unknown>) => ({ id: Math.random().toString(36), createdAt: T0, updatedAt: T0, ...o }) as any;
@@ -88,6 +88,17 @@ describe('liczniki w menu', () => {
     expect(zadaniaCount(t, true)).toBe(2);
     expect(zadaniaCount(t, false)).toBe(0);
     expect(badgeLabel('zad', 2)).toBe(', 2 z priorytetem 1');
+  });
+
+  it('leadyCount: zaległe kontakty jak na ekranie Leady (otwarte, termin dziś lub wcześniej), tylko admin; odmiana w opisie dla czytnika', () => {
+    const group = (st: string) => (st === 'Zamknięty' ? 'zamkniete' : 'aktualne');
+    const l = [r({ status: 'Nowy', nastepny: '2026-10-28' }), r({ status: 'Nowy', nastepny: '2026-10-20' }), r({ status: 'Nowy', nastepny: '2026-10-29' }),
+      r({ status: 'Nowy', nastepny: null }), r({ status: 'Zamknięty', nastepny: '2026-10-01' })];
+    expect(leadyCount(l, group, '2026-10-28', true)).toBe(2);
+    expect(leadyCount(l, group, '2026-10-28', false)).toBe(0);
+    expect([1, 2, 4, 5, 12, 14, 22, 25, 101].map((n) => badgeLabel('leady', n))).toEqual([
+      ', 1 zaległy kontakt', ', 2 zaległe kontakty', ', 4 zaległe kontakty', ', 5 zaległych kontaktów', ', 12 zaległych kontaktów',
+      ', 14 zaległych kontaktów', ', 22 zaległe kontakty', ', 25 zaległych kontaktów', ', 101 zaległych kontaktów']);
   });
 
   it('autaCount: tylko usterki bez dnia naprawy i bez „Naprawione”', () => {
