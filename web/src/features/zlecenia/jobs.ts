@@ -22,11 +22,11 @@ export function jobDays(entries: Rec[], jobId: string): { dni: number; od?: stri
   return { dni: rows.reduce((s, r) => s + (r.polDnia ? 0.5 : 1), 0), od: ds[0], do: ds.at(-1) };
 }
 
-/** Kolejność listy zleceń: najpóźniejszy miesiąc terminu na górze (bez terminu na końcu), w miesiącu – najwcześniejszy pierwszy dzień w harmonogramie (bez dni po nich), potem numer malejąco. */
+/** Kolejność listy zleceń: najstarszy miesiąc terminu na górze (bez terminu na końcu), w miesiącu – najwcześniejszy pierwszy dzień w harmonogramie (bez dni po nich), potem numer malejąco. */
 export function byTermin(firstDay: Map<string, string>): (a: Rec, b: Rec) => number {
   return (a, b) => {
     const ta = (a.termin as string | null) ?? '', tb = (b.termin as string | null) ?? '';
-    if (ta !== tb) return ta && tb ? tb.localeCompare(ta) : ta ? -1 : 1;
+    if (ta !== tb) return ta && tb ? ta.localeCompare(tb) : ta ? -1 : 1;
     const da = firstDay.get(a.id) ?? '', db = firstDay.get(b.id) ?? '';
     if (da !== db) return da && db ? da.localeCompare(db) : da ? -1 : 1;
     return String(b.numer ?? '').localeCompare(String(a.numer ?? ''), 'pl', { numeric: true });

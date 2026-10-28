@@ -82,19 +82,21 @@ export function mapsUrl(site: Rec | undefined): string | undefined {
 
 export const telHref = (t: string) => `tel:${t.replace(/[^\d+]/g, '')}`;
 
-/** Ostatnia wizyta w zleceniu (licznik „nowe”), per urządzenie. */
-const SEEN0 = 'seen0';
+/** Ostatnia wizyta w zleceniu (licznik „nowe”), per użytkownik na urządzeniu (drugi admin na tym samym komputerze ma własne „widziane”). */
+const seen0 = (userId: string) => `seen0:${userId}`;
+/** Pierwsze uruchomienie użytkownika na urządzeniu: zmiany innych z ostatnich dni są „nowe” (np. wpis dodany przed zalogowaniem). */
+const FIRST_RUN_DAYS = 3;
 const navKey = (userId: string, screen: string) => `nav-seen:${userId}:${screen}`;
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 /** Tylko odczyt (bezpieczne w useMemo). Bez zapisanej bazy: „teraz”, czyli nic nie jest nowe, dopóki ensureSeenBase jej nie zapisze. */
-export const seenAt = (jobId: string): string => read(`seen:${jobId}`) ?? read(SEEN0) ?? new Date().toISOString();
+export const seenFor = (userId: string) => (jobId: string): string => read(`seen:${userId}:${jobId}`) ?? read(seen0(userId)) ?? new Date().toISOString();
 /** Baza „ostatnio widziane” ekranu (pierwsze uruchomienie), per użytkownik; tylko odczyt. */
 export const screenSeenAt = (userId: string, screen: string): string => read(navKey(userId, screen)) ?? new Date().toISOString();
 /** Pierwsze uruchomienie: baza „ostatnio widziane” = teraz (stare dane nie są „nowe”). Wołać w efekcie. */
 export function ensureSeenBase(userId: string, screens: string[]): void {
   try {
     const now = new Date().toISOString();
-    if (!localStorage.getItem(SEEN0)) localStorage.setItem(SEEN0, now);
+    if (!localStorage.getItem(seen0(userId))) localStorage.setItem(seen0(userId), new Date(Date.now() - FIRST_RUN_DAYS * 864e5).toISOString());
     for (const sc of screens) if (!localStorage.getItem(navKey(userId, sc))) localStorage.setItem(navKey(userId, sc), now);
     // obejrzane dni starsze niż DAY_SEEN_KEEP: usuwamy (licznik i tak ich nie liczy)
     const cut = addDays(today(), -DAY_SEEN_KEEP);
@@ -104,8 +106,8 @@ export function ensureSeenBase(userId: string, screens: string[]): void {
 let seenVer = 0;
 const seenSubs = new Set<() => void>();
 const bump = () => { seenVer++; for (const f of seenSubs) f(); };
-export function markSeen(jobId: string): void {
-  try { localStorage.setItem(`seen:${jobId}`, new Date().toISOString()); } catch { /* prywatne okno */ }
+export function markSeen(userId: string, jobId: string): void {
+  try { localStorage.setItem(`seen:${userId}:${jobId}`, new Date().toISOString()); } catch { /* prywatne okno */ }
   bump();
 }
 /** Ile dni wstecz liczą się zmiany harmonogramu („nowe”) i zapamiętane obejrzenia. */

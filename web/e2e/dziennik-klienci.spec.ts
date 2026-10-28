@@ -111,3 +111,17 @@ test('klienci: admin widzi możliwe duplikaty i łączy je; „Połącz z…” 
   await expect(page).toHaveURL(new RegExp(`#kl/${a}$`));
   await expect(page.getByRole('heading', { name: `Duplikat Nowak ${t}`, level: 2 })).toBeVisible();
 });
+
+test('wpis jednego admina jest „nowy” dla drugiego admina na tym samym urządzeniu', async ({ page }, info) => {
+  const tag = `E2E 2adm ${info.project.name} ${Date.now() % 100000}`;
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#zl');
+  await page.getByRole('link', { name: /Józef Bukowski/ }).first().click();
+  await page.getByPlaceholder('Co zrobiono, czego brakuje').fill(tag);
+  await page.getByRole('button', { name: 'Dodaj wpis' }).click();
+  await expect(page.locator('li[id^="e-"]', { hasText: tag })).not.toContainText('wysyłanie');
+  await page.context().clearCookies(); // wylogowanie: następny admin na tym samym urządzeniu (localStorage zostaje)
+  await login(page, 'Anna Syrek');
+  await page.goto('/#zl');
+  await expect(page.getByRole('link', { name: /Józef Bukowski/ }).first()).toContainText(/nowy|nowe/);
+});

@@ -1,6 +1,6 @@
 import { Briefcase, MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
-import { matches, seenAt, useCrewColor, useIsAdmin, useLoading, useMe, useSeenVersion, useStatusGroup } from '../../core/data.js';
+import { matches, seenFor, useCrewColor, useIsAdmin, useLoading, useMe, useSeenVersion, useStatusGroup } from '../../core/data.js';
 import { freshByJob } from '../../core/badges.js';
 import { useEntities } from '../../core/store.js';
 import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
@@ -60,7 +60,7 @@ function JobList({ selected }: { selected?: string }) {
   const scope = useEntities('job_scope_items');
   const rawJobs = useEntities('jobs');
   const pumble = useEntities('pumble_messages');
-  const fresh = useMemo(() => freshByJob(rawJobs, entries, scope, me?.id, seenAt, admin, pumble), [rawJobs, entries, scope, me?.id, admin, pumble, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fresh = useMemo(() => freshByJob(rawJobs, entries, scope, me?.id, seenFor(me?.id ?? ''), admin, pumble), [rawJobs, entries, scope, me?.id, admin, pumble, seenVer]); // eslint-disable-line react-hooks/exhaustive-deps
   const scopeText = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const p of scope) m.set(p.jobId, [...(m.get(p.jobId) ?? []), p.tekst]);

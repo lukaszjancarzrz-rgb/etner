@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { autaCount, changedDays, freshByJob, naJutroCount, unseenDays, zadaniaCount, zakupyCount } from '../badges.js';
 import { addDays } from '@etner/shared';
-import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenAt, today, useDict, useMe, useSeenVersion } from '../data.js';
+import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenFor, today, useDict, useMe, useSeenVersion } from '../data.js';
 import { useEntities } from '../store.js';
 import { withoutEchoes } from '../write.js';
 
@@ -44,7 +44,7 @@ export function useBadges(): Record<string, number> {
     return {
       jutro: naJutroCount(checklists, day, me, off.map((d) => d.wartosc as string)),
       harm,
-      zl: freshByJob(jobs, entries, scope, me.id, seenAt, admin, pumble).size,
+      zl: freshByJob(jobs, entries, scope, me.id, seenFor(me.id), admin, pumble).size,
       zakupy: zakupyCount(shopping, first, admin),
       auta,
       zad: zadaniaCount(tasks, admin),

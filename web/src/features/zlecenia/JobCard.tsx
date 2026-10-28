@@ -1,6 +1,6 @@
 import { ArrowLeft, CalendarCheck, MapPin, NavigationArrow, PencilSimple, Phone, User } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
-import { fmtDay, mapsUrl, markSeen, telHref, useCrewColor, useIsAdmin, useLoading } from '../../core/data.js';
+import { fmtDay, mapsUrl, markSeen, telHref, useCrewColor, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { useEntities, useEntity } from '../../core/store.js';
 import { Badge, Empty } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
@@ -28,7 +28,8 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const days = useMemo(() => jobDays(sched, id), [sched, id]);
 
   // „nowe” liczone od ostatniej wizyty; wpisy przeczytane podczas otwartej karty też się liczą
-  useEffect(() => { markSeen(id); if (!highlight) scrollTo(0, 0); return () => markSeen(id); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const me = useMe();
+  useEffect(() => { if (me) markSeen(me.id, id); if (!highlight) scrollTo(0, 0); return () => { if (me) markSeen(me.id, id); }; }, [id, me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!job) {
     return loading ? (
