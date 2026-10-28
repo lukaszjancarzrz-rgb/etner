@@ -237,3 +237,6 @@ Task 19h: polish round dispatched (desktop double auta badge + aria, More.tsx du
 Task 19h: polish round 1/5 (all addressed; c639fd6) — complete. Controller verification: shared 15, web 58, server 199, build clean, e2e 50 passed / 2 skipped.
 ## Owner 2026-10-28: proceed to Task 20 (a11y and performance).
 Task 20: impl 5d124ff..de24149 (axe 0 serious/critical all screens light+dark; JS 248.2 kB gzip; warm LCP 740–892 ms; cold 7.8 s — no compression); review dispatched
+Task 20: review Approved; polish round dispatched (a11y #wiecej + pracownik pass + no fixed wait, JobChip sr text, session start-order test if feasible)
+- Ruling R46: remembered account rendered before /api/me (warm LCP) — accepted: a revoked/demoted user sees already-cached data for ~1 round trip online (same data was visible offline anyway); outbox/sync stay gated — cost: brief stale admin screens after demotion.
+Task 20: minor (deferred): JS headroom ~2 kB (plan route-level splitting before next big feature); cold visit ~8 s on 3G (no compression; decide with SSE-safe compression at Task 23); preload of Harmonogram chunk on logged-out cold start
