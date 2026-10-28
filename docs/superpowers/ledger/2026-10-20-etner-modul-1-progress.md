@@ -258,3 +258,6 @@ Task 21–22: fix round 1/5 (ba09de8; migration 0021 przeniesienie); controller 
 Task 21–22: re-review clean (all findings addressed) — complete (commits e3d9953..ba09de8). Controller verification: shared 15, web 61, server 220, build clean, size 121.29/248.94 kB, e2e 56 passed / 2 skipped.
 Task 21–22: minor (deferred): an „A / B” cell can yield two review items; checkDict skips shopping 'Kupione'; review list same createdAt (web sorts)
 Open owner questions: pay status of added absence codes (na żądanie, okolicznościowy = paid; bezpłatny = unpaid). Next: Task 23 (needs O4) or modules 3–4 specs.
+## Owner 2026-10-28: production on Render instead of Hetzner (< 10 USD/month, simple) → Task 23 rewritten
+- Ruling R52: one Blueprint with two services — etner-demo (free, modul-1) and etner (starter + 1 GB disk, branch `produkcja`); production updated only when the owner says „wydaj na produkcję” (Claude pushes to `produkcja`); new branch `produkcja` allowed for this (extends R8) — cost: one more branch.
+- Ruling R53: no terminal for the owner — first admin from ADMIN_* env on an empty DB; workbook migration via admin upload in Ustawienia (dry-run then apply, empty DB only, file kept in memory only, start passwords shown once) — cost: one endpoint + one screen section.

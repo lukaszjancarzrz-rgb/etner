@@ -866,22 +866,23 @@ Decyzje właściciela do przeniesienia (2026-10-28):
 - [ ] **Step 4:** PASS. Próbne przeniesienie z prawdziwych eksportów (O3) **tylko lokalnie**, raport do właściciela.
 - [ ] **Step 5:** Commit (bez danych).
 
-### Task 23: Produkcja (Hetzner) i przełączenie
+### Task 23: Produkcja na Render i przełączenie
+
+Zmiana 2026-10-28 (właściciel): zamiast Hetznera – Render, budżet < 10 USD/mies., prosta konfiguracja. Konto Hobby (0 USD) + usługa Starter (7 USD) + dysk 1 GB (0,25 USD); zdjęcia i ciągła kopia bazy w Cloudflare R2 (darmowe 10 GB, bez opłat za pobieranie). Plik `deploy/` i Hetzner nie powstają.
 
 **Files:**
-- Create: `deploy/{Caddyfile,etner.service,litestream.service,setup.sh}`, `.github/workflows/deploy.yml`
+- Modify: `render.yaml`, `README.md`, `server/src/main.ts`, ekran Ustawień (sekcja przeniesienia)
+- Create: endpoint i sekcja „Przeniesienie z arkusza” (admin)
 
 **Interfaces:**
-- Produces:
-  - Serwer z Ubuntu LTS, `unattended-upgrades`, użytkownik `etner`, Node 22.
-  - Caddy (HTTPS dla domeny z O4), systemd dla aplikacji i Litestream.
-  - Deploy z GitHuba:
-    - po zielonym CI na `main`: build, `rsync` do `releases/<sha>`, zmiana dowiązania `current`, `systemctl restart`,
-    - `deploy.yml` z ręcznym `rollback` do poprzedniego `sha`.
-  - Sekrety: klucz SSH wdrożenia, VAPID, R2, `GOOGLE_SA_JSON`, `APP_SECRET`. Wkleja je właściciel w ustawieniach repozytorium i w `/etc/etner.env`.
+- `render.yaml` – jeden Blueprint, dwie usługi:
+  - `etner-demo` bez zmian (free, `DEMO=1`, gałąź `modul-1`) – do oglądania nowych wersji;
+  - `etner` (produkcja): `plan: starter`, gałąź `produkcja`, dysk 1 GB zamontowany np. w `/var/data`, `DATA_DIR=/var/data`, bez `DEMO`, `autoDeploy` po każdym pushu na `produkcja`; sekrety `sync: false`: `R2_*` (bucket produkcyjny, osobny od demo), `VAPID_*`, `PUMBLE_API_KEY`, `SMTP_*`, `MAIL_FROM`, `BASE_URL` (opcjonalnie, domena), `ADMIN_LOGIN`, `ADMIN_NAME`, `ADMIN_PASSWORD`, opcjonalnie `SHEETS_ID`, `GOOGLE_SA_JSON`; `APP_SECRET` generowany.
+- Pierwszy administrator bez terminala: przy starcie, gdy baza nie ma żadnego użytkownika, a ustawione są `ADMIN_LOGIN` i `ADMIN_PASSWORD` – serwer zakłada konto admina (jak `create-admin`) i loguje to bez hasła. Gdy użytkownicy istnieją – zmienne ignorowane.
+- Przeniesienie z arkusza bez terminala: w Ustawieniach (admin) sekcja „Przeniesienie z arkusza”: wgranie pliku .xlsx → próbne przeniesienie (raport liczb, liczba pozycji do przejrzenia), potem „Przenieś naprawdę”. Działa tylko na bazie bez danych biznesowych (jak CLI). Hasła startowe pracowników pokazane raz na ekranie po przeniesieniu (do przepisania / przekazania), nigdzie niezapisane. Plik nie jest zapisywany na dysku ani w R2 (tylko w pamięci na czas żądania); limit rozmiaru.
+- Wydawanie wersji: demo aktualizuje się samo po każdej zmianie na `modul-1`; produkcja tylko po wypchnięciu na `produkcja` – robi to Claude na polecenie właściciela („wydaj na produkcję”). Nowych Blueprintów się nie tworzy.
+- README: instrukcja dla właściciela krok po kroku (jeden Blueprint, sekrety, R2, VAPID, pierwsze logowanie, przeniesienie, domena, jak wydawać wersje, sprzątanie starych usług).
 
-- [ ] **Step 1:** `setup.sh` jest idempotentny. Test: `bash -n` + `shellcheck` w CI.
-- [ ] **Step 2:** Uruchomienie na serwerze. `GET /api/health` z domeny → 200. Wymuszony `rollback` działa.
-- [ ] **Step 3:** Test odtworzenia: `litestream restore` na czysty katalog → aplikacja startuje z tymi samymi danymi.
-- [ ] **Step 4:** Przeniesienie danych na produkcji (Task 22). Raport do właściciela. Wyłączenie wyzwalaczy i wdrożenia Apps Script. Pracownicy dostają login i hasło startowe, nowy adres.
-- [ ] **Step 5:** Commit. **STOP: właściciel potwierdza raport przeniesienia i działanie na telefonach.**
+- [ ] **Step 1:** Testy: start z pustą bazą + `ADMIN_*` → jest admin; drugi start → bez zmian; import przez endpoint na fixturze (dry-run nic nie zapisuje, apply odmawia na niepustej bazie, 403 dla pracownika); `render.yaml` poprawny (parsowanie YAML w teście).
+- [ ] **Step 2:** FAIL. **Step 3:** Implementacja. **Step 4:** PASS.
+- [ ] **Step 5:** Commit. Utworzenie gałęzi `produkcja`. **STOP: właściciel wdraża Blueprint, wkleja sekrety, przenosi dane i sprawdza na telefonach.**
