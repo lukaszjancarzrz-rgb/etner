@@ -1,5 +1,7 @@
 import { loginSchema, hasloSchema } from '@etner/shared';
+import { count } from 'drizzle-orm';
 import type { Db } from '../core/db.js';
+import { users } from '../core/schema-base.js';
 import { hashPassword } from '../core/password.js';
 import * as uzytkownicy from '../modules/uzytkownicy/service.js';
 
@@ -15,4 +17,14 @@ export async function createAdmin(db: Db, o: { login: string; name: string; hasl
   } catch (e) {
     throw e instanceof uzytkownicy.LoginTakenError ? new Error(`Login „${login.data}” jest już zajęty.`) : e;
   }
+}
+
+/**
+ * Pierwszy administrator bez terminala (Render): baza bez żadnego konta + `ADMIN_LOGIN` i `ADMIN_PASSWORD` → konto jak z `create-admin`.
+ * Gdy konta już są albo zmiennych brak – nic. Zwraca login założonego konta (do logu, bez hasła).
+ */
+export async function bootstrapAdmin(db: Db, env: Record<string, string | undefined>): Promise<string | undefined> {
+  const { ADMIN_LOGIN: login, ADMIN_PASSWORD: haslo } = env;
+  if (!login || !haslo || db.select({ n: count() }).from(users).get()!.n) return undefined;
+  return (await createAdmin(db, { login, name: env.ADMIN_NAME?.trim() || login, haslo })).login ?? undefined;
 }

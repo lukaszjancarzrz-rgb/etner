@@ -15,6 +15,7 @@ import { startPoll } from './modules/zlecenia/pumble.js';
 import { modules } from './modules/index.js';
 import { kopieCrons } from './scripts/kopie.js';
 import { seedBase } from './modules/slowniki/seed.js';
+import { bootstrapAdmin } from './scripts/create-admin.js';
 import { demoAccounts, seedDemo } from './scripts/seed-demo.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
@@ -37,6 +38,11 @@ migrate(db);
 seedBase(db);
 const demo = process.env.DEMO === '1';
 if (demo && (await seedDemo(db, files))) console.log('Dane demo załadowane.');
+// Pierwszy administrator z ADMIN_LOGIN / ADMIN_PASSWORD (tylko pusta baza); w logu sam login.
+await bootstrapAdmin(db, process.env).then(
+  (login) => { if (login) console.log(`Utworzono administratora „${login}” (z ADMIN_LOGIN / ADMIN_PASSWORD).`); },
+  (e: unknown) => console.error(`Nie utworzono administratora z ADMIN_LOGIN / ADMIN_PASSWORD: ${e instanceof Error ? e.message : e}`),
+);
 
 const vapid = vapidFromEnv(process.env, dataDir);
 if (!vapid) console.warn('Push wyłączony: brak VAPID_PUBLIC / VAPID_PRIVATE.');
