@@ -16,6 +16,7 @@ import { modules } from './modules/index.js';
 import { kopieCrons } from './scripts/kopie.js';
 import { seedBase } from './modules/slowniki/seed.js';
 import { bootstrapAdmin } from './scripts/create-admin.js';
+import { swapRestored } from './scripts/restore-swap.js';
 import { demoAccounts, seedDemo } from './scripts/seed-demo.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
@@ -33,6 +34,7 @@ if (!secret) {
   secret = readFileSync(secretFile, 'utf8').trim();
 }
 const files = fileStoreFromEnv({ ...process.env, DATA_DIR: dataDir, APP_SECRET: secret });
+if (swapRestored(dataDir)) console.log('Odtworzona baza (restore.db) podmieniona na etner.db.');
 const db = openDb(join(dataDir, 'etner.db'));
 migrate(db);
 seedBase(db);
