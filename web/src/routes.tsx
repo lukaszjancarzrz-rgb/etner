@@ -66,6 +66,9 @@ export const useRoute = (): Route =>
 /** Czy ekran jest w dolnym pasku telefonu (reszta: w Więcej). */
 export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.nav === undefined && !(admin && screens[k]!.adminEnd);
 
+/** Czy ekran jest w menu bocznym komputera (bez Więcej). */
+export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && (!screens[k]!.admin || admin);
+
 /** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `kl` → Więcej. */
 export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'kl' ? 'wiecej' : screen);
 

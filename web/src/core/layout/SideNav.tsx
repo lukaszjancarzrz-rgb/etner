@@ -1,11 +1,15 @@
 import { navKey, screens, type Route } from '../../routes.js';
-import { useSession } from '../session.js';
+import { SignOut } from '@phosphor-icons/react';
+import { moreGroups } from '../../screens/More.js';
+import { logout, useSession } from '../session.js';
 import { badgeLabel, badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
 import { Logo } from './Logo.js';
 
 export function SideNav({ route, badges }: { route: Route; badges: Record<string, number> }) {
   const { me } = useSession();
+  const admin = me?.role === 'admin';
+  const more = moreGroups(admin, true).length > 0; // Więcej tylko z ekranami spoza tego menu (adres #wiecej działa dalej)
   return (
     <nav aria-label="Menu" className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-card desk:flex">
       <div className="stripes h-1.5" aria-hidden />
@@ -13,8 +17,8 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
         <Logo />
       </div>
       <ul className="grid gap-1 px-3 py-2">
-        {Object.entries(screens).filter(([, s]) => s.nav !== false && (!s.admin || me?.role === 'admin'))
-          .sort(([, a], [, b]) => (me?.role === 'admin' ? Number(!!a.adminEnd) - Number(!!b.adminEnd) : 0)).map(([k, s]) => {
+        {Object.entries(screens).filter(([k, s]) => s.nav !== false && (!s.admin || admin) && (k !== 'wiecej' || more))
+          .sort(([, a], [, b]) => (admin ? Number(!!a.adminEnd) - Number(!!b.adminEnd) : 0)).map(([k, s]) => {
           const on = navKey(route.screen) === k;
           const I = s.icon;
           const n = badges[k] ?? 0;
@@ -30,9 +34,14 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
         })}
       </ul>
       {me && (
-        <div className="mt-auto border-t border-line px-5 py-4 text-sm">
-          <p className="truncate font-semibold">{me.name}</p>
-          <p className="text-ink-2">{me.role === 'admin' ? 'Administrator' : `Pracownik${me.ekipa ? `, ${me.ekipa}` : ''}`}</p>
+        <div className="mt-auto flex items-center gap-2 border-t border-line py-3 pr-3 pl-5 text-sm">
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold">{me.name}</p>
+            <p className="text-ink-2">{me.role === 'admin' ? 'Administrator' : `Pracownik${me.ekipa ? `, ${me.ekipa}` : ''}`}</p>
+          </div>
+          {/* komputer: Więcej bywa poza menu, więc wylogowanie jest tutaj */}
+          <button type="button" onClick={() => void logout()} aria-label="Wyloguj" title="Wyloguj"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-2 transition-colors duration-200 hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-action"><SignOut className="h-5 w-5" /></button>
         </div>
       )}
     </nav>

@@ -376,6 +376,22 @@ test('admin: Na jutro poza głównym menu (koniec menu bocznego / kafelek w Wię
   if (phone) await expect(nav.getByRole('link', { name: /^Więcej/ })).toHaveAttribute('aria-current', 'page');
 });
 
+test('komputer: Więcej bez ekranów z menu bocznego; pracownik bez Więcej, wylogowanie w menu', async ({ page }, info) => {
+  test.skip(info.project.name.startsWith('iPhone'), 'telefon: Więcej bez zmian');
+  const side = page.getByRole('navigation', { name: 'Menu' }).filter({ visible: true });
+  await loginAdmin(page);
+  await side.getByRole('link', { name: /^Więcej/ }).click();
+  const main = page.getByRole('main');
+  await expect(main.getByRole('link', { name: /^Klienci/ })).toBeVisible();
+  await expect(main.getByRole('link', { name: /^(Samochody|Ustawienia|Leady|Na jutro)/ })).toHaveCount(0);
+  await side.getByRole('button', { name: 'Wyloguj' }).click();
+  await page.getByRole('button', { name: /Bartek Gawlik/ }).click();
+  await expect(page.getByText('Pracownik', { exact: false }).first()).toBeVisible();
+  await expect(side.getByRole('link', { name: /^Więcej/ })).toHaveCount(0);
+  await expect(page.getByRole('main').getByText('Wszystkie ekrany są w menu po lewej')).toBeVisible(); // adres #wiecej działa dalej
+  await expect(side.getByRole('button', { name: 'Wyloguj' })).toBeVisible();
+});
+
 test('Pumble (atrapa): sekcja na karcie zlecenia, wysłanie dodaje wiadomość', async ({ page }, info) => {
   await loginAdmin(page);
   await page.goto('/#zl');
