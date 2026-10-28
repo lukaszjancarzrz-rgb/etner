@@ -80,8 +80,7 @@ export const autaCount = (faults: Rec[]): number => faults.filter((f) => !f.napr
 /** Zadania (admin): otwarte z priorytetem 1. */
 export const zadaniaCount = (tasks: Rec[], admin: boolean): number => (admin ? tasks.filter((t) => t.priorytet === 1 && !isDone(t)).length : 0);
 
-/** Opis licznika dla czytnika ekranu: Samochody (i Więcej, gdzie są na telefonie) liczą usterki bez terminu, Zadania priorytet 1, reszta nowości. */
-/** Dopisek licznika do nazwy pozycji menu dla czytnika (cała nazwa w sr-only: bez aria-label niezgodnego z widocznym tekstem i bez spacji przed przecinkiem). */
+/** Dopisek licznika do nazwy pozycji menu dla czytnika (cała nazwa w sr-only, bez spacji przed przecinkiem): Samochody i Więcej – usterki bez terminu, Zadania – priorytet 1, reszta – nowości. */
 export const badgeLabel = (screen: string, n: number) => `, ${n} ${screen === 'auta' || screen === 'wiecej' ? 'bez terminu naprawy' : screen === 'zad' ? 'z priorytetem 1' : 'nowe'}`;
 
 /** „99+” powyżej 99. */

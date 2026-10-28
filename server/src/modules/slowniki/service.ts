@@ -40,7 +40,7 @@ export function replace(db: Db, userId: string, rodzaj: DictRodzaj, items: DictP
     if (kept.has(old.id)) continue;
     const n = uses(old.wartosc);
     if (!n) continue;
-    const to = zamien[old.wartosc];
+    const to = Object.hasOwn(zamien, old.wartosc) ? zamien[old.wartosc] : undefined;
     if (to === undefined) throw new ValueInUseError(old.wartosc, n);
     if (to === old.wartosc || !items.some((it) => it.wartosc === to)) throw new HTTPException(400, { message: `Wartości „${to}” nie ma w słowniku` });
     swaps.push([old.wartosc, to]);
