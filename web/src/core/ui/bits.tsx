@@ -37,6 +37,11 @@ export const Badge = ({ children, tone = 'line', className }: { children: ReactN
   }[tone], className)}>{children}</span>
 );
 
+/** Czerwony znacznik „nowe” przy wpisie lub polu zmienionym przez inną osobę od ostatniej wizyty; `sr`: co jest nowe (dla czytnika). */
+export const NewMark = ({ sr }: { sr: string }) => (
+  <Badge tone="new" className="h-5 px-2"><span aria-hidden>nowe</span><span className="sr-only">{sr}</span></Badge>
+);
+
 /** Przełącznik w kształcie pigułki (radio). */
 export function Segmented<T extends string>({ value, onChange, options, label, className }: {
   value: T; onChange: (v: T) => void; options: { v: T; label: string }[]; label: string; className?: string;

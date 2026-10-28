@@ -121,3 +121,18 @@ it('store.apply: _by = autor zmiany; zmiana systemu (by=null) zostawia poprzedni
   s.apply({ seq: 3, entity: 'jobs', id: 'j', action: 'update', data: { updatedAt: 'b' }, by: 'me' });
   expect(s.get('jobs', 'j')?._by).toBe('me');
 });
+
+it('store.apply: _hist najwyżej 5 poprzednich wersji jobs/clients/sites, bez zagnieżdżeń; snapshot i inne encje bez historii (R62)', () => {
+  const s = createStore();
+  s.replace([{ entity: 'jobs', id: 'j', data: { updatedAt: '0' } }], 0);
+  for (let i = 1; i <= 7; i++) s.apply({ seq: i, entity: 'jobs', id: 'j', action: 'update', data: { updatedAt: String(i) }, by: 'w' });
+  const h = s.get('jobs', 'j')!._hist;
+  expect(h.map((v: any) => v.updatedAt)).toEqual(['2', '3', '4', '5', '6']);
+  expect(h.every((v: any) => !('_hist' in v))).toBe(true);
+  expect(h[4]._by).toBe('w');
+  s.apply({ seq: 8, entity: 'diary_entries', id: 'd', action: 'update', data: { updatedAt: '1' }, by: 'w' });
+  s.apply({ seq: 9, entity: 'diary_entries', id: 'd', action: 'update', data: { updatedAt: '2' }, by: 'w' });
+  expect(s.get('diary_entries', 'd')!._hist).toBeUndefined();
+  s.replace([{ entity: 'jobs', id: 'j', data: { updatedAt: '9' } }], 9);
+  expect(s.get('jobs', 'j')!._hist).toBeUndefined();
+});

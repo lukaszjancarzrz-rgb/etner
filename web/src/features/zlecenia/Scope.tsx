@@ -3,7 +3,8 @@ import { useMemo, useState } from 'react';
 import { useIsAdmin, useMe } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { store, useEntities, type Rec } from '../../core/store.js';
-import { Empty, SectionTitle, Textarea } from '../../core/ui/bits.js';
+import { Empty, NewMark, SectionTitle, Textarea } from '../../core/ui/bits.js';
+import { freshScope } from '../../core/badges.js';
 import { Button } from '../../core/ui/button.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
@@ -19,7 +20,8 @@ const tmpAtts = (ownerId: string, files: Picked[]) => {
 };
 
 /** Zakres prac: numerowane punkty z tekstem i zdjęciami. Admin dodaje, poprawia, usuwa i przesuwa; pracownik czyta. */
-export function Scope({ jobId, disabled }: { jobId: string; disabled?: boolean }) {
+export function Scope({ jobId, disabled, since }: { jobId: string; disabled?: boolean; since?: string }) {
+  const me = useMe();
   const all = useEntities('job_scope_items');
   const atts = useEntities('attachments');
   const admin = useIsAdmin();
@@ -61,6 +63,7 @@ export function Scope({ jobId, disabled }: { jobId: string; disabled?: boolean }
               <li key={p.id} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 rounded-2xl border border-line bg-card p-4">
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-action/12 font-bold tabular-nums text-action" aria-hidden>{i + 1}</span>
                 <div className="min-w-0">
+                  {since && freshScope(p, me?.id, since) && <p className="pt-1"><NewMark sr={`punkt ${i + 1} nowy lub zmieniony od ostatniej wizyty`} /></p>}
                   <p className="max-w-[70ch] pt-1 whitespace-pre-wrap">{p.tekst}</p>
                   {p._tmp && <p className="mt-1 text-sm text-ink-2">wysyłanie…</p>}
                   {imgs.length > 0 && (

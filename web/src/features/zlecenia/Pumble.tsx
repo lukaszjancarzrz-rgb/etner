@@ -2,10 +2,11 @@ import { ArrowSquareOut, Camera, ChatsCircle, PaperclipHorizontal, PaperPlaneRig
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { newId } from '@etner/shared';
 import { api, ApiError } from '../../core/api.js';
-import { fmtWhen, useIsAdmin } from '../../core/data.js';
+import { fmtWhen, useIsAdmin, useMe } from '../../core/data.js';
 import { useOnline } from '../../core/layout/status.js';
 import { store, useEntities, type Rec } from '../../core/store.js';
-import { SectionTitle, Textarea } from '../../core/ui/bits.js';
+import { NewMark, SectionTitle, Textarea } from '../../core/ui/bits.js';
+import { freshPumble } from '../../core/badges.js';
 import { Button } from '../../core/ui/button.js';
 import { toast } from '../../core/ui/toast.js';
 import { Avatar } from '../../core/ui/avatar.js';
@@ -35,7 +36,8 @@ export const fileLine = (author: string, { images, others }: { images: number; o
 ];
 
 /** Sekcja „Pumble” karty zlecenia: kilka ostatnich wiadomości, pole do kanału, przejście do Pumble. Wymaga sieci (nie idzie przez kolejkę offline). */
-export function Pumble({ job }: { job: Rec }) {
+export function Pumble({ job, since }: { job: Rec; since?: string }) {
+  const me = useMe();
   const [on, setOn] = useState(false);
   useEffect(() => { let live = true; void pumbleOn().then((v) => live && setOn(v)); return () => { live = false; }; }, []);
   const all = useEntities('pumble_messages');
@@ -93,7 +95,7 @@ export function Pumble({ job }: { job: Rec }) {
             <ol className="grid gap-3" aria-live="polite">
               {shown.map((m) => (
                 <li key={m.id} className="grid gap-0.5">
-                  <p className="flex flex-wrap items-center gap-x-2"><Avatar userId={m.createdBy} name={m.authorName} size="sm" /><span className="font-semibold">{m.authorName}</span><span className="text-sm text-ink-2">{fmtWhen(m.sentAt)}</span></p>
+                  <p className="flex flex-wrap items-center gap-x-2"><Avatar userId={m.createdBy} name={m.authorName} size="sm" /><span className="font-semibold">{m.authorName}</span><span className="text-sm text-ink-2">{fmtWhen(m.sentAt)}</span>{since && freshPumble(m, me?.id, since) && <NewMark sr="nowa wiadomość od ostatniej wizyty" />}</p>
                   {m.text && <p className="max-w-[70ch] whitespace-pre-wrap break-words">{m.text}</p>}
                   <Files m={m} />
                 </li>

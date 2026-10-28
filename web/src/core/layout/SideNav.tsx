@@ -1,4 +1,4 @@
-import { navKey, screens, type Route } from '../../routes.js';
+import { inSideNav, navKey, screens, type Route } from '../../routes.js';
 import { SignOut } from '@phosphor-icons/react';
 import { moreGroups } from '../../screens/More.js';
 import { logout, useSession } from '../session.js';
@@ -17,7 +17,7 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
         <Logo />
       </div>
       <ul className="grid gap-1 px-3 py-2">
-        {Object.entries(screens).filter(([k, s]) => s.nav !== false && (!s.admin || admin) && (k !== 'wiecej' || more))
+        {Object.entries(screens).filter(([k, s]) => (k === 'wiecej' ? more : inSideNav(k, admin)))
           .sort(([, a], [, b]) => (admin ? Number(!!a.adminEnd) - Number(!!b.adminEnd) : 0)).map(([k, s]) => {
           const on = navKey(route.screen) === k;
           const I = s.icon;

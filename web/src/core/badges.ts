@@ -2,6 +2,13 @@ import { nextWorkday } from '@etner/shared';
 import type { Rec } from './store.js';
 import { isDone } from '../features/zadania/model.js';
 
+/** Zmiana przez inną osobę (`_by` ze strumienia zmian); bez `_by` (snapshot) nie jest nowa. Też dla wersji z `_hist` na karcie. */
+export const byOther = (r: Rec, meId: string | undefined) => !r._tmp && !!r._by && r._by !== meId;
+/** Pojedyncze „nowe” (lista zleceń, menu i karta liczą tak samo): wpis dziennika, wiadomość Pumble, punkt zakresu nowsze niż `since`. */
+export const freshEntry = (e: Rec, meId: string | undefined, since: string) => !e._tmp && e.authorId !== meId && e.createdAt > since;
+export const freshPumble = (p: Rec, meId: string | undefined, since: string) => p.createdBy !== meId && p.createdAt > since;
+export const freshScope = (p: Rec, meId: string | undefined, since: string) => byOther(p, meId) && p.updatedAt > since;
+
 /**
  * „Nowe” w zleceniach (jedno źródło dla listy i menu): wpisy dziennika innych osób, wiadomości Pumble innych osób, punkty
  * zakresu i zlecenie zmienione przez inną osobę (`_by` ze strumienia zmian), nowsze niż `since(jobId)`.
@@ -14,12 +21,11 @@ export function freshByJob(jobs: Rec[], entries: Rec[], scope: Rec[], meId: stri
   const s = new Map<string, string>();
   const at = (id: string) => s.get(id) ?? (s.set(id, since(id)), s.get(id)!);
   const bump = (id: string) => m.set(id, (m.get(id) ?? 0) + 1);
-  for (const e of entries) if (e.ownerType === 'job' && !e._tmp && e.authorId !== meId && e.createdAt > at(e.ownerId)) bump(e.ownerId);
-  for (const p of pumble) if (p.createdBy !== meId && p.createdAt > at(p.jobId)) bump(p.jobId);
-  const other = (r: Rec) => !r._tmp && !!r._by && r._by !== meId;
-  for (const p of scope) if (other(p) && p.updatedAt > at(p.jobId)) bump(p.jobId);
+  for (const e of entries) if (e.ownerType === 'job' && freshEntry(e, meId, at(e.ownerId))) bump(e.ownerId);
+  for (const p of pumble) if (freshPumble(p, meId, at(p.jobId))) bump(p.jobId);
+  for (const p of scope) if (freshScope(p, meId, at(p.jobId))) bump(p.jobId);
   // pracownik (jobRow=false): wiersz zlecenia pomijamy, bo zmiana mogła dotyczyć tylko uwag admina
-  if (jobRow) for (const j of jobs) if (other(j) && j.updatedAt > at(j.id)) bump(j.id);
+  if (jobRow) for (const j of jobs) if (byOther(j, meId) && j.updatedAt > at(j.id)) bump(j.id);
   return m;
 }
 

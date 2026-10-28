@@ -17,7 +17,7 @@ export function parseHash(hash: string): Route {
  * `nav`: brak = dolny pasek i menu boczne; 'side' = tylko menu boczne i kafelek w Więcej; false = poza menu. `admin` = tylko admin (inni: „Brak dostępu”).
  * `adminEnd`: u admina poza dolnym paskiem, na końcu menu bocznego i kafelków Więcej (pracownik bez zmian).
  */
-export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true; adminEnd?: true };
+export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true; adminEnd?: true; moreOnly?: true };
 
 // Ekrany ładowane osobno (mniejszy pierwszy pakiet JS); `preload` = pobranie pakietu bez renderu.
 const lazyScreen = (f: () => Promise<{ default: ComponentType<{ route: Route }> }>) => Object.assign(lazy(f), { preload: f });
@@ -45,8 +45,8 @@ export const screens: Record<string, Screen> = {
   narz: { title: 'Narzędzia', icon: Wrench, component: Narzedzia, nav: 'side' },
   mag: { title: 'Rzeczy nietypowe', icon: Package, component: Magazyn, nav: 'side' },
   zad: { title: 'Zadania', icon: ListChecks, component: Zadania, nav: 'side', admin: true },
-  uz: { title: 'Użytkownicy', icon: UserGear, component: Uzytkownicy, nav: 'side', admin: true },
-  ust: { title: 'Ustawienia', icon: GearSix, component: Ustawienia, nav: 'side' },
+  uz: { title: 'Użytkownicy', icon: UserGear, component: Uzytkownicy, nav: 'side', admin: true, moreOnly: true },
+  ust: { title: 'Ustawienia', icon: GearSix, component: Ustawienia, nav: 'side', moreOnly: true },
   wiecej: { title: 'Więcej', icon: DotsThreeCircle, component: More },
   kl: { title: 'Klienci', icon: UsersThree, component: Klienci, nav: false },
   ld: { title: 'Leady', icon: Handshake, component: Leady, nav: false, admin: true },
@@ -67,9 +67,9 @@ export const useRoute = (): Route =>
 export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.nav === undefined && !(admin && screens[k]!.adminEnd);
 
 /** Czy ekran jest w menu bocznym komputera (bez Więcej). */
-export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && (!screens[k]!.admin || admin);
+export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && !screens[k]!.moreOnly && (!screens[k]!.admin || admin);
 
-/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `kl` → Więcej. */
-export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'kl' ? 'wiecej' : screen);
+/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `kl` i ekrany tylko z Więcej → Więcej. */
+export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'kl' || screens[screen]?.moreOnly ? 'wiecej' : screen);
 
 export const go = (hash: string): void => { location.hash = hash.replace(/^#?/, '#'); };

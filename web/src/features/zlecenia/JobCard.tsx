@@ -1,8 +1,8 @@
 import { ArrowLeft, CalendarCheck, MapPin, NavigationArrow, PencilSimple, Phone, User } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
-import { fmtDay, mapsUrl, markSeen, telHref, useCrewColor, useIsAdmin, useLoading, useMe } from '../../core/data.js';
+import { fmtDay, mapsUrl, markSeen, seenFor, telHref, useCrewColor, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { useEntities, useEntity } from '../../core/store.js';
-import { Badge, Empty } from '../../core/ui/bits.js';
+import { Badge, Empty, NewMark } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { CategoryPill, useCatColor } from '../../core/ui/category.js';
@@ -10,6 +10,7 @@ import { Diary } from '../dziennik/Diary.js';
 import { JobForm } from './JobForm.js';
 import { Pumble } from './Pumble.js';
 import { Scope } from './Scope.js';
+import { CLIENT_FIELDS, JOB_FIELDS, SITE_FIELDS, changedFields } from './changed.js';
 import { fmtDni, jobDays } from './jobs.js';
 
 const MON = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
@@ -29,6 +30,11 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
 
   // „nowe” liczone od ostatniej wizyty; wpisy przeczytane podczas otwartej karty też się liczą
   const me = useMe();
+  // „ostatnio widziane” z chwili otwarcia, do zamknięcia karty: znaczniki „nowe” nie znikają od markSeen przy otwarciu
+  const since = useMemo(() => (me ? seenFor(me.id)(id) : undefined), [id, me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fj = useMemo(() => changedFields(job, since ?? '\uffff', me?.id, JOB_FIELDS), [job, since, me?.id]);
+  const fc = useMemo(() => changedFields(client, since ?? '\uffff', me?.id, CLIENT_FIELDS), [client, since, me?.id]);
+  const fs = useMemo(() => changedFields(site, since ?? '\uffff', me?.id, SITE_FIELDS), [site, since, me?.id]);
   useEffect(() => { if (me) markSeen(me.id, id); if (!highlight) scrollTo(0, 0); return () => { if (me) markSeen(me.id, id); }; }, [id, me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!job) {
@@ -51,13 +57,13 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
-                <span className="font-semibold tabular-nums">{job._tmp ? 'zapisywanie' : job.numer}</span><Badge tone="action">{job.status}</Badge>
+                <span className="font-semibold tabular-nums">{job._tmp ? 'zapisywanie' : job.numer}</span><Badge tone="action">{job.status}</Badge>{fj.has('status') && <NewMark sr="nowy status" />}
                 {job.kategoria && <CategoryPill name={job.kategoria} color={cat(job.kategoria)} />}
               </p>
               <h2 className="mt-1 font-wide text-2xl font-extrabold leading-tight">
-                {client ? <a href={`#kl/${client.id}`} className="hover:text-action">{client.nazwa}</a> : 'Klient'}
+                {client ? <a href={`#kl/${client.id}`} className="hover:text-action">{client.nazwa}</a> : 'Klient'}{fc.has('nazwa') && <> <NewMark sr="nowa nazwa klienta" /></>}
               </h2>
-              {site && <p className="mt-1 flex items-start gap-1.5 text-ink-2"><MapPin className="mt-0.5 h-5 w-5 shrink-0" />{[site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ')}</p>}
+              {site && <p className="mt-1 flex items-start gap-1.5 text-ink-2"><MapPin className="mt-0.5 h-5 w-5 shrink-0" /><span>{[site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ')}{fs.size > 0 && <> <NewMark sr="zmieniony obiekt" /></>}</span></p>}
             </div>
             {admin && <Button variant="secondary" size="sm" onClick={() => setEditing(true)}><PencilSimple className="h-4 w-4" />Edytuj</Button>}
           </div>
@@ -65,30 +71,31 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
             <div className="flex flex-wrap gap-2">
               {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-full bg-action px-5 font-semibold text-action-ink"><NavigationArrow className="h-5 w-5" weight="fill" />Nawiguj</a>}
               {phones.map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-full border border-line px-5 font-semibold"><Phone className="h-5 w-5" />{t}</a>)}
+              {fc.has('telefony') && <span className="self-center"><NewMark sr="zmienione telefony klienta" /></span>}
             </div>
           )}
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4 text-sm min-[560px]:grid-cols-4">
-            <Info k="Ekipa"><span className="inline-flex items-center gap-1.5">{job.ekipa && <span className="h-2.5 w-2.5 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />}{job.ekipa ?? 'nie przypisano'}</span></Info>
-            <Info k="Termin"><span className="capitalize">{fmtTermin(job.termin)}</span></Info>
-            <Info k="Rodzaj">{[job.rodzaj, job.kategoria].filter(Boolean).join(', ') || 'brak'}</Info>
+            <Info k="Ekipa" fresh={fj.has('ekipa')}><span className="inline-flex items-center gap-1.5">{job.ekipa && <span className="h-2.5 w-2.5 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />}{job.ekipa ?? 'nie przypisano'}</span></Info>
+            <Info k="Termin" fresh={fj.has('termin')}><span className="capitalize">{fmtTermin(job.termin)}</span></Info>
+            <Info k="Rodzaj" fresh={fj.has('rodzaj') || fj.has('kategoria')}>{[job.rodzaj, job.kategoria].filter(Boolean).join(', ') || 'brak'}</Info>
             <Info k="W harmonogramie">
               {days.dni ? <span className="inline-flex items-center gap-1.5"><CalendarCheck className="h-4 w-4 text-ok" />{fmtDni(days.dni)}</span> : <span className="text-danger">brak dni</span>}
               {days.od && <span className="block text-xs text-ink-2">{days.od === days.do ? fmtDay(days.od) : `${fmtDay(days.od)} - ${fmtDay(days.do!)}`}</span>}
             </Info>
           </dl>
           {admin && job.uwagiAdmin && (
-            <div className="grid gap-1 rounded-xl bg-bg/70 p-3"><p className="flex items-center gap-1.5 text-sm font-semibold text-ink-2"><User className="h-4 w-4" />Uwagi admina (pracownicy nie widzą)</p><p className="whitespace-pre-wrap">{job.uwagiAdmin}</p></div>
+            <div className="grid gap-1 rounded-xl bg-bg/70 p-3"><p className="flex items-center gap-1.5 text-sm font-semibold text-ink-2"><User className="h-4 w-4" />Uwagi admina (pracownicy nie widzą){fj.has('uwagiAdmin') && <NewMark sr="zmienione uwagi admina" />}</p><p className="whitespace-pre-wrap">{job.uwagiAdmin}</p></div>
           )}
         </div>
       </div>
-      <Scope jobId={id} disabled={!!job._tmp} />
-      <Pumble job={job} />
-      <Diary ownerType="job" ownerId={id} highlight={highlight} disabled={!!job._tmp} />
+      <Scope jobId={id} disabled={!!job._tmp} since={since} />
+      <Pumble job={job} since={since} />
+      <Diary ownerType="job" ownerId={id} highlight={highlight} disabled={!!job._tmp} since={since} />
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}
     </article>
   );
 }
 
-const Info = ({ k, children }: { k: string; children: React.ReactNode }) => (
-  <div className="min-w-0"><dt className="text-ink-2">{k}</dt><dd className="mt-0.5 font-semibold">{children}</dd></div>
+const Info = ({ k, fresh, children }: { k: string; fresh?: boolean; children: React.ReactNode }) => (
+  <div className="min-w-0"><dt className="flex items-center gap-1.5 text-ink-2">{k}{fresh && <NewMark sr={`zmienione pole ${k.toLowerCase()}`} />}</dt><dd className="mt-0.5 font-semibold">{children}</dd></div>
 );

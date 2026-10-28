@@ -8,6 +8,8 @@ export type Change = { seq: number; entity: string; id: string; action: string; 
 export type Undo = { entity: string; id: string; prev?: Rec; next?: Rec };
 
 const KEY = (e: string) => `e:${e}`;
+const HIST = new Set(['jobs', 'clients', 'sites']);
+const HIST_MAX = 5;
 
 export interface Store {
   get(e: string, id: string | undefined): Rec | undefined;
@@ -80,7 +82,13 @@ export function createStore(): Store {
     apply(ch: Change) {
       if (ch.action === 'delete' || !ch.data || ch.data.deletedAt) s.remove(ch.entity, ch.id);
       // `_by`: kto ostatnio zmienił rekord (do „nowe”); zmiana systemu (by=null) zostawia poprzedniego; snapshot go nie ma
-      else s.put(ch.entity, { ...ch.data, id: ch.id, _by: ch.by ?? s.get(ch.entity, ch.id)?._by });
+      else {
+        const prev = s.get(ch.entity, ch.id);
+        const r: Rec = { ...ch.data, id: ch.id, _by: ch.by ?? prev?._by };
+        // R62: kilka poprzednich wersji (bez zagnieżdżeń) do „nowe” przy polach karty zlecenia; snapshot historii nie ma
+        if (prev && HIST.has(ch.entity)) { const { _hist, ...v } = prev; r._hist = [...((_hist as Rec[] | undefined) ?? []), v].slice(-HIST_MAX); }
+        s.put(ch.entity, r);
+      }
       if (ch.seq > last) s.setLast(ch.seq);
     },
     /** Snapshot: wszystkie kolekcje zastąpione. */
