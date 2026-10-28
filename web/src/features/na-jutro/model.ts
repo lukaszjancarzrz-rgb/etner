@@ -28,3 +28,10 @@ export function rankTemplates<J extends Rec>(templates: Rec[], dayJobs: J[]): { 
     .map((t) => ({ t, jobs: dayJobs.filter((j) => fits(t, j)) }));
   return [...all.filter((x) => x.jobs.length), ...all.filter((x) => !x.jobs.length)];
 }
+
+/** Auta ekipy w naprawie danego dnia (jak czerwone oznaczenie w harmonogramie): nazwa auta i opis usterki. */
+export function crewRepairs(cars: Rec[], faults: Rec[], ekipa: string, day: string): { id: string; auto: string; opis: string }[] {
+  const mine = new Map(cars.filter((c) => !c.deletedAt && c.ekipa === ekipa).map((c) => [c.id, c.nazwa as string]));
+  return faults.filter((f) => !f.deletedAt && f.naprawaDzien === day && mine.has(f.carId))
+    .map((f) => ({ id: f.id, auto: mine.get(f.carId)!, opis: f.opis }));
+}

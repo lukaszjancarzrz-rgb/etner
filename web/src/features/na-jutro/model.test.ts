@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayJobIds, fits, rankTemplates } from './model.js';
+import { crewRepairs, dayJobIds, fits, rankTemplates } from './model.js';
 
 const t = (id: string, kategorie: string[], rodzaje: string[] = [], kolejnosc = 0) => ({ id, nazwa: id, kategorie, rodzaje, kolejnosc, pozycje: [] });
 const job = (id: string, kategoria: string, rodzaj = 'montaż', ekipa = 'A') => ({ id, kategoria, rodzaj, ekipa });
@@ -32,5 +32,20 @@ describe('listy predefiniowane: dopasowanie', () => {
     expect(dayJobIds(entries, people, '2026-10-23', jobs, (u) => u === 'me')).toEqual(['j2']); // pracownik: tylko swoje
     expect(dayJobIds(entries, people, '2026-10-23', jobs, (u) => ek[u] === 'A').sort()).toEqual(['j2', 'j3']); // admin, ekipa A
     expect(dayJobIds(entries, people, '2026-10-23', jobs, (u) => ek[u] === 'B').sort()).toEqual(['j1', 'j4']); // admin, ekipa B
+  });
+});
+
+describe('crewRepairs', () => {
+  it('tylko auta tej ekipy z naprawą tego dnia; bez usuniętych', () => {
+    const cars = [{ id: 'c1', nazwa: 'Mała Toyota', ekipa: 'A' }, { id: 'c2', nazwa: 'Stary Ducato', ekipa: 'B' }, { id: 'c3', nazwa: 'Stara', ekipa: 'A', deletedAt: 'x' }];
+    const faults = [
+      { id: 'f1', carId: 'c1', opis: 'check engine', naprawaDzien: '2026-11-03' },
+      { id: 'f2', carId: 'c1', opis: 'inny dzień', naprawaDzien: '2026-11-04' },
+      { id: 'f3', carId: 'c2', opis: 'druga ekipa', naprawaDzien: '2026-11-03' },
+      { id: 'f4', carId: 'c1', opis: 'usunięta', naprawaDzien: '2026-11-03', deletedAt: 'x' },
+      { id: 'f5', carId: 'c3', opis: 'auto usunięte', naprawaDzien: '2026-11-03' },
+    ];
+    expect(crewRepairs(cars, faults, 'A', '2026-11-03')).toEqual([{ id: 'f1', auto: 'Mała Toyota', opis: 'check engine' }]);
+    expect(crewRepairs(cars, faults, 'B', '2026-11-04')).toEqual([]);
   });
 });

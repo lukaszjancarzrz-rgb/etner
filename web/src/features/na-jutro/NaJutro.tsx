@@ -1,4 +1,4 @@
-import { CaretLeft, CaretRight, Check, ListChecks, PencilSimple, Plus, SunHorizon, Trash, X } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, Check, ListChecks, PencilSimple, Plus, SunHorizon, Trash, Wrench, X } from '@phosphor-icons/react';
 import { addDays, nextWorkday } from '@etner/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { dayLong, fmtWhen, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
@@ -12,7 +12,7 @@ import { Input } from '../../core/ui/input.js';
 import { Avatar } from '../../core/ui/avatar.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { useJobs, type JobView } from '../zlecenia/jobs.js';
-import { dayJobIds, rankTemplates } from './model.js';
+import { crewRepairs, dayJobIds, rankTemplates } from './model.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
@@ -53,6 +53,9 @@ export function NaJutro({ route }: { route: Route }) {
   const ekipa: string | undefined = admin ? crewSel ?? crews[0]?.wartosc : me?.ekipa ?? undefined;
   const list = useMemo(() => items.filter((i) => i.ekipa === ekipa && i.dzien === day), [items, ekipa, day]);
   const open = useMemo(() => list.filter((i) => !i.zabrane).sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)), [list]);
+  const cars = useEntities('cars');
+  const faults = useEntities('car_faults');
+  const repairs = useMemo(() => (ekipa ? crewRepairs(cars, faults, ekipa, day) : []), [cars, faults, ekipa, day]);
   const taken = useMemo(() => list.filter((i) => i.zabrane).sort((a, b) => ((a.zabraneAt ?? '') < (b.zabraneAt ?? '') ? -1 : 1)), [list]);
 
   if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true" aria-label="Wczytywanie listy"><Skeleton className="h-28" />{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>;
@@ -69,6 +72,12 @@ export function NaJutro({ route }: { route: Route }) {
           <p className="min-w-0 flex-1 text-center font-semibold first-letter:uppercase" aria-live="polite">{dayName(day)}</p>
           <Button variant="secondary" size="icon" aria-label="Następny dzień" onClick={() => setDay(addDays(day, 1))}><CaretRight className="h-5 w-5" /></Button>
         </div>
+        {repairs.map((r) => (
+          <a key={r.id} href={`#auta~${r.id}`} className="flex items-start gap-2 rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger">
+            <Wrench className="mt-0.5 h-4 w-4 shrink-0" weight="bold" aria-hidden />
+            <span className="min-w-0 [overflow-wrap:anywhere]">{r.auto} w naprawie – {r.opis}</span>
+          </a>
+        ))}
         {day !== next && <Button variant="ghost" size="sm" className="justify-self-center text-action" onClick={() => setDay(undefined)}>{next === addDays(today(), 1) ? 'Wróć do jutra' : 'Wróć do następnego dnia roboczego'}</Button>}
       </div>
 
