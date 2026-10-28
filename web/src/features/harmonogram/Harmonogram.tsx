@@ -298,14 +298,14 @@ function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { 
   // linia 1: cała kategoria (bez ucinania) i ½; linia 2: klient pogrubiony · miejscowość wyszarzona (ucinana pierwsza)
   const body = (
     <span className="min-w-0 pl-2.5">
-      <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
+      <span className={cn('flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
         <span className="sr-only">{j ? `Zlecenie ${j.numer}` : 'zlecenie'}</span>
-        {j?.kategoria && <span className="flex min-w-0 items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide break-words text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span className="min-w-0">{j.kategoria}</span></span>}
+        {j?.kategoria && <span className="flex items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span>{j.kategoria}</span></span>}
         {slot.polDnia && <span className="shrink-0 font-bold"><span aria-hidden>½</span><span className="sr-only">pół dnia</span></span>}
       </span>
       <span className={cn('flex min-w-0 items-baseline gap-1 leading-tight', compact ? 'text-sm' : 'text-[15px]')}>
         <span className="max-w-full shrink-0 truncate font-semibold">{j?.client?.nazwa ?? ''}</span>
-        {j?.site?.miejscowosc && <><span aria-hidden className="text-ink-2">·</span><span className="min-w-0 truncate text-ink-2">{j.site.miejscowosc}</span></>}
+        {j?.site?.miejscowosc && <span className="min-w-0 truncate text-ink-2"><span aria-hidden>· </span>{j.site.miejscowosc}</span>}
       </span>
     </span>
   );
