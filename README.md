@@ -39,6 +39,18 @@ Plik `render.yaml` opisuje usługę z danymi przykładowymi (tryb demo). Dane le
 
 Darmowa usługa usypia się po kwadransie bez ruchu; pierwsze wejście po przerwie trwa około minuty.
 
+### Powiadomienia push
+
+Serwer wysyła push tylko na urządzenia zapisane w swojej bazie. W wersji demo baza leży w `/tmp/etner`, więc po każdym wdrożeniu lub uśpieniu lista urządzeń jest pusta. Telefon zapisuje się ponownie dopiero, gdy ktoś otworzy na nim aplikację (i zaloguje się, bo sesje też znikają). Kto po uśpieniu usługi nie otworzył aplikacji, ten nie dostanie powiadomienia, np. o naprawie auta.
+
+Bez kluczy `VAPID_PUBLIC` / `VAPID_PRIVATE` serwer losuje nowe klucze przy każdym starcie. Ustaw je raz jako sekrety, żeby subskrypcje w telefonach zostały ważne:
+
+1. Na komputerze z Node.js uruchom `npx web-push generate-vapid-keys`.
+2. Na Render w ustawieniach usługi (Environment) wklej „Public Key” jako `VAPID_PUBLIC`, „Private Key” jako `VAPID_PRIVATE` i wdroż ponownie.
+3. Na każdym telefonie otwórz aplikację, w Ustawieniach sprawdź „Powiadomienia” i wyślij próbne powiadomienie.
+
+Na stałe (wersja produkcyjna) baza musi leżeć na trwałym dysku (`DATA_DIR` na dysku Render, plan płatny), wtedy urządzenia nie znikają. Nieudane wysyłki widać w Ustawieniach, w logu błędów (miejsce „push”).
+
 ## Pumble (kanał przy każdym zleceniu)
 
 Przy nowym zleceniu serwer zakłada prywatny kanał Pumble (np. `z0012-kowalski-zawoja`) i dodaje do niego administratorów, ekipę zlecenia i osoby z harmonogramu. Na karcie zlecenia widać ostatnie wiadomości kanału, można napisać do kanału i przejść do Pumble.
