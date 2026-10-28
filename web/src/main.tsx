@@ -3,9 +3,11 @@ import { registerSW } from 'virtual:pwa-register';
 import { App } from './App.js';
 import { startSession } from './core/session.js';
 import { applyTheme } from './core/theme.js';
+import { preloadScreen } from './routes.js';
 import './theme.css';
 
 applyTheme();
+preloadScreen(location.hash);
 void startSession();
 createRoot(document.getElementById('root')!).render(<App />);
 

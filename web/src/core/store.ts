@@ -1,4 +1,4 @@
-import { del, get, keys, set } from 'idb-keyval';
+import { del, entries, set } from 'idb-keyval';
 import { useMemo, useSyncExternalStore } from 'react';
 
 export type Rec = { id: string } & Record<string, any>;
@@ -105,14 +105,15 @@ export function createStore(): Store {
     },
     subscribe(f: () => void) { subs.add(f); return () => { subs.delete(f); }; },
     async load() {
-      for (const k of (await keys()) as string[]) {
+      // jedna transakcja zamiast odczytu klucz po kluczu (start aplikacji, LCP)
+      for (const [k, v] of await entries()) {
         if (typeof k === 'string' && k.startsWith('e:')) {
           const m = map(k.slice(2));
-          for (const r of ((await get(k)) as Rec[]) ?? []) m.set(r.id, r);
+          for (const r of (v as Rec[]) ?? []) m.set(r.id, r);
           lists.delete(k.slice(2));
         }
+        if (k === 'last') last = (v as number) ?? 0;
       }
-      last = ((await get('last')) as number) ?? 0;
       for (const f of subs) f();
     },
     /** Czeka na zapis do IndexedDB. */

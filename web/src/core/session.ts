@@ -34,8 +34,10 @@ async function signedIn(me: Me) {
   void pushState().catch(() => {}); // istniejąca subskrypcja tego urządzenia przechodzi na zalogowaną osobę
 }
 
-/** Start aplikacji: /api/me (401 = ekran logowania; offline: zapamiętane konto). */
+/** Start aplikacji: zapamiętane konto od razu, potem /api/me (401 = ekran logowania; offline: zostaje zapamiętane konto). */
 export async function startSession(): Promise<void> {
+  const meReq = api<Me>('/api/me'); // równolegle z wczytaniem danych z urządzenia
+  meReq.catch(() => {}); // błąd obsłużony niżej
   await store.load();
   dropTmp();
   addEventListener('online', () => { outbox.kick(); sync.wake(); });
@@ -43,10 +45,12 @@ export async function startSession(): Promise<void> {
     if (document.visibilityState === 'visible') { outbox.kick(); sync.wake(); }
   });
 
+  const cached = (await get('me')) as Me | undefined;
+  // zapamiętane konto od razu: ekran z danych z urządzenia bez czekania na sieć (LCP); kolejka i synchronizacja ruszają dopiero po /api/me
+  if (cached) setState({ status: 'in', me: cached });
   try {
-    await signedIn(await api<Me>('/api/me'));
+    await signedIn(await meReq);
   } catch (e) {
-    const cached = (await get('me')) as Me | undefined;
     if (e instanceof ApiError && e.status === 401) {
       setState(cached ? { status: 'expired', me: cached, askLogin: true } : { status: 'out' });
       void outbox.refresh(); // licznik zapisów czekających na ponowne zalogowanie

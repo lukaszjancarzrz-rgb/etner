@@ -16,19 +16,20 @@ export function parseHash(hash: string): Route {
 /** `nav`: brak = dolny pasek i menu boczne; 'side' = tylko menu boczne i kafelek w Więcej; false = poza menu. `admin` = tylko admin (inni: „Brak dostępu”). */
 export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true };
 
-// Ekrany ładowane osobno (mniejszy pierwszy pakiet JS).
-const Harmonogram = lazy(() => import('./features/harmonogram/Harmonogram.js').then((m) => ({ default: m.Harmonogram })));
-const Zlecenia = lazy(() => import('./features/zlecenia/Zlecenia.js').then((m) => ({ default: m.Zlecenia })));
-const Zakupy = lazy(() => import('./features/zakupy/Zakupy.js').then((m) => ({ default: m.Zakupy })));
-const NaJutro = lazy(() => import('./features/na-jutro/NaJutro.js').then((m) => ({ default: m.NaJutro })));
-const Leady = lazy(() => import('./features/leady/Leady.js').then((m) => ({ default: m.Leady })));
-const Zadania = lazy(() => import('./features/zadania/Zadania.js').then((m) => ({ default: m.Zadania })));
-const Uzytkownicy = lazy(() => import('./features/uzytkownicy/Uzytkownicy.js').then((m) => ({ default: m.Uzytkownicy })));
-const Ustawienia = lazy(() => import('./features/ustawienia/Ustawienia.js').then((m) => ({ default: m.Ustawienia })));
-const Samochody = lazy(() => import('./features/samochody/Samochody.js').then((m) => ({ default: m.Samochody })));
-const Narzedzia = lazy(() => import('./features/narzedzia/Narzedzia.js').then((m) => ({ default: m.Narzedzia })));
-const Magazyn = lazy(() => import('./features/magazyn/Magazyn.js').then((m) => ({ default: m.Magazyn })));
-const Klienci = lazy(() => import('./features/klienci/Klienci.js').then((m) => ({ default: m.Klienci })));
+// Ekrany ładowane osobno (mniejszy pierwszy pakiet JS); `preload` = pobranie pakietu bez renderu.
+const lazyScreen = (f: () => Promise<{ default: ComponentType<{ route: Route }> }>) => Object.assign(lazy(f), { preload: f });
+const Harmonogram = lazyScreen(() => import('./features/harmonogram/Harmonogram.js').then((m) => ({ default: m.Harmonogram })));
+const Zlecenia = lazyScreen(() => import('./features/zlecenia/Zlecenia.js').then((m) => ({ default: m.Zlecenia })));
+const Zakupy = lazyScreen(() => import('./features/zakupy/Zakupy.js').then((m) => ({ default: m.Zakupy })));
+const NaJutro = lazyScreen(() => import('./features/na-jutro/NaJutro.js').then((m) => ({ default: m.NaJutro })));
+const Leady = lazyScreen(() => import('./features/leady/Leady.js').then((m) => ({ default: m.Leady })));
+const Zadania = lazyScreen(() => import('./features/zadania/Zadania.js').then((m) => ({ default: m.Zadania })));
+const Uzytkownicy = lazyScreen(() => import('./features/uzytkownicy/Uzytkownicy.js').then((m) => ({ default: m.Uzytkownicy })));
+const Ustawienia = lazyScreen(() => import('./features/ustawienia/Ustawienia.js').then((m) => ({ default: m.Ustawienia })));
+const Samochody = lazyScreen(() => import('./features/samochody/Samochody.js').then((m) => ({ default: m.Samochody })));
+const Narzedzia = lazyScreen(() => import('./features/narzedzia/Narzedzia.js').then((m) => ({ default: m.Narzedzia })));
+const Magazyn = lazyScreen(() => import('./features/magazyn/Magazyn.js').then((m) => ({ default: m.Magazyn })));
+const Klienci = lazyScreen(() => import('./features/klienci/Klienci.js').then((m) => ({ default: m.Klienci })));
 
 /** Ekrany w kolejności menu. */
 export const screens: Record<string, Screen> = {
@@ -47,6 +48,9 @@ export const screens: Record<string, Screen> = {
   kl: { title: 'Klienci', icon: UsersThree, component: Klienci, nav: false },
   ld: { title: 'Leady', icon: Handshake, component: Leady, nav: false, admin: true },
 };
+
+/** Pakiet ekranu z adresu startowego pobierany od razu, równolegle z danymi z urządzenia (krótszy łańcuch do LCP). */
+export const preloadScreen = (hash: string): void => { void (screens[parseHash(hash).screen]!.component as { preload?: () => Promise<unknown> }).preload?.().catch(() => {}); };
 
 let cached: { hash: string; route: Route } = { hash: '\0', route: { screen: 'harm' } };
 const snapshot = () => {
