@@ -251,3 +251,6 @@ Owner checkpoint: next = Tasks 21–22 (need O3 exports of the old app: Firma_20
 - Split: 19i (slowniki seed, seed-demo, templates, tests) in parallel with 21→22 (new files under server/src/scripts/migrate-old only).
 Task 19i: impl e661562 (8 categories, templates, demo); controller review of the 15-line diff: matches brief/R50 — complete. Tests: shared 15, server 199, web 59, e2e 54/2 skipped (implementer run).
 Task 21: impl e3d9953; Task 22: impl aa71dc6 (real-file dry-run local: diff 0 on all sheets, 60 review items); controller privacy check: fixture tokens vs workbook — only town names match, no names/phones; review dispatched
+Task 21–22: review — Needs fixes: silent longest-hasło wins + substring matches; 222 text cells hidden behind grouped review rows; >2-part cells lose text; contact status at contact time dropped (R37); review screen missing
+- Ruling R51: „do przejrzenia” stored in a DB table (admin-only), shown in Ustawienia with a „przejrzane” tick, filled by the migration in the same transaction — cost: one table + one screen section.
+Task 21–22: fix round 1 dispatched (Important 1–3, R51, R37 + minors 4–15)
