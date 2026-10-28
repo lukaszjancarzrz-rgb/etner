@@ -1,13 +1,5 @@
 import { z } from 'zod';
-
-export const DICT_RODZAJE = [
-  'status_zlecenia', 'status_leada', 'kategoria', 'ekipa', 'zrodlo', 'kod_nieobecnosci',
-  'grupa_zadan', 'status_zadania', 'rodzaj_zlecenia', 'status_zakupu', 'dzien_wolny',
-] as const;
-export type DictRodzaj = (typeof DICT_RODZAJE)[number];
-
-export const DICT_GRUPY = ['aktualne', 'pozniej', 'zamkniete'] as const;
-export type DictGrupa = (typeof DICT_GRUPY)[number];
+import { DICT_GRUPY, DICT_RODZAJE } from '../stale.js';
 
 export const dictRodzajSchema = z.enum(DICT_RODZAJE);
 

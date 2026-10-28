@@ -1,11 +1,8 @@
 import { z } from 'zod';
+import { PODMIEJSCA } from '../stale.js';
 
 const txt = z.string().trim();
 const opId = z.string().min(1).optional();
-
-/** Miejsca w samochodzie (R42); Magazyn (carId = null) nie ma podmiejsc. */
-export const PODMIEJSCA = ['Górna półka na regale', 'Środkowa półka na regale', 'Nad kabiną', 'Dolna półka', 'W kabinie'] as const;
-export type Podmiejsce = (typeof PODMIEJSCA)[number];
 
 const nazwa = txt.min(1, 'Wpisz nazwę narzędzia').max(200, 'Nazwa jest za długa');
 const carId = z.string().min(1).nullable();

@@ -1,11 +1,5 @@
 import { z } from 'zod';
-import { addDays, addMonths } from '../dates.js';
-
-/** Cykl zadania cyklicznego: po „Zrobione” termin = dziś + cykl. */
-export const CYKLE = { '1t': 'co tydzień', '2t': 'co 2 tygodnie', '1m': 'co miesiąc', '3m': 'co 3 miesiące', '6m': 'co pół roku', '1r': 'co rok' } as const;
-export type Cykl = keyof typeof CYKLE;
-export const nextTermin = (today: string, cykl: Cykl): string =>
-  cykl === '1t' ? addDays(today, 7) : cykl === '2t' ? addDays(today, 14) : addMonths(today, { '1m': 1, '3m': 3, '6m': 6, '1r': 12 }[cykl]);
+import { CYKLE, type Cykl } from '../stale.js';
 
 const txt = z.string().trim();
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data w formacie RRRR-MM-DD');

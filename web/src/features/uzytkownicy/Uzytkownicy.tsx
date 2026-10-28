@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, CalendarDots, CaretRight, Copy, EnvelopeSimple, Key, Plus, ShareNetwork, Trash, UserPlus, UsersThree } from '@phosphor-icons/react';
 import { useMemo, useState, type FormEvent } from 'react';
-import { loginSchema } from '@etner/shared';
+import { LOGIN_MSG, LOGIN_RE } from '@etner/shared';
 import { ApiError, api } from '../../core/api.js';
 import { useDict, useLoading, useMe } from '../../core/data.js';
 import { store, useEntities, useEntity, type Rec } from '../../core/store.js';
@@ -103,13 +103,13 @@ function UserForm({ user, onClose, onShow }: { user?: Rec; onClose: () => void; 
     e.preventDefault();
     const er: Record<string, string> = {};
     if (!f.name.trim()) er.name = 'Podaj imię i nazwisko';
-    const login = loginSchema.safeParse(f.login);
-    if (!login.success) er.login = login.error.issues[0]!.message;
+    const login = f.login.trim().toLowerCase();
+    if (!LOGIN_RE.test(login)) er.login = LOGIN_MSG;
     if (!user && f.haslo.length < 8) er.haslo = 'Hasło musi mieć co najmniej 8 znaków';
     setErr(er);
     if (Object.keys(er).length) return;
     const perms = [...((user?.perms as string[] | undefined) ?? []).filter((p) => p !== 'finanse'), ...(f.role === 'admin' && f.finanse ? ['finanse'] : [])];
-    const body = { name: f.name.trim(), login: login.data ?? '', role: f.role, perms, ekipa: f.ekipa === NONE ? null : f.ekipa, email: f.email.trim() };
+    const body = { name: f.name.trim(), login, role: f.role, perms, ekipa: f.ekipa === NONE ? null : f.ekipa, email: f.email.trim() };
     setBusy(true);
     try {
       const u = user ? await send('users', `/api/users/${user.id}`, 'PUT', { ...body, active: f.active })

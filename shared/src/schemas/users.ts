@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LOGIN_MSG, LOGIN_RE } from '../stale.js';
 
 export type Role = 'pracownik' | 'admin';
 
@@ -21,7 +22,7 @@ const opt = z.string().trim().min(1).nullish();
 /** Ten sam co w Pumble (po nim łączymy konta); pusty = brak. */
 const email = z.string().trim().toLowerCase().max(200).pipe(z.union([z.literal(''), z.email('Nieprawidłowy e-mail')])).transform((v) => v || null).nullish();
 
-export const loginSchema = z.string().trim().toLowerCase().regex(/^[a-ząćęłńóśźż0-9._-]{2,32}$/, 'Login: 2–32 znaków (litery, cyfry, . _ -)');
+export const loginSchema = z.string().trim().toLowerCase().regex(LOGIN_RE, LOGIN_MSG);
 export const hasloSchema = z.string().min(8, 'Hasło musi mieć co najmniej 8 znaków').max(200);
 
 export const userCreateSchema = z.object({

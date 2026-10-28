@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addDays, addMonths, dayOf, mondayOf, nextWorkday } from './dates.js';
-import { nextTermin } from './schemas/zadania.js';
+import { nextTermin } from './stale.js';
 
 describe('dates', () => {
   it('dayOf w Europe/Warsaw', () => {

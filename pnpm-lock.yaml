@@ -133,9 +133,15 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
+      '@axe-core/playwright':
+        specifier: ^4.14.0
+        version: 4.14.0(playwright-core@1.64.1)
       '@playwright/test':
         specifier: ^1.64.1
         version: 1.64.1
+      '@size-limit/file':
+        specifier: ^14.3.0
+        version: 14.3.0(size-limit@14.3.0)
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@7.3.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15))
@@ -157,6 +163,9 @@ importers:
       msw:
         specifier: ^2.15.0
         version: 2.15.0(@types/node@22.20.5)(typescript@5.9.3)
+      size-limit:
+        specifier: ^14.3.0
+        version: 14.3.0
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -259,6 +268,12 @@ packages:
   '@aws/lambda-invoke-store@0.3.0':
     resolution: {integrity: sha512-sl4Bm6yiMNYrZKkqqDFWN0UfnWhlS8ivKxrYl+6t0gCLrqr8y3B2IqZZbFRkfaVVp7C/baApyh71P+LeE1A2sQ==}
     engines: {node: '>=18.0.0'}
+
+  '@axe-core/playwright@4.14.0':
+    resolution: {integrity: sha512-SGUhG5PIHd2eMdpgBF2PyQLOhX+qyDR2PT4cmoS4Qk2ak+jX/rrSvst9l0PGv5WTHolKpUMvVmoHpr4cZgf1RQ==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      playwright-core: '>= 1.0.0'
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -1966,6 +1981,12 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@size-limit/file@14.3.0':
+    resolution: {integrity: sha512-GWKOi0rorXPbYmwbT926Z91t28rg5gd5hv8ywY1FNcaYf8NbibgK5K5YabYbLkV6KpGwuuixBRtIzl3ZpPzUfw==}
+    engines: {node: ^22.19.0 || ^24.5.0 || >=26.0.0}
+    peerDependencies:
+      size-limit: 14.3.0
+
   '@smithy/core@3.36.1':
     resolution: {integrity: sha512-WC5W1Jrsfxu1y6LeqXMie7N14qmcdafij/Haye4feVlyMMXLGpYxBeOX6Ee1iRJbDzGG5LVman8U1rrt9MYFHA==}
     engines: {node: '>=18.0.0'}
@@ -2240,6 +2261,10 @@ packages:
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
+
+  axe-core@4.14.0:
+    resolution: {integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==}
+    engines: {node: '>=4'}
 
   babel-plugin-polyfill-corejs2@0.4.17:
     resolution: {integrity: sha512-aTyf30K/rqAsNwN76zYrdtx8obu0E4KoUME29B1xj+B3WxgvWkp943vYQ+z8Mv3lw9xHXMHpvSPOBxzAkIa94w==}
@@ -3127,6 +3152,10 @@ packages:
     resolution: {integrity: sha512-WkUDrojuJs0xkgGf2udWxa3yGBRxPtxUkB79i6aCZLRgc7PM8fZe9TosfPDcvEpQZbuFASnHYmRLBLUbmLOIIA==}
     engines: {node: '>= 12.0.0'}
 
+  lilconfig@3.1.4:
+    resolution: {integrity: sha512-zJZyBmQhArDRefuWTypZxwDpFDIYmrj8ypSBvwGD5P13Y95s6DjzKgu4DVdGbeQa5PDEsAOCAPNk4X+QOR006w==}
+    engines: {node: '>=14'}
+
   lodash.debounce@4.0.8:
     resolution: {integrity: sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==}
 
@@ -3187,6 +3216,9 @@ packages:
     resolution: {integrity: sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
+
+  nanospinner@1.2.2:
+    resolution: {integrity: sha512-Zt/AmG6qRU3e+WnzGGLuMCEAO/dAu45stNbHY223tUxldaDAeE+FxSPsd9Q+j+paejmm0ZbrNVs5Sraqy3dRxA==}
 
   node-addon-api@8.9.2:
     resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
@@ -3474,6 +3506,11 @@ packages:
   signal-exit@4.1.0:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
+
+  size-limit@14.3.0:
+    resolution: {integrity: sha512-SoT7DtEYQ9AkOIyrNmmHu8IyJyA3P/Q6EUVjUUinT0iBuaI6IOpWxwyI+teUxg8WdLwcTwbu9moKvw/LGlCE7g==}
+    engines: {node: ^22.19.0 || ^24.5.0 || >=26.0.0}
+    hasBin: true
 
   smob@1.6.2:
     resolution: {integrity: sha512-RQsvleCbF8cVHEv+xuDGaA4pOizFqJ0GgjtMSRo6oP8pnN7WsigHgVGey6aILRBKv4W2YOMHLqbKdnB6hpB9fw==}
@@ -4104,6 +4141,11 @@ snapshots:
       tslib: 2.8.1
 
   '@aws/lambda-invoke-store@0.3.0': {}
+
+  '@axe-core/playwright@4.14.0(playwright-core@1.64.1)':
+    dependencies:
+      axe-core: 4.14.0
+      playwright-core: 1.64.1
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -5675,6 +5717,10 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.64.12':
     optional: true
 
+  '@size-limit/file@14.3.0(size-limit@14.3.0)':
+    dependencies:
+      size-limit: 14.3.0
+
   '@smithy/core@3.36.1':
     dependencies:
       '@smithy/types': 4.19.0
@@ -5982,6 +6028,8 @@ snapshots:
   available-typed-arrays@1.0.7:
     dependencies:
       possible-typed-array-names: 1.1.0
+
+  axe-core@4.14.0: {}
 
   babel-plugin-polyfill-corejs2@0.4.17(@babel/core@7.29.7):
     dependencies:
@@ -6889,6 +6937,8 @@ snapshots:
       lightningcss-win32-x64-msvc: 1.33.0
     optional: true
 
+  lilconfig@3.1.4: {}
+
   lodash.debounce@4.0.8: {}
 
   loose-envify@1.4.0:
@@ -6977,6 +7027,10 @@ snapshots:
   mute-stream@3.0.0: {}
 
   nanoid@3.3.20: {}
+
+  nanospinner@1.2.2:
+    dependencies:
+      picocolors: 1.1.1
 
   node-addon-api@8.9.2: {}
 
@@ -7314,6 +7368,11 @@ snapshots:
   siginfo@2.0.0: {}
 
   signal-exit@4.1.0: {}
+
+  size-limit@14.3.0:
+    dependencies:
+      lilconfig: 3.1.4
+      nanospinner: 1.2.2
 
   smob@1.6.2: {}
 
