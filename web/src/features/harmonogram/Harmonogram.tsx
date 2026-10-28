@@ -30,6 +30,15 @@ export type Ctx = {
 /** „Dziś”: po przejściu na bieżący tydzień / miesiąc przewijamy do dzisiejszego dnia. */
 let scrollToday = false;
 const smooth = (): ScrollBehavior => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+/** Przewija do dzisiejszego dnia (karta na telefonie, kolumna na komputerze), daje mu fokus i na chwilę obwódkę. */
+function goToday() {
+  const el = document.querySelector<HTMLElement>(`[data-day="${today()}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: smooth(), block: el.tagName === 'TH' ? 'nearest' : 'start', inline: 'start' });
+  el.tabIndex = -1;
+  el.focus({ preventScroll: true });
+  el.animate?.([{ boxShadow: 'inset 0 0 0 3px var(--action)' }, { boxShadow: 'inset 0 0 0 3px transparent' }], { duration: 1800, easing: 'ease-out' });
+}
 
 const validDay = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined);
 
@@ -92,7 +101,7 @@ export function Harmonogram({ route }: { route: Route }) {
   useEffect(() => {
     if (!scrollToday || loading) return;
     scrollToday = false;
-    requestAnimationFrame(() => document.querySelector(`[data-day="${t}"]`)?.scrollIntoView({ behavior: smooth(), block: desk ? 'nearest' : 'start', inline: 'start' }));
+    requestAnimationFrame(goToday);
   }, [anchor, month, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Z powiadomienia `#harm/<dzień>~<osoba>`: przewiń do komórki, podświetl ją na chwilę, dzień obejrzany.
@@ -184,11 +193,12 @@ function HarmSkeleton() {
 const navBtn = 'grid h-11 w-11 desk:h-12 desk:w-12 shrink-0 place-items-center rounded-full border border-line bg-card hover:border-ink-2';
 
 /** Stały układ: [miejsce na „Dziś”] ‹ etykieta › (strzałki nie skaczą). */
-function NavRow({ back, slot, prev, next, labels, title, sub }: { back?: string; slot: string; prev: string; next: string; labels: [string, string]; title: string; sub: string }) {
+function NavRow({ back, here, slot, prev, next, labels, title, sub }: { back: string; here: boolean; slot: string; prev: string; next: string; labels: [string, string]; title: string; sub: string }) {
   return (
     <div className="flex items-center gap-1.5 desk:gap-2">
       <span className={cn('flex shrink-0 justify-end', slot)}>
-        {back && <a href="#harm" onClick={() => { scrollToday = true; }} className="inline-flex h-11 items-center rounded-full px-2.5 font-semibold text-action hover:bg-action/10 desk:h-12 desk:px-3">{back}</a>}
+        {/* widok już z dzisiejszym dniem: bez nawigacji, sam przewijamy */}
+        <a href="#harm" onClick={(e) => { if (here) { e.preventDefault(); goToday(); } else scrollToday = true; }} className="inline-flex h-11 items-center rounded-full px-2.5 font-semibold text-action hover:bg-action/10 desk:h-12 desk:px-3">{back}</a>
       </span>
       <a href={prev} aria-label={labels[0]} className={navBtn}><CaretLeft className="h-5 w-5" /></a>
       <div className="w-48 shrink-0 text-center desk:w-52">
@@ -205,7 +215,7 @@ function WeekNav({ monday, today: t }: { monday: string; today: string }) {
   const isNow = mondayOf(t) === monday;
   const range = `${Number(monday.slice(8))}.${monday.slice(5, 7)}-${Number(sun.slice(8))}.${sun.slice(5, 7)}.${sun.slice(0, 4)}`;
   const title = isNow ? 'Ten tydzień' : mondayOf(addDays(t, 7)) === monday ? 'Następny tydzień' : mondayOf(addDays(t, -7)) === monday ? 'Poprzedni tydzień' : 'Tydzień';
-  return <NavRow slot="w-[3.75rem] desk:w-16" back={isNow ? undefined : 'Dziś'} prev={`#harm/${addDays(monday, -7)}`} next={`#harm/${addDays(monday, 7)}`} labels={['Poprzedni tydzień', 'Następny tydzień']} title={title} sub={range} />;
+  return <NavRow slot="w-[3.75rem] desk:w-16" back="Dziś" here={isNow} prev={`#harm/${addDays(monday, -7)}`} next={`#harm/${addDays(monday, 7)}`} labels={['Poprzedni tydzień', 'Następny tydzień']} title={title} sub={range} />;
 }
 
 const MONTH = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -216,7 +226,7 @@ function MonthNav({ day, today: t }: { day: string; today: string }) {
   const prev = `${addDays(first, -1).slice(0, 7)}-01`;
   const next = addDays(monthDays(day).at(-1)!, 1);
   const isNow = t.slice(0, 7) === day.slice(0, 7);
-  return <NavRow slot="w-32" back={isNow ? undefined : 'Ten miesiąc'} prev={`#harm/${prev}`} next={`#harm/${next}`} labels={['Poprzedni miesiąc', 'Następny miesiąc']} title={monthName(day)} sub={isNow ? 'Ten miesiąc' : 'Miesiąc'} />;
+  return <NavRow slot="w-32" back={isNow ? 'Dziś' : 'Ten miesiąc'} here={isNow} prev={`#harm/${prev}`} next={`#harm/${next}`} labels={['Poprzedni miesiąc', 'Następny miesiąc']} title={monthName(day)} sub={isNow ? 'Ten miesiąc' : 'Miesiąc'} />;
 }
 
 /** „Gdzie jedziesz”: pierwszy dzień od dziś z wpisami użytkownika. */

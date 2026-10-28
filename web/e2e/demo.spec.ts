@@ -148,11 +148,10 @@ test('harmonogram: jedno zlecenie dwóm osobom na 3 dni robocze, admin bez wiers
   await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
 });
 
-test('harmonogram: strzałki w miejscu, „Dziś” wraca do bieżącego tygodnia', async ({ page }) => {
+test('harmonogram: strzałki w miejscu, „Dziś” wraca do bieżącego tygodnia i przewija do dziś', async ({ page }) => {
   const t = dayOf(new Date());
   await loginAdmin(page);
   await expect(page.getByText('Ten tydzień', { exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Dziś', exact: true })).toHaveCount(0);
   const next = page.getByRole('link', { name: 'Następny tydzień' });
   const before = await next.boundingBox();
   await next.click();
@@ -165,7 +164,12 @@ test('harmonogram: strzałki w miejscu, „Dziś” wraca do bieżącego tygodni
   await dzis.click();
   await expect(page.getByText('Ten tydzień', { exact: true })).toBeVisible();
   await expect(page.locator(`[data-day="${t}"]`)).toBeInViewport();
-  await expect(page.getByRole('link', { name: 'Dziś', exact: true })).toHaveCount(0);
+  // w bieżącym tygodniu „Dziś” też jest: przewija do dzisiejszego dnia i daje mu fokus
+  await page.mouse.wheel(0, 2000);
+  await page.getByRole('link', { name: 'Dziś', exact: true }).click();
+  await expect(page).toHaveURL(/#harm$/);
+  await expect(page.locator(`[data-day="${t}"]`)).toBeInViewport();
+  await expect(page.locator(`[data-day="${t}"]`)).toBeFocused();
 });
 
 test('harmonogram: zmieniony dzień ma „nowe”, licznik spada po obejrzeniu dnia', async ({ page, browser }, info) => {
