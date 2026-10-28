@@ -10,7 +10,7 @@ const Tile = ({ href, icon: I, title, hint }: { href: string; icon: Icon; title:
   </a>
 );
 
-/** Więcej: Samochody, Narzędzia, Magazyn; Leady, Zadania, Klienci, Użytkownicy (admin); Ustawienia, wylogowanie. */
+/** Więcej: Samochody, Narzędzia, Rzeczy nietypowe; Leady, Zadania, Klienci, Użytkownicy (admin); Ustawienia, wylogowanie. */
 export function More() {
   const { me } = useSession();
   return (
@@ -18,7 +18,7 @@ export function More() {
       <div className="grid gap-3">
         <Tile href="#auta" icon={Van} title="Samochody" hint="Usterki aut, terminy napraw" />
         <Tile href="#narz" icon={Wrench} title="Narzędzia" hint="Gdzie leży narzędzie: samochody i Magazyn" />
-        <Tile href="#mag" icon={Package} title="Magazyn" hint="Nietypowe rzeczy: co leży, kto zabrał" />
+        <Tile href="#mag" icon={Package} title="Rzeczy nietypowe" hint="Co leży na magazynie, kto zabrał" />
       </div>
       {me?.role === 'admin' && (
         <div className="grid gap-3">

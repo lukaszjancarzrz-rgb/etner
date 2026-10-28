@@ -1,7 +1,7 @@
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Input } from './input.js';
 
-/** Pole wyszukiwania z ikoną i czyszczeniem (Narzędzia, Magazyn). */
+/** Pole wyszukiwania z ikoną i czyszczeniem (Narzędzia, Rzeczy nietypowe). */
 export function Search({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label: string; placeholder: string }) {
   return (
     <div className="relative">

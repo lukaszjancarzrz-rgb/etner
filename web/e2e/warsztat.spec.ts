@@ -97,10 +97,11 @@ test('narzędzia: wyszukiwanie pokazuje wszystkie miejsca; dodanie, przeniesieni
   await expect(page.getByText(`${tag} szlifierka`)).toHaveCount(0);
 });
 
-test('magazyn: dodanie, Zabieram → Zabrane (kto), Zwracam z nową ilością, wyszukiwanie w obu listach, usunięcie', async ({ page }, info) => {
+test('rzeczy nietypowe: dodanie, Zabieram → Zabrane (kto), Zwracam z nową ilością, wyszukiwanie w obu listach, usunięcie', async ({ page }, info) => {
   const tag = `E2E ${info.project.name}`;
   await login(page, 'Kamil Zięba');
   await page.goto('/#mag');
+  await expect(page.getByRole('heading', { name: 'Rzeczy nietypowe', level: 1 })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Zabrane' }).getByText(/^Zabrał /).first()).toBeVisible(); // demo
   await page.getByLabel('Co leży').fill(`${tag} wkręty`);
   await page.getByLabel('Ilość', { exact: true }).fill('pudełko');
