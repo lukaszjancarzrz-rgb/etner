@@ -232,3 +232,5 @@ Tasks 19d–19g: controller verification — shared 15, web 57, server 198, buil
 - Ruling R44: repair history = faults with naprawione_at set (admin „Naprawione”) or repair day before today; never auto-deleted; badge „Samochody” = active faults without repair day, for everyone.
 - Ruling R45: list highlight for a worker = jobs of his own schedule row that day (not crew-wide); admin = members of the selected crew.
 - Split: 19h-A (points 2,3,4,6,7,9 – samochody, narzędzia, magazyn, badges) and 19h-B (points 1,5,8,10 – na-jutro, harmonogram, leady) in parallel, disjoint files.
+Task 19h: impl A 63a8721..7da214d (migration 0020), B 1a6dca8..c632b29; push root cause = Render demo (DATA_DIR /tmp + no fixed VAPID) → render.yaml VAPID secrets sync:false + README; review Approved
+Task 19h: polish round dispatched (desktop double auta badge + aria, More.tsx dup, reschedule missed repair from history, shortcut comment NOT_FROM_LEAD, VAPID warning both keys)
