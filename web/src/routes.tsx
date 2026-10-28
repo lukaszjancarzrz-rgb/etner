@@ -39,11 +39,11 @@ export const screens: Record<string, Screen> = {
   harm: { title: 'Harmonogram', icon: CalendarDots, component: Harmonogram },
   jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true }, // admin rzadko: koniec menu
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
+  leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
   zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
   auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side' },
   narz: { title: 'Narzędzia', icon: Wrench, component: Narzedzia, nav: 'side' },
   mag: { title: 'Rzeczy nietypowe', icon: Package, component: Magazyn, nav: 'side' },
-  leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
   zad: { title: 'Zadania', icon: ListChecks, component: Zadania, nav: 'side', admin: true },
   uz: { title: 'Użytkownicy', icon: UserGear, component: Uzytkownicy, nav: 'side', admin: true },
   ust: { title: 'Ustawienia', icon: GearSix, component: Ustawienia, nav: 'side' },

@@ -13,7 +13,7 @@ import { useDesk } from '../../core/layout/status.js';
 import type { Route } from '../../routes.js';
 import { fmtTermin, JobCard } from './JobCard.js';
 import { JobForm } from './JobForm.js';
-import { useJobs, type JobView } from './jobs.js';
+import { byTermin, useJobs, type JobView } from './jobs.js';
 
 const GROUPS = [
   { g: 'aktualne', title: 'Aktualne' },
@@ -52,6 +52,11 @@ function JobList({ selected }: { selected?: string }) {
 
   const seenVer = useSeenVersion();
   const planned = useMemo(() => new Set(sched.map((e) => e.jobId).filter(Boolean)), [sched]);
+  const firstDay = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of sched) if (e.jobId && !e.deletedAt && (!m.has(e.jobId) || e.dzien < m.get(e.jobId)!)) m.set(e.jobId, e.dzien);
+    return m;
+  }, [sched]);
   const scope = useEntities('job_scope_items');
   const rawJobs = useEntities('jobs');
   const pumble = useEntities('pumble_messages');
@@ -63,7 +68,7 @@ function JobList({ selected }: { selected?: string }) {
   }, [scope]);
   const list = useMemo(() => [...jobs.values()]
     .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.status, j.ekipa, ...(scopeText.get(j.id) ?? [])))
-    .sort((a, b) => String(b.numer ?? '').localeCompare(String(a.numer ?? ''), 'pl', { numeric: true })), [jobs, q, scopeText]);
+    .sort(byTermin(firstDay)), [jobs, q, scopeText, firstDay]);
 
   if (loading) return <div className="grid gap-3 p-4" aria-busy="true" aria-label="Wczytywanie zleceń">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div>;
 
@@ -88,11 +93,14 @@ function JobList({ selected }: { selected?: string }) {
         return (
           <div key={g} className="grid gap-2">
             <SectionTitle count={items.length} toggle={g === 'zamkniete' && !q ? { open: !collapsed, onToggle: () => setClosedOpen((o) => !o) } : undefined}>{title}</SectionTitle>
-            {!collapsed && (
-              <ul className={desk ? 'divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card' : 'grid gap-2'}>
-                {items.map((j) => <JobRow key={j.id} desk={desk} j={j} on={j.id === selected} nowe={fresh.get(j.id) ?? 0} missing={g === 'aktualne' && !planned.has(j.id)} color={crew(j.ekipa)} />)}
-              </ul>
-            )}
+            {!collapsed && byMonth(items).map(([t, month]) => (
+              <div key={t} className="grid gap-2">
+                <h3 className="mt-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-ink-2 first-letter:uppercase after:h-px after:flex-1 after:bg-line">{fmtTermin(t || null)}</h3>
+                <ul className={desk ? 'divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card' : 'grid gap-2'}>
+                  {month.map((j) => <JobRow key={j.id} desk={desk} j={j} on={j.id === selected} nowe={fresh.get(j.id) ?? 0} missing={g === 'aktualne' && !planned.has(j.id)} color={crew(j.ekipa)} />)}
+                </ul>
+              </div>
+            ))}
           </div>
         );
       })}
@@ -100,6 +108,16 @@ function JobList({ selected }: { selected?: string }) {
     </section>
   );
 }
+
+/** Kolejne zlecenia z tym samym miesiącem terminu (lista już posortowana byTermin) – osobne bloki z nagłówkiem miesiąca. */
+const byMonth = (items: JobView[]): [string, JobView[]][] => {
+  const out: [string, JobView[]][] = [];
+  for (const j of items) {
+    const t = (j.termin as string | null) ?? '';
+    if (out.at(-1)?.[0] === t) out.at(-1)![1].push(j); else out.push([t, [j]]);
+  }
+  return out;
+};
 
 function JobRow({ j, on, nowe, missing, color, desk }: { j: JobView; on: boolean; nowe: number; missing: boolean; color?: string; desk: boolean }) {
   const cat = useCatColor();
