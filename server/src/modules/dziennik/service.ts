@@ -3,7 +3,7 @@ import { HTTPException } from 'hono/http-exception';
 import { newId, type DiaryCreate, type User } from '@etner/shared';
 import type { Diary } from '../../app.js';
 import { recordChange } from '../../core/changes.js';
-import type { Db } from '../../core/db.js';
+import { tx, type Db } from '../../core/db.js';
 import type { Notification } from '../../core/notify.js';
 import { can } from '../../core/permissions.js';
 import * as leady from '../leady/service.js';
@@ -93,14 +93,18 @@ export function create(db: Db, user: User, input: DiaryCreate, peopleForJob: (jo
   return entry;
 }
 
+/** Admin albo autor; miękko, razem z załącznikami. Już usunięty = true (powtórka z kolejki offline). */
 export function remove(db: Db, user: User, id: string): boolean {
-  const e = getEntry(db, id);
+  const e = db.select().from(diaryEntries).where(eq(diaryEntries.id, id)).get();
   if (!e || !canSee(user, e)) return false;
   if (!can(user, 'admin') && e.authorId !== user.id) throw new HTTPException(403, { message: 'BRAK_UPRAWNIEN' });
-  removeAttachmentsOf(db, user.id, 'entry', id);
-  const now = NOW();
-  const row = db.update(diaryEntries).set({ deletedAt: now, updatedAt: now }).where(eq(diaryEntries.id, id)).returning().get();
-  recordChange(db, user.id, 'diary_entries', id, 'delete', e, row);
+  if (e.deletedAt) return true;
+  tx(db, () => {
+    removeAttachmentsOf(db, user.id, 'entry', id);
+    const now = NOW();
+    const row = db.update(diaryEntries).set({ deletedAt: now, updatedAt: now }).where(eq(diaryEntries.id, id)).returning().get();
+    recordChange(db, user.id, 'diary_entries', id, 'delete', e, row);
+  });
   return true;
 }
 

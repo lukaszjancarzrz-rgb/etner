@@ -1,6 +1,7 @@
-import { Camera, Eye, EyeSlash, FilePdf, ImageSquare, NotePencil, PaperPlaneRight, X } from '@phosphor-icons/react';
+import { Camera, Eye, EyeSlash, FilePdf, ImageSquare, NotePencil, PaperPlaneRight, Trash, X } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fmtWhen, useIsAdmin, useMe, useNames } from '../../core/data.js';
+import { outbox } from '../../core/outbox.js';
 import { resizePhoto } from '../../core/photo.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Empty, SectionTitle, Textarea } from '../../core/ui/bits.js';
@@ -30,6 +31,8 @@ export function Diary({ ownerType, ownerId, highlight, disabled }: { ownerType: 
   const photos = useMemo(() => entries.flatMap((e) => (byEntry.get(e.id) ?? []).filter((a) => a.rodzaj === 'zdjecie')), [entries, byEntry]);
   const [view, setView] = useState<number | null>(null);
   const [flash, setFlash] = useState<string | undefined>();
+  const me = useMe();
+  const canDelete = (e: Rec) => admin || (!!me && e.authorId === me.id); // serwer sprawdza to samo
 
   // ~wpis z powiadomienia: przewiń i podświetl
   const found = highlight && entries.some((e) => e.id === highlight);
@@ -79,9 +82,10 @@ export function Diary({ ownerType, ownerId, highlight, disabled }: { ownerType: 
               {docs.map((a) => (
                 <a key={a.id} href={fileUrl(a, 'orig')} target="_blank" rel="noreferrer" className="mt-2 inline-flex h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><FilePdf className="h-5 w-5" />{a.nazwa}</a>
               ))}
-              {admin && !e._tmp && e.authorId && (
-                <div className="mt-3 border-t border-line pt-2">
-                  <KlientToggle on={!!e.dlaKlienta} onChange={(v) => void updateVia('diary_entries', e.id, { dlaKlienta: v }, { kind: 'dziennik', url: `/api/diary/${e.id}`, method: 'PATCH', body: { dla_klienta: v } }).catch((x: Error) => toast('Nie zapisano', { body: x.message, tone: 'error' }))} />
+              {!e._tmp && ((admin && e.authorId) || canDelete(e)) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-2">
+                  {admin && e.authorId && <KlientToggle on={!!e.dlaKlienta} onChange={(v) => void updateVia('diary_entries', e.id, { dlaKlienta: v }, { kind: 'dziennik', url: `/api/diary/${e.id}`, method: 'PATCH', body: { dla_klienta: v } }).catch((x: Error) => toast('Nie zapisano', { body: x.message, tone: 'error' }))} />}
+                  {canDelete(e) && <DeleteEntry id={e.id} files={files.length} />}
                 </div>
               )}
             </li>
@@ -90,6 +94,22 @@ export function Diary({ ownerType, ownerId, highlight, disabled }: { ownerType: 
       </ol>
       {view !== null && photos[view] && <Viewer photos={photos} index={view} onIndex={setView} onClose={() => setView(null)} admin={admin} />}
     </section>
+  );
+}
+
+/** Usunięcie wpisu z jego zdjęciami: drugi klik potwierdza; przez kolejkę offline, inne urządzenia dostają usunięcie z synchronizacji. */
+function DeleteEntry({ id, files }: { id: string; files: number }) {
+  const [ask, setAsk] = useState(false);
+  const remove = () => void outbox.enqueue({
+    kind: 'dziennik', url: `/api/diary/${id}`, method: 'DELETE',
+    optimistic: (s) => { s.remove('diary_entries', id); for (const a of s.all('attachments')) if (a.ownerType === 'entry' && a.ownerId === id) s.remove('attachments', a.id); },
+  }).catch((x: Error) => toast('Nie usunięto wpisu', { body: x.message, tone: 'error' }));
+  if (!ask) return <Button variant="ghost" size="sm" className="ml-auto text-danger" onClick={() => setAsk(true)}><Trash className="h-4 w-4" />Usuń wpis</Button>;
+  return (
+    <span className="ml-auto flex flex-wrap items-center justify-end gap-2" role="group" aria-label="Potwierdź usunięcie wpisu">
+      <Button variant="ghost" size="sm" onClick={() => setAsk(false)}>Anuluj</Button>
+      <Button variant="danger" size="sm" onClick={remove} autoFocus><Trash className="h-4 w-4" />{files ? `Usunąć wpis i ${files === 1 ? 'załącznik' : `załączniki (${files})`}?` : 'Na pewno usunąć wpis?'}</Button>
+    </span>
   );
 }
 

@@ -74,6 +74,22 @@ describe('dziennik', () => {
     expect(s.deps.db.$client.prepare('select count(*) n from attachments where deleted_at is null').get()).toEqual({ n: 0 });
   });
 
+  it('usuwanie: admin usuwa cudzy wpis, powtórka 200 bez nowych zmian, inne urządzenia dostają delete', async () => {
+    const s = await setup();
+    const id = await up(s, s.worker);
+    const e = (await (await post(s, s.worker, { uploads: [id] })).json()) as { id: string };
+    expect((await s.app.request(`/api/diary/${e.id}`, json(s.worker2, 'DELETE'))).status).toBe(403);
+    expect((await s.app.request(`/api/diary/${e.id}`, json(s.admin, 'DELETE'))).status).toBe(200);
+    const n = changesSince(s.deps.db, 0, 1000).length;
+    expect((await s.app.request(`/api/diary/${e.id}`, json(s.admin, 'DELETE'))).status).toBe(200); // kolejka offline wysłała drugi raz
+    expect((await s.app.request(`/api/diary/${e.id}`, json(s.worker, 'DELETE'))).status).toBe(200); // autor też, bez błędu
+    const ch = changesSince(s.deps.db, 0, 1000);
+    expect(ch).toHaveLength(n);
+    expect(ch.filter((c) => c.action === 'delete').map((c) => [c.entity, c.entityId]).sort()).toEqual([['attachments', id], ['diary_entries', e.id]].sort());
+    expect((await s.app.request(`/api/attachments/${id}/file`, json(s.admin, 'GET'))).status).toBe(404);
+    expect((await s.app.request('/api/diary/nie-ma', json(s.admin, 'DELETE'))).status).toBe(404);
+  });
+
   it('PATCH dla_klienta: pracownik 403, admin OK', async () => {
     const s = await setup();
     const id = await up(s, s.worker);
