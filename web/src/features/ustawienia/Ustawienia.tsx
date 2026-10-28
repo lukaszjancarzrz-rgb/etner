@@ -18,11 +18,12 @@ import { AvatarUpload } from '../uzytkownicy/AvatarUpload.js';
 import { Card } from './card.js';
 import { Templates } from './Listy.js';
 import { LeadyEmail } from '../leady/LeadyEmail.js';
+import { Import } from './Import.js';
 import { Przeniesienie } from './Przeniesienie.js';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Brak połączenia z serwerem.');
 
-/** Ustawienia: moje zdjęcie, motyw, powiadomienia, hasło; admin dodatkowo listy predefiniowane, słowniki, lista „do przejrzenia” po przeniesieniu danych, godzina przypomnienia, e-mail o zaległych kontaktach, log błędów, stan kopii. */
+/** Ustawienia: moje zdjęcie, motyw, powiadomienia, hasło; admin dodatkowo listy predefiniowane, słowniki, przeniesienie z arkusza i lista „do przejrzenia” po nim, godzina przypomnienia, e-mail o zaległych kontaktach, log błędów, stan kopii. */
 export function Ustawienia() {
   const admin = useIsAdmin();
   return (
@@ -40,6 +41,7 @@ export function Ustawienia() {
         <div className="grid gap-5">
           <Templates />
           <Dictionaries />
+          <Import />
           <Przeniesienie />
           <ErrorLog />
         </div>
