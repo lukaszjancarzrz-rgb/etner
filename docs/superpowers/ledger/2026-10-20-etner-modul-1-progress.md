@@ -255,3 +255,6 @@ Task 21–22: review — Needs fixes: silent longest-hasło wins + substring mat
 - Ruling R51: „do przejrzenia” stored in a DB table (admin-only), shown in Ustawienia with a „przejrzane” tick, filled by the migration in the same transaction — cost: one table + one screen section.
 Task 21–22: fix round 1 dispatched (Important 1–3, R51, R37 + minors 4–15)
 Task 21–22: fix round 1/5 (ba09de8; migration 0021 przeniesienie); controller privacy check clean; re-review dispatched. Real dry-run: diff 0, entries zlecenie/kod/tekst 383/79/257, 420 review items.
+Task 21–22: re-review clean (all findings addressed) — complete (commits e3d9953..ba09de8). Controller verification: shared 15, web 61, server 220, build clean, size 121.29/248.94 kB, e2e 56 passed / 2 skipped.
+Task 21–22: minor (deferred): an „A / B” cell can yield two review items; checkDict skips shopping 'Kupione'; review list same createdAt (web sorts)
+Open owner questions: pay status of added absence codes (na żądanie, okolicznościowy = paid; bezpłatny = unpaid). Next: Task 23 (needs O4) or modules 3–4 specs.
