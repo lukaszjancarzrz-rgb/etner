@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { baseCols, firmy } from '../../core/schema-base.js';
 import { clients, sites } from '../klienci/schema.js';
 
@@ -44,3 +44,12 @@ export const pumbleMessages = sqliteTable('pumble_messages', {
   /** JSON {files, attachments?}: surowe dane plików z Pumble; null = bez plików. */
   files: text('files'),
 });
+
+/** „Ostatnio widziane” zlecenia przez użytkownika (Task 26); `job_id` = '*': baza użytkownika (zlecenia nigdy nieotwarte). */
+export const jobSeen = sqliteTable('job_seen', {
+  ...baseCols(),
+  userId: text('user_id').notNull(),
+  jobId: text('job_id').notNull(),
+  /** ISO UTC, tylko rośnie. */
+  seenAt: text('seen_at').notNull(),
+}, (t) => [uniqueIndex('job_seen_user_job').on(t.userId, t.jobId)]);

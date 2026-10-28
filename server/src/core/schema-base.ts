@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /** Kolumny wspólne każdej tabeli: ULID, ślad autora i czasu, miękkie usuwanie (ISO UTC). */
 export const baseCols = () => ({
@@ -61,7 +61,7 @@ export const changes = sqliteTable('changes', {
   action: text('action', { enum: ['create', 'update', 'delete'] }).notNull(),
   before: text('before', { mode: 'json' }),
   after: text('after', { mode: 'json' }),
-});
+}, (t) => [index('changes_entity').on(t.entity, t.entityId)]); // zmiany jednego rekordu („nowe” przy polach karty zlecenia)
 
 export const opIds = sqliteTable('op_ids', {
   opId: text('op_id').primaryKey(),

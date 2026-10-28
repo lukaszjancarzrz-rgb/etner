@@ -1,4 +1,4 @@
-import { jobCreateSchema, jobUpdateSchema, pumbleSendSchema, scopeCreateSchema, scopeOrderSchema, scopeUpdateSchema } from '@etner/shared';
+import { jobCreateSchema, jobUpdateSchema, pumbleSendSchema, scopeCreateSchema, scopeOrderSchema, scopeUpdateSchema, seenSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -11,6 +11,8 @@ import { can } from '../../core/permissions.js';
 import { PumbleError } from '../../core/pumble.js';
 import * as pumble from './pumble.js';
 import * as scope from './scope.js';
+import * as seen from './seen.js';
+import { visibleChange } from '../../core/sync.js';
 import * as users from '../uzytkownicy/service.js';
 import * as svc from './service.js';
 
@@ -64,6 +66,23 @@ export function routes(app: Hono, deps: AppDeps): void {
     const id = c.req.param('id');
     if (!scope.remove(db, c.get('user').id, id) && !scope.removed(db, id)) nf(undefined); // już usunięty: 200 (powtórka z kolejki)
     return c.json({ ok: true });
+  });
+
+  // „Widziane” (Task 26): każdy zapisuje tylko swoje; wracają do niego synchronizacją (visibleTo: własne wiersze)
+  app.post('/api/seen', requireUser(db), async (c) => {
+    const { jobs: js, base } = await body(c, seenSchema);
+    seen.saveSeen(db, c.get('user').id, js, base);
+    return c.json({ ok: true });
+  });
+  // Pola zlecenia, jego klienta i obiektu zmienione od `since` przez inne osoby; widoczność jak w synchronizacji
+  app.get('/api/jobs/:id/zmiany', requireUser(db), (c) => {
+    const j = nf(svc.get(db, c.req.param('id')));
+    const since = c.req.query('since') ?? '';
+    if (Number.isNaN(Date.parse(since))) throw new HTTPException(400, { message: 'Podaj since (ISO)' });
+    const user = c.get('user');
+    const at = new Date(since).toISOString();
+    const f = (entity: string, id: string | null) => (id ? seen.changedFields(db, (ch) => visibleChange(app, deps, user, ch), user.id, entity, id, at) : []);
+    return c.json({ jobs: f('jobs', j.id), clients: f('clients', j.clientId), sites: f('sites', j.siteId) });
   });
 
   // Pumble (zadanie 18g): bez klucza tylko status, reszta tras nie istnieje.

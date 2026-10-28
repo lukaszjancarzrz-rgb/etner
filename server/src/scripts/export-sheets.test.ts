@@ -27,7 +27,7 @@ describe('eksport do arkusza', () => {
     const deps = testDeps(); const f = fake();
     const names = Object.keys(tablesForExport(modules));
     expect(names).toEqual(expect.arrayContaining(['firmy', 'users', 'clients', 'jobs', 'leads', 'attachments']));
-    for (const x of ['sessions', 'op_ids', 'push_subscriptions', 'changes', 'errors', 'settings']) expect(names).not.toContain(x);
+    for (const x of ['sessions', 'op_ids', 'push_subscriptions', 'changes', 'errors', 'settings', 'job_seen']) expect(names).not.toContain(x);
     await exportToSheets(deps.db, f.client, 'sid', tablesForExport(modules));
     expect(f.calls.ensured).toEqual(expect.arrayContaining([...names, '_info']));
     expect(f.calls.cleared.length).toBe(names.length + 1);

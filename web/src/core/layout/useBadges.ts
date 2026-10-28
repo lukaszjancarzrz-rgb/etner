@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { autaCount, changedDays, freshByJob, naJutroCount, unseenDays, zadaniaCount, zakupyCount } from '../badges.js';
 import { addDays } from '@etner/shared';
-import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenFor, today, useDict, useMe, useSeenVersion } from '../data.js';
+import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenFor, today, uploadSeen, useDict, useMe, useSeenVersion } from '../data.js';
 import { useEntities } from '../store.js';
 import { withoutEchoes } from '../write.js';
 
@@ -25,10 +25,17 @@ export function useBadges(): Record<string, number> {
   const [day, setDay] = useState(today);
   // przełom doby: następny dzień roboczy w Na jutro liczony od nowa
   useEffect(() => { const t = setInterval(() => setDay(today()), 60_000); return () => clearInterval(t); }, []);
-  useEffect(() => { if (me) ensureSeenBase(me.id, ['harm']); }, [me]);
+  const jobs = useEntities('jobs');
+  useEffect(() => {
+    if (!me) return;
+    ensureSeenBase(me.id, ['harm']);
+    uploadSeen(me.id);
+    const up = () => uploadSeen(me.id);
+    addEventListener('online', up);
+    return () => removeEventListener('online', up);
+  }, [me, jobs.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps -- po pierwszej synchronizacji zleceń wysyła jeszcze raz
   const harm = useUnseenDays().length;
   const checklists = useEntities('checklists');
-  const jobs = useEntities('jobs');
   const entries = useEntities('diary_entries');
   const scope = useEntities('job_scope_items');
   const pumble = useEntities('pumble_messages');

@@ -43,3 +43,9 @@ export const scopeOrderSchema = z.object({ opId: z.string().min(1).optional(), i
 
 /** Wiadomość do kanału Pumble zlecenia (wysyła serwer jako bot, z imieniem autora). */
 export const pumbleSendSchema = z.object({ opId: z.string().min(1).optional(), text: txt.min(1, 'Wpisz wiadomość').max(4000, 'Wiadomość jest za długa') });
+
+/** „Ostatnio widziane” zleceń (Task 26): jobId → chwila ISO; `base`: baza użytkownika z urządzenia (zapisywana tylko, gdy jej nie ma). */
+export const seenSchema = z.object({
+  jobs: z.record(z.string().min(1).max(40), z.iso.datetime()).refine((o) => Object.keys(o).length <= 2000, 'Za dużo zleceń naraz'),
+  base: z.iso.datetime().optional(),
+});

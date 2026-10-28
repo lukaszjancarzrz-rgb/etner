@@ -14,10 +14,11 @@ export interface SheetsClient {
   batchUpdate(id: string, data: { range: string; values: Cell[][] }[]): Promise<void>;
 }
 
-/** Tabele biznesowe: tabele wszystkich modułów + firmy + users (nowy moduł eksportuje się sam). Bez sessions, op_ids, push_subscriptions, changes, errors, settings. */
+/** Tabele biznesowe: tabele wszystkich modułów + firmy + users (nowy moduł eksportuje się sam). Bez sessions, op_ids, push_subscriptions, changes, errors, settings i „widzianych” (job_seen). */
 export function tablesForExport(defs: ModuleDef[]): Record<string, SQLiteTable> {
   const out: Record<string, SQLiteTable> = { firmy, users };
   for (const d of defs) Object.assign(out, d.tables);
+  delete out.job_seen;
   return out;
 }
 

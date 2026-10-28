@@ -2,7 +2,8 @@ import { addDays, dayOf } from '@etner/shared';
 import { staleDayKeys } from './badges.js';
 import { useMemo, useSyncExternalStore } from 'react';
 import { useSession } from './session.js';
-import { useEntities, type Rec } from './store.js';
+import { api } from './api.js';
+import { store, useEntities, type Rec } from './store.js';
 
 export const useMe = () => useSession().me;
 export const useIsAdmin = () => useSession().me?.role === 'admin';
@@ -82,14 +83,50 @@ export function mapsUrl(site: Rec | undefined): string | undefined {
 
 export const telHref = (t: string) => `tel:${t.replace(/[^\d+]/g, '')}`;
 
-/** Ostatnia wizyta w zleceniu (licznik „nowe”), per użytkownik na urządzeniu (drugi admin na tym samym komputerze ma własne „widziane”). */
+/**
+ * Ostatnia wizyta w zleceniu (licznik „nowe”), per użytkownik. Źródło: serwer (`job_seen`, synchronizacja: każdy tylko swoje),
+ * więc działa po ponownym logowaniu i na innym komputerze; localStorage to zapis od razu i zapas bez sieci (bierzemy późniejszą chwilę).
+ */
 const seen0 = (userId: string) => `seen0:${userId}`;
 /** Pierwsze uruchomienie użytkownika na urządzeniu: zmiany innych z ostatnich dni są „nowe” (np. wpis dodany przed zalogowaniem). */
 const FIRST_RUN_DAYS = 3;
 const navKey = (userId: string, screen: string) => `nav-seen:${userId}:${screen}`;
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
-/** Tylko odczyt (bezpieczne w useMemo). Bez zapisanej bazy: „teraz”, czyli nic nie jest nowe, dopóki ensureSeenBase jej nie zapisze. */
-export const seenFor = (userId: string) => (jobId: string): string => read(`seen:${userId}:${jobId}`) ?? read(seen0(userId)) ?? new Date().toISOString();
+const SEEN_BASE = '*'; // job_id bazy użytkownika na serwerze
+let srvCache: { rows: Rec[]; userId: string; m: Map<string, string> } | undefined;
+const serverSeen = (userId: string): Map<string, string> => {
+  const rows = store.all('job_seen');
+  if (srvCache?.rows !== rows || srvCache.userId !== userId) srvCache = { rows, userId, m: new Map(rows.filter((r) => r.userId === userId).map((r) => [r.jobId, r.seenAt])) };
+  return srvCache.m;
+};
+const later = (a: string | null | undefined, b: string | null | undefined) => (!a ? b : !b ? a : a > b ? a : b);
+/** Tylko odczyt (bezpieczne w useMemo). Bez żadnej bazy: „teraz”, czyli nic nie jest nowe, dopóki ensureSeenBase jej nie zapisze. */
+export const seenFor = (userId: string) => {
+  const srv = serverSeen(userId);
+  const base = srv.get(SEEN_BASE) ?? read(seen0(userId)) ?? new Date().toISOString();
+  return (jobId: string): string => later(srv.get(jobId), read(`seen:${userId}:${jobId}`)) ?? base;
+};
+const postSeen = (jobs: Record<string, string>, base?: string) => void api('/api/seen', { method: 'POST', json: { jobs, base } }).catch(() => { /* bez sieci: zostaje w localStorage, wyśle uploadSeen */ });
+/**
+ * Wysyła lokalne „widziane” nowsze niż na serwerze (też jednorazowe przeniesienie wartości sprzed Task 26) i bazę urządzenia,
+ * gdy serwer jej jeszcze nie ma. Start aplikacji i powrót sieci; serwer bierze tylko późniejsze chwile, więc powtórka nic nie psuje.
+ */
+export function uploadSeen(userId: string): void {
+  const srv = serverSeen(userId);
+  const pre = `seen:${userId}:`;
+  let jobs: [string, string][] = [];
+  try {
+    for (const k of Object.keys(localStorage)) {
+      const id = k.slice(pre.length), v = k.startsWith(pre) ? localStorage.getItem(k) : null;
+      // tylko zlecenia w sklepie: usunięte serwer i tak odrzuca, więc wysyłałyby się przy każdym starcie
+      if (v && store.get('jobs', id) && v > (srv.get(id) ?? '')) jobs.push([id, v]);
+    }
+  } catch { return; }
+  // shortcut: najwyżej 2000 najświeższych naraz (limit serwera); reszta przy następnym starcie
+  jobs = jobs.sort((x, y) => (x[1] < y[1] ? 1 : -1)).slice(0, 2000);
+  const base = srv.has(SEEN_BASE) ? undefined : read(seen0(userId)) ?? undefined;
+  if (jobs.length || base) postSeen(Object.fromEntries(jobs), base);
+}
 /** Baza „ostatnio widziane” ekranu (pierwsze uruchomienie), per użytkownik; tylko odczyt. */
 export const screenSeenAt = (userId: string, screen: string): string => read(navKey(userId, screen)) ?? new Date().toISOString();
 /** Pierwsze uruchomienie: baza „ostatnio widziane” = teraz (stare dane nie są „nowe”). Wołać w efekcie. */
@@ -107,8 +144,10 @@ let seenVer = 0;
 const seenSubs = new Set<() => void>();
 const bump = () => { seenVer++; for (const f of seenSubs) f(); };
 export function markSeen(userId: string, jobId: string): void {
-  try { localStorage.setItem(`seen:${userId}:${jobId}`, new Date().toISOString()); } catch { /* prywatne okno */ }
+  const at = new Date().toISOString();
+  try { localStorage.setItem(`seen:${userId}:${jobId}`, at); } catch { /* prywatne okno */ }
   bump();
+  postSeen({ [jobId]: at });
 }
 /** Ile dni wstecz liczą się zmiany harmonogramu („nowe”) i zapamiętane obejrzenia. */
 export const DAY_SEEN_KEEP = 60;
@@ -118,8 +157,12 @@ export function markDaySeen(userId: string, dzien: string, at = new Date().toISO
   try { localStorage.setItem(`harm-day:${userId}:${dzien}`, at); } catch { /* prywatne okno */ }
   bump();
 }
-/** Zmienia się po każdym markSeen (liczniki „nowe” liczone od nowa). */
-export const useSeenVersion = () => useSyncExternalStore((f) => { seenSubs.add(f); return () => seenSubs.delete(f); }, () => seenVer);
+/** Zmienia się po każdym markSeen i po „widzianych” z serwera (liczniki „nowe” liczone od nowa); tylko do zależności useMemo. */
+export const useSeenVersion = () => {
+  const v = useSyncExternalStore((f) => { seenSubs.add(f); return () => seenSubs.delete(f); }, () => seenVer);
+  const rows = useEntities('job_seen');
+  return useMemo(() => ({ v, rows }), [v, rows]);
+};
 
 export const matches = (q: string, ...xs: (string | null | undefined)[]) => {
   const n = (s: string) => s.toLocaleLowerCase('pl').normalize('NFD').replace(/\p{M}/gu, '').replace(/ł/g, 'l');

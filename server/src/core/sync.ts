@@ -26,6 +26,14 @@ function toOut(app: Hono, deps: AppDeps, user: User, ch: ChangeRow): ChangeOut |
   return { seq: ch.seq, entity: ch.entity, id: ch.entityId, action: v.action, data: v.after, by: ch.userId };
 }
 
+/** Wersja zmiany przed i po, okrojona dla użytkownika tak samo jak w synchronizacji; null = zmiana dla niego niewidoczna. */
+export function visibleChange(app: Hono, deps: AppDeps, user: User, ch: ChangeRow): { before: Record<string, unknown> | null; after: Record<string, unknown> | null } | null {
+  const a = toOut(app, deps, user, ch);
+  if (!a) return null;
+  const b = ch.before ? toOut(app, deps, user, { ...ch, after: ch.before }) : null;
+  return { before: b?.data ?? null, after: a.data };
+}
+
 export function mountSync(app: Hono, deps: AppDeps): void {
   const { db } = deps;
   const auth = requireUser(db);
