@@ -25,7 +25,10 @@ export function Import() {
       setWynik(await api<Wynik>(`/api/migration-import${naprawde ? '?naprawde=1' : ''}`, { method: 'POST', body: fd }));
       if (naprawde) setFile(null);
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : 'Brak połączenia z serwerem.');
+      const lost = naprawde && (!(e instanceof ApiError) || e.status === 409 || e.status >= 500);
+      // odpowiedź zapisu zgubiona albo baza już zapełniona: hasła startowe przepadły
+      setErr(lost ? 'Dane mogły zostać już przeniesione – sprawdź Użytkownicy i ustaw nowe hasła pracownikom.'
+        : e instanceof ApiError ? e.message : 'Brak połączenia z serwerem.');
     } finally { setBusy(false); }
   }
   const pick = (f: File | undefined) => { if (!f) return; setFile(f); setWynik(null); void send(f, false); };
