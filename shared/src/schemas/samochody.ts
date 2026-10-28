@@ -25,3 +25,6 @@ export const faultRepairSchema = z.object({
   naprawaDzien: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data w formacie RRRR-MM-DD').refine(realDay, 'Nie ma takiego dnia').nullable(),
 });
 export type FaultRepair = z.infer<typeof faultRepairSchema>;
+/** „Naprawione” (admin, R44): true = do historii napraw, false = cofnięcie. */
+export const faultFixedSchema = z.object({ opId, naprawione: z.boolean() });
+export type FaultFixed = z.infer<typeof faultFixedSchema>;

@@ -25,7 +25,8 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   await page.goto('/#auta');
   const car = page.getByRole('article', { name: 'Mała Toyota' });
   await expect(car.getByText('Zaświecił się check engine')).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Naprawa:/ })).toHaveCount(0); // pracownik: bez planowania
+  await expect(page.getByRole('button', { name: /^Naprawa:|^Naprawione:/ })).toHaveCount(0); // pracownik: bez planowania
+  await expect(car.getByRole('list', { name: 'Historia napraw: Mała Toyota' })).toContainText('Przepalona żarówka mijania'); // demo
   await car.getByLabel('Nowa usterka').fill(`${tag}: pisk paska`);
   await car.getByRole('button', { name: 'Zgłoś usterkę: Mała Toyota' }).click();
   const item = car.locator('li', { hasText: `${tag}: pisk paska` });
@@ -43,6 +44,13 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   await expect(dlg).toBeHidden();
   await expect(admin.getByRole('article', { name: 'Mała Toyota' }).locator('li', { hasText: `${tag}: pisk paska` })).toContainText('naprawa');
 
+  await page.goto(`/#harm/${day}`);
+  await expect(page.locator(`[data-cell="${day}|Marek Pilch"]`)).toContainText('Mała Toyota w naprawie');
+  // „Naprawione”: usterka w historii, oznaczenie w harmonogramie zostaje (R44)
+  await admin.getByRole('button', { name: `Naprawione: ${tag}: pisk paska` }).click();
+  await expect(admin.getByRole('list', { name: 'Historia napraw: Mała Toyota' })).toContainText(`${tag}: pisk paska`);
+  await page.goto('/#auta');
+  await expect(car.getByRole('list', { name: 'Historia napraw: Mała Toyota' })).toContainText(`${tag}: pisk paska`);
   await page.goto(`/#harm/${day}`);
   await expect(page.locator(`[data-cell="${day}|Marek Pilch"]`)).toContainText('Mała Toyota w naprawie');
   // usunięta usterka: oznaczenie znika

@@ -1,5 +1,6 @@
-import { CalendarCheck, PencilSimple, Plus, Trash, Van, Wrench } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, CalendarCheck, CheckCircle, PencilSimple, Plus, Trash, Van, Wrench } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
+import { dayOf } from '@etner/shared';
 import { dayShort, fmtWhen, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { useEntities, type Rec } from '../../core/store.js';
@@ -18,7 +19,7 @@ const fail = (t: string) => (e: Error) => toast(t, { body: e.message, tone: 'err
 const NONE = '__brak';
 const W = { kind: 'samochody' } as const;
 
-/** Samochody: auta z ekipą, usterki (zgłasza każdy), naprawy i usuwanie (admin). */
+/** Samochody: auta z ekipą, usterki (zgłasza każdy), naprawy, „Naprawione” i usuwanie (admin), historia napraw pod spodem. */
 export function Samochody({ route }: { route: Route }) {
   const cars = useEntities('cars');
   const raw = useEntities('car_faults');
@@ -57,8 +58,9 @@ export function Samochody({ route }: { route: Route }) {
 function CarCard({ car, faults, flash, onEdit, onRepair }: { car: Rec; faults: Rec[]; flash?: string; onEdit?: () => void; onRepair?: (f: Rec) => void }) {
   const crew = useCrewColor();
   const t = today();
-  // bez terminu i z naprawą od dziś na górze, „po naprawie” na dole; w grupie najnowsze pierwsze
-  const list = useMemo(() => [...faults].sort((a, b) => Number(isPast(a, t)) - Number(isPast(b, t)) || b.createdAt.localeCompare(a.createdAt)), [faults, t]);
+  // aktywne: najnowsze pierwsze; historia (R44): ostatnio naprawione pierwsze
+  const list = useMemo(() => faults.filter((f) => !inHistory(f, t)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [faults, t]);
+  const history = useMemo(() => faults.filter((f) => inHistory(f, t)).sort((a, b) => fixedOn(b).localeCompare(fixedOn(a))), [faults, t]);
   return (
     <article aria-label={car.nazwa} className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
       <header className="flex items-center gap-3 border-b border-line px-4 py-3" style={{ boxShadow: `inset 4px 0 0 ${crew(car.ekipa) ?? 'var(--line)'}` }}>
@@ -75,30 +77,51 @@ function CarCard({ car, faults, flash, onEdit, onRepair }: { car: Rec; faults: R
         </ul>
       ) : <p className="px-4 py-3 text-sm text-ink-2">Brak zgłoszonych usterek.</p>}
       {!car._tmp && <FaultForm car={car} />}
+      {!!history.length && (
+        <div className="border-t border-line bg-bg/50">
+          <h3 className="flex items-baseline gap-2 px-4 pt-3 font-wide text-sm font-extrabold text-ink-2">Historia napraw<span className="font-sans font-semibold">{history.length}</span></h3>
+          <ul className="divide-y divide-line/70" aria-label={`Historia napraw: ${car.nazwa}`}>
+            {history.map((f) => <Fault key={f.id} f={f} flash={f.id === flash} onRepair={onRepair} past />)}
+          </ul>
+        </div>
+      )}
     </article>
   );
 }
 
-const isPast = (f: Rec, t: string) => !!f.naprawaDzien && f.naprawaDzien < t;
+/** Historia napraw (R44): oznaczona „Naprawione” albo dzień naprawy przed dziś. */
+const inHistory = (f: Rec, t: string) => !!f.naprawioneAt || (!!f.naprawaDzien && f.naprawaDzien < t);
+/** Dzień naprawy do sortowania historii: oznaczenie „Naprawione” (dzień w Warszawie) albo dzień naprawy. */
+const fixedOn = (f: Rec): string => (f.naprawioneAt ? dayOf(f.naprawioneAt) : f.naprawaDzien ?? '');
 
-function Fault({ f, flash, onRepair }: { f: Rec; flash: boolean; onRepair?: (f: Rec) => void }) {
+function Fault({ f, flash, onRepair, past }: { f: Rec; flash: boolean; onRepair?: (f: Rec) => void; past?: boolean }) {
   const names = useNames();
   const t = today();
+  const fixed = (naprawione: boolean) => {
+    const body = { naprawione };
+    void updateVia('car_faults', f.id, { naprawioneAt: naprawione ? new Date().toISOString() : null }, { ...W, url: `/api/car-faults/${f.id}/naprawione`, method: 'PUT', body })
+      .catch(fail('Naprawa nie została zapisana'));
+  };
   const remove = () => void outbox.enqueue({ ...W, url: `/api/car-faults/${f.id}`, method: 'DELETE', optimistic: (s) => s.remove('car_faults', f.id) }).catch(fail('Nie usunięto usterki'));
   return (
-    <li id={`u-${f.id}`} className={cn('grid scroll-m-24 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none', flash && 'bg-ok/10 ring-4 ring-inset ring-ok/30', isPast(f, t) && 'bg-bg/50')}>
+    <li id={`u-${f.id}`} className={cn('grid scroll-m-24 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none', flash && 'bg-ok/10 ring-4 ring-inset ring-ok/30')}>
       <div className="min-w-0">
-        <p className="font-semibold leading-snug">{f.opis}</p>
+        <p className={cn('font-semibold leading-snug', past && 'text-ink-2')}>{f.opis}</p>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
           <span>{names(f.by)}, {f._tmp ? 'wysyłanie…' : fmtWhen(f.createdAt)}</span>
-          {f.naprawaDzien && (isPast(f, t)
-            ? <Badge tone="ok">po naprawie</Badge>
-            : <Badge tone="warn"><Wrench className="h-3.5 w-3.5" weight="bold" aria-hidden />naprawa {f.naprawaDzien === t ? 'dziś' : dayShort(f.naprawaDzien)}</Badge>)}
+          {past
+            ? <Badge tone="ok">naprawione {dayShort(fixedOn(f))}</Badge>
+            : f.naprawaDzien && <Badge tone="warn"><Wrench className="h-3.5 w-3.5" weight="bold" aria-hidden />naprawa {f.naprawaDzien === t ? 'dziś' : dayShort(f.naprawaDzien)}</Badge>}
         </p>
       </div>
       {onRepair && !f._tmp && (
         <span className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => onRepair(f)} aria-label={`Naprawa: ${f.opis}`} className="text-action"><CalendarCheck className="h-5 w-5 shrink-0" /><span className="hidden min-[560px]:inline">Naprawa</span></Button>
+          {past
+            ? f.naprawioneAt && <Button variant="ghost" size="sm" onClick={() => fixed(false)} aria-label={`Cofnij naprawione: ${f.opis}`} className="w-10 px-0 text-ink-2"><ArrowCounterClockwise className="h-5 w-5 shrink-0" /></Button>
+            : <>
+              <Button variant="ghost" size="sm" onClick={() => onRepair(f)} aria-label={`Naprawa: ${f.opis}`} className="text-action"><CalendarCheck className="h-5 w-5 shrink-0" /><span className="hidden min-[560px]:inline">Naprawa</span></Button>
+              <Button variant="ghost" size="sm" onClick={() => fixed(true)} aria-label={`Naprawione: ${f.opis}`} className="text-ok"><CheckCircle className="h-5 w-5 shrink-0" /><span className="hidden min-[560px]:inline">Naprawione</span></Button>
+            </>}
           <Button variant="ghost" size="sm" aria-label={`Usuń usterkę: ${f.opis}`} onClick={remove} className="w-10 px-0 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>
         </span>
       )}

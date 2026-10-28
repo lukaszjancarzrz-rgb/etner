@@ -1,4 +1,4 @@
-import { carCreateSchema, carUpdateSchema, faultCreateSchema, faultRepairSchema } from '@etner/shared';
+import { carCreateSchema, carUpdateSchema, faultCreateSchema, faultFixedSchema, faultRepairSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -51,6 +51,15 @@ export function routes(app: Hono, deps: AppDeps): void {
       await notify(deps, users.activeIds(db), { title: `🔧 ${car?.nazwa ?? 'Samochód'}: naprawa ${fmtDay(naprawaDzien)} – ${result.opis}`, body: '', url: `#auta~${result.id}`, tag: `auta-${result.id}` })
         .catch((e) => logError(db, 'push', e, me(c).id));
     }
+    return c.json(result);
+  });
+  // „Naprawione” (R44): usterka przechodzi do historii napraw; oznaczenie w harmonogramie zostaje
+  app.put('/api/car-faults/:id/naprawione', admin, async (c) => {
+    const { opId, naprawione } = await body(c, faultFixedSchema);
+    const { result } = runOp(db, opId, me(c).id, () => {
+      if (!svc.getFault(db, c.req.param('id'))) throw notFound();
+      return svc.setFixed(db, me(c).id, c.req.param('id'), naprawione)!;
+    });
     return c.json(result);
   });
   app.delete('/api/car-faults/:id', admin, (c) => {

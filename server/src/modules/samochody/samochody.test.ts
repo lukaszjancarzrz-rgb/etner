@@ -96,6 +96,25 @@ describe('samochody', () => {
     expect(await marks()).toEqual([]);
   });
 
+  it('„Naprawione” oznacza tylko admin (idempotentnie, z cofnięciem); usterka zostaje, oznaczenie w harmonogramie też', async () => {
+    const { app, admin, worker, pb } = await setup();
+    const [car] = await (await app.request('/api/cars', req(admin, 'GET'))).json();
+    await app.request(`/api/cars/${car.id}`, req(admin, 'PUT', { ekipa: 'ekipa Bartek' }));
+    const f = await (await app.request('/api/car-faults', req(worker, 'POST', { carId: car.id, opis: 'Hamulce' }))).json();
+    expect(f.naprawioneAt).toBeNull();
+    await app.request(`/api/car-faults/${f.id}`, req(admin, 'PUT', { naprawaDzien: '2026-11-03' }));
+    expect((await app.request(`/api/car-faults/${f.id}/naprawione`, req(worker, 'PUT', { naprawione: true }))).status).toBe(403);
+    const fixed = await (await app.request(`/api/car-faults/${f.id}/naprawione`, req(admin, 'PUT', { opId: 'op-fix', naprawione: true }))).json();
+    expect(fixed.naprawioneAt).toEqual(expect.any(String));
+    expect(await (await app.request(`/api/car-faults/${f.id}/naprawione`, req(admin, 'PUT', { opId: 'op-fix', naprawione: true }))).json()).toEqual(fixed); // powtórka
+    expect((await (await app.request(`/api/car-faults/${f.id}/naprawione`, req(admin, 'PUT', { naprawione: true }))).json()).naprawioneAt).toBe(fixed.naprawioneAt); // chwila bez zmiany
+    expect(await (await app.request('/api/car-faults', req(worker, 'GET'))).json()).toMatchObject([{ id: f.id, naprawioneAt: fixed.naprawioneAt }]);
+    const marks = (await (await app.request('/api/schedule?from=2026-11-03&to=2026-11-03', req(worker, 'GET'))).json()).days.flatMap((d: { naprawy: unknown[] }) => d.naprawy);
+    expect(marks).toEqual([{ dzien: '2026-11-03', personId: pb.id, tekst: 'Nowa Duża Toyota w naprawie', faultId: f.id }]);
+    expect((await (await app.request(`/api/car-faults/${f.id}/naprawione`, req(admin, 'PUT', { naprawione: false }))).json()).naprawioneAt).toBeNull();
+    expect((await app.request('/api/car-faults/nie-ma/naprawione', req(admin, 'PUT', { naprawione: true }))).status).toBe(404);
+  });
+
   it('zmiana nazwy ekipy w słowniku przenosi się na auta; ekipy z autem nie można usunąć', async () => {
     const { app, admin, deps } = await setup();
     const [car] = await (await app.request('/api/cars', req(admin, 'GET'))).json();

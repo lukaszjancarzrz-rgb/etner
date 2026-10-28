@@ -231,7 +231,7 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
       });
     }
 
-    // Samochody (z seedBase): ekipy, usterki; jedna naprawa za dwa dni robocze (oznaczenie w harmonogramie), jedna już po naprawie.
+    // Samochody (z seedBase): ekipy, usterki; jedna naprawa za dwa dni robocze (oznaczenie w harmonogramie), dwie w historii napraw (dzień minął, „Naprawione”).
     const [duza, mala, ducato] = samochody.listCars(db);
     if (duza && mala && ducato) {
       samochody.updateCar(db, a1, duza.id, { ekipa: BARTEK });
@@ -242,6 +242,8 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
       samochody.createFault(db, u.bartek!.id, { carId: duza.id, opis: 'Stuka zawieszenie z przodu' });
       const f3 = samochody.createFault(db, u.adam!.id, { carId: ducato.id, opis: 'Wymiana oleju' });
       samochody.setRepair(db, a1, f3.id, addDays(today, -5));
+      const f4 = samochody.createFault(db, u.marek!.id, { carId: mala.id, opis: 'Przepalona żarówka mijania' });
+      samochody.setFixed(db, a1, f4.id, true);
 
       // Narzędzia: wkrętarka w dwóch autach (wyszukiwanie pokazuje oba miejsca), reszta w autach i Magazynie.
       const tool = (nazwa: string, carId: string | null, podmiejsce: Podmiejsce | null = null) => narzedzia.create(db, u.bartek!.id, { nazwa, carId, podmiejsce });

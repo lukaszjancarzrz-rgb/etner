@@ -71,6 +71,16 @@ export function setRepair(db: Db, userId: string, id: string, naprawaDzien: stri
   return row;
 }
 
+/** „Naprawione” (R44): ustawia albo czyści chwilę naprawy; usterka zostaje w historii (bez usuwania). */
+export function setFixed(db: Db, userId: string, id: string, naprawione: boolean): FaultRow | undefined {
+  const old = getFault(db, id);
+  if (!old) return undefined;
+  const now = new Date().toISOString();
+  const row = db.update(carFaults).set({ naprawioneAt: naprawione ? old.naprawioneAt ?? now : null, updatedAt: now }).where(eq(carFaults.id, id)).returning().get();
+  recordChange(db, userId, 'car_faults', id, 'update', old, row);
+  return row;
+}
+
 export function removeFault(db: Db, userId: string, id: string): void {
   const old = getFault(db, id);
   if (!old) return;

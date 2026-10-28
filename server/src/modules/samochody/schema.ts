@@ -16,4 +16,6 @@ export const carFaults = sqliteTable('car_faults', {
   by: text('by').notNull(),
   /** Dzień naprawy (RRRR-MM-DD, admin); null = bez terminu. */
   naprawaDzien: text('naprawa_dzien'),
+  /** Chwila oznaczenia „Naprawione” (admin, R44); null = nie oznaczona. */
+  naprawioneAt: text('naprawione_at'),
 });

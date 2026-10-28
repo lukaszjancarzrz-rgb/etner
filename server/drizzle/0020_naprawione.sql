@@ -1,0 +1,1 @@
+ALTER TABLE `car_faults` ADD `naprawione_at` text;
