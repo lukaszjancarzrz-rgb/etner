@@ -10,6 +10,8 @@ const SCREENS: [string, string][] = [
 /** Naruszenia WCAG 2.1 A/AA o wadze „serious” i „critical”, opisane do komunikatu błędu. */
 async function audit(page: Page, where: string): Promise<string[]> {
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0); // szkielety ładowania → treść
+  // przejścia kolorów menu po zmianie ekranu (200 ms): kontrast mierzony po ich końcu
+  await page.waitForFunction(() => document.getAnimations().every((x) => !(x instanceof CSSTransition) || x.playState !== 'running'));
   // znak ETNER to logotyp (WCAG 1.4.3 go wyłącza): kolor marki zostaje
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('[data-logo]').analyze();
   return r.violations
