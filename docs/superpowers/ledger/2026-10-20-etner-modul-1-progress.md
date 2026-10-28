@@ -265,3 +265,4 @@ Task 23: impl e3444d6..4a803c2 (env admin, upload import, render.yaml prod servi
 Task 23: review — Needs fixes: real import would queue Pumble channels for every migrated open job (in-memory awaitingChannel); plan `starter`/autoDeploy vs current spec; README flow ignores sync:false prompt-only-at-creation; duplicate Litestream secrets
 - Ruling R54: Litestream kept with zero extra secrets — reuses R2_KEY/R2_SECRET/R2_ENDPOINT and the photo bucket under prefix `db/`; tarball sha256-pinned; owner creates ONE fresh Blueprint (prompted for secrets) and deletes earlier ones — cost: DB copy shares the photo bucket.
 Task 23: fix round 1 dispatched
+Task 23: fix round 1/5 (274f703..9176084); re-review dispatched
