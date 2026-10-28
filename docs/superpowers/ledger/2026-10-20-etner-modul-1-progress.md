@@ -242,3 +242,4 @@ Task 20: review Approved; polish round dispatched (a11y #wiecej + pracownik pass
 Task 20: minor (deferred): JS headroom ~2 kB (plan route-level splitting before next big feature); cold visit ~8 s on 3G (no compression; decide with SSE-safe compression at Task 23); preload of Harmonogram chunk on logged-out cold start
 Task 20: polish round 1/5 (all addressed; 7b8f785, 3a94b33) — complete. Controller verification: shared 15, web 59, server 199, build clean, size ≤ 250 kB, e2e 54 passed / 2 skipped.
 Owner checkpoint: next = Tasks 21–22 (need O3 exports of the old app: Firma_2026 sheets, app DB, Firestore read access) and 23 (needs O4: Hetzner, R2, domain).
+- Ruling R47 (owner 2026-10-28, app will grow): JS budget split — start (index-* + Harmonogram chunks) ≤ 150 kB gzip (now 121 kB), whole app ≤ 500 kB gzip (now 248 kB); replaces the single 250 kB limit of Task 20.

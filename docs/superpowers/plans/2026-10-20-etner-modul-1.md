@@ -782,7 +782,7 @@ Decyzje właściciela 2026-10-28:
 
 - [ ] **Step 1: Test** `a11y.spec.ts`: `@axe-core/playwright` na 6 głównych ekranach (telefon, jasny i ciemny) → 0 naruszeń „serious/critical”.
 - [ ] **Step 2:** Uruchom → lista naruszeń.
-- [ ] **Step 3:** Poprawki. Budżet: JS aplikacji po gzip ≤ 250 KB (sprawdzany w CI przez `size-limit`), LCP z cache < 1 s na profilu „Fast 3G” w Lighthouse CI dla ekranu harmonogramu.
+- [ ] **Step 3:** Poprawki. Budżet: JS po gzip: start (szkielet + harmonogram) ≤ 150 KB, cała aplikacja ≤ 500 KB (zmiana właściciela 2026-10-28, R47) (sprawdzany w CI przez `size-limit`), LCP z cache < 1 s na profilu „Fast 3G” w Lighthouse CI dla ekranu harmonogramu.
 - [ ] **Step 4:** PASS.
 - [ ] **Step 5:** Commit.
 

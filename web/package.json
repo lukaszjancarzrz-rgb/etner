@@ -45,9 +45,18 @@
   },
   "size-limit": [
     {
-      "name": "JS aplikacji (wszystkie pakiety, gzip)",
+      "name": "Start: szkielet i harmonogram (gzip)",
+      "path": [
+        "dist/assets/index-*.js",
+        "dist/assets/Harmonogram-*.js"
+      ],
+      "limit": "150 KB",
+      "gzip": true
+    },
+    {
+      "name": "Cała aplikacja, wszystkie ekrany (gzip)",
       "path": "dist/assets/*.js",
-      "limit": "250 KB",
+      "limit": "500 KB",
       "gzip": true
     }
   ]
