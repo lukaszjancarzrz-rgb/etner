@@ -774,6 +774,16 @@ Decyzje właściciela 2026-10-28:
 9. **Historia napraw:** usterki po naprawie (dzień naprawy minął lub admin oznaczył „Naprawione”) trafiają na szarą listę „Historia napraw” pod spodem, jak „Zabrane” w Rzeczach nietypowych. Nie są usuwane automatycznie.
 10. **Zlecenie z leada:** usunąć bezsensowne statusy „nowe” i „do wyceny” z wyboru przy tworzeniu zlecenia z leada (zlecenie dostaje pierwszy sensowny status).
 
+### Task 19i: Kategorie zleceń z arkusza Firma_2026
+
+Decyzja właściciela 2026-10-28 (po analizie arkusza): kategorie jak w arkuszu, bez hydrauliki, z dodaną fotowoltaiką. Słownik `kategoria` (kolejność i kolory):
+- Elektryka #0070ab, Fotowoltaika #c62828, Rekuperacja #2e7d32, Klimatyzacja #7b1fa2 (jak dotąd),
+- Alarmy i monitoring #455a64, Smart home #00838f, Sprzedaż #6d4c41 (nowe),
+- Inne #f9a825 (jak dotąd).
+- Listy predefiniowane: „Alarm” i „Kamery” pasują także do „Alarmy i monitoring”; „Elektryka” także do „Smart home”.
+- Dane demo i testy dostosowane; legenda kategorii w harmonogramie pokazuje wszystkie.
+- Brak produkcyjnej bazy → wystarczy zmiana wartości startowych (Render demo zaczyna od zera).
+
 ### Task 20: Przegląd dostępności i szybkości
 
 **Files:**
@@ -787,6 +797,19 @@ Decyzje właściciela 2026-10-28:
 - [ ] **Step 5:** Commit.
 
 ### Task 21: Atrapa danych starej aplikacji (do testu przeniesienia)
+
+Zmiana 2026-10-28: źródłem jest arkusz Firma_2026 (układ opisany w `.superpowers/sdd/2026-10-20-etner-modul-1/firma-2026-analiza.md`, poza repozytorium). Atrapa odwzorowuje ten układ (zakładki Zlecenia, Wyceny i leady, Historia kontaktów, Harmonogram, Zadania i notatki, Zakupy, Parametry; nagłówki w wierszu jak w oryginale, sekcje i archiwa, znaczniki sekcji w kolumnie A, komórki harmonogramu jako wolny tekst) i jest generowana jako plik .xlsx z wymyślonymi danymi. Baza starej aplikacji, Firestore i zdjęcia z Dysku – później, gdy właściciel da dostęp. Koszty, Przychody, płace – nie w tym zadaniu (moduły 3–4).
+Decyzje właściciela do przeniesienia (2026-10-28):
+- kategorie: kody E, RW, K, AM, SH, S, I → nazwy z zadania 19i; H (hydraulika) → Inne;
+- „Do rozliczenia” zostaje statusem zamkniętym (archiwum);
+- rodzaj zlecenia przeniesionych zleceń: pusty;
+- zakupy: Sklep, Grupa, Kwota, „Lista (z notatek)” i status „Zamówione” → dopisane do uwag (status „Zamówione” → „Do kupienia”);
+- zadania z grup „form” i „fi” nie są przenoszone;
+- osoby z kolumn harmonogramu poza listą płac nie są przenoszone (ich komórki pomijane);
+- stare koszty i przychody: później, jako osobna historia bez powiązań ze zleceniami.
+- zlecenia nie mają numerów w arkuszu → dostają nowe numery w kolejności daty; powiązanie z harmonogramem przez hasło.
+- prawdziwe dane nigdy w repozytorium ani na demo Render (DEMO=1 ma jawne konta); próbne przeniesienie tylko lokalnie, z raportem bez danych osobowych.
+
 
 **Files:**
 - Create: `server/src/scripts/migrate-old/fixtures/` (wygenerowane, wymyślone dane w układzie arkuszy Firma_2026 i bazy aplikacji), `server/src/scripts/migrate-old/fixtures.ts`

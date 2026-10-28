@@ -244,3 +244,8 @@ Task 20: polish round 1/5 (all addressed; 7b8f785, 3a94b33) — complete. Contro
 Owner checkpoint: next = Tasks 21–22 (need O3 exports of the old app: Firma_2026 sheets, app DB, Firestore read access) and 23 (needs O4: Hetzner, R2, domain).
 - Ruling R47 (owner 2026-10-28, app will grow): JS budget split — start (index-* + Harmonogram chunks) ≤ 150 kB gzip (now 121 kB), whole app ≤ 500 kB gzip (now 248 kB); replaces the single 250 kB limit of Task 20.
 ## Owner 2026-10-28: real workbook Firma_2026_9.xlsx uploaded (session-only, never committed); structure analysis in .superpowers/sdd/…/firma-2026-analiza.md (no personal data). Basis for migration (21–22) and modules 2–4. Questions sent to owner.
+## Owner 2026-10-28 answers (workbook questions 1–7) → Task 19i (categories) + scope of Tasks 21–22 updated in plan
+- Ruling R48: Tasks 21–22 = workbook (xlsx) only for module-1 sheets; old app DB/Firestore/Drive photos later when access is given; costs/revenue with module 3.
+- Ruling R49: real data never on Render demo (DEMO=1 lists accounts with a known password) nor in the repo; trial migration only locally, report without personal data — cost: owner sees real data only after Task 23 (or a non-demo instance).
+- Ruling R50: new category colours Alarmy i monitoring #455a64, Smart home #00838f, Sprzedaż #6d4c41; templates Alarm/Kamery also match Alarmy i monitoring, Elektryka also Smart home — cost: owner may retune colours.
+- Split: 19i (slowniki seed, seed-demo, templates, tests) in parallel with 21→22 (new files under server/src/scripts/migrate-old only).
