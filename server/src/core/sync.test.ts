@@ -47,7 +47,7 @@ describe('GET /api/changes', () => {
     recordChange(deps.db, null, 'users', 'u1', 'update', { a: 0, tajne: 'x' }, { a: 1, tajne: 'x' });
     recordChange(deps.db, null, 'users', 'u1', 'delete', { a: 1 }, { a: 1, deletedAt: 'z' });
     const body = (await (await get(app, '/api/changes?since=0', worker)).json()) as any;
-    expect(body.changes[0]).toEqual({ seq: 1, entity: 'users', id: 'u1', action: 'update', data: { a: 1 } });
+    expect(body.changes[0]).toEqual({ seq: 1, entity: 'users', id: 'u1', action: 'update', data: { a: 1 }, by: null });
     expect(body.changes[0].data).not.toHaveProperty('tajne');
     expect(body.changes[1].data).toEqual({ a: 1, deletedAt: 'z' });
     expect(JSON.stringify(body)).not.toContain('before');

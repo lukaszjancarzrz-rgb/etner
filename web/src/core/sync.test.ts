@@ -112,3 +112,12 @@ it('nieudany pierwszy snapshot: ponawiany snapshot, nie strumień od zera', asyn
   expect(FakeES.all[0]!.url).toBe(`${B}/api/stream?since=4`);
   sync.stop();
 });
+
+it('store.apply: _by = autor zmiany; zmiana systemu (by=null) zostawia poprzedniego (24-A 8)', () => {
+  const s = createStore();
+  s.apply({ seq: 1, entity: 'jobs', id: 'j', action: 'update', data: { updatedAt: 'a' }, by: 'w' });
+  s.apply({ seq: 2, entity: 'jobs', id: 'j', action: 'update', data: { updatedAt: 'a', pumbleChannelId: 'c' }, by: null });
+  expect(s.get('jobs', 'j')?._by).toBe('w');
+  s.apply({ seq: 3, entity: 'jobs', id: 'j', action: 'update', data: { updatedAt: 'b' }, by: 'me' });
+  expect(s.get('jobs', 'j')?._by).toBe('me');
+});

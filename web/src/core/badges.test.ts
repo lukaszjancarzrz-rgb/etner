@@ -6,13 +6,13 @@ const r = (o: Record<string, unknown>) => ({ id: Math.random().toString(36), cre
 
 describe('liczniki w menu', () => {
   it('freshByJob: cudze wpisy, zmiany zakresu i zlecenia po wizycie; własne i stare pomija', () => {
-    const jobs = [r({ id: 'j1', updatedAt: T2, createdBy: 'adm' }), r({ id: 'j2', createdBy: 'me', createdAt: T2, updatedAt: T2 }), r({ id: 'j3' })];
+    const jobs = [r({ id: 'j1', updatedAt: T2, _by: 'adm' }), r({ id: 'j2', _by: 'me', createdAt: T2, updatedAt: T2 }), r({ id: 'j3' })];
     const entries = [
       r({ ownerType: 'job', ownerId: 'j1', authorId: 'w', createdAt: T2 }), r({ ownerType: 'job', ownerId: 'j1', authorId: 'me', createdAt: T2 }),
       r({ ownerType: 'job', ownerId: 'j3', authorId: 'w', createdAt: T0 }), r({ ownerType: 'lead', ownerId: 'j3', authorId: 'w', createdAt: T2 }),
       r({ ownerType: 'job', ownerId: 'j3', authorId: 'w', createdAt: T2, _tmp: true }),
     ];
-    const scope = [r({ jobId: 'j3', createdBy: 'adm', updatedAt: T2 }), r({ jobId: 'j3', createdBy: 'adm', updatedAt: T0 })];
+    const scope = [r({ jobId: 'j3', _by: 'adm', updatedAt: T2 }), r({ jobId: 'j3', _by: 'adm', updatedAt: T0 })];
     const m = freshByJob(jobs, entries, scope, 'me', () => T1);
     expect(Object.fromEntries(m)).toEqual({ j1: 2, j3: 1 });
     expect(freshByJob(jobs, entries, scope, 'me', () => T2).size).toBe(0);
@@ -21,6 +21,17 @@ describe('liczniki w menu', () => {
     // Pumble: cudze wiadomości po wizycie; własne (wysłane z ETNER) i stare nie
     const pb = [r({ jobId: 'j3', createdBy: null, createdAt: T2 }), r({ jobId: 'j3', createdBy: 'me', createdAt: T2 }), r({ jobId: 'j2', createdBy: 'w', createdAt: T0 })];
     expect(Object.fromEntries(freshByJob([], [], [], 'me', () => T1, false, pb))).toEqual({ j3: 1 });
+  });
+
+  it('freshByJob: zmiany z przeniesienia, z innego urządzenia i sprzed pierwszej synchronizacji nie są nowe (24-A 8)', () => {
+    // przeniesienie: zlecenie zamknięte z datą z arkusza ma updatedAt ≠ createdAt, autorem jest administrator, który importował
+    const jobs = [
+      r({ id: 'mig', createdBy: 'me', createdAt: T0, updatedAt: T2, _by: 'me' }), // import / zmiana z drugiego urządzenia
+      r({ id: 'snap', createdBy: 'w', updatedAt: T2 }), // ze snapshotu (bez _by)
+      r({ id: 'sys', updatedAt: T2, _by: 'w' }), // zmiana pracownika po wizycie: nowa
+    ];
+    const scope = [r({ jobId: 'mig', createdBy: 'w', updatedAt: T2, _by: 'me' }), r({ jobId: 'snap', createdBy: 'w', updatedAt: T2 })];
+    expect(Object.fromEntries(freshByJob(jobs, [], scope, 'me', () => T1))).toEqual({ sys: 1 });
   });
 
   it('naJutroCount: tylko następny dzień roboczy, niezabrane, ekipa pracownika; admin wszystkie', () => {

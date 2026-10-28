@@ -2,7 +2,8 @@ import { del, entries, set } from 'idb-keyval';
 import { useMemo, useSyncExternalStore } from 'react';
 
 export type Rec = { id: string } & Record<string, any>;
-export type Change = { seq: number; entity: string; id: string; action: string; data: Record<string, any> | null };
+/** `by`: autor zmiany (null = system). */
+export type Change = { seq: number; entity: string; id: string; action: string; data: Record<string, any> | null; by?: string | null };
 /** Zmiana optymistyczna: stan przed (`prev`) i po (`next`); brak = rekordu nie ma. */
 export type Undo = { entity: string; id: string; prev?: Rec; next?: Rec };
 
@@ -78,7 +79,8 @@ export function createStore(): Store {
     setLast(n: number) { last = n; lastDirty = true; touched(''); },
     apply(ch: Change) {
       if (ch.action === 'delete' || !ch.data || ch.data.deletedAt) s.remove(ch.entity, ch.id);
-      else s.put(ch.entity, { ...ch.data, id: ch.id });
+      // `_by`: kto ostatnio zmienił rekord (do „nowe”); zmiana systemu (by=null) zostawia poprzedniego; snapshot go nie ma
+      else s.put(ch.entity, { ...ch.data, id: ch.id, _by: ch.by ?? s.get(ch.entity, ch.id)?._by });
       if (ch.seq > last) s.setLast(ch.seq);
     },
     /** Snapshot: wszystkie kolekcje zastąpione. */

@@ -11,7 +11,8 @@ import { modulesOf } from './registry.js';
 import { changes } from './schema-base.js';
 
 // Rekordy w `changes.after` i w snapshocie to wiersze Drizzle z select() (camelCase wg schematu); moduły przekazują ten kształt do recordChange.
-export type ChangeOut = { seq: number; entity: string; id: string; action: ChangeRow['action']; data: Record<string, unknown> | null };
+// `by`: kto zmienił (null = system); klient liczy „nowe” tylko ze zmian innych osób.
+export type ChangeOut = { seq: number; entity: string; id: string; action: ChangeRow['action']; data: Record<string, unknown> | null; by: string | null };
 
 const PAGE = 500;
 const PING_MS = 25_000;
@@ -22,7 +23,7 @@ function toOut(app: Hono, deps: AppDeps, user: User, ch: ChangeRow): ChangeOut |
   const r = owner?.visibleTo ? owner.visibleTo(user, ch, deps) : can(user, 'admin');
   if (!r) return null;
   const v = r === true ? ch : r;
-  return { seq: ch.seq, entity: ch.entity, id: ch.entityId, action: v.action, data: v.after };
+  return { seq: ch.seq, entity: ch.entity, id: ch.entityId, action: v.action, data: v.after, by: ch.userId };
 }
 
 export function mountSync(app: Hono, deps: AppDeps): void {
