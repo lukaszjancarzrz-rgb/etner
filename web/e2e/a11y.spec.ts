@@ -9,7 +9,7 @@ const SCREENS: [string, string][] = [
 
 /** Naruszenia WCAG 2.1 A/AA o wadze „serious” i „critical”, opisane do komunikatu błędu. */
 async function audit(page: Page, where: string): Promise<string[]> {
-  await page.waitForTimeout(400); // szkielety ładowania → treść
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0); // szkielety ładowania → treść
   // znak ETNER to logotyp (WCAG 1.4.3 go wyłącza): kolor marki zostaje
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('[data-logo]').analyze();
   return r.violations
@@ -18,7 +18,7 @@ async function audit(page: Page, where: string): Promise<string[]> {
 }
 
 for (const theme of ['light', 'dark'] as const) {
-  test(`dostępność (${theme}): ekrany bez naruszeń serious/critical`, async ({ page }, info) => {
+  test(`dostępność (${theme}): ekrany bez naruszeń serious/critical`, async ({ page, browser }, info) => {
     test.setTimeout(180_000);
     const phone = info.project.name.startsWith('iPhone');
     await page.addInitScript((t) => localStorage.setItem('theme', t), theme);
@@ -34,6 +34,11 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto(`/${hash}`);
       await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible();
       found.push(...(await audit(page, hash)));
+    }
+    if (phone) { // Więcej tylko w dolnym pasku telefonu
+      await page.goto('/#wiecej');
+      await expect(page.getByRole('heading', { name: 'Więcej', level: 1 })).toBeVisible();
+      found.push(...(await audit(page, '#wiecej')));
     }
     if (!phone) { // miesiąc jest tylko na komputerze
       await page.goto('/#harm');
@@ -51,6 +56,19 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByRole('link', { name: /Instalacja elektryczna w garażu/ }).click();
     await expect(page.locator('li[id^="e-"]', { hasText: 'Zadzwonić we wtorek' })).toBeVisible();
     found.push(...(await audit(page, 'karta leada')));
+
+    // pracownik: inne ekrany (bez szkiców, „Gdzie jedziesz”, lista swojej ekipy)
+    const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
+    const w = await ctx.newPage();
+    await w.addInitScript((t) => localStorage.setItem('theme', t), theme);
+    await w.goto('/');
+    await w.getByRole('button', { name: /Bartek Gawlik/ }).click();
+    await expect(w.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
+    found.push(...(await audit(w, 'pracownik #harm')));
+    await w.goto('/#jutro');
+    await expect(w.getByRole('heading', { name: 'Na jutro', level: 1 })).toBeVisible();
+    found.push(...(await audit(w, 'pracownik #jutro')));
+    await ctx.close();
 
     expect(found).toEqual([]);
   });

@@ -297,7 +297,7 @@ function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { 
   const body = (
     <span className="min-w-0 pl-2.5">
       <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
-        <span className="sr-only">Zlecenie {j?.numer ?? ''}</span>
+        <span className="sr-only">{j ? `Zlecenie ${j.numer}` : 'zlecenie'}</span>
         {j?.kategoria && <span className="flex min-w-0 items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span className="truncate">{j.kategoria}</span></span>}
         {slot.polDnia && <span className="shrink-0 font-bold"><span aria-hidden>½</span><span className="sr-only">pół dnia</span></span>}
         {j?.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}

@@ -15,6 +15,7 @@ let state: { status: Status; me: Me | null; askLogin?: boolean } = { status: 'lo
 const subs = new Set<() => void>();
 const setState = (s: Partial<typeof state>) => { state = { ...state, ...s }; for (const f of subs) f(); };
 
+export const getSession = () => state;
 export const useSession = () => useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => state);
 
 bus.addEventListener('session-expired', () => { if (state.status === 'in') setState({ status: 'expired' }); });
