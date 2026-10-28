@@ -22,7 +22,8 @@ export interface DiskStore extends FileStore {
 
 const KEY_RE = /^[A-Za-z0-9_.-]+(\/[A-Za-z0-9_.-]+)*$/;
 function checkKey(key: string): string {
-  if (!KEY_RE.test(key) || key.split('/').some((p) => p === '.' || p === '..')) throw new Error(`Niepoprawny klucz pliku: ${key}`);
+  // db/ w buckecie zdjęć należy do Litestream (ciągła kopia bazy): aplikacja nigdy tam nie pisze ani nie kasuje
+  if (!KEY_RE.test(key) || key.startsWith('db/') || key.split('/').some((p) => p === '.' || p === '..')) throw new Error(`Niepoprawny klucz pliku: ${key}`);
   return key;
 }
 

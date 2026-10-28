@@ -53,7 +53,7 @@ describe('diskStore', () => {
 
   it('odrzuca klucze z path traversal', async () => {
     const s = diskStore(tmp(), 'sekret');
-    for (const k of ['../x', 'a/../x', '/etc/passwd', 'a\\b', 'a b']) {
+    for (const k of ['../x', 'a/../x', '/etc/passwd', 'a\\b', 'a b', 'db/generations/x']) {
       await expect(s.put(k, Buffer.from('x'), 'text/plain')).rejects.toThrow();
       await expect(s.get(k)).rejects.toThrow();
     }

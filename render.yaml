@@ -41,22 +41,27 @@ services:
       - key: PUMBLE_API_KEY
         sync: false
 
-  # Produkcja: Starter (7 USD/mies.) + dysk 1 GB na bazę. Wdraża się po każdym pushu na gałąź produkcja (robi to Claude na polecenie właściciela).
+  # Produkcja: instancja 0,5 CPU / 512 MB (dawniej „Starter”, ok. 7 USD/mies.) + dysk 1 GB na bazę. Wdraża się po każdym pushu na gałąź produkcja (robi to Claude na polecenie właściciela).
+  # Polecenia budowania i startu (oraz cały ten plik) Render bierze z gałęzi Blueprintu (modul-1), kod aplikacji z gałęzi produkcja.
   # Usługa z dyskiem nie ma wdrożeń bez przerwy: przy nowej wersji aplikacja jest niedostępna przez około minutę.
   - type: web
     name: etner
     runtime: node
-    plan: starter
+    plan: 0.5c-512mb
     region: frankfurt
     branch: produkcja
-    autoDeploy: true
-    # Litestream (ciągła kopia bazy do R2) jako jeden plik wykonywalny w bin/ – runtime node go nie ma.
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build && mkdir -p bin && curl -fsSL https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz | tar -xz -C bin litestream
-    # Z kluczem LITESTREAM_* aplikacja startuje pod Litestream (kopia każdej zmiany bazy); bez niego sama, z ostrzeżeniem w logu.
+    autoDeployTrigger: commit
+    # Litestream (ciągła kopia bazy do R2) jako jeden plik wykonywalny w bin/ – runtime node go nie ma; suma SHA-256 przypięta.
+    buildCommand: >-
+      corepack enable && pnpm install --frozen-lockfile && pnpm build && mkdir -p bin &&
+      curl -fsSL -o bin/litestream.tar.gz https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz &&
+      echo "eb75a3de5cab03875cdae9f5f539e6aedadd66607003d9b1e7a9077948818ba0  bin/litestream.tar.gz" | sha256sum -c - &&
+      tar -xzf bin/litestream.tar.gz -C bin litestream && rm bin/litestream.tar.gz
+    # Najpierw ewentualna podmiana odtworzonej bazy (restore.db). Z R2_BUCKET aplikacja startuje pod Litestream (kopia każdej zmiany bazy do R2_BUCKET/db); bez niego sama, z ostrzeżeniem w logu.
     startCommand: >-
-      export NODE_ENV=production;
-      if [ -n "$LITESTREAM_ACCESS_KEY_ID" ]; then exec ./bin/litestream replicate -config deploy/litestream.yml -exec "node server/dist/main.js";
-      else echo "Ciągła kopia bazy wyłączona: brak LITESTREAM_ACCESS_KEY_ID."; exec node server/dist/main.js; fi
+      export NODE_ENV=production; node server/dist/scripts/restore-swap-cli.js;
+      if [ -n "$R2_BUCKET" ]; then exec ./bin/litestream replicate -config deploy/litestream.yml -exec "node server/dist/main.js";
+      else echo "Ciągła kopia bazy wyłączona: brak R2_BUCKET."; exec node server/dist/main.js; fi
     healthCheckPath: /api/health
     disk:
       name: etner-dane
@@ -76,7 +81,7 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      # Produkcyjny bucket R2 na zdjęcia (osobny od testowego).
+      # Produkcyjny bucket R2 (osobny od testowego): zdjęcia i ciągła kopia bazy pod db/.
       - key: R2_BUCKET
         sync: false
       - key: R2_ENDPOINT
@@ -85,12 +90,8 @@ services:
         sync: false
       - key: R2_SECRET
         sync: false
-      # Bucket kopii: nocna kopia zdjęć (prefiks files/) i ciągła kopia bazy Litestream (prefiks db/).
+      # Opcjonalnie: drugi bucket na nocną kopię zdjęć (prefiks files/).
       - key: R2_BACKUP_BUCKET
-        sync: false
-      - key: LITESTREAM_ACCESS_KEY_ID
-        sync: false
-      - key: LITESTREAM_SECRET_ACCESS_KEY
         sync: false
       - key: VAPID_PUBLIC
         sync: false
