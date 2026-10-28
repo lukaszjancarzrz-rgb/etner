@@ -250,3 +250,4 @@ Owner checkpoint: next = Tasks 21–22 (need O3 exports of the old app: Firma_20
 - Ruling R50: new category colours Alarmy i monitoring #455a64, Smart home #00838f, Sprzedaż #6d4c41; templates Alarm/Kamery also match Alarmy i monitoring, Elektryka also Smart home — cost: owner may retune colours.
 - Split: 19i (slowniki seed, seed-demo, templates, tests) in parallel with 21→22 (new files under server/src/scripts/migrate-old only).
 Task 19i: impl e661562 (8 categories, templates, demo); controller review of the 15-line diff: matches brief/R50 — complete. Tests: shared 15, server 199, web 59, e2e 54/2 skipped (implementer run).
+Task 21: impl e3d9953; Task 22: impl aa71dc6 (real-file dry-run local: diff 0 on all sheets, 60 review items); controller privacy check: fixture tokens vs workbook — only town names match, no names/phones; review dispatched
