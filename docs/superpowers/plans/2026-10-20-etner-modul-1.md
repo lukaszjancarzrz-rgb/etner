@@ -900,3 +900,8 @@ Aplikacja działa na produkcji z prawdziwymi danymi – zmiany bazy tylko dodaj�
   - (1) Zdjęcie → „Oryginał” na telefonie: wyjście z oryginału wraca do aplikacji (oryginał w podglądzie w aplikacji z przyciskiem zamknięcia / „wstecz” zamyka podgląd; ewentualnie pobranie w nowej karcie), nie wychodzi z aplikacji.
   - (9) Usuwanie wpisów dziennika (i ich zdjęć/załączników) przez admina i autora wpisu, z potwierdzeniem; miękkie usunięcie, synchronizacja na inne urządzenia.
   - (11) Łączenie zdublowanych klientów (admin): w Klientach lista prawdopodobnych duplikatów (ta sama nazwa po normalizacji lub ten sam telefon/e-mail) i akcja „Połącz” (wybór klienta głównego; zlecenia, leady, obiekty i kontakty przechodzą do niego, brakujące pola uzupełniane, duplikat miękko usunięty); pojedyncze ręczne „Połącz z…” na karcie klienta.
+
+### Task 25: Licznik zadań P1, usuwanie wartości słownika z zamianą (2026-10-28)
+
+- **Zadania – licznik w menu (admin):** jak przy Zakupach/Samochodach – liczba otwartych (niewykonanych, nieusuniętych) zadań z priorytetem 1, na pozycji „Zadania” w menu bocznym i w „Więcej” (telefon); opis dla czytnika „N z priorytetem 1”.
+- **Słowniki – usunięcie wartości w użyciu:** zamiast samego błędu 409 („wartość w użyciu”) okno „Zamień na…”: admin wybiera inną wartość tego samego słownika, wszystkie rekordy używające starej wartości dostają nową (ten sam mechanizm co zmiana nazwy, R36 – jedna transakcja, wpisy w changes), potem stara wartość jest usuwana. Potrzebne na produkcji do usunięcia kodów nieobecności „na żądanie” i „okolicznościowy” (decyzja właściciela: usuwamy; „bezpłatny” = niepłatny – już tak jest po przeniesieniu, sprawdzić).
