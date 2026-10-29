@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { Hono, MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { loginSchema, newId, ownPasswordSchema, type Me, type User } from '@etner/shared';
@@ -11,7 +11,7 @@ import { rankoGodzina } from './cron.js';
 import { recentErrors } from './errors.js';
 import { MAX_PASSWORD, dummyVerify, hashPassword, verifyPassword } from './password.js';
 import { can } from './permissions.js';
-import { sessions, settings, users } from './schema-base.js';
+import { pushSubscriptions, sessions, settings, users } from './schema-base.js';
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -31,8 +31,11 @@ const toUser = (r: typeof users.$inferSelect): User => ({
 });
 const toMe = (u: User): Me => ({ id: u.id, name: u.name, role: u.role, perms: u.perms, ekipa: u.ekipa, scheduleCol: u.scheduleCol });
 
+/** Kończy wszystkie sesje osoby i wyłącza jej powiadomienia (po ponownym zalogowaniu urządzenie zapisuje się samo). */
 export function revokeUser(db: Db, userId: string): void {
   db.delete(sessions).where(eq(sessions.userId, userId)).run();
+  const now = new Date().toISOString();
+  db.update(pushSubscriptions).set({ deletedAt: now, updatedAt: now }).where(and(eq(pushSubscriptions.userId, userId), isNull(pushSubscriptions.deletedAt))).run();
 }
 
 const live = (r: { s: typeof sessions.$inferSelect; u: typeof users.$inferSelect }, now: Date) =>

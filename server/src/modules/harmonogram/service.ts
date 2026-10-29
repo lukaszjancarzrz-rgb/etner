@@ -210,10 +210,11 @@ export function range(db: Db, from: string, to: string, withDrafts: boolean) {
 const jobEntries = (db: Db, jobId: string): EntryRow[] =>
   db.select().from(scheduleEntries).where(and(live, eq(scheduleEntries.jobId, jobId))).all();
 
-/** Id użytkowników przypisanych do zlecenia w harmonogramie. */
+/** Id aktywnych użytkowników przypisanych do zlecenia w harmonogramie (wyłączeni nie dostają powiadomień ani kanału Pumble). */
 export const peopleForJob = (db: Db, jobId: string): string[] => {
   const people = new Map(users.listPeople(db).map((p) => [p.id, p.userId]));
-  return [...new Set(jobEntries(db, jobId).map((e) => people.get(e.personId)).filter((u): u is string => !!u))];
+  const on = new Set(users.activeIds(db));
+  return [...new Set(jobEntries(db, jobId).map((e) => people.get(e.personId)).filter((u): u is string => !!u && on.has(u)))];
 };
 
 /** Pełny dzień = 1, pół = 0,5. */

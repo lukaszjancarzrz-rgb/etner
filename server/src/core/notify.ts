@@ -8,7 +8,7 @@ import { newId } from '@etner/shared';
 import type { AppDeps } from '../app.js';
 import { requireUser } from './auth.js';
 import { logError } from './errors.js';
-import { pushSubscriptions } from './schema-base.js';
+import { pushSubscriptions, users } from './schema-base.js';
 
 export type PushSub = { endpoint: string; keys: { p256dh: string; auth: string } };
 export type PushSender = (sub: PushSub, payload: string, opts: { TTL: number }) => Promise<{ statusCode: number }>;
@@ -40,8 +40,11 @@ export async function notify(deps: AppDeps, userIds: string[], n: Notification):
   const { push } = deps;
   const ids = [...new Set(userIds)];
   if (!push || !ids.length) return 0; // push wyłączony (brak VAPID)
+  // tylko aktywni, nieusunięci (np. były pracownik z dawnych wpisów harmonogramu nic nie dostaje)
+  const on = new Set(deps.db.select({ id: users.id }).from(users)
+    .where(and(inArray(users.id, ids), eq(users.active, true), isNull(users.deletedAt))).all().map((r) => r.id));
   const subs = deps.db.select().from(pushSubscriptions)
-    .where(and(inArray(pushSubscriptions.userId, ids), isNull(pushSubscriptions.deletedAt))).all();
+    .where(and(inArray(pushSubscriptions.userId, ids), isNull(pushSubscriptions.deletedAt))).all().filter((s) => on.has(s.userId));
   const payload = JSON.stringify(n);
   let ok = 0;
   for (const s of subs) {

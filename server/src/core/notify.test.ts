@@ -5,7 +5,8 @@ import { createApp } from '../app.js';
 import { addUser, loginCookie, testDeps } from '../test-utils.js';
 import { rankoGodzina, rankoTick, registerCron, rankoTeraz } from './cron.js';
 import { notify, vapidFromEnv, type PushSender } from './notify.js';
-import { errors, pushSubscriptions, settings } from './schema-base.js';
+import { errors, pushSubscriptions, settings, users } from './schema-base.js';
+import { revokeUser } from './auth.js';
 
 const n = { title: 'T', body: 'B', url: '/x', tag: 't' };
 function sub(deps: ReturnType<typeof testDeps>, userId: string, endpoint: string) {
@@ -53,6 +54,17 @@ describe('notify', () => {
     const a = addUser(deps).user; sub(deps, a.id, 'e1');
     expect(await notify(deps, [a.id], n)).toBe(0);
     expect(deps.db.select().from(errors).all()).toHaveLength(0);
+  });
+  it('wyłączeni i usunięci użytkownicy nic nie dostają; revokeUser wyłącza ich subskrypcje', async () => {
+    const push = vi.fn<PushSender>(async () => ({ statusCode: 201 }));
+    const deps = testDeps({ push });
+    const a = addUser(deps).user, b = addUser(deps, { active: false }).user, c = addUser(deps).user;
+    deps.db.update(users).set({ deletedAt: 'x' }).where(eq(users.id, c.id)).run();
+    sub(deps, a.id, 'ea'); sub(deps, b.id, 'eb'); sub(deps, c.id, 'ec');
+    expect(await notify(deps, [a.id, b.id, c.id], n)).toBe(1);
+    expect(push.mock.calls.map((x) => x[0].endpoint)).toEqual(['ea']);
+    revokeUser(deps.db, a.id);
+    expect(alive(deps)).toEqual(['eb', 'ec']);
   });
   it('pusta lista → 0 bez wywołań', async () => {
     const push = vi.fn<PushSender>();

@@ -164,6 +164,8 @@ describe('harmonogram', () => {
     const next = await (await s.app.request('/api/schedule/my-next', req(s.worker, 'GET'))).json();
     expect(next).toMatchObject({ dzien: '2026-10-26', entries: [{ jobId: s.job.id, job: { numer: s.job.numer, klient: 'Nowak', miejscowosc: 'Zawoja' } }] });
     expect(await (await s.app.request('/api/schedule/my-next', req(s.admin2, 'GET'))).json()).toBeNull();
+    users.update(s.deps.db, s.a.user.id, s.w.user.id, { active: false }); // zwolniony: bez powiadomień i kanału Pumble
+    expect(svc.peopleForJob(s.deps.db, s.job.id)).toEqual([]);
   });
 
   it('workdaysOnly pomija sobotę, niedzielę, 11.11 i dzień wolny ze słownika', async () => {
