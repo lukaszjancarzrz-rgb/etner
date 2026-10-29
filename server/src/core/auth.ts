@@ -22,7 +22,10 @@ declare module 'hono' {
 
 const COOKIE = 'etner_s';
 const DAY = 86_400_000;
-const MAX_AGE_S = 180 * 24 * 3600;
+const SESSION_DAYS = 180;
+const MAX_AGE_S = SESSION_DAYS * 24 * 3600;
+/** Cookie Secure (ustawiane w mountAuth; requireUser przedłuża ciasteczko z tym samym ustawieniem). */
+let secureCookie = process.env.NODE_ENV === 'production';
 
 export const hashToken = (t: string): string => createHash('sha256').update(t).digest('hex');
 
@@ -67,6 +70,11 @@ export function requireUser(db: Db): MiddlewareHandler {
     if (now.getTime() - Date.parse(row.s.lastSeen) > 3_600_000) {
       db.update(sessions).set({ lastSeen: now.toISOString() }).where(eq(sessions.id, row.s.id)).run();
     }
+    // sesja przesuwana przy używaniu (najwyżej raz na dobę): aktywny użytkownik nie jest wylogowywany po 180 dniach od logowania
+    if (Date.parse(row.s.expiresAt) - now.getTime() < (SESSION_DAYS - 1) * DAY) {
+      db.update(sessions).set({ expiresAt: new Date(now.getTime() + SESSION_DAYS * DAY).toISOString() }).where(eq(sessions.id, row.s.id)).run();
+      setCookie(c, COOKIE, tok!, { httpOnly: true, sameSite: 'Lax', path: '/', maxAge: MAX_AGE_S, secure: secureCookie });
+    }
     c.set('user', toUser(row.u));
     c.set('sessionId', row.s.id);
     await next();
@@ -87,7 +95,7 @@ export function requireAdmin(db: Db): MiddlewareHandler {
 
 export function mountAuth(app: Hono, deps: AppDeps): void {
   const { db } = deps;
-  const secure = deps.secureCookie ?? process.env.NODE_ENV === 'production';
+  const secure = (secureCookie = deps.secureCookie ?? process.env.NODE_ENV === 'production');
 
   // shortcut: in-memory, single process, max 5000 keys (when full, expired ones are dropped, then new keys get 429) — move to the DB if the app ever runs several processes
   const fails = new Map<string, { n: number; since: number }>();
@@ -115,7 +123,7 @@ export function mountAuth(app: Hono, deps: AppDeps): void {
     const now = new Date();
     db.insert(sessions).values({
       id: newId(), userId, tokenHash: hashToken(sessionToken), device: c.req.header('user-agent') ?? null,
-      createdAt: now.toISOString(), lastSeen: now.toISOString(), expiresAt: new Date(now.getTime() + 180 * DAY).toISOString(),
+      createdAt: now.toISOString(), lastSeen: now.toISOString(), expiresAt: new Date(now.getTime() + SESSION_DAYS * DAY).toISOString(),
     }).run();
     setCookie(c, COOKIE, sessionToken, { httpOnly: true, sameSite: 'Lax', path: '/', maxAge: MAX_AGE_S, secure });
   };

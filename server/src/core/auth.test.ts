@@ -162,6 +162,19 @@ describe('logowanie hasłem', () => {
     expect((await get(app, '/api/me', cookie)).status).toBe(401);
   });
 
+  it('sesja przesuwa się przy używaniu, najwyżej raz na dobę (nowe ciasteczko z pełnym terminem)', async () => {
+    const { deps, app } = setup();
+    const cookie = await loginCookie(app, addUser(deps).login);
+    const exp = () => Date.parse(deps.db.select().from(sessions).get()!.expiresAt);
+    expect((await get(app, '/api/me', cookie)).headers.get('set-cookie')).toBeNull(); // świeża: bez przesuwania
+    deps.db.update(sessions).set({ expiresAt: new Date(Date.now() + 100 * 86_400_000).toISOString() }).run();
+    const res = await get(app, '/api/me', cookie);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('set-cookie')).toContain(`${cookie}; Max-Age=${180 * 24 * 3600}`);
+    expect(exp() - Date.now()).toBeGreaterThan(179.9 * 86_400_000);
+    expect((await get(app, '/api/me', cookie)).headers.get('set-cookie')).toBeNull();
+  });
+
   it('revokeUser kasuje sesje', async () => {
     const { deps, app } = setup();
     const { user, login } = addUser(deps);
