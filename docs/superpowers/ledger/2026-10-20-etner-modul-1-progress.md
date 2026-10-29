@@ -295,3 +295,4 @@ Task 26: review — Needs fixes: card fixes since/posts markSeen before first sy
 Task 27: impl 784a04b (Leady desktop compact), b9e5141 (cyclic UX); controller review (diff + screenshot) OK; cherry-picked to produkcja with typecheck + unit tests in a worktree.
 Task 26: fix round 1/5 (ec72565) re-review clean; controller folded the „waits forever after re-login with open stream” minor (sync.cycle sets tried when es open) — complete. Verification: shared 15, web 79, server 241, build clean, e2e 71 passed / 3 skipped. Released (merge of produkcja cherry-picks).
 Task 26: minor (deferred): 60 s server skip can resurface a change seen live within that window as „nowe”; visits shorter than the first sync aren't recorded; no test for /api/seen 413
+## Owner 2026-10-29: final whole-branch review of module 1 first, then decide next module. Final review dispatched (base 312a013, head b3b002c).
