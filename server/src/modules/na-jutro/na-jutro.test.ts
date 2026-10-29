@@ -63,6 +63,14 @@ describe('na jutro', () => {
     expect((await app.request(`/api/checklists/${row.id}`, req(admin, 'PUT', { tekst: 'Inne' }))).status).toBe(200);
   });
 
+  it('zawieszona usługa push nie wstrzymuje odpowiedzi (wysyłka po odpowiedzi)', async () => {
+    const { app, c1, push } = await setup();
+    push.mockImplementation(() => new Promise(() => {}));
+    const res = await app.request('/api/checklists', req(c1, 'POST', { ekipa: 'ekipa A', dzien: '2026-03-11', tekst: 'Drabina' }));
+    expect(res.status).toBe(200);
+    expect(push).toHaveBeenCalledTimes(1);
+  });
+
   it('usuwanie: autor lub admin, inny pracownik 403; powtórka 200', async () => {
     const { app, c1, c1b, c2, admin } = await setup();
     const mk = async () => (await (await app.request('/api/checklists', req(c1, 'POST', { ekipa: 'ekipa A', dzien: '2026-03-11', tekst: 'Drabina' }))).json()).id;

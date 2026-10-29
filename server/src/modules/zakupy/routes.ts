@@ -26,7 +26,7 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.post('/api/shopping', auth, async (c) => {
     const { opId, ...d } = await body(c, shoppingCreateSchema);
     const { result, dup } = runOp(db, opId, me(c).id, () => svc.create(db, me(c).id, d));
-    if (!dup) await push(c, users.admins(db).filter((id) => id !== me(c).id), { title: `🛒 Do kupienia: ${d.co}`, body: d.uwagi, url: `#zakupy~${result.id}`, tag: `zakupy-${result.id}` });
+    if (!dup) void push(c, users.admins(db).filter((id) => id !== me(c).id), { title: `🛒 Do kupienia: ${d.co}`, body: d.uwagi, url: `#zakupy~${result.id}`, tag: `zakupy-${result.id}` });
     return c.json(result);
   });
 
@@ -39,7 +39,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     const { result, dup } = runOp(db, opId, me(c).id, () => svc.update(db, me(c).id, old.id, d));
     if (!result) throw notFound();
     if (!dup && result.status === 'Kupione' && old.status !== 'Kupione' && old.by !== me(c).id) {
-      await push(c, [old.by], { title: `🛒 Kupione: ${result.co}`, body: '', url: `#zakupy~${result.id}`, tag: `zakupy-${result.id}` });
+      void push(c, [old.by], { title: `🛒 Kupione: ${result.co}`, body: '', url: `#zakupy~${result.id}`, tag: `zakupy-${result.id}` });
     }
     return c.json(result);
   });

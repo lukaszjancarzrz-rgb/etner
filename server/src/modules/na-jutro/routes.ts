@@ -34,7 +34,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     if (!inCrew(c, d.ekipa)) throw forbidden();
     const { result, dup } = runOp(db, opId, me(c).id, () => svc.create(db, me(c).id, d));
     if (!dup) {
-      await notify(deps, users.crewMembers(db, d.ekipa).filter((id) => id !== me(c).id),
+      void notify(deps, users.crewMembers(db, d.ekipa).filter((id) => id !== me(c).id),
         { title: `📦 ${d.ekipa} – ${d.dzien}: do zabrania`, body: d.tekst, url: `#jutro~${result.id}`, tag: `jutro-${result.id}` })
         .catch((e) => logError(db, 'push', e, me(c).id));
     }

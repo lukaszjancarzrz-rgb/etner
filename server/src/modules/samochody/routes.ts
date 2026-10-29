@@ -48,7 +48,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     const result = r.row;
     if (!dup && naprawaDzien && naprawaDzien !== r.before) {
       const car = svc.getCar(db, result.carId);
-      await notify(deps, users.activeIds(db), { title: `🔧 ${car?.nazwa ?? 'Samochód'}: naprawa ${fmtDay(naprawaDzien)} – ${result.opis}`, body: '', url: `#auta~${result.id}`, tag: `auta-${result.id}` })
+      void notify(deps, users.activeIds(db), { title: `🔧 ${car?.nazwa ?? 'Samochód'}: naprawa ${fmtDay(naprawaDzien)} – ${result.opis}`, body: '', url: `#auta~${result.id}`, tag: `auta-${result.id}` })
         .catch((e) => logError(db, 'push', e, me(c).id));
     }
     return c.json(result);

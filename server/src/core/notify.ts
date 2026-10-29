@@ -26,7 +26,8 @@ export function vapidFromEnv(env: NodeJS.ProcessEnv, dataDir: string): { publicK
 export function webPushSender(vapid: { publicKey: string; privateKey: string }, subject = 'mailto:admin@etner.local'): PushSender {
   return async (sub, payload, opts) => {
     try {
-      const r = await webpush.sendNotification(sub, payload, { ...opts, vapidDetails: { subject, ...vapid } });
+      // limit czasu: zawieszona usługa push nie trzyma wysyłki w nieskończoność (zapis i tak już odpowiedział)
+      const r = await webpush.sendNotification(sub, payload, { ...opts, timeout: 10_000, vapidDetails: { subject, ...vapid } });
       return { statusCode: r.statusCode };
     } catch (e) {
       if (e instanceof webpush.WebPushError) return { statusCode: e.statusCode };
@@ -35,7 +36,7 @@ export function webPushSender(vapid: { publicKey: string; privateKey: string }, 
   };
 }
 
-/** Wysyła powiadomienie do wszystkich urządzeń podanych osób; zwraca liczbę udanych wysyłek. */
+/** Wysyła powiadomienie do wszystkich urządzeń podanych osób; zwraca liczbę udanych wysyłek. Trasy wołają ją bez await (po COMMIT, z .catch → logError), żeby odpowiedź nie czekała na usługę push. */
 export async function notify(deps: AppDeps, userIds: string[], n: Notification): Promise<number> {
   const { push } = deps;
   const ids = [...new Set(userIds)];

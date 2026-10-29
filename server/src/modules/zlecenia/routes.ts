@@ -39,7 +39,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     const { result, dup } = runOp(db, opId, uid, () => svc.save(db, uid, { ...d, id }, out));
     if (!result) throw new HTTPException(404, { message: 'Nie znaleziono' });
     // Po commit; błąd wysyłki nie może zamienić zapisanego zlecenia w 500.
-    if (!dup) for (const o of out) await notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, uid));
+    if (!dup) for (const o of out) void notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, uid));
     // Pumble po odpowiedzi (zapis nie czeka); id kanału dociera zmianą zlecenia
     if (!dup && !id) pumble.later(deps, 'pumble:kanal', () => pumble.ensureChannel(deps, result.id));
     else if (!dup && prev && prev.ekipa !== result.ekipa && result.ekipa && result.ekipa !== 'mieszane') pumble.addPeopleLater(deps, result.id, users.crewMembers(db, result.ekipa));

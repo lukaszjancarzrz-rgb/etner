@@ -66,7 +66,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     const user = c.get('user');
     const out: svc.Outbox = [];
     const { result, dup } = runOp(db, b.opId, user.id, () => svc.create(db, user, b, (id) => deps.schedule?.peopleForJob?.(id) ?? [], out));
-    if (!dup) for (const o of out) await notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, user.id));
+    if (!dup) for (const o of out) void notify(deps, o.userIds, o.n).catch((e) => logError(db, 'push', e, user.id));
     return c.json(result);
   });
 
