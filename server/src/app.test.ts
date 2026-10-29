@@ -13,6 +13,16 @@ describe('health', () => {
   });
 });
 
+describe('limit danych JSON', () => {
+  it('ponad 1 MB → 413 przed trasą; mniejsze przechodzą dalej', async () => {
+    const app = createApp(testDeps());
+    const big = await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ login: 'x'.repeat(1024 * 1024) }) });
+    expect(big.status).toBe(413);
+    const small = await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ login: 'x', haslo: 'y' }) });
+    expect(small.status).toBe(401);
+  });
+});
+
 describe('serwowanie web/dist', () => {
   const webDist = mkdtempSync(join(tmpdir(), 'etner-web-'));
   writeFileSync(join(webDist, 'index.html'), '<h1>ETNER</h1>');

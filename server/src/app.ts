@@ -3,6 +3,7 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import type { Db } from './core/db.js';
 import { mountAuth } from './core/auth.js';
@@ -61,6 +62,10 @@ export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
   });
 
   app.get('/api/health', (c) => c.json({ ok: true, version: deps.version }));
+
+  // Dane JSON najwyżej 1 MB; wysyłka plików (multipart) ma własne limity w trasach.
+  const jsonLimit = bodyLimit({ maxSize: 1024 * 1024, onError: (c) => c.json({ error: 'Za dużo danych naraz (max 1 MB).' }, 413) });
+  app.use('/api/*', (c, next) => (c.req.header('content-type')?.startsWith('multipart/form-data') ? next() : jsonLimit(c, next)));
 
   const demo = deps.demoAccounts;
   if (demo) app.get('/api/demo/konta', (c) => c.json(demo()));
