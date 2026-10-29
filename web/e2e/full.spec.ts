@@ -329,10 +329,10 @@ test('admin: Ustawienia mają listę „do przejrzenia” po przeniesieniu (w de
   await login(page, 'Tomasz Wrona');
   await page.goto('/#ust');
   await expect(page.getByRole('region', { name: 'Do przejrzenia po przeniesieniu' })).toContainText('Brak pozycji');
-  // Wgranie arkusza: zły plik → komunikat na karcie, baza demo bez zmian (pełna próba i zapis w testach serwera).
+  // Wgranie arkusza do niepustej bazy demo: odmowa przed czytaniem pliku, komunikat na karcie (pełna próba i zapis w testach serwera).
   const card = page.getByRole('region', { name: 'Przeniesienie z arkusza' });
   await card.getByTestId('import-file').setInputFiles({ name: 'Firma.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('PK\x03\x04 to nie arkusz', 'latin1') });
-  await expect(card.getByRole('alert')).toContainText('Nie udało się odczytać arkusza');
+  await expect(card.getByRole('alert')).toContainText('Baza nie jest pusta');
   await expect(card.getByRole('table', { name: 'Raport przeniesienia' })).toHaveCount(0);
 });
 
