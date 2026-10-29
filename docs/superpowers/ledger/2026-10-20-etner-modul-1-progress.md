@@ -303,3 +303,4 @@ Final fix round: scoped re-review — all addressed; controller folded minors (a
 Final review deferred minors: op_ids replay after 30 days not deduped; multipart content-type skips JSON limit (logged-in only); cookie renewal lost on a 403 response; multi-tab resync (T17/T18).
 ## Module 1 complete (Tasks 1–27 + final review). Next: owner chooses module 2 (Paszport) / 3 (Finanse) / 4 (Płace).
 ## Owner 2026-10-29: passport (module 2) paused after the first question; Task 28 transposed schedule on desktop approved (bounded, in-chat design).
+Task 28: impl 6ba0d1e; controller review (screenshots week/month 1440/1100, e2e incl. new layout test + a11y) OK; folded month-title truncation fix. Verification: shared 15, web 85, server 252, build clean, e2e 72 passed / 4 skipped. Released.
