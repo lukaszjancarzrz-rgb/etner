@@ -302,3 +302,4 @@ Final fix round (4d06b6b..55aea44): all 3 Important + listed minors addressed; s
 Final fix round: scoped re-review — all addressed; controller folded minors (avatar backup own cursor incl. old avatars; catchUp generation guard against stale response after resync). Verification: shared 15, web 85, server 252, build clean, e2e 71 passed / 3 skipped. Released to produkcja.
 Final review deferred minors: op_ids replay after 30 days not deduped; multipart content-type skips JSON limit (logged-in only); cookie renewal lost on a 403 response; multi-tab resync (T17/T18).
 ## Module 1 complete (Tasks 1–27 + final review). Next: owner chooses module 2 (Paszport) / 3 (Finanse) / 4 (Płace).
+## Owner 2026-10-29: passport (module 2) paused after the first question; Task 28 transposed schedule on desktop approved (bounded, in-chat design).

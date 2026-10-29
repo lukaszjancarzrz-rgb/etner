@@ -913,3 +913,12 @@ Właściciel: nowy wpis w dzienniku zlecenia ma znacznik „nowe”, dopóki ogl
 - Dziennik: wpis innej osoby utworzony po „ostatnio widziane” → czerwony znacznik „nowe” przy wpisie (kolor `--new`), z opisem dla czytnika. To samo dla punktów zakresu prac zmienionych przez inną osobę i wiadomości Pumble innej osoby.
 - Zmiany pól: sklep na urządzeniu zapamiętuje kilka poprzednich wersji rekordów `jobs`, `clients`, `sites` przy zmianach z serwera (`_hist`, najwyżej 5, bez zagnieżdżeń, z `updatedAt` i `_by`). Karta porównuje obecną wersję z wersją widzianą (ostatnia z `_hist` sprzed „ostatnio widziane”) i przy zmienionych polach (opis, status, termin, kategoria, rodzaj, ekipa, uwagi; klient: nazwa, telefony, e-maile, NIP; obiekt: nazwa, adres, miejscowość, mapa) pokazuje „nowe” – tylko gdy zmienił je ktoś inny. Po świeżym logowaniu (snapshot) historii nie ma – wtedy bez znaczników pól.
 - Testy: jednostkowe porównanie wersji i wybór wersji widzianej; e2e: drugi admin widzi „nowe” przy wpisie i przy zmienionym opisie, po zamknięciu i ponownym otwarciu karty znacznik znika.
+
+### Task 28: Harmonogram – układ „osoby w kolumnach” na komputerze (2026-10-29)
+
+Właściciel zatwierdził: na komputerze przełącznik układu obok „Tydzień / Miesiąc”: „Osoby w wierszach” (jak dziś) i „Osoby w kolumnach” (wiersze = dni, kolumny = osoby). Wybór zapamiętany na urządzeniu (localStorage). Telefon bez zmian.
+- Nagłówek kolumn: osoby (awatar, kolor ekipy, „Ty”), przyklejony przy przewijaniu w pionie; pierwsza kolumna: data („Pon. 23.11”, święto na czerwono z nazwą, dzisiejszy dzień podświetlony), przyklejona przy przewijaniu w poziomie. Sobota i niedziela niższe wiersze.
+- Komórki identyczne jak dziś (ten sam komponent): kafelki zleceń (kategoria, klient · miejscowość), kody, tekst, pół dnia, szkice, „w naprawie”, „nowe”, klik → ta sama edycja, podświetlenie z adresu `#harm/<dzień>~<osoba>`, „Dziś” przewija do dzisiejszego wiersza.
+- Tydzień: 7 wierszy; miesiąc: wiersz na każdy dzień miesiąca. Strzałki i „Dziś” jak dziś.
+- Przy wielu osobach kolumny o stałej minimalnej szerokości i przewijanie w poziomie w ramce.
+- Testy: e2e przełącznika (komórka osoby/dnia klikalna i edycja działa w obu układach, wybór pamiętany po odświeżeniu), a11y w nowym układzie.
