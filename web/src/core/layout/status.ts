@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { bus } from '../api.js';
 import { outbox } from '../outbox.js';
+import { sync } from '../sync.js';
 
 export const useOnline = () =>
   useSyncExternalStore((f) => { addEventListener('online', f); addEventListener('offline', f); return () => { removeEventListener('online', f); removeEventListener('offline', f); }; }, () => navigator.onLine);
@@ -12,3 +13,7 @@ const desk = typeof matchMedia === 'function' ? matchMedia('(min-width: 1100px)'
 /** Komputer (≥1100 px, jak breakpoint `desk`). */
 export const useDesk = () =>
   useSyncExternalStore((f) => { desk?.addEventListener('change', f); return () => desk?.removeEventListener('change', f); }, () => !!desk?.matches);
+
+/** Pierwsza synchronizacja tej sesji za nami (albo nieudana bez sieci). */
+export const useSynced = () =>
+  useSyncExternalStore((f) => { bus.addEventListener('synced', f); return () => bus.removeEventListener('synced', f); }, () => sync.tried);

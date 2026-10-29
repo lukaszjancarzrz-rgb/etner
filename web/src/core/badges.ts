@@ -16,6 +16,8 @@ export const freshScope = (p: Rec, meId: string | undefined, since: string) => b
  * Rekord bez `_by` (snapshot przy pierwszej synchronizacji, przyszedł przed wersją z `_by`) nie jest nowy:
  * inaczej własne zmiany (z innego urządzenia, z przeniesienia arkusza) liczyły się jako nowe.
  * Zmiana samego zlecenia liczy się tylko dla admina (`jobRow`).
+ * Lista liczy cały wiersz zlecenia (każda zmiana po `since`, też samego kanału Pumble z `_by` poprzedniej osoby), a karta
+ * zaznacza tylko pola karty zmienione przez inną osobę – licznik na liście może więc być „1 nowy” bez znacznika na karcie.
  */
 export function freshByJob(jobs: Rec[], entries: Rec[], scope: Rec[], meId: string | undefined, since: (jobId: string) => string, jobRow = true, pumble: Rec[] = []): Map<string, number> {
   const m = new Map<string, number>();

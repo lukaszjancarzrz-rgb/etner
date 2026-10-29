@@ -169,3 +169,23 @@ test('karta zlecenia: „nowe” przy cudzym wpisie i zmienionym polu po śwież
   await expect(uwagi.getByText('nowe', { exact: true })).toHaveCount(0);
   await ctx.close();
 });
+
+test('karta zlecenia otwarta przy wylogowaniu: drugi admin logujący się na tym urządzeniu widzi „nowe” na tej karcie (Task 26)', async ({ page }, info) => {
+  const tag = `E2E 26b ${info.project.name} ${Date.now() % 100000}`;
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#zl');
+  await page.getByRole('link', { name: /Józef Bukowski/ }).first().click();
+  await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
+  const card = new URL(page.url()).hash;
+  await page.getByPlaceholder('Co zrobiono, czego brakuje').fill(tag);
+  await page.getByRole('button', { name: 'Dodaj wpis' }).click();
+  await expect(page.locator('li[id^="e-"]', { hasText: tag })).not.toContainText('wysyłanie');
+  // wylogowanie z otwartą kartą; następny admin loguje się z tym samym adresem karty (świeży sklep, snapshot)
+  await page.context().clearCookies();
+  await page.reload(); // ten sam adres karty
+  await page.getByRole('button', { name: /Anna Syrek/ }).click();
+  await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
+  expect(new URL(page.url()).hash).toBe(card);
+  const entry = page.locator('li[id^="e-"]', { hasText: tag });
+  await expect(entry.getByText('nowe', { exact: true })).toBeVisible();
+});

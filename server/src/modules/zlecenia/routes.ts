@@ -1,5 +1,6 @@
 import { jobCreateSchema, jobUpdateSchema, pumbleSendSchema, scopeCreateSchema, scopeOrderSchema, scopeUpdateSchema, seenSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
 import { body } from '../../core/body.js';
@@ -69,7 +70,7 @@ export function routes(app: Hono, deps: AppDeps): void {
   });
 
   // „Widziane” (Task 26): każdy zapisuje tylko swoje; wracają do niego synchronizacją (visibleTo: własne wiersze)
-  app.post('/api/seen', requireUser(db), async (c) => {
+  app.post('/api/seen', requireUser(db), bodyLimit({ maxSize: 256 * 1024, onError: (c) => c.json({ error: 'Za dużo danych naraz' }, 413) }), async (c) => {
     const { jobs: js, base } = await body(c, seenSchema);
     seen.saveSeen(db, c.get('user').id, js, base);
     return c.json({ ok: true });
@@ -80,7 +81,8 @@ export function routes(app: Hono, deps: AppDeps): void {
     const since = c.req.query('since') ?? '';
     if (Number.isNaN(Date.parse(since))) throw new HTTPException(400, { message: 'Podaj since (ISO)' });
     const user = c.get('user');
-    const at = new Date(since).toISOString();
+    // własny wiersz „widziane” z serwera przed chwilą z telefonu (zegar telefonu bywa przesunięty)
+    const at = seen.seenAt(db, user.id, j.id) ?? new Date(since).toISOString();
     const f = (entity: string, id: string | null) => (id ? seen.changedFields(db, (ch) => visibleChange(app, deps, user, ch), user.id, entity, id, at) : []);
     return c.json({ jobs: f('jobs', j.id), clients: f('clients', j.clientId), sites: f('sites', j.siteId) });
   });

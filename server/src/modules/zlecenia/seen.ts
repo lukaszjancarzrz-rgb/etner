@@ -1,5 +1,5 @@
 import { newId } from '@etner/shared';
-import { and, asc, eq, gt, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull } from 'drizzle-orm';
 import { recordChange, type ChangeRow } from '../../core/changes.js';
 import { tx, type Db } from '../../core/db.js';
 import { changes } from '../../core/schema-base.js';
@@ -10,6 +10,8 @@ export const BASE = '*';
 /** Baza bez podpowiedzi z urządzenia: zmiany innych z ostatnich dni są „nowe” (jak R61). */
 const FIRST_DAYS = 3;
 const iso = (s: string) => new Date(s).toISOString();
+/** Krótsze przesunięcie niż minuta nie jest zapisywane (mniej wierszy w `changes`). */
+const MIN_STEP_MS = 60_000;
 
 function put(db: Db, userId: string, jobId: string, at: string, onlyNew = false): void {
   const old = db.select().from(jobSeen).where(and(eq(jobSeen.userId, userId), eq(jobSeen.jobId, jobId))).get();
@@ -17,19 +19,19 @@ function put(db: Db, userId: string, jobId: string, at: string, onlyNew = false)
   if (!old) {
     const row = db.insert(jobSeen).values({ id: newId(), userId, jobId, seenAt: at, createdAt: now, createdBy: userId, updatedAt: now }).returning().get();
     recordChange(db, userId, 'job_seen', row.id, 'create', null, row);
-  } else if (!onlyNew && at > old.seenAt) {
+  } else if (!onlyNew && Date.parse(at) - Date.parse(old.seenAt) >= MIN_STEP_MS) {
     const row = db.update(jobSeen).set({ seenAt: at, updatedAt: now }).where(eq(jobSeen.id, old.id)).returning().get();
     recordChange(db, userId, 'job_seen', row.id, 'update', old, row);
   }
 }
 
-/** Zapisuje „widziane” użytkownika: tylko rośnie, nie później niż teraz, tylko istniejące zlecenia; baza zapisywana raz. */
+/** Zapisuje „widziane” użytkownika: tylko rośnie (co najmniej o minutę), nie później niż teraz, tylko nieusunięte zlecenia; baza zapisywana raz. */
 export function saveSeen(db: Db, userId: string, input: Record<string, string>, base?: string): void {
   const now = new Date().toISOString();
   const cap = (s: string) => (iso(s) > now ? now : iso(s));
   tx(db, () => {
     const ids = Object.keys(input);
-    const known = ids.length ? new Set(db.select({ id: jobs.id }).from(jobs).where(inArray(jobs.id, ids)).all().map((r) => r.id)) : new Set<string>();
+    const known = ids.length ? new Set(db.select({ id: jobs.id }).from(jobs).where(and(inArray(jobs.id, ids), isNull(jobs.deletedAt))).all().map((r) => r.id)) : new Set<string>();
     for (const id of ids) if (known.has(id)) put(db, userId, id, cap(input[id]!));
     put(db, userId, BASE, base ? cap(base) : new Date(Date.now() - FIRST_DAYS * 864e5).toISOString(), true);
   });
@@ -62,3 +64,7 @@ export function changedFields(db: Db, view: View, meId: string, entity: string, 
   }
   return [...by].filter(([k, u]) => !!u && u !== meId && !same(first.get(k), last.get(k))).map(([k]) => k);
 }
+
+/** Własne „widziane” zlecenia z serwera (bez zegara telefonu); brak = undefined. */
+export const seenAt = (db: Db, userId: string, jobId: string): string | undefined =>
+  db.select({ at: jobSeen.seenAt }).from(jobSeen).where(and(eq(jobSeen.userId, userId), eq(jobSeen.jobId, jobId))).get()?.at;

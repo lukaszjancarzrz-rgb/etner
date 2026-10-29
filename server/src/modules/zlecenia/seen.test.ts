@@ -69,4 +69,58 @@ describe('widziane i zmiany pól (Task 26)', () => {
     expect((await call(B, 'GET', `/api/jobs/${job.id}/zmiany?since=x`)).status).toBe(400);
     expect((await call(B, 'GET', `/api/jobs/nie-ma/zmiany?since=${since}`)).status).toBe(404);
   });
+
+  it('limity: 2001 zleceń = 400, przesunięcie poniżej minuty nie zapisuje, usunięte zlecenie pominięte', async () => {
+    const { deps, A, call, job } = await setup();
+    const many = Object.fromEntries(Array.from({ length: 2001 }, (_, i) => [`j${i}`, '2026-10-01T10:00:00Z']));
+    expect((await call(A, 'POST', '/api/seen', { jobs: many })).status).toBe(400);
+    await call(A, 'POST', '/api/seen', { jobs: { [job.id]: '2026-10-01T10:00:00Z' } });
+    await call(A, 'POST', '/api/seen', { jobs: { [job.id]: '2026-10-01T10:00:59Z' } });
+    let rows = (await seenRows(call, A)).filter((r) => r.jobId === job.id);
+    expect(rows.map((r) => r.seenAt)).toEqual(['2026-10-01T10:00:00.000Z']);
+    await call(A, 'POST', '/api/seen', { jobs: { [job.id]: '2026-10-01T10:01:00Z' } });
+    rows = (await seenRows(call, A)).filter((r) => r.jobId === job.id);
+    expect(rows.at(-1)!.seenAt).toBe('2026-10-01T10:01:00.000Z');
+    const { jobs } = await import('./schema.js');
+    const { eq } = await import('drizzle-orm');
+    deps.db.update(jobs).set({ deletedAt: new Date().toISOString() }).where(eq(jobs.id, job.id)).run();
+    await call(A, 'POST', '/api/seen', { jobs: { [job.id]: '2026-10-02T10:00:00Z' } });
+    expect((await seenRows(call, A)).filter((r) => r.jobId === job.id).at(-1)!.seenAt).toBe('2026-10-01T10:01:00.000Z');
+  });
+
+  it('GET /zmiany liczy od własnego wiersza „widziane” na serwerze, nie od chwili z telefonu', async () => {
+    const { A, B, call, job } = await setup();
+    await call(A, 'PUT', `/api/jobs/${job.id}`, { status: 'W realizacji' });
+    const z = async (since: string) => (await call(B, 'GET', `/api/jobs/${job.id}/zmiany?since=${encodeURIComponent(since)}`)).json.jobs;
+    expect(await z('2000-01-01T00:00:00Z')).toEqual(['status']);
+    await call(B, 'POST', '/api/seen', { jobs: { [job.id]: new Date().toISOString() } }); // B obejrzał po zmianie
+    expect(await z('2000-01-01T00:00:00Z')).toEqual([]); // zegar telefonu cofnięty: i tak nic nowego
+  });
+
+  it('strumień SSE: „widziane” dochodzą tylko do właściciela', async () => {
+    const { app, A, B, call, job } = await setup();
+    const open = async (cookie: string) => {
+      const res = await app.request('/api/stream?since=0', { headers: { cookie } });
+      const reader = res.body!.getReader();
+      let buf = '';
+      return {
+        async seen(): Promise<any> {
+          for (;;) {
+            for (const m of buf.matchAll(/data: (\{.*\})\n/g)) { const d = JSON.parse(m[1]!); if (d.entity === 'job_seen') { buf = ''; return d; } }
+            const { value, done } = await reader.read();
+            if (done) throw new Error('koniec');
+            buf += new TextDecoder().decode(value);
+          }
+        },
+        close: () => reader.cancel(),
+      };
+    };
+    const sa = await open(A), sb = await open(B);
+    await call(B, 'POST', '/api/seen', { jobs: { [job.id]: '2026-10-01T10:00:00Z' } });
+    await call(A, 'POST', '/api/seen', { jobs: { [job.id]: '2026-10-01T11:00:00Z' } });
+    const b1 = await sb.seen(), a1 = await sa.seen();
+    expect(a1.data.seenAt).toBe('2026-10-01T11:00:00.000Z'); // pierwsze, co A dostaje z job_seen, to jego wiersz, nie B
+    expect(b1.data.seenAt).toBe('2026-10-01T10:00:00.000Z');
+    await sa.close(); await sb.close();
+  });
 });

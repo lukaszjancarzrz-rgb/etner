@@ -12,6 +12,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
  * Pola zmienione przez inną osobę od wersji widzianej (ostatnia z `_hist` z `updatedAt` ≤ `since`); bez historii (snapshot) nic.
  * Kopia optymistyczna ma `updatedAt` poprzedniej wersji i jest pomijana: to własna zmiana, a jej `_by` jest jeszcze stary.
  * Pole, które po cudzej zmianie poprawiłem sam albo wróciło do widzianej wartości, nie jest nowe.
+ * Zmiana systemu nie jest niczyja (jak na serwerze): sklep nie zapisuje dla niej wersji (store.apply), więc nie zaznacza pola.
  */
 export function changedFields(r: Rec | undefined, since: string, meId: string | undefined, fields: readonly string[]): Set<string> {
   const out = new Set<string>();

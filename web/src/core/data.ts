@@ -106,7 +106,12 @@ export const seenFor = (userId: string) => {
   const base = srv.get(SEEN_BASE) ?? read(seen0(userId)) ?? new Date().toISOString();
   return (jobId: string): string => later(srv.get(jobId), read(`seen:${userId}:${jobId}`)) ?? base;
 };
-const postSeen = (jobs: Record<string, string>, base?: string) => void api('/api/seen', { method: 'POST', json: { jobs, base } }).catch(() => { /* bez sieci: zostaje w localStorage, wyśle uploadSeen */ });
+let posting: Promise<unknown> = Promise.resolve();
+const postSeen = (jobs: Record<string, string>, base?: string) => {
+  posting = api('/api/seen', { method: 'POST', json: { jobs, base } }).catch(() => { /* bez sieci: zostaje w localStorage, wyśle uploadSeen */ });
+};
+/** Czeka na ostatni zapis „widziane” (karta otwarta zaraz po zamknięciu nie może pytać serwera o stare „widziane”). */
+export const seenSettled = () => posting;
 /**
  * Wysyła lokalne „widziane” nowsze niż na serwerze (też jednorazowe przeniesienie wartości sprzed Task 26) i bazę urządzenia,
  * gdy serwer jej jeszcze nie ma. Start aplikacji i powrót sieci; serwer bierze tylko późniejsze chwile, więc powtórka nic nie psuje.
@@ -143,11 +148,13 @@ export function ensureSeenBase(userId: string, screens: string[]): void {
 let seenVer = 0;
 const seenSubs = new Set<() => void>();
 const bump = () => { seenVer++; for (const f of seenSubs) f(); };
-export function markSeen(userId: string, jobId: string): void {
+/** `post`: od razu na serwer (zamknięcie karty); przy otwarciu tylko localStorage – serwer dostanie to przy zamknięciu albo z uploadSeen. */
+export function markSeen(userId: string, jobId: string, post = true): void {
   const at = new Date().toISOString();
   try { localStorage.setItem(`seen:${userId}:${jobId}`, at); } catch { /* prywatne okno */ }
   bump();
-  postSeen({ [jobId]: at });
+  // baza urządzenia razem z zapisem: serwer zapisuje ją tylko, gdy jeszcze jej nie ma
+  if (post) postSeen({ [jobId]: at }, read(seen0(userId)) ?? undefined);
 }
 /** Ile dni wstecz liczą się zmiany harmonogramu („nowe”) i zapamiętane obejrzenia. */
 export const DAY_SEEN_KEEP = 60;

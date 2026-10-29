@@ -45,6 +45,9 @@ it('uploadSeen: wysyła lokalne nowsze niż serwer (tylko zlecenia w sklepie) i 
   store.put('job_seen', { id: 's3', userId: 'u', jobId: 'j1', seenAt: '2026-10-05T00:00:00.000Z' });
   uploadSeen('u');
   expect(posted).toEqual([]);
+  markSeen('u', 'j1', false); // otwarcie karty: tylko localStorage
+  expect(posted).toEqual([]);
   markSeen('u', 'j1');
   expect(Object.keys(posted[0].jobs)).toEqual(['j1']);
+  expect(posted[0].base).toBe('2026-10-01T00:00:00.000Z'); // baza urządzenia razem z zapisem
 });

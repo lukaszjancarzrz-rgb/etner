@@ -86,7 +86,12 @@ export function createStore(): Store {
         const prev = s.get(ch.entity, ch.id);
         const r: Rec = { ...ch.data, id: ch.id, _by: ch.by ?? prev?._by };
         // R62: kilka poprzednich wersji (bez zagnieżdżeń) do „nowe” przy polach karty zlecenia; snapshot historii nie ma
-        if (prev && HIST.has(ch.entity)) { const { _hist, ...v } = prev; r._hist = [...((_hist as Rec[] | undefined) ?? []), v].slice(-HIST_MAX); }
+        // Zmiana systemu (by=null, dziś tylko kanał Pumble zlecenia) nie dokłada wersji: jak na serwerze, nie jest niczyją zmianą pola.
+        // shortcut: jej pola liczą się do następnej wersji osoby; oznaczać wersje systemu, gdyby system zaczął zmieniać pola karty.
+        if (prev && HIST.has(ch.entity)) {
+          const { _hist, szukaj: _s, zakres: _z, ...v } = prev; // ciężkie pola bez znaczenia dla karty nie idą do historii
+          r._hist = ch.by == null ? _hist : [...((_hist as Rec[] | undefined) ?? []), v].slice(-HIST_MAX);
+        }
         s.put(ch.entity, r);
       }
       if (ch.seq > last) s.setLast(ch.seq);

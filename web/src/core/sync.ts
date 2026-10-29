@@ -12,6 +12,8 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
   let attempt = 0;
   let on = false;
   let paused = false;
+  let tried = false; // pierwsze nadrabianie tej sesji za nami (udane albo bez sieci)
+  const setTried = (v: boolean) => { if (tried !== v) { tried = v; emit('synced'); } };
 
   async function catchUp() {
     if (!store.last) {
@@ -33,7 +35,9 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
     if (!on || paused || es) return;
     try {
       await catchUp();
+      setTried(true);
     } catch (err) {
+      setTried(true); // bez sieci: dane z IndexedDB
       if ((err as { status?: number }).status === 401) return expired();
       if (on && !paused) timer = setTimeout(() => void cycle(), backoff(attempt++));
       return;
@@ -71,7 +75,10 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
 
   return {
     /** Promise kończy się po pierwszej próbie nadrobienia (offline: dane z IndexedDB, ponowienie w tle). */
+    /** Pierwsze nadrabianie tej sesji za nami: dopiero wtedy „widziane” w sklepie są aktualne (np. świeże logowanie). */
+    get tried() { return tried; },
     async start() {
+      setTried(false);
       on = true;
       paused = false;
       attempt = 0;
@@ -79,6 +86,7 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
     },
     stop() {
       on = false;
+      setTried(false);
       clearTimeout(timer);
       es?.close();
       es = null;

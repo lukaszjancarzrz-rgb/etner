@@ -1,4 +1,4 @@
-/** Wspólne zdarzenia aplikacji: 'session-expired', 'outbox' (zmiana kolejki), 'outbox-failed' (detail: {kind, message}). */
+/** Wspólne zdarzenia aplikacji: 'session-expired', 'outbox' (zmiana kolejki), 'outbox-failed' (detail: {kind, message}), 'synced' (sync.tried). */
 export const bus = new EventTarget();
 export const emit = (type: string, detail?: unknown) => bus.dispatchEvent(new CustomEvent(type, { detail }));
 

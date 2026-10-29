@@ -24,7 +24,11 @@ it('pierwszy raz snapshot, SSE zerwane: ponowne łączenie z since=last', async 
   );
   const store = createStore();
   const sync = createSync({ store, EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
-  await sync.start();
+  expect(sync.tried).toBe(false);
+  const p = sync.start();
+  expect(sync.tried).toBe(false); // karta zlecenia czeka z „widziane” do końca snapshotu
+  await p;
+  expect(sync.tried).toBe(true);
   expect(store.get('jobs', 'j1')?.nazwa).toBe('A');
   expect(FakeES.all[0]!.url).toBe(`${B}/api/stream?since=5`);
 
@@ -40,6 +44,7 @@ it('pierwszy raz snapshot, SSE zerwane: ponowne łączenie z since=last', async 
   await store.flush();
   expect(await get('last')).toBe(8);
   sync.stop();
+  expect(sync.tried).toBe(false); // wylogowanie: następny użytkownik czeka na swoją synchronizację
 });
 
 it('kolejny start: changes?since=last w pętli, potem SSE; session-expired wstrzymuje', async () => {
@@ -135,4 +140,14 @@ it('store.apply: _hist najwyżej 5 poprzednich wersji jobs/clients/sites, bez za
   expect(s.get('diary_entries', 'd')!._hist).toBeUndefined();
   s.replace([{ entity: 'jobs', id: 'j', data: { updatedAt: '9' } }], 9);
   expect(s.get('jobs', 'j')!._hist).toBeUndefined();
+});
+
+it('store.apply: zmiana systemu nie dokłada wersji do _hist; szukaj i zakres nie idą do historii (R62)', () => {
+  const s = createStore();
+  s.apply({ seq: 1, entity: 'jobs', id: 'j', action: 'create', data: { updatedAt: '1', zakres: 'x'.repeat(1000) }, by: 'a' });
+  s.apply({ seq: 2, entity: 'jobs', id: 'j', action: 'update', data: { updatedAt: '2', pumbleChannelId: 'c', zakres: 'x' }, by: null });
+  expect(s.get('jobs', 'j')!._hist).toBeUndefined();
+  s.apply({ seq: 3, entity: 'clients', id: 'k', action: 'create', data: { updatedAt: '1', szukaj: 'kowalski' }, by: 'a' });
+  s.apply({ seq: 4, entity: 'clients', id: 'k', action: 'update', data: { updatedAt: '2', szukaj: 'nowak' }, by: 'a' });
+  expect(s.get('clients', 'k')!._hist).toEqual([{ id: 'k', updatedAt: '1', _by: 'a' }]);
 });
