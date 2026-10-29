@@ -32,7 +32,8 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
   /** Nadrabianie (snapshot albo changes?since), potem strumień. 401 = sesja wygasła; brak sieci = ponów później. */
   async function cycle() {
     clearTimeout(timer);
-    if (!on || paused || es) return;
+    if (!on || paused) return;
+    if (es) { setTried(true); return; } // strumień nadal otwarty (np. ponowne logowanie po 401): dane są aktualne
     try {
       await catchUp();
       setTried(true);
