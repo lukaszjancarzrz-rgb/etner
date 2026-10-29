@@ -209,7 +209,7 @@ function NavRow({ back, here, slot, prev, next, labels, title, sub }: { back: st
         <a href="#harm" onClick={(e) => { if (here) { e.preventDefault(); goToday(); } else scrollToday = true; }} className="inline-flex h-11 items-center rounded-full px-2.5 font-semibold text-action hover:bg-action/10 desk:h-12 desk:px-3">{back}</a>
       </span>
       <a href={prev} aria-label={labels[0]} className={navBtn}><CaretLeft className="h-5 w-5" /></a>
-      <div className="w-48 shrink-0 text-center desk:w-52">
+      <div className="w-48 shrink-0 text-center desk:w-60">
         <p className="truncate font-wide text-base font-extrabold leading-tight first-letter:uppercase desk:text-lg">{title}</p>
         <p className="text-sm text-ink-2 tabular-nums">{sub}</p>
       </div>
