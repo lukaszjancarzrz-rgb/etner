@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -5,6 +6,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
+import { secureHeaders } from 'hono/secure-headers';
 import type { Db } from './core/db.js';
 import { mountAuth } from './core/auth.js';
 import { logError } from './core/errors.js';
@@ -52,8 +54,26 @@ export interface AppDeps {
 
 const defaultWebDist = fileURLToPath(new URL('../../web/dist', import.meta.url));
 
+/** Skróty sha256 skryptów wpisanych w index.html (motyw przed pierwszym malowaniem), do script-src. */
+export const inlineScriptHashes = (html: string): string[] =>
+  [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => `'sha256-${createHash('sha256').update(m[1]!).digest('base64')}'`);
+
 export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
   const app = new Hono();
+  const webDist = deps.webDist ?? defaultWebDist;
+  const hasWeb = existsSync(join(webDist, 'index.html'));
+  const index = hasWeb ? readFileSync(join(webDist, 'index.html'), 'utf8') : '';
+
+  // Nagłówki bezpieczeństwa. Zdjęcia z R2 to podpisane adresy https (img-src https:), podglądy przed wysłaniem to blob:,
+  // czcionki z Google Fonts (też pobierane przez service worker, stąd connect-src). Style inline: Radix wstawia <style>.
+  const fonts = ['https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
+  app.use(secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"], scriptSrc: ["'self'", ...inlineScriptHashes(index)], styleSrc: ["'self'", "'unsafe-inline'", fonts[0]!],
+      fontSrc: ["'self'", fonts[1]!], imgSrc: ["'self'", 'https:', 'data:', 'blob:'], connectSrc: ["'self'", ...fonts],
+      workerSrc: ["'self'"], manifestSrc: ["'self'"], objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"], frameAncestors: ["'none'"],
+    },
+  }));
 
   app.onError((err, c) => {
     if (err instanceof HTTPException && err.status < 500) return c.json({ error: err.message }, err.status);
@@ -76,12 +96,9 @@ export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
   mountPush(app, deps);
   registerModules(app, deps, defs);
 
-  const webDist = deps.webDist ?? defaultWebDist;
-  const hasWeb = existsSync(join(webDist, 'index.html'));
   if (hasWeb) {
     // serveStatic przyjmuje root względem cwd
     const root = relative(process.cwd(), webDist) || '.';
-    const index = readFileSync(join(webDist, 'index.html'), 'utf8');
     const files = serveStatic({ root });
     app.use('/*', (c, next) => (c.req.path.startsWith('/api/') ? next() : files(c, next)));
     // Fallback SPA tylko dla GET/HEAD poza /api i bez rozszerzenia (brakujący plik to 404)

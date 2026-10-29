@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { createApp } from './app.js';
+import { createApp, inlineScriptHashes } from './app.js';
 import { testDeps } from './test-utils.js';
 
 describe('health', () => {
@@ -25,9 +25,20 @@ describe('limit danych JSON', () => {
 
 describe('serwowanie web/dist', () => {
   const webDist = mkdtempSync(join(tmpdir(), 'etner-web-'));
-  writeFileSync(join(webDist, 'index.html'), '<h1>ETNER</h1>');
+  writeFileSync(join(webDist, 'index.html'), '<script>var t = 1;</script><h1>ETNER</h1>');
   writeFileSync(join(webDist, 'app.js'), 'console.log(1)');
   const app = createApp(testDeps({ webDist }));
+
+  it('nagłówki bezpieczeństwa: CSP ze skrótem skryptu z index.html, czcionki Google, zdjęcia https i blob, bez ramek', async () => {
+    const res = await app.request('/');
+    const csp = res.headers.get('content-security-policy')!;
+    expect(csp).toContain(`script-src 'self' ${inlineScriptHashes('<script>var t = 1;</script>')[0]}`);
+    expect(csp).toContain("img-src 'self' https: data: blob:");
+    expect(csp).toContain('font-src \'self\' https://fonts.gstatic.com');
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+    expect((await app.request('/api/health')).headers.get('x-frame-options')).toBe('SAMEORIGIN');
+  });
 
   it('serwuje plik statyczny', async () => {
     const res = await app.request('/app.js');
