@@ -13,4 +13,11 @@ describe('api', () => {
     vi.stubGlobal('fetch', (_u: string, init: RequestInit) => new Promise((_r, rej) => init.signal!.addEventListener('abort', () => rej(init.signal!.reason))));
     await expect(api('/x', { timeout: 10 })).rejects.toMatchObject({ name: 'TimeoutError' });
   });
+
+  it('kody błędów serwera po polsku, nieznany tekst bez zmian', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'BRAK_UPRAWNIEN' }), { status: 403 })));
+    await expect(api('/x')).rejects.toMatchObject({ status: 403, message: 'Nie masz uprawnień do tej zmiany' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'Nie znaleziono' }), { status: 404 })));
+    await expect(api('/x')).rejects.toMatchObject({ message: 'Nie znaleziono' });
+  });
 });

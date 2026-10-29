@@ -6,7 +6,16 @@ export const emit = (type: string, detail?: unknown) => bus.dispatchEvent(new Cu
 export const cfg = { base: '' };
 
 /** Kody błędów serwera → tekst dla człowieka. */
-const CODES: Record<string, string> = { LEAD_MA_ZLECENIE: 'Ten lead ma już zlecenie', LOGIN_ZAJETY: 'Ten login jest już zajęty' };
+const CODES: Record<string, string> = {
+  LEAD_MA_ZLECENIE: 'Ten lead ma już zlecenie',
+  LOGIN_ZAJETY: 'Ten login jest już zajęty',
+  BRAK_UPRAWNIEN: 'Nie masz uprawnień do tej zmiany',
+  PUMBLE: 'Pumble nie odpowiada, spróbuj za chwilę',
+  ZA_DUZO_PROB: 'Za dużo prób, spróbuj ponownie za kilkanaście minut',
+  ZLE_HASLO: 'Obecne hasło jest nieprawidłowe',
+  ZLE_DANE: 'Nieprawidłowy login lub hasło',
+  WARTOSC_W_UZYCIU: 'Ta wartość jest w użyciu',
+};
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public body?: unknown) {
