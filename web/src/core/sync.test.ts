@@ -105,6 +105,23 @@ it('401 przy ponownym łączeniu (catch-up przed strumieniem) = sesja wygasła, 
   sync.stop();
 });
 
+it('resync ze strumienia: strumień zamknięty, zdarzenie dla sesji, bez samodzielnego łączenia', async () => {
+  server.use(http.get(`${B}/api/snapshot`, () => HttpResponse.json({ records: [], last: 3 })));
+  FakeES.all = [];
+  const sync = createSync({ store: createStore(), EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
+  await sync.start();
+  let n = 0;
+  const f = () => n++;
+  bus.addEventListener('resync', f);
+  FakeES.all[0]!.emit('resync', '');
+  expect(n).toBe(1);
+  expect(FakeES.all[0]!.readyState).toBe(2);
+  await new Promise((r) => setTimeout(r, 30));
+  expect(FakeES.all).toHaveLength(1);
+  bus.removeEventListener('resync', f);
+  sync.stop();
+});
+
 it('nieudany pierwszy snapshot: ponawiany snapshot, nie strumień od zera', async () => {
   let n = 0;
   server.use(http.get(`${B}/api/snapshot`, () => (++n < 3 ? HttpResponse.error() : HttpResponse.json({ records: [], last: 4 }))));

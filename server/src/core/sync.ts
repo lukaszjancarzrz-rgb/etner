@@ -3,7 +3,7 @@ import type { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import type { User } from '@etner/shared';
 import type { AppDeps } from '../app.js';
-import { requireUser, sessionAlive } from './auth.js';
+import { accessChanged, requireUser, sessionUser } from './auth.js';
 import { logError } from './errors.js';
 import { changeBusOf, changesSince, type ChangeRow } from './changes.js';
 import { can } from './permissions.js';
@@ -84,9 +84,11 @@ export function mountSync(app: Hono, deps: AppDeps): void {
       const closed = new Promise<void>((res) => (stop = res));
       stream.onAbort(stop);
       // Sesja unieważniona lub użytkownik wyłączony: kończymy, klient zaloguje się ponownie.
+      // Zmiana roli, uprawnień lub ekipy: kończymy z `resync`, klient sprawdza /api/me i bierze świeży snapshot (filtr liczony od nowa).
       const alive = async () => {
-        if (sessionAlive(db, sid)) return true;
-        await stream.writeSSE({ event: 'session-expired', data: '' }).catch(() => {});
+        const now = sessionUser(db, sid);
+        if (now && !accessChanged(now, user)) return true;
+        await stream.writeSSE({ event: now ? 'resync' : 'session-expired', data: '' }).catch(() => {});
         stop();
         return false;
       };

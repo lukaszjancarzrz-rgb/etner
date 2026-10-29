@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { addUser, loginCookie, testDeps } from '../test-utils.js';
 import { recordChange } from './changes.js';
 import { revokeUser } from './auth.js';
@@ -159,6 +159,29 @@ describe('strumień: błędy i sesja', () => {
     const body = await drained(res);
     expect(body).toContain('event: session-expired');
     expect(body).not.toContain('event: change');
+  });
+
+  it('admin zdegradowany przy otwartym strumieniu: resync, koniec strumienia, żadnej zmiany tylko dla admina', async () => {
+    const { deps, app } = await setup();
+    const a = addUser(deps, { role: 'admin' });
+    const res = await get(app, '/api/stream?since=0', await loginCookie(app, a.login));
+    deps.db.update(users).set({ role: 'pracownik' }).where(eq(users.id, a.user.id)).run();
+    recordChange(deps.db, null, 'firmy', 'f1', 'create', null, { id: 'f1' });
+    const body = await drained(res);
+    expect(body).toContain('event: resync');
+    expect(body).not.toContain('event: change');
+  });
+
+  it('zmiana uprawnień też kończy strumień; zmiana nazwy nie', async () => {
+    const { deps, app } = await setup();
+    const w = addUser(deps, { ekipa: 'A' });
+    const s = await open(app, await loginCookie(app, w.login));
+    deps.db.update(users).set({ name: 'Inny' }).where(eq(users.id, w.user.id)).run();
+    recordChange(deps.db, null, 'users', 'u1', 'update', null, { a: 1 });
+    expect((await s.next()).data).toMatchObject({ data: { a: 1 } });
+    deps.db.update(users).set({ perms: ['finanse'] }).where(eq(users.id, w.user.id)).run();
+    recordChange(deps.db, null, 'users', 'u1', 'update', null, { a: 2 });
+    await expect(s.next()).rejects.toThrow('koniec strumienia');
   });
 
   it('Last-Event-ID wyprzedza since', async () => {

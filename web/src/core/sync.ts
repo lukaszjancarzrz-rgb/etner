@@ -70,6 +70,8 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
     });
     e.addEventListener('ping', () => { attempt = 0; });
     e.addEventListener('session-expired', expired);
+    // Zmiana roli, uprawnień lub ekipy: sesja (session.ts) sprawdza konto i łączy od nowa.
+    e.addEventListener('resync', () => { e.close(); if (es === e) es = null; emit('resync'); });
     // Przeglądarka łączyłaby sama z Last-Event-ID; zamykamy i łączymy po swojemu z since=last.
     e.onerror = () => { if (es === e) retry(); };
   }

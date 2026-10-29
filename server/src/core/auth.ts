@@ -38,12 +38,16 @@ export function revokeUser(db: Db, userId: string): void {
 const live = (r: { s: typeof sessions.$inferSelect; u: typeof users.$inferSelect }, now: Date) =>
   r.s.expiresAt > now.toISOString() && r.u.active && !r.u.deletedAt;
 
-/** Czy sesja nadal istnieje, nie wygasła, a użytkownik jest aktywny (długie połączenia SSE). */
-export function sessionAlive(db: Db, sessionId: string): boolean {
+/** Użytkownik sesji, jeśli sesja nadal istnieje, nie wygasła, a użytkownik jest aktywny (długie połączenia SSE); inaczej null. */
+export function sessionUser(db: Db, sessionId: string): User | null {
   const row = db.select({ s: sessions, u: users }).from(sessions).innerJoin(users, eq(users.id, sessions.userId))
     .where(eq(sessions.id, sessionId)).get();
-  return !!row && live(row, new Date());
+  return row && live(row, new Date()) ? toUser(row.u) : null;
 }
+
+/** Czy zmieniło się to, od czego zależy widoczność danych (rola, uprawnienia, ekipa). */
+export const accessChanged = (a: User, b: User): boolean =>
+  a.role !== b.role || a.ekipa !== b.ekipa || JSON.stringify(a.perms) !== JSON.stringify(b.perms);
 
 export function requireUser(db: Db): MiddlewareHandler {
   return async (c, next) => {
