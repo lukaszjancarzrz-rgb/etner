@@ -8,6 +8,7 @@ import { CategoryPill, useCatColor } from '../../core/ui/category.js';
 import { cn } from '../../core/ui/cn.js';
 import { Input } from '../../core/ui/input.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
+import { useDesk } from '../../core/layout/status.js';
 import type { Route } from '../../routes.js';
 import { LeadCard } from './LeadCard.js';
 import { LeadForm } from './LeadForm.js';
@@ -43,7 +44,9 @@ function LeadList({ selected }: { selected?: string }) {
   const clients = useEntities('clients');
   const sites = useEntities('sites');
   const group = useStatusGroup('status_leada');
+  const desk = useDesk();
   const day = today();
+  const ul = (frame = 'border-line') => desk ? `divide-y divide-line overflow-hidden rounded-2xl border bg-card ${frame}` : 'grid gap-2';
 
   const view = useMemo(() => {
     const c = new Map(clients.map((x) => [x.id, x]));
@@ -72,7 +75,7 @@ function LeadList({ selected }: { selected?: string }) {
       {sec.zalegle.length > 0 && (
         <div className="grid gap-2">
           <SectionTitle count={sec.zalegle.length} className="border-danger text-danger">Zaległe kontakty</SectionTitle>
-          <ul className="grid gap-2">{sec.zalegle.map((l) => <LeadRow key={l.id} l={l} on={l.id === selected} overdue={day} />)}</ul>
+          <ul className={ul('border-danger/60')}>{sec.zalegle.map((l) => <LeadRow key={l.id} desk={desk} l={l} on={l.id === selected} overdue={day} />)}</ul>
         </div>
       )}
       {SECTIONS.map(({ k, title }) => {
@@ -82,7 +85,7 @@ function LeadList({ selected }: { selected?: string }) {
         return (
           <div key={k} className="grid gap-2">
             <SectionTitle count={items.length} toggle={k === 'zamkniete' && !q ? { open: !collapsed, onToggle: () => setClosedOpen((o) => !o) } : undefined}>{title}</SectionTitle>
-            {!collapsed && <ul className="grid gap-2">{items.map((l) => <LeadRow key={l.id} l={l} on={l.id === selected} />)}</ul>}
+            {!collapsed && <ul className={ul()}>{items.map((l) => <LeadRow key={l.id} desk={desk} l={l} on={l.id === selected} />)}</ul>}
           </div>
         );
       })}
@@ -91,8 +94,34 @@ function LeadList({ selected }: { selected?: string }) {
   );
 }
 
-function LeadRow({ l, on, overdue }: { l: Rec; on: boolean; overdue?: string }) {
+function LeadRow({ l, on, overdue, desk }: { l: Rec; on: boolean; overdue?: string; desk: boolean }) {
   const cat = useCatColor();
+  const nazwa = l.client?.nazwa ?? l.newClient?.nazwa ?? 'Bez klienta';
+  const next = l.nastepny && (
+    <span className={cn('inline-flex shrink-0 items-center gap-1', overdue ? 'font-bold text-danger' : 'text-ink-2')}>
+      <Phone className="h-4 w-4" weight={overdue ? 'fill' : 'regular'} aria-hidden />
+      <span className="sr-only">{overdue ? 'Kontakt zaległy:' : 'Następny kontakt:'}</span>
+      {l.nastepny === overdue ? 'dziś' : fmtDay(l.nastepny)}
+    </span>
+  );
+  // komputer: zwarty wiersz jak w Zleceniach (klient, status / temat, miejscowość, termin kontaktu, kategoria)
+  if (desk) return (
+    <li>
+      <a href={`#ld/${l.id}`} aria-current={on ? 'page' : undefined}
+        className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-l-4 px-3 py-2 transition-colors duration-200', on ? 'border-l-action bg-action/8' : overdue ? 'border-l-danger hover:bg-bg' : 'border-l-transparent hover:bg-bg')}>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-semibold">{nazwa}</span>
+          {overdue && <Badge tone="warn" className="h-5 px-2">zaległe</Badge>}
+        </span>
+        <span className="truncate text-right text-sm text-ink-2">{l._tmp ? 'zapisywanie' : l.status}</span>
+        <span className="flex min-w-0 items-center gap-1.5 text-sm text-ink-2">
+          {next}{next && (l.temat || l.site?.miejscowosc) && <span aria-hidden>·</span>}
+          <span className="truncate">{[l.temat, l.site?.miejscowosc].filter(Boolean).join(', ')}</span>
+        </span>
+        <span className="flex justify-end">{l.kategoria && <CategoryPill name={l.kategoria} color={cat(l.kategoria)} className="max-w-[9rem]" />}</span>
+      </a>
+    </li>
+  );
   return (
     <li>
       <a href={`#ld/${l.id}`} aria-current={on ? 'page' : undefined}
@@ -101,15 +130,9 @@ function LeadRow({ l, on, overdue }: { l: Rec; on: boolean; overdue?: string }) 
           {l._tmp && <span className="font-semibold text-ink-2">zapisywanie</span>}
           <span className="truncate text-ink-2">{l.status}</span>
           {overdue && <Badge tone="warn">zaległe</Badge>}
-          {l.nastepny && (
-            <span className={cn('ml-auto inline-flex shrink-0 items-center gap-1', overdue ? 'font-bold text-danger' : 'text-ink-2')}>
-              <Phone className="h-4 w-4" weight={overdue ? 'fill' : 'regular'} aria-hidden />
-              <span className="sr-only">{overdue ? 'Kontakt zaległy:' : 'Następny kontakt:'}</span>
-              {l.nastepny === overdue ? 'dziś' : fmtDay(l.nastepny)}
-            </span>
-          )}
+          {next && <span className="ml-auto inline-flex">{next}</span>}
         </span>
-        <span className="truncate font-wide text-lg font-extrabold leading-tight">{l.client?.nazwa ?? l.newClient?.nazwa ?? 'Bez klienta'}</span>
+        <span className="truncate font-wide text-lg font-extrabold leading-tight">{nazwa}</span>
         <span className="flex items-end gap-2 text-sm text-ink-2">
           <span className="min-w-0 truncate">{[l.temat, l.site?.miejscowosc].filter(Boolean).join(', ')}</span>
           {l.kategoria && <CategoryPill name={l.kategoria} color={cat(l.kategoria)} className="ml-auto shrink-0" />}
