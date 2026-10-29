@@ -46,7 +46,11 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto('/#harm');
       await page.getByRole('radio', { name: 'Miesiąc' }).click();
       found.push(...(await audit(page, '#harm miesiąc')));
+      await page.getByRole('radio', { name: 'Osoby w kolumnach' }).click(); // miesiąc i tydzień: dni w wierszach
+      found.push(...(await audit(page, '#harm miesiąc, osoby w kolumnach')));
       await page.getByRole('radio', { name: 'Tydzień' }).click();
+      found.push(...(await audit(page, '#harm tydzień, osoby w kolumnach')));
+      await page.getByRole('radio', { name: 'Osoby w wierszach' }).click();
     }
 
     await page.goto('/#zl');

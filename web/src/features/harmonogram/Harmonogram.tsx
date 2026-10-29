@@ -34,7 +34,8 @@ const smooth = (): ScrollBehavior => (matchMedia('(prefers-reduced-motion: reduc
 function goToday() {
   const el = document.querySelector<HTMLElement>(`[data-day="${today()}"]`);
   if (!el) return;
-  el.scrollIntoView({ behavior: smooth(), block: el.tagName === 'TH' ? 'nearest' : 'start', inline: 'start' });
+  const row = el.getAttribute('scope') === 'row'; // układ „osoby w kolumnach”: dzień to wiersz
+  el.scrollIntoView({ behavior: smooth(), block: row ? 'center' : el.tagName === 'TH' ? 'nearest' : 'start', inline: row ? 'nearest' : 'start' });
   el.tabIndex = -1;
   el.focus({ preventScroll: true });
   el.animate?.([{ boxShadow: 'inset 0 0 0 3px var(--action)' }, { boxShadow: 'inset 0 0 0 3px transparent' }], { duration: 1800, easing: 'ease-out' });
@@ -45,6 +46,10 @@ const validDay = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undef
 type View = 'tydzien' | 'miesiac';
 const VIEW_KEY = 'harm-widok';
 const readView = (): View => { try { return localStorage.getItem(VIEW_KEY) === 'miesiac' ? 'miesiac' : 'tydzien'; } catch { return 'tydzien'; } };
+/** Układ tabeli na komputerze: osoby w wierszach (dni w kolumnach) albo osoby w kolumnach (dni w wierszach). */
+type Layout = 'wiersze' | 'kolumny';
+const LAYOUT_KEY = 'harm-uklad';
+const readLayout = (): Layout => { try { return localStorage.getItem(LAYOUT_KEY) === 'kolumny' ? 'kolumny' : 'wiersze'; } catch { return 'wiersze'; } };
 
 export function Harmonogram({ route }: { route: Route }) {
   const me = useMe();
@@ -55,6 +60,8 @@ export function Harmonogram({ route }: { route: Route }) {
   const anchor = validDay(route.param) ?? t;
   const [view, setViewState] = useState<View>(readView);
   const setView = (v: View) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* prywatne okno */ } };
+  const [layout, setLayoutState] = useState<Layout>(readLayout);
+  const setLayout = (v: Layout) => { setLayoutState(v); try { localStorage.setItem(LAYOUT_KEY, v); } catch { /* prywatne okno */ } };
   const month = desk && view === 'miesiac'; // telefon: zawsze tydzień
   const monday = mondayOf(anchor);
   const days = useMemo(() => (month ? monthDays(anchor) : Array.from({ length: 7 }, (_, i) => addDays(monday, i))), [month, anchor, monday]);
@@ -124,12 +131,13 @@ export function Harmonogram({ route }: { route: Route }) {
       {mine && <WhereNext person={mine} entries={entries} ctx={ctx} />}
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">{month ? <MonthNav day={anchor} today={t} /> : <WeekNav monday={monday} today={t} />}</div>
+        {desk && <Segmented label="Układ" value={layout} onChange={setLayout} className="w-[21rem]" options={[{ v: 'wiersze', label: 'Osoby w wierszach' }, { v: 'kolumny', label: 'Osoby w kolumnach' }]} />}
         {desk && <Segmented label="Widok" value={view} onChange={setView} className="w-64" options={[{ v: 'tydzien', label: 'Tydzień' }, { v: 'miesiac', label: 'Miesiąc' }]} />}
       </div>
       {admin && <DraftBar drafts={drafts} people={sorted} entries={entries} ctx={ctx} />}
       {!sorted.length ? (
         <Empty icon={CalendarBlank} title="Harmonogram nie ma jeszcze osób" hint="Administrator dodaje osoby (kolumny) w ustawieniach użytkowników." />
-      ) : month ? <MonthTable {...props} /> : desk ? <WeekTable {...props} /> : <DayCards {...props} />}
+      ) : !desk ? <DayCards {...props} /> : layout === 'kolumny' ? <DaysTable {...props} /> : month ? <MonthTable {...props} /> : <WeekTable {...props} />}
       {!!sorted.length && <CategoryLegend className="px-1" />}
       {edit && <CellEditor dzien={edit.dzien} person={edit.person} people={sorted} current={cells.get(cellKey(edit.dzien, edit.person.id)) ?? []}
         draft={draftMap.get(cellKey(edit.dzien, edit.person.id))} ekipa={ekipaOf.get(edit.person.userId) ?? null} ctx={ctx} onClose={() => setEdit(null)} />}
@@ -443,13 +451,13 @@ function DayCard({ d, p }: { d: string; p: ViewProps }) {
 }
 
 /** Nagłówek kolumny dnia (tydzień i miesiąc): dzień, święto, uwaga, „nowe”; obejrzenie liczone, gdy widać nagłówek. */
-function DayHead({ d, p, className }: { d: string; p: ViewProps; className?: string }) {
+function DayHead({ d, p, className, row }: { d: string; p: ViewProps; className?: string; row?: boolean }) {
   const ref = useSeenRef(d, p);
   const { wd, info } = p.dayInfo(d);
   const isToday = d === p.today;
   const note = p.noteOf.get(d);
   return (
-    <th ref={ref} data-day={d} onClick={() => p.tap?.(d)} data-today={isToday || undefined} scope="col" className={cn('px-2 py-2 align-top', isToday && 'bg-action/10', wd !== 1 && 'bg-bg/60', className)}>
+    <th ref={ref} data-day={d} onClick={() => p.tap?.(d)} data-today={isToday || undefined} scope={row ? 'row' : 'col'} className={cn('px-2 py-2 align-top', isToday && 'bg-action/10', wd !== 1 && 'bg-bg/60', className)}>
       <span className="flex items-center justify-between gap-1">
         <span className={cn('block font-wide text-sm font-extrabold first-letter:uppercase', isToday && 'text-action')}>{dayShort(d)}</span>
         {p.fresh.has(d) && <NewPill />}
@@ -546,6 +554,58 @@ function MonthTable(p: ViewProps) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+const DAY = 144; // kolumna dat w układzie „osoby w kolumnach”
+const PERSON = 150; // najmniejsza szerokość kolumny osoby; więcej osób → przewijanie w poziomie w ramce
+
+/** Komputer, „osoby w kolumnach”: wiersz = dzień (tydzień albo miesiąc), kolumna = osoba; te same komórki co w tabeli osób. */
+function DaysTable(p: ViewProps) {
+  const box = useRef<HTMLDivElement>(null);
+  const first = p.days[0]!;
+  useEffect(() => {
+    const el = box.current, th = el?.querySelector<HTMLElement>('th[data-today]'), head = el?.querySelector('thead');
+    // na start dzisiejszy wiersz tuż pod przyklejonym nagłówkiem osób
+    if (el) el.scrollTop = th && head ? Math.max(0, el.scrollTop + th.getBoundingClientRect().top - el.getBoundingClientRect().top - head.getBoundingClientRect().height) : 0;
+  }, [first]);
+  return (
+    <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-contain rounded-2xl border border-line bg-card shadow-card">
+      <table className="w-full table-fixed border-separate border-spacing-0 text-left" style={{ minWidth: DAY + PERSON * p.people.length }}>
+        <colgroup>
+          <col style={{ width: DAY }} />
+          {p.people.map((x) => <col key={x.id} />)}
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col" className="sticky top-0 left-0 z-20 border-r border-b border-line bg-card px-4 py-3 text-sm font-semibold text-ink-2">Dzień</th>
+            {p.people.map((x) => {
+              const me = x.id === p.mine?.id;
+              return (
+                <th key={x.id} scope="col" className={cn('sticky top-0 z-10 border-b border-line bg-card px-2 py-2.5 text-sm', me && 'bg-[color-mix(in_srgb,var(--action)_6%,var(--card))]')}>
+                  <NameCell person={x} mine={me} color={p.ctx.crew(p.ekipaOf.get(x.userId))} />
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {p.days.map((d) => {
+            const work = p.dayInfo(d).wd === 1;
+            return (
+              <tr key={d}>
+                <DayHead d={d} p={p} row className={cn('sticky left-0 z-10 scroll-mt-16 border-r border-b border-line/70 bg-card', d === p.today ? 'bg-[color-mix(in_srgb,var(--action)_14%,var(--card))]' : !work && 'bg-[color-mix(in_srgb,var(--bg)_70%,var(--card))]')} />
+                {p.people.map((x) => (
+                  <td key={x.id} className={cn('border-b border-line/70 p-1 align-top', work ? 'h-[4.5rem]' : 'bg-bg/50', d === p.today && 'bg-action/5', x.id === p.mine?.id && 'bg-action/6')}>
+                    <CellButton dzien={d} person={x} p={p} compact />
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

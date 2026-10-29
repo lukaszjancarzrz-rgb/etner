@@ -254,6 +254,56 @@ test('harmonogram: widok miesiąca na komputerze', async ({ page }, info) => {
   await expect(page.getByRole('dialog', { name: 'Bartek Gawlik' })).toBeVisible();
 });
 
+test('harmonogram: układ „osoby w kolumnach” (dni w wierszach) na komputerze, wybór zapamiętany', async ({ page }) => {
+  test.skip(test.info().project.name.startsWith('iPhone'), 'telefon bez zmian: karty dni');
+  const t = dayOf(new Date());
+  const d = addDays(mondayOf(t), 65); // środa za 9 tygodni: tydzień bez danych demo
+  await loginAdmin(page);
+  await page.getByRole('radio', { name: 'Osoby w kolumnach' }).click();
+  await expect(page.locator(`th[scope="row"][data-day="${t}"]`)).toBeVisible();
+  await expect(page.locator('[data-cell$="|Bartek Gawlik"]')).toHaveCount(7);
+  // osoba = kolumna: komórki Bartka w różnych dniach jedna pod drugą
+  const [a, b] = await Promise.all([0, 1].map((i) => page.locator('[data-cell$="|Bartek Gawlik"]').nth(i).boundingBox()));
+  expect(a!.x).toBe(b!.x);
+  expect(b!.y).toBeGreaterThan(a!.y);
+  await page.reload(); // wybór zapamiętany
+  await expect(page.getByRole('radio', { name: 'Osoby w kolumnach' })).toHaveAttribute('aria-checked', 'true');
+
+  // edycja w nowym układzie: ten sam edytor i szkic
+  await page.goto(`/#harm/${d}`);
+  const cell = page.locator(`[data-cell="${d}|Bartek Gawlik"]`);
+  await editCell(cell);
+  await page.getByRole('radio', { name: 'Tekst' }).click();
+  await page.getByLabel('Tekst').fill('Układ kolumn');
+  await page.getByRole('button', { name: 'Zapisz szkic' }).click();
+  await expect(cell).toHaveAttribute('aria-label', /: Układ kolumn, szkic$/);
+
+  // miesiąc: wiersz na każdy dzień, komórka otwiera ten sam edytor
+  await page.getByRole('link', { name: 'Dziś', exact: true }).click();
+  await page.getByRole('radio', { name: 'Miesiąc' }).click();
+  const days = Number(addDays(`${addDays(`${t.slice(0, 7)}-28`, 7).slice(0, 7)}-01`, -1).slice(8));
+  await expect(page.locator('tbody th[scope="row"]')).toHaveCount(days);
+  await expect(page.locator(`[data-day="${t}"]`)).toBeInViewport(); // na start widać dziś
+  await page.locator('[data-cell]').first().locator('xpath=ancestor::div[contains(@class,"overflow-auto")]').evaluate((e) => { e.scrollTop = 0; });
+  await page.getByRole('link', { name: 'Dziś', exact: true }).click();
+  await expect(page.locator(`[data-day="${t}"]`)).toBeFocused();
+  await expect(page.locator(`[data-day="${t}"]`)).toBeInViewport();
+  await editCell(page.locator(`[data-cell="${t}|Bartek Gawlik"]`));
+  await expect(page.getByRole('dialog', { name: 'Bartek Gawlik' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // powrót do osób w wierszach: ten sam szkic w tej samej komórce; zatwierdzenie sprząta po teście
+  await page.getByRole('radio', { name: 'Tydzień' }).click();
+  await page.getByRole('radio', { name: 'Osoby w wierszach' }).click();
+  await page.goto(`/#harm/${d}`);
+  await expect(page.locator('th[scope="row"][data-day]')).toHaveCount(0);
+  await expect(cell).toHaveAttribute('aria-label', /: Układ kolumn, szkic$/);
+  await page.getByRole('button', { name: 'Przejrzyj' }).click();
+  const review = page.getByRole('dialog', { name: 'Szkice harmonogramu' });
+  await review.getByRole('button', { name: 'Zatwierdź i powiadom' }).click();
+  await expect(review).toBeHidden();
+});
+
 test('klienci: admin zmienia telefon i adres obiektu, zmiana na karcie zlecenia; pracownik bez edycji', async ({ page, browser }, info) => {
   const phone = info.project.name.startsWith('iPhone');
   const [who, tel, adres] = phone ? ['Maria Cholewa', '601 202 303', 'ul. Kościuszki 14'] : ['Stanisław Mrówka', '602 303 404', 'Stryszawa 541'];
