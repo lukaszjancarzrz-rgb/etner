@@ -162,6 +162,11 @@ test('zadania: admin dodaje zadanie, odhacza je; cykliczne wraca z datą „osta
   await expect(task.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
 
   const cyc = page.locator('li', { hasText: 'Kalibracja manometrów' });
+  // demo: cykliczne bez cyklu (jak z arkusza) → ostrzeżenie otwiera edycję
+  await cyc.getByRole('button', { name: 'Ustaw cykliczność: Kalibracja manometrów' }).click();
+  const edit = page.getByRole('dialog', { name: 'Zadanie' });
+  await expect(edit.getByText('Ustaw cykliczność: bez cyklu termin się nie zmienia.')).toBeVisible();
+  await edit.getByRole('button', { name: 'Anuluj' }).click();
   await cyc.getByRole('checkbox').click();
   await expect(cyc).toContainText(`ostatnio ${fmt(dayOf(new Date()))}`);
   await expect(cyc.getByRole('checkbox')).toHaveAttribute('aria-checked', 'false');
@@ -179,7 +184,8 @@ test('zadania: cykl „co miesiąc” i klient; po Zrobione termin = dziś + mie
   await task.getByRole('button', { name: `Edytuj: ${tag}` }).click();
   const form = page.getByRole('dialog', { name: 'Zadanie' });
   await form.getByRole('checkbox', { name: 'Cykliczne' }).click();
-  await form.getByRole('combobox', { name: 'Cykl' }).click();
+  await expect(form.getByRole('combobox', { name: 'Cykliczność' })).toHaveText('co tydzień'); // nie „Bez cyklu”
+  await form.getByRole('combobox', { name: 'Cykliczność' }).click();
   await page.getByRole('option', { name: 'co miesiąc' }).click();
   await form.getByLabel('Klient').click();
   await page.getByPlaceholder('Nazwisko, firma').fill(who);
@@ -190,9 +196,9 @@ test('zadania: cykl „co miesiąc” i klient; po Zrobione termin = dziś + mie
   await expect(task).not.toContainText('wysyłanie');
   await task.getByRole('checkbox', { name: `Zrobione: ${tag}` }).click();
   const day = dayOf(new Date());
-  await expect(task).toContainText(`termin ${fmt(addMonths(day, 1))}`);
+  await expect(task).toContainText(`następny ${fmt(addMonths(day, 1))}`);
   await page.reload();
-  await expect(task).toContainText(`termin ${fmt(addMonths(day, 1))}`);
+  await expect(task).toContainText(`następny ${fmt(addMonths(day, 1))}`);
   await expect(task).toContainText(`ostatnio ${fmt(day)}`);
 });
 

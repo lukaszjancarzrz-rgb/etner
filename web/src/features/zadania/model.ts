@@ -1,3 +1,4 @@
+import type { Cykl } from '@etner/shared';
 import type { Rec } from '../../core/store.js';
 
 /** Literał jak na serwerze (seed słownika status_zadania). */
@@ -22,3 +23,10 @@ export function taskGroups(tasks: Rec[], grupy: string[]) {
   const done = tasks.filter(isDone).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
   return { groups, done };
 }
+
+/** Cykl wybierany sam, gdy zadanie staje się cykliczne bez cyklu. */
+export const DEFAULT_CYKL: Cykl = '1t';
+/** Grupa „Cykliczne” (np. ze starego arkusza) oznacza zadanie cykliczne. */
+export const isCyclicGroup = (g: string | null | undefined) => (g ?? '').trim().toLocaleLowerCase('pl') === 'cykliczne';
+/** Cykliczne bez cyklu (np. z migracji): termin po zrobieniu się nie przesuwa, trzeba ustawić cykliczność. */
+export const needsCycle = (t: Rec) => !!t.cykliczne && !t.cykl;
