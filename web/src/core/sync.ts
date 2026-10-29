@@ -21,18 +21,22 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
   let attempt = 0;
   let on = false;
   let paused = false;
+  let gen = 0; // start/stop: odpowiedź starego nadrabiania (np. po resync i wyczyszczeniu sklepu) jest pomijana
   let tried = false; // pierwsze nadrabianie tej sesji za nami (udane albo bez sieci)
   const setTried = (v: boolean) => { if (tried !== v) { tried = v; emit('synced'); } };
 
   async function catchUp() {
+    const g = gen;
     for (;;) {
       if (!store.last) {
         const s = await api<{ records: { entity: string; id: string; data: Record<string, any> | null }[]; last: number; db?: string }>('/api/snapshot', { timeout: 60_000 });
+        if (g !== gen) return;
         store.replace(s.records, s.last);
         if (s.db) await set('db', s.db);
         return;
       }
       const p = await api<{ changes: Change[]; last: number; more?: boolean; reset?: boolean; db?: string }>(`/api/changes?since=${store.last}`);
+      if (g !== gen) return;
       // Baza na serwerze odtworzona (inny db albo urządzenie „przed” bazą): dane od nowa ze snapshotu, kolejka zostaje.
       if (p.reset || !(await sameDb(p.db))) { store.setLast(0); continue; }
       for (const ch of p.changes) store.apply(ch);
@@ -93,6 +97,7 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
     /** Pierwsze nadrabianie tej sesji za nami: dopiero wtedy „widziane” w sklepie są aktualne (np. świeże logowanie). */
     get tried() { return tried; },
     async start() {
+      gen++;
       setTried(false);
       on = true;
       paused = false;
@@ -100,6 +105,7 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
       await cycle();
     },
     stop() {
+      gen++;
       on = false;
       setTried(false);
       clearTimeout(timer);

@@ -128,7 +128,11 @@ describe('zadania kopii', () => {
     const def = kopieCrons({}, modules).find((c) => c.name === 'kopia-zdjec')!;
     expect(def.schedule).toBe('0 3 * * *');
     await copyPhotos(deps.db, async (k) => { copied.push(k); }, '2026-10-01T00:00:00.000Z');
-    expect(copied.sort()).toEqual(['o2', 'o3', 't2', 'v2']);
+    // zdjęcia osób z własnym kursorem: pierwszy raz wszystkie (także sprzed kursora załączników)
+    expect(copied.sort()).toEqual(['avatar/stary.webp', 'o2', 'o3', 't2', 'v2']);
     expect(deps.db.select().from(settings).where(eq(settings.key, 'kopia_zdjec_at')).get()).toBeTruthy();
+    copied.length = 0;
+    await copyPhotos(deps.db, async (k) => { copied.push(k); }, '2026-10-01T00:00:00.000Z');
+    expect(copied).not.toContain('avatar/stary.webp');
   });
 });

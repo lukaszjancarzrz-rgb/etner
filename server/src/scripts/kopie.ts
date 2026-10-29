@@ -15,17 +15,20 @@ function stamp(db: Db, key: string, at = new Date().toISOString()) {
 }
 const stamped = (db: Db, key: string) => db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? '';
 
-/** Klucze (oryginał, podgląd, miniatura) załączników utworzonych po `since` (ISO) i zdjęcia osób zmienionych po `since`. */
-export function keysToCopy(db: Db, since: string): string[] {
+/** Klucze (oryginał, podgląd, miniatura) załączników utworzonych po `since` (ISO) i zdjęcia osób zmienionych po `avatarSince`. */
+export function keysToCopy(db: Db, since: string, avatarSince = since): string[] {
   const rows = db.select().from(attachments).where(gt(attachments.createdAt, since)).all();
-  const avatars = db.select({ k: users.avatarKey }).from(users).where(and(gt(users.updatedAt, since), isNotNull(users.avatarKey))).all();
+  const avatars = db.select({ k: users.avatarKey }).from(users).where(and(gt(users.updatedAt, avatarSince), isNotNull(users.avatarKey))).all();
   return [...rows.flatMap((r) => [r.keyOrig, r.keyView, r.keyThumb]), ...avatars.map((a) => a.k)].filter((k): k is string => !!k);
 }
 
-/** Kopiuje nowe klucze; ustawia `kopia_zdjec_at` dopiero po sukcesie całości (błąd = ponowienie następnej nocy). */
-export async function copyPhotos(db: Db, copy: (key: string) => Promise<void>, since: string): Promise<number> {
+/**
+ * Kopiuje nowe klucze; ustawia `kopia_zdjec_at` i `kopia_avatarow_at` dopiero po sukcesie całości (błąd = ponowienie następnej nocy).
+ * Zdjęcia osób mają własny kursor (pusty = wszystkie), bo doszły do kopii później niż załączniki.
+ */
+export async function copyPhotos(db: Db, copy: (key: string) => Promise<void>, since: string, avatarSince = stamped(db, 'kopia_avatarow_at')): Promise<number> {
   const started = new Date().toISOString();
-  const keys = keysToCopy(db, since);
+  const keys = keysToCopy(db, since, avatarSince);
   for (const k of keys) {
     try { await copy(k); } catch (e) {
       // brak pliku źródłowego nie może blokować kopii na zawsze; inne błędy przerywają (kursor stoi)
@@ -34,6 +37,7 @@ export async function copyPhotos(db: Db, copy: (key: string) => Promise<void>, s
     }
   }
   stamp(db, 'kopia_zdjec_at', started);
+  stamp(db, 'kopia_avatarow_at', started);
   return keys.length;
 }
 
