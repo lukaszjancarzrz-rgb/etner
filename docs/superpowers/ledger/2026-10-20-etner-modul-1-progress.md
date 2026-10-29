@@ -292,3 +292,4 @@ Deferred: snapshot records have no `_by`, so job-field changes by others made be
 Task 26: impl de75337, 4e92e40 (migration 0022 job_seen), 104592d, 3079156 (Leady badge); review dispatched. Earlier: 4dba418 (Użytkownicy/Ustawienia only in Więcej on desktop) cherry-picked alone to produkcja.
 ## Owner 2026-10-29: cyclic tasks need „cykliczność” + next termin on done (feature existed since 19c; migrated tasks have no cycle) and compact Leady list like Zlecenia → Task 27 (UI: default „co tydzień”, group „Cykliczne” auto-ticks, warning for cyclic without cycle; Leady desktop compact rows).
 Task 26: review — Needs fixes: card fixes since/posts markSeen before first sync (fresh login on a deep-linked card overwrites server seen → no „nowe”); fix round 1 dispatched with minors 2,3,5–9
+Task 27: impl 784a04b (Leady desktop compact), b9e5141 (cyclic UX); controller review (diff + screenshot) OK; cherry-picked to produkcja with typecheck + unit tests in a worktree.
