@@ -5,7 +5,8 @@ import { addUser, loginCookie, testDeps } from '../test-utils.js';
 import { recordChange } from './changes.js';
 import { revokeUser } from './auth.js';
 import { registerModules } from './registry.js';
-import { errors, firmy, users } from './schema-base.js';
+import { errors, firmy, settings, users } from './schema-base.js';
+import { dbIdOf } from './sync.js';
 
 // 'firmy': tylko admin; 'users': widoczne dla wszystkich, bez pola `tajne`. Encja 'nikt' nie ma właściciela.
 async function setup() {
@@ -54,12 +55,24 @@ describe('GET /api/changes', () => {
     expect(body.last).toBe(2);
   });
 
-  it('since większy niż ostatni → pusta lista', async () => {
+  it('since większy niż ostatni (baza odtworzona) → reset; since = ostatni → zwykła pusta strona', async () => {
     const { deps, app, admin } = await setup();
     recordChange(deps.db, null, 'firmy', 'f1', 'create', null, {});
     const body = (await (await get(app, '/api/changes?since=99', admin)).json()) as any;
-    expect(body).toMatchObject({ changes: [], last: 99 });
-    expect(body.more).toBeFalsy();
+    expect(body).toMatchObject({ changes: [], reset: true });
+    const same = (await (await get(app, '/api/changes?since=1', admin)).json()) as any;
+    expect(same).toMatchObject({ changes: [], last: 1, more: false });
+    expect(same.reset).toBeUndefined();
+  });
+
+  it('db: ten sam identyfikator bazy w changes i snapshot, zapisany w settings; nowy po skasowaniu (odtworzenie)', async () => {
+    const { deps, app, admin } = await setup();
+    const a = ((await (await get(app, '/api/changes?since=0', admin)).json()) as any).db;
+    expect(a).toMatch(/^[\w-]{8,}$/);
+    expect(((await (await get(app, '/api/snapshot', admin)).json()) as any).db).toBe(a);
+    expect(dbIdOf(deps.db)).toBe(a);
+    deps.db.delete(settings).run();
+    expect(dbIdOf(deps.db)).not.toBe(a);
   });
 
   it('600 zmian → 500 i more, potem reszta', async () => {

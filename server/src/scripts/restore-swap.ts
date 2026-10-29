@@ -1,5 +1,6 @@
 import { closeSync, existsSync, openSync, readSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
+import Database from 'better-sqlite3';
 
 const SQLITE_HEADER = 'SQLite format 3\0';
 
@@ -13,6 +14,7 @@ function isSqlite(path: string): boolean {
  * Odtworzona baza `DATA_DIR/restore.db` (np. z `litestream restore -o`) wchodzi na miejsce `etner.db` przed otwarciem bazy.
  * Stara baza zostaje obok jako `etner.db.przed-odtworzeniem-<czas>` (z -wal/-shm), więc kolejne odtworzenie jej nie nadpisze.
  * Plik, który nie jest bazą SQLite, zostaje odłożony jako `restore.db.niepoprawny` (bieżąca baza bez zmian). Zwraca true, gdy podmieniono.
+ * W podmienionej bazie kasuje `settings.db_id`: aplikacja nada nowy, a telefony wezmą dane od nowa (snapshot), zamiast pomijać zmiany.
  */
 export function swapRestored(dataDir: string, now = new Date()): boolean {
   const src = join(dataDir, 'restore.db');
@@ -26,5 +28,11 @@ export function swapRestored(dataDir: string, now = new Date()): boolean {
   const aside = `${db}.przed-odtworzeniem-${now.toISOString().replace(/[:.]/g, '-')}`;
   for (const ext of ['', '-wal', '-shm']) if (existsSync(db + ext)) renameSync(db + ext, aside + ext);
   renameSync(src, db);
+  try {
+    const c = new Database(db);
+    try { c.prepare("DELETE FROM settings WHERE key = 'db_id'").run(); } finally { c.close(); }
+  } catch (e) {
+    console.error(`Nie skasowano db_id w odtworzonej bazie (telefony mogą nie pobrać danych od nowa): ${e instanceof Error ? e.message : e}`);
+  }
   return true;
 }

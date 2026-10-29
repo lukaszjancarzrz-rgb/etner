@@ -1,4 +1,4 @@
-import { get } from 'idb-keyval';
+import { get, set } from 'idb-keyval';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import { bus } from './api.js';
@@ -119,6 +119,39 @@ it('resync ze strumienia: strumień zamknięty, zdarzenie dla sesji, bez samodzi
   await new Promise((r) => setTimeout(r, 30));
   expect(FakeES.all).toHaveLength(1);
   bus.removeEventListener('resync', f);
+  sync.stop();
+});
+
+it.each([
+  ['inny identyfikator bazy', { changes: [], last: 5, db: 'b' }],
+  ['reset (urządzenie przed bazą)', { changes: [], last: 0, reset: true, db: 'a' }],
+])('odtworzona baza na serwerze (%s): snapshot od nowa, stare rekordy znikają', async (_, answer) => {
+  server.use(
+    http.get(`${B}/api/changes`, () => HttpResponse.json(answer)),
+    http.get(`${B}/api/snapshot`, () => HttpResponse.json({ records: [{ entity: 'jobs', id: 'j9', data: { id: 'j9' } }], last: 2, db: 'b' })),
+  );
+  await set('db', 'a');
+  const store = createStore();
+  store.put('jobs', { id: 'j-stary' });
+  store.setLast(5);
+  FakeES.all = [];
+  const sync = createSync({ store, EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
+  await sync.start();
+  expect(store.all('jobs').map((r) => r.id)).toEqual(['j9']);
+  expect(FakeES.all[0]!.url).toBe(`${B}/api/stream?since=2`);
+  expect(await get('db')).toBe('b');
+  sync.stop();
+});
+
+it('pierwszy znany identyfikator bazy jest zapamiętywany bez snapshotu', async () => {
+  server.use(http.get(`${B}/api/changes`, () => HttpResponse.json({ changes: [], last: 5, db: 'a' })));
+  const store = createStore();
+  store.setLast(5);
+  FakeES.all = [];
+  const sync = createSync({ store, EventSource: FakeES as unknown as typeof EventSource, backoff: () => 5 });
+  await sync.start();
+  expect(await get('db')).toBe('a');
+  expect(FakeES.all[0]!.url).toBe(`${B}/api/stream?since=5`);
   sync.stop();
 });
 

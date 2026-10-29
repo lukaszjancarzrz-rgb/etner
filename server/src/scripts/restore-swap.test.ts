@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } fro
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
 import { swapRestored } from './restore-swap.js';
 
 const sqlite = (s: string) => 'SQLite format 3\0' + s;
@@ -34,5 +35,16 @@ describe('swapRestored', () => {
     expect(swapRestored(d)).toBe(false);
     expect(readFileSync(join(d, 'etner.db'), 'utf8')).toBe(sqlite('c'));
     expect(existsSync(join(d, 'restore.db.niepoprawny'))).toBe(true);
+  });
+
+  it('w podmienionej bazie db_id jest skasowany (aplikacja nada nowy), reszta ustawień zostaje', () => {
+    const d = mkdtempSync(join(tmpdir(), 'etner-restore-'));
+    const c = new Database(join(d, 'restore.db'));
+    c.exec("CREATE TABLE settings (key text primary key, value text not null, updated_at text not null); INSERT INTO settings VALUES ('db_id', 'stary', 't'), ('rano_godzina', '07:00', 't')");
+    c.close();
+    expect(swapRestored(d)).toBe(true);
+    const r = new Database(join(d, 'etner.db'));
+    expect(r.prepare('SELECT key FROM settings').all()).toEqual([{ key: 'rano_godzina' }]);
+    r.close();
   });
 });

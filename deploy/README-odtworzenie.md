@@ -24,9 +24,13 @@ Klucze wkleja właściciel jako sekrety środowiska. Brak `GOOGLE_SA_JSON` / `SH
 
 Aplikacja przy starcie (i `startCommand` przed Litestream) sprawdza, czy w `DATA_DIR` leży `restore.db`. Jeśli tak, sprawdza, że to baza SQLite (inaczej odkłada plik jako `restore.db.niepoprawny` i nic nie zmienia), przenosi bieżącą bazę na bok jako `etner.db.przed-odtworzeniem-<data i godzina>` (z `-wal` / `-shm`; kolejne odtworzenie jej nie nadpisze) i wstawia `restore.db` na miejsce `etner.db`. Dzięki temu odtworzenie nie wymaga zatrzymywania działającej aplikacji.
 
+**Telefony po odtworzeniu.** Baza ma losowy identyfikator (`settings.db_id`). Podmiana `restore.db` go kasuje, a aplikacja przy starcie nadaje nowy. Telefon przy najbliższej synchronizacji widzi inny identyfikator, kasuje dane z urządzenia i pobiera wszystko od nowa. Zapisy czekające w kolejce telefonu zostają i wysyłają się normalnie. Nikt nie musi się wylogowywać.
+
 ### Na Render (usługa `etner`)
 
-Najprościej, stan sprzed najwyżej doby: usługa `etner` → **Disks** → migawka dysku → **Restore** (nazwy mogą się różnić).
+Najprościej, stan sprzed najwyżej doby: usługa `etner` → **Disks** → migawka dysku → **Restore** (nazwy mogą się różnić). Migawka dysku nie zmienia identyfikatora bazy. Telefony, które mają nowsze dane niż migawka, same pobiorą wszystko od nowa, ale zmiany zapisane po odtworzeniu mogą ominąć telefony, które były w tyle. Dlatego po odtworzeniu migawki w **Shell** wykonaj
+`cd server && node -e "require('better-sqlite3')('/var/data/etner.db').prepare(\"DELETE FROM settings WHERE key='db_id'\").run()"`
+i uruchom usługę ponownie (krok 3 niżej): aplikacja nada nowy identyfikator i wszystkie telefony pobiorą dane od nowa.
 
 Stan z dowolnej chwili z ostatnich 30 dni (Litestream), najlepiej z pomocą Claude:
 

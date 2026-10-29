@@ -1,5 +1,14 @@
+import { get, set } from 'idb-keyval';
 import { api, cfg, emit } from './api.js';
 import { store as defaultStore, type Change, type Store } from './store.js';
+
+/** Czy serwer ma tę samą bazę, z której są dane urządzenia; pierwszy znany identyfikator jest zapamiętywany. */
+async function sameDb(id: string | undefined): Promise<boolean> {
+  if (!id) return true;
+  const had = await get('db');
+  if (had === undefined) await set('db', id);
+  return had === undefined || had === id;
+}
 
 const defaultBackoff = (n: number) => Math.min(30_000, 1000 * 2 ** n);
 
@@ -16,13 +25,16 @@ export function createSync({ store = defaultStore, EventSource: ES = globalThis.
   const setTried = (v: boolean) => { if (tried !== v) { tried = v; emit('synced'); } };
 
   async function catchUp() {
-    if (!store.last) {
-      const s = await api<{ records: { entity: string; id: string; data: Record<string, any> | null }[]; last: number }>('/api/snapshot', { timeout: 60_000 });
-      store.replace(s.records, s.last);
-      return;
-    }
     for (;;) {
-      const p = await api<{ changes: Change[]; last: number; more?: boolean }>(`/api/changes?since=${store.last}`);
+      if (!store.last) {
+        const s = await api<{ records: { entity: string; id: string; data: Record<string, any> | null }[]; last: number; db?: string }>('/api/snapshot', { timeout: 60_000 });
+        store.replace(s.records, s.last);
+        if (s.db) await set('db', s.db);
+        return;
+      }
+      const p = await api<{ changes: Change[]; last: number; more?: boolean; reset?: boolean; db?: string }>(`/api/changes?since=${store.last}`);
+      // Baza na serwerze odtworzona (inny db albo urządzenie „przed” bazą): dane od nowa ze snapshotu, kolejka zostaje.
+      if (p.reset || !(await sameDb(p.db))) { store.setLast(0); continue; }
       for (const ch of p.changes) store.apply(ch);
       if (p.last > store.last) store.setLast(p.last); // ukryte zmiany też przesuwają kursor
       if (!p.more) return;

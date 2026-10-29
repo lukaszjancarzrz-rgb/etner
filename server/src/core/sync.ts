@@ -1,4 +1,5 @@
-import { getTableColumns, isNull, max } from 'drizzle-orm';
+import { randomBytes } from 'node:crypto';
+import { eq, getTableColumns, isNull, max } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import type { User } from '@etner/shared';
@@ -8,7 +9,7 @@ import { logError } from './errors.js';
 import { changeBusOf, changesSince, type ChangeRow } from './changes.js';
 import { can } from './permissions.js';
 import { modulesOf } from './registry.js';
-import { changes } from './schema-base.js';
+import { changes, settings } from './schema-base.js';
 
 // Rekordy w `changes.after` i w snapshocie to wiersze Drizzle z select() (camelCase wg schematu); moduły przekazują ten kształt do recordChange.
 // `by`: kto zmienił (null = system); klient liczy „nowe” tylko ze zmian innych osób.
@@ -34,8 +35,20 @@ export function visibleChange(app: Hono, deps: AppDeps, user: User, ch: ChangeRo
   return { before: b?.data ?? null, after: a.data };
 }
 
+/** Losowy identyfikator bazy (settings.db_id), tworzony przy braku; odtworzenie bazy (restore-swap) go kasuje, więc powstaje nowy. */
+export function dbIdOf(db: AppDeps['db']): string {
+  const had = db.select().from(settings).where(eq(settings.key, 'db_id')).get()?.value;
+  if (had) return had;
+  const value = randomBytes(9).toString('base64url');
+  db.insert(settings).values({ key: 'db_id', value, updatedAt: new Date().toISOString() }).onConflictDoNothing().run();
+  return db.select().from(settings).where(eq(settings.key, 'db_id')).get()!.value;
+}
+
 export function mountSync(app: Hono, deps: AppDeps): void {
   const { db } = deps;
+  // Inna baza niż ta, z której urządzenie ma dane (odtworzenie): klient bierze snapshot od nowa.
+  const dbId = dbIdOf(db);
+  const maxSeq = () => db.select({ m: max(changes.seq) }).from(changes).get()?.m ?? 0;
   const auth = requireUser(db);
   /** Podłączone strumienie SSE tej aplikacji (w pamięci procesu). */
   const clients = new Set<{ user: User }>();
@@ -50,14 +63,17 @@ export function mountSync(app: Hono, deps: AppDeps): void {
   const sinceOf = (v: string | undefined) => Math.max(0, Math.floor(Number(v)) || 0);
 
   app.get('/api/changes', auth, (c) => {
-    const { out, last, more } = page(c.get('user'), sinceOf(c.req.query('since')));
-    return c.json({ changes: out, last, more });
+    const since = sinceOf(c.req.query('since'));
+    const { out, last, more } = page(c.get('user'), since);
+    // urządzenie jest „przed” bazą (np. odtworzenie migawki dysku): reset = snapshot od nowa
+    if (!out.length && last === since && since > maxSeq()) return c.json({ changes: [], last: 0, reset: true, db: dbId });
+    return c.json({ changes: out, last, more, db: dbId });
   });
 
   // Snapshot: { records: {entity,id,data}[], last }. Kod jest synchroniczny, więc rekordy i `last` są spójne.
   app.get('/api/snapshot', auth, (c) => {
     const user = c.get('user');
-    const last = db.select({ m: max(changes.seq) }).from(changes).get()?.m ?? 0;
+    const last = maxSeq();
     const records: { entity: string; id: string; data: Record<string, unknown> | null }[] = [];
     const at = new Date().toISOString();
     for (const m of modulesOf(app)) {
@@ -70,7 +86,7 @@ export function mountSync(app: Hono, deps: AppDeps): void {
         }
       }
     }
-    return c.json({ records, last });
+    return c.json({ records, last, db: dbId });
   });
 
   app.get('/api/stream', auth, (c) => {
