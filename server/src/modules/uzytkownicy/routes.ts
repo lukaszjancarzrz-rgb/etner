@@ -75,7 +75,7 @@ export function routes(app: Hono, { db, files }: AppDeps): void {
   });
 
   app.delete('/api/schedule-people/:id', admin, (c) => {
-    if (!svc.deletePerson(db, me(c), c.req.param('id'))) throw notFound();
+    if (!svc.deletePerson(db, me(c), c.req.param('id')) && !svc.removedPerson(db, c.req.param('id'))) throw notFound(); // już usunięta = 200
     return c.json({ ok: true });
   });
 

@@ -55,6 +55,8 @@ export function routes(app: Hono, deps: AppDeps): void {
   });
 
   app.delete('/api/checklists/:id', auth, (c) => {
+    const gone = svc.removed(db, c.req.param('id'));
+    if (gone && inCrew(c, gone.ekipa)) return c.json({ ok: true }); // już usunięta: powtórka z kolejki
     const r = visible(c, c.req.param('id'));
     if (r.createdBy !== me(c).id && !can(me(c), 'admin')) throw forbidden();
     svc.remove(db, me(c).id, r.id);
@@ -74,6 +76,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     return c.json(nf(runOp(db, opId, me(c).id, () => svc.updateTemplate(db, me(c).id, c.req.param('id'), d)).result));
   });
   app.delete('/api/checklist-templates/:id', admin, (c) => {
+    if (svc.removedTemplate(db, c.req.param('id'))) return c.json({ ok: true }); // powtórka
     nf(svc.updateTemplate(db, me(c).id, c.req.param('id'), {}, true));
     return c.json({ ok: true });
   });

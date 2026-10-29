@@ -63,12 +63,15 @@ describe('na jutro', () => {
     expect((await app.request(`/api/checklists/${row.id}`, req(admin, 'PUT', { tekst: 'Inne' }))).status).toBe(200);
   });
 
-  it('usuwanie: autor lub admin, inny pracownik 403', async () => {
-    const { app, c1, c1b, admin } = await setup();
+  it('usuwanie: autor lub admin, inny pracownik 403; powtórka 200', async () => {
+    const { app, c1, c1b, c2, admin } = await setup();
     const mk = async () => (await (await app.request('/api/checklists', req(c1, 'POST', { ekipa: 'ekipa A', dzien: '2026-03-11', tekst: 'Drabina' }))).json()).id;
     const id = await mk();
     expect((await app.request(`/api/checklists/${id}`, req(c1b, 'DELETE'))).status).toBe(403);
     expect((await app.request(`/api/checklists/${id}`, req(c1, 'DELETE'))).status).toBe(200);
+    expect((await app.request(`/api/checklists/${id}`, req(c1, 'DELETE'))).status).toBe(200); // powtórka z kolejki
+    expect((await app.request(`/api/checklists/${id}`, req(c2, 'DELETE'))).status).toBe(404); // cudza ekipa: bez zdradzania
+    expect((await app.request('/api/checklists/brak', req(c1, 'DELETE'))).status).toBe(404);
     const id2 = await mk();
     expect((await app.request(`/api/checklists/${id2}`, req(admin, 'DELETE'))).status).toBe(200);
     expect(await (await app.request('/api/checklists', req(admin, 'GET'))).json()).toEqual([]);
@@ -135,7 +138,8 @@ describe('na jutro', () => {
     expect(ch.filter((x) => x.entity === 'checklist_templates' && x.id === t.id)).toHaveLength(2);
     expect((await app.request(`/api/checklist-templates/${t.id}`, req(c1, 'DELETE'))).status).toBe(403);
     expect((await app.request(`/api/checklist-templates/${t.id}`, req(admin, 'DELETE'))).status).toBe(200);
-    expect((await app.request(`/api/checklist-templates/${t.id}`, req(admin, 'DELETE'))).status).toBe(404);
+    expect((await app.request(`/api/checklist-templates/${t.id}`, req(admin, 'DELETE'))).status).toBe(200); // powtórka
+    expect((await app.request('/api/checklist-templates/brak', req(admin, 'DELETE'))).status).toBe(404);
     expect(listTemplates(deps.db)).toHaveLength(9);
     // usunięte listy seedu nie wracają przy restarcie
     for (const x of listTemplates(deps.db)) await app.request(`/api/checklist-templates/${x.id}`, req(admin, 'DELETE'));

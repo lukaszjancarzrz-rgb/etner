@@ -42,6 +42,13 @@ export const remove = (db: Db, userId: string, id: string) =>
   patch(db, userId, id, { deletedAt: new Date().toISOString() }, 'delete');
 
 // Listy predefiniowane (18j)
+/** Już usunięte (powtórka usunięcia z kolejki); lista zwracana, żeby sprawdzić ekipę. */
+export const removed = (db: Db, id: string): ChecklistRow | undefined => {
+  const r = db.select().from(checklists).where(eq(checklists.id, id)).get();
+  return r?.deletedAt ? r : undefined;
+};
+export const removedTemplate = (db: Db, id: string): boolean => !!db.select({ d: checklistTemplates.deletedAt }).from(checklistTemplates).where(eq(checklistTemplates.id, id)).get()?.d;
+
 export type TemplateRow = typeof checklistTemplates.$inferSelect;
 type TemplateInput = Partial<Pick<TemplateRow, 'nazwa' | 'kategorie' | 'rodzaje' | 'pozycje' | 'kolejnosc'>>;
 

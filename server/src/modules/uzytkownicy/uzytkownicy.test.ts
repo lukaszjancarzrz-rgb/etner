@@ -137,6 +137,8 @@ describe('użytkownicy', () => {
     const list = (await (await get(app, '/api/schedule-people', worker)).json()) as any[];
     expect(list.map((x) => x.nazwa)).toEqual(['Bartek K.']);
     expect((await send(app, 'DELETE', `/api/schedule-people/${p.id}`, admin)).status).toBe(200);
+    expect((await send(app, 'DELETE', `/api/schedule-people/${p.id}`, admin)).status).toBe(200); // powtórka
+    expect((await send(app, 'DELETE', '/api/schedule-people/brak', admin)).status).toBe(404);
     expect(((await (await get(app, '/api/schedule-people', worker)).json()) as any[])).toHaveLength(0);
     const ch = (await (await get(app, '/api/changes?since=0', worker)).json()) as any;
     expect(ch.changes.filter((c: any) => c.entity === 'schedule_people')).toHaveLength(3);

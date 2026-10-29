@@ -105,6 +105,8 @@ export function updatePerson(db: Db, by: string, id: string, d: Partial<{ nazwa:
   return row;
 }
 
+export const removedPerson = (db: Db, id: string): boolean => !!db.select({ d: schedulePeople.deletedAt }).from(schedulePeople).where(eq(schedulePeople.id, id)).get()?.d;
+
 export function deletePerson(db: Db, by: string, id: string): boolean {
   const now = new Date().toISOString();
   const old = db.select().from(schedulePeople).where(and(eq(schedulePeople.id, id), isNull(schedulePeople.deletedAt))).get();
