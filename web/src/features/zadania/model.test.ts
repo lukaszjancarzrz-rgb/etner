@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLate, taskGroups } from './model.js';
+import { isCyclicGroup, isLate, needsCycle, taskGroups } from './model.js';
 
 const T = (id: string, extra: Record<string, unknown> = {}) => ({ id, tekst: id, grupa: 'Firma', status: 'Do zrobienia', priorytet: null, termin: null, cykliczne: false, createdAt: id, updatedAt: id, ...extra });
 
@@ -17,5 +17,12 @@ describe('taskGroups', () => {
     expect(isLate(T('a', { termin: '2026-10-21' }), '2026-10-22')).toBe(true);
     expect(isLate(T('a', { termin: '2026-10-22' }), '2026-10-22')).toBe(false);
     expect(isLate(T('a', { termin: '2026-10-01', status: 'Zrobione' }), '2026-10-22')).toBe(false);
+  });
+  it('isCyclicGroup bez względu na wielkość liter i spacje, needsCycle tylko cykliczne bez cyklu', () => {
+    expect(['Cykliczne', 'cykliczne', ' CYKLICZNE '].map(isCyclicGroup)).toEqual([true, true, true]);
+    expect(['Firma', '', null].map(isCyclicGroup)).toEqual([false, false, false]);
+    expect(needsCycle(T('a', { cykliczne: true, cykl: null }))).toBe(true);
+    expect(needsCycle(T('a', { cykliczne: true, cykl: '1m' }))).toBe(false);
+    expect(needsCycle(T('a', { cykl: null }))).toBe(false);
   });
 });

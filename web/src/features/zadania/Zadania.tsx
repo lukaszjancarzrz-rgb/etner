@@ -1,4 +1,4 @@
-import { ArrowsClockwise, ListChecks, PencilSimple, Plus, User, X } from '@phosphor-icons/react';
+import { ArrowsClockwise, ListChecks, PencilSimple, Plus, User, Warning, X } from '@phosphor-icons/react';
 import { CYKLE, nextTermin, type Cykl } from '@etner/shared';
 import { useMemo, useState } from 'react';
 import { fmtDay, today, useDict, useLoading } from '../../core/data.js';
@@ -15,7 +15,7 @@ import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
-import { DONE, isDone, isLate, taskGroups } from './model.js';
+import { DEFAULT_CYKL, DONE, isCyclicGroup, isDone, isLate, needsCycle, taskGroups } from './model.js';
 
 /** Optymistycznie jak serwer: cykliczne „Zrobione” wraca do pierwszego statusu, z cyklem termin = dziś + cykl. */
 const doneCyclic = (first: string | undefined, cykl: Cykl | null, day: string) => ({ status: first, ostatnio: day, ...(cykl && { termin: nextTermin(day, cykl) }) });
@@ -69,8 +69,9 @@ function AddForm() {
     const tekst = t.trim();
     if (!tekst) return setErr('Wpisz treść zadania');
     if (tekst.length > 500) return setErr('Tekst jest za długi');
-    const body = { tekst, grupa: g };
-    void createVia('tasks', { kind: 'zadania', url: '/api/tasks', method: 'POST', body }, { ...body, status: first, priorytet: null, termin: null, cykliczne: false, cykl: null, clientId: null })
+    const cyc = isCyclicGroup(g);
+    const body = { tekst, grupa: g, cykliczne: cyc, cykl: cyc ? DEFAULT_CYKL : null };
+    void createVia('tasks', { kind: 'zadania', url: '/api/tasks', method: 'POST', body }, { ...body, status: first, priorytet: null, termin: null, clientId: null })
       .catch((x: Error) => { setT((c) => c || tekst); setErr(x.message); });
     setT(''); setErr('');
   }
@@ -108,11 +109,16 @@ function Task({ t, onEdit }: { t: Rec; onEdit: () => void }) {
           <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
             {t.priorytet != null && <Badge tone={t.priorytet === 1 ? 'ink' : 'line'}>P{t.priorytet}</Badge>}
             {t.status !== first && !done && <Badge tone="action">{t.status}</Badge>}
-            {t.termin && <span className={cn(late && 'font-bold text-danger')}>{late ? 'po terminie ' : 'termin '}{t.termin === day ? 'dziś' : fmtDay(t.termin)}</span>}
+            {t.termin && <span className={cn(late && 'font-bold text-danger')}>{late ? 'po terminie ' : t.cykliczne && t.cykl ? 'następny ' : 'termin '}{t.termin === day ? 'dziś' : fmtDay(t.termin)}</span>}
             {t.cykliczne && <span className="inline-flex items-center gap-1"><ArrowsClockwise className="h-4 w-4" aria-hidden />{t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne'}{t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}</span>}
             {t._tmp && <span>wysyłanie…</span>}
           </span>
         </button>
+        {needsCycle(t) && !t._tmp && (
+          <button type="button" onClick={onEdit} aria-label={`Ustaw cykliczność: ${t.tekst}`} className="mt-1 inline-flex min-h-8 items-center gap-1 text-sm font-semibold text-danger underline-offset-2 hover:underline">
+            <Warning className="h-4 w-4" weight="fill" aria-hidden />ustaw cykliczność
+          </button>
+        )}
         {client && <a href={`#kl/${client.id}`} className="mt-1 inline-flex min-h-8 items-center gap-1 text-sm font-semibold text-action"><User className="h-4 w-4" aria-hidden />{client.nazwa}</a>}
       </div>
       <Button variant="ghost" size="sm" aria-label={`Edytuj: ${t.tekst}`} onClick={onEdit} disabled={!!t._tmp} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>
@@ -154,17 +160,17 @@ function TaskForm({ task, onClose }: { task: Rec; onClose: () => void }) {
         <form onSubmit={submit} noValidate className="grid gap-4">
           <Field label="Treść" error={err}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err} value={f.tekst} onChange={(e) => set({ tekst: e.target.value })} />}</Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Grupa">{(id) => <Select id={id} value={f.grupa} onValueChange={(grupa) => set({ grupa })} options={[{ value: NONE, label: 'Bez grupy' }, ...opts(grupy)]} />}</Field>
+            <Field label="Grupa">{(id) => <Select id={id} value={f.grupa} onValueChange={(grupa) => set(isCyclicGroup(grupa) ? { grupa, cykliczne: true, cykl: f.cykl === NONE ? DEFAULT_CYKL : f.cykl } : { grupa })} options={[{ value: NONE, label: 'Bez grupy' }, ...opts(grupy)]} />}</Field>
             <Field label="Status">{(id) => <Select id={id} value={f.status} onValueChange={(status) => set({ status })} options={opts(statusy)} />}</Field>
             <Field label="Priorytet">{(id) => <Select id={id} value={f.priorytet} onValueChange={(priorytet) => set({ priorytet })} options={[{ value: NONE, label: 'Brak' }, ...['1', '2', '3', '4', '5'].map((p) => ({ value: p, label: p === '1' ? '1 (najważniejsze)' : p }))]} />}</Field>
             <Field label="Termin">{(id) => <Input id={id} type="date" value={f.termin} onChange={(e) => set({ termin: e.target.value })} />}</Field>
           </div>
           <label className="flex min-h-11 cursor-pointer items-center gap-3 font-semibold">
-            <Checkbox checked={f.cykliczne} onCheckedChange={(v) => set({ cykliczne: v === true })} aria-label="Cykliczne" />
+            <Checkbox checked={f.cykliczne} onCheckedChange={(v) => set(v === true ? { cykliczne: true, cykl: f.cykl === NONE ? DEFAULT_CYKL : f.cykl } : { cykliczne: false })} aria-label="Cykliczne" />
             <span>Cykliczne <span className="block text-sm font-normal text-ink-2">Po oznaczeniu jako zrobione wraca na listę, zapisuje się data.</span></span>
           </label>
           {f.cykliczne && (
-            <Field label="Cykl" hint={f.cykl === NONE ? 'Termin się nie zmienia.' : 'Po zrobieniu termin = dziś + cykl.'}>
+            <Field label="Cykliczność" hint="Po zrobieniu następny termin = dziś + cykl." error={f.cykl === NONE ? 'Ustaw cykliczność: bez cyklu termin się nie zmienia.' : undefined}>
               {(id, d) => <Select id={id} aria-describedby={d} value={f.cykl} onValueChange={(cykl) => set({ cykl })} options={[{ value: NONE, label: 'Bez cyklu' }, ...Object.entries(CYKLE).map(([value, label]) => ({ value, label }))]} />}
             </Field>
           )}
