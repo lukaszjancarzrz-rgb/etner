@@ -3,7 +3,7 @@
 Kopie powstają trzema drogami:
 
 - **Baza, na bieżąco:** Litestream replikuje `etner.db` do bucketu zdjęć `R2_BUCKET` pod prefiks `db/` (przechowywanie 720 h = 30 dni), tym samym kluczem `R2_KEY` / `R2_SECRET`. Aplikacja nie zapisuje ani nie kasuje plików pod `db/`. Konfiguracja: `deploy/litestream.yml`. Na Render usługa `etner` startuje pod Litestream, gdy ustawiony jest `R2_BUCKET` (`render.yaml`, `startCommand`); program leży w `./bin/litestream`. Render robi też codzienną migawkę dysku `/var/data`.
-- **Zdjęcia, co noc o 03:00 (opcjonalnie):** nowe pliki z bucketu roboczego (`R2_BUCKET`) trafiają do `R2_BACKUP_BUCKET` (np. `etner-backup`) pod prefiks `files/`.
+- **Zdjęcia, co noc o 03:00 (opcjonalnie):** nowe pliki (załączniki dziennika i zdjęcia osób) z bucketu roboczego (`R2_BUCKET`) trafiają do `R2_BACKUP_BUCKET` (np. `etner-backup`) pod prefiks `files/`.
 - **Tabele, co noc o 02:30:** eksport wszystkich tabel do arkusza Google (`SHEETS_ID`), do wglądu i jako ostatnia deska ratunku. Arkusz nie zawiera tokenów logowania.
 
 ## Zmienne środowiska

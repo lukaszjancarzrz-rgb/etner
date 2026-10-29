@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { newId } from '@etner/shared';
 import { testDeps, addUser } from '../test-utils.js';
 import { modules } from '../modules/index.js';
-import { errors, settings } from '../core/schema-base.js';
+import { errors, settings, users } from '../core/schema-base.js';
 import { attachments } from '../modules/dziennik/schema.js';
 import { exportToSheets, tablesForExport, type SheetsClient } from './export-sheets.js';
 import { kopieCrons, keysToCopy, copyPhotos } from './kopie.js';
@@ -109,7 +109,7 @@ describe('zadania kopii', () => {
     expect(deps.db.select().from(errors).where(eq(errors.where, 'kopia-zdjec')).all()).toHaveLength(1);
   });
 
-  it('kopia-zdjec: wybiera klucze załączników nowszych niż kopia_zdjec_at', async () => {
+  it('kopia-zdjec: wybiera klucze załączników i zdjęć osób nowszych niż kopia_zdjec_at', async () => {
     const deps = testDeps();
     deps.db.insert(attachments).values([
       att({ createdAt: '2026-09-01T00:00:00.000Z' }),
@@ -117,6 +117,13 @@ describe('zadania kopii', () => {
       att({ keyOrig: 'o3', keyView: null, keyThumb: null, createdAt: '2026-10-06T00:00:00.000Z' }),
     ]).run();
     expect(keysToCopy(deps.db, '2026-10-01T00:00:00.000Z').sort()).toEqual(['o2', 'o3', 't2', 'v2']);
+    // zdjęcia osób: zmienione po kursorze, z kluczem
+    const u1 = addUser(deps).user.id, u2 = addUser(deps).user.id;
+    addUser(deps);
+    deps.db.update(users).set({ avatarKey: 'avatar/a.webp', updatedAt: '2026-10-07T00:00:00.000Z' }).where(eq(users.id, u1)).run();
+    deps.db.update(users).set({ avatarKey: 'avatar/stary.webp', updatedAt: '2026-09-07T00:00:00.000Z' }).where(eq(users.id, u2)).run();
+    expect(keysToCopy(deps.db, '2026-10-01T00:00:00.000Z').sort()).toEqual(['avatar/a.webp', 'o2', 'o3', 't2', 'v2']);
+    deps.db.update(users).set({ avatarKey: null }).where(eq(users.id, u1)).run();
     const copied: string[] = [];
     const def = kopieCrons({}, modules).find((c) => c.name === 'kopia-zdjec')!;
     expect(def.schedule).toBe('0 3 * * *');

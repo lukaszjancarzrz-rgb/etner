@@ -1,10 +1,10 @@
 import { CopyObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { eq, gt } from 'drizzle-orm';
+import { and, eq, gt, isNotNull } from 'drizzle-orm';
 import type { AppDeps } from '../app.js';
 import type { Db } from '../core/db.js';
 import { logError } from '../core/errors.js';
 import type { CronDef, ModuleDef } from '../core/registry.js';
-import { settings } from '../core/schema-base.js';
+import { settings, users } from '../core/schema-base.js';
 import { attachments } from '../modules/dziennik/schema.js';
 import { exportToSheets, googleSheets, tablesForExport, type SheetsClient } from './export-sheets.js';
 
@@ -15,10 +15,11 @@ function stamp(db: Db, key: string, at = new Date().toISOString()) {
 }
 const stamped = (db: Db, key: string) => db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? '';
 
-/** Klucze (oryginał, podgląd, miniatura) załączników utworzonych po `since` (ISO). */
+/** Klucze (oryginał, podgląd, miniatura) załączników utworzonych po `since` (ISO) i zdjęcia osób zmienionych po `since`. */
 export function keysToCopy(db: Db, since: string): string[] {
   const rows = db.select().from(attachments).where(gt(attachments.createdAt, since)).all();
-  return rows.flatMap((r) => [r.keyOrig, r.keyView, r.keyThumb]).filter((k): k is string => !!k);
+  const avatars = db.select({ k: users.avatarKey }).from(users).where(and(gt(users.updatedAt, since), isNotNull(users.avatarKey))).all();
+  return [...rows.flatMap((r) => [r.keyOrig, r.keyView, r.keyThumb]), ...avatars.map((a) => a.k)].filter((k): k is string => !!k);
 }
 
 /** Kopiuje nowe klucze; ustawia `kopia_zdjec_at` dopiero po sukcesie całości (błąd = ponowienie następnej nocy). */
