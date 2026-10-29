@@ -5,7 +5,7 @@ import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { fileStoreFromEnv } from './core/files.js';
 import { migrate, openDb } from './core/db.js';
-import { registerCron } from './core/cron.js';
+import { pruneCron, registerCron } from './core/cron.js';
 import { closeStreams } from './core/sync.js';
 import { vapidFromEnv, webPushSender } from './core/notify.js';
 import { smtpMailerFromEnv } from './core/mail.js';
@@ -75,7 +75,7 @@ const deps = {
 };
 const app = createApp(deps, modules);
 const stopPumble = pumble ? startPoll(deps) : () => {};
-const stopCron = registerCron(deps, [...modulesOf(app).flatMap((m) => m.cron ?? []), ...kopieCrons(process.env, modules)]);
+const stopCron = registerCron(deps, [...modulesOf(app).flatMap((m) => m.cron ?? []), ...kopieCrons(process.env, modules), pruneCron]);
 
 const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`ETNER nasłuchuje na :${port}`);

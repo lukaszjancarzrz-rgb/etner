@@ -1,10 +1,10 @@
 import cron from 'node-cron';
-import { eq } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import { dayOf } from '@etner/shared';
 import type { AppDeps } from '../app.js';
 import { logError } from './errors.js';
 import type { CronDef } from './registry.js';
-import { settings } from './schema-base.js';
+import { errors, opIds, settings } from './schema-base.js';
 
 const TZ = 'Europe/Warsaw';
 const hm = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -42,3 +42,13 @@ export function registerCron(deps: AppDeps, defs: CronDef[]): () => void {
   }
   return () => tasks.forEach((t) => t.stop());
 }
+
+/** Porządki co noc: identyfikatory operacji starsze niż 30 dni (kolejka offline ich już nie powtórzy) i dziennik błędów starszy niż 90 dni. `changes` zostaje (synchronizacja „od numeru”). */
+export const pruneCron: CronDef = {
+  name: 'porzadki', schedule: '40 4 * * *',
+  run(deps) {
+    const t = (deps.now ?? (() => new Date()))().getTime(), day = 86_400_000;
+    deps.db.delete(opIds).where(lt(opIds.at, new Date(t - 30 * day).toISOString())).run();
+    deps.db.delete(errors).where(lt(errors.at, new Date(t - 90 * day).toISOString())).run();
+  },
+};

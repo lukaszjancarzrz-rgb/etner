@@ -3,9 +3,10 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { newId } from '@etner/shared';
 import { createApp } from '../app.js';
 import { addUser, loginCookie, testDeps } from '../test-utils.js';
-import { rankoGodzina, rankoTick, registerCron, rankoTeraz } from './cron.js';
+import { pruneCron, rankoGodzina, rankoTick, registerCron, rankoTeraz } from './cron.js';
+import { recordChange } from './changes.js';
 import { notify, vapidFromEnv, type PushSender } from './notify.js';
-import { errors, pushSubscriptions, settings, users } from './schema-base.js';
+import { changes, errors, opIds, pushSubscriptions, settings, users } from './schema-base.js';
 import { revokeUser } from './auth.js';
 
 const n = { title: 'T', body: 'B', url: '/x', tag: 't' };
@@ -175,6 +176,17 @@ describe('zadanie rano', () => {
     await rankoTick(deps, defs, at('2026-01-16T07:00:00Z'));
     expect(run).toHaveBeenCalledTimes(2);
   });
+  it('porządki: op_ids starsze niż 30 dni i errors starsze niż 90 dni znikają, changes zostają', async () => {
+    const deps = testDeps({ now: () => new Date('2026-10-29T03:00:00Z') });
+    deps.db.insert(opIds).values([{ opId: 'stary', userId: 'u', at: '2026-09-28T00:00:00Z' }, { opId: 'nowy', userId: 'u', at: '2026-10-01T00:00:00Z' }]).run();
+    deps.db.insert(errors).values([{ at: '2026-07-30T00:00:00Z', where: 'a', message: 'stary' }, { at: '2026-08-01T00:00:00Z', where: 'a', message: 'nowy' }]).run();
+    recordChange(deps.db, null, 'firmy', 'f', 'create', null, {});
+    await pruneCron.run(deps);
+    expect(deps.db.select().from(opIds).all().map((r) => r.opId)).toEqual(['nowy']);
+    expect(deps.db.select().from(errors).all().map((r) => r.message)).toEqual(['nowy']);
+    expect(deps.db.select().from(changes).all()).toHaveLength(1);
+  });
+
   it('rano_godzina: zły format → 07:00', () => {
     const deps = testDeps();
     expect(rankoGodzina(deps)).toBe('07:00');
