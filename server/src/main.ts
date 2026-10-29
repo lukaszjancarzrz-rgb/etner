@@ -6,6 +6,7 @@ import { createApp } from './app.js';
 import { fileStoreFromEnv } from './core/files.js';
 import { migrate, openDb } from './core/db.js';
 import { registerCron } from './core/cron.js';
+import { closeStreams } from './core/sync.js';
 import { vapidFromEnv, webPushSender } from './core/notify.js';
 import { smtpMailerFromEnv } from './core/mail.js';
 import { modulesOf } from './core/registry.js';
@@ -80,4 +81,16 @@ const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`ETNER nasłuchuje na :${port}`);
   if (demo) for (const a of demoAccounts(db)) console.log(`DEMO ${a.role}${a.ekipa ? ` (${a.ekipa})` : ''} ${a.name}: login ${a.login}, hasło ${a.haslo}`);
 });
-for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { stopCron(); stopPumble(); server.close(); });
+// Zamknięcie (wdrożenie, restart): strumienie SSE kończą się od razu, trwające zapytania mają 5 s, potem baza zamknięta (WAL zapisany).
+let closing = false;
+const shutdown = () => {
+  if (closing) return;
+  closing = true;
+  stopCron();
+  stopPumble();
+  const done = () => { try { db.$client.close(); } catch (e) { console.error('Zamykanie bazy', e); } process.exit(0); };
+  server.close(done);
+  closeStreams(db);
+  setTimeout(() => (server as import('node:http').Server).closeAllConnections?.(), 5000).unref();
+};
+for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, shutdown);

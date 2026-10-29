@@ -6,7 +6,7 @@ import { recordChange } from './changes.js';
 import { revokeUser } from './auth.js';
 import { registerModules } from './registry.js';
 import { errors, firmy, settings, users } from './schema-base.js';
-import { dbIdOf } from './sync.js';
+import { closeStreams, dbIdOf } from './sync.js';
 
 // 'firmy': tylko admin; 'users': widoczne dla wszystkich, bez pola `tajne`. Encja 'nikt' nie ma właściciela.
 async function setup() {
@@ -195,6 +195,13 @@ describe('strumień: błędy i sesja', () => {
     deps.db.update(users).set({ perms: ['finanse'] }).where(eq(users.id, w.user.id)).run();
     recordChange(deps.db, null, 'users', 'u1', 'update', null, { a: 2 });
     await expect(s.next()).rejects.toThrow('koniec strumienia');
+  });
+
+  it('closeStreams (zamknięcie serwera) kończy otwarte strumienie', async () => {
+    const { deps, app, admin } = await setup();
+    const res = await get(app, '/api/stream?since=0', admin);
+    closeStreams(deps.db);
+    expect(await drained(res)).not.toContain('event: change');
   });
 
   it('Last-Event-ID wyprzedza since', async () => {

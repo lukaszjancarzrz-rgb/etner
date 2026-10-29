@@ -44,6 +44,9 @@ export function dbIdOf(db: AppDeps['db']): string {
   return db.select().from(settings).where(eq(settings.key, 'db_id')).get()!.value;
 }
 
+/** Zamknięcie serwera: kończy wszystkie strumienie SSE tej bazy (inaczej server.close() czekałby na nie bez końca). */
+export const closeStreams = (db: AppDeps['db']): void => { changeBusOf(db).emit('close'); };
+
 export function mountSync(app: Hono, deps: AppDeps): void {
   const { db } = deps;
   // Inna baza niż ta, z której urządzenie ma dane (odtworzenie): klient bierze snapshot od nowa.
@@ -126,6 +129,7 @@ export function mountSync(app: Hono, deps: AppDeps): void {
       };
       const bus = changeBusOf(db);
       bus.on('change', drain);
+      bus.on('close', stop);
       const ping = setInterval(() => {
         q = q.then(async () => { if (await alive()) await stream.writeSSE({ event: 'ping', data: '' }); }).catch(stop);
       }, PING_MS);
@@ -133,6 +137,7 @@ export function mountSync(app: Hono, deps: AppDeps): void {
       await closed;
       clearInterval(ping);
       bus.off('change', drain);
+      bus.off('close', stop);
       clients.delete(client);
     });
   });
