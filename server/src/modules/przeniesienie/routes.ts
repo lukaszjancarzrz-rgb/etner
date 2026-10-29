@@ -7,7 +7,7 @@ import { requireAdmin, requireUser } from '../../core/auth.js';
 import { body } from '../../core/body.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
-import { NotEmptyError } from '../../scripts/migrate-old/apply.js';
+import { NotEmptyError, assertEmpty } from '../../scripts/migrate-old/apply.js';
 import type { OldData } from '../../scripts/migrate-old/old-data.js';
 import { readOld } from '../../scripts/migrate-old/read-xlsx.js';
 import { migrate } from '../../scripts/migrate-old/run.js';
@@ -38,6 +38,8 @@ export function routes(app: Hono, deps: AppDeps): void {
    */
   const limit = bodyLimit({ maxSize: XLSX_MAX + 64 * 1024, onError: (c) => c.json({ error: 'Plik jest za duży (max 10 MB).' }, 413) });
   app.post('/api/migration-import', requireAdmin(db), limit, async (c) => {
+    // niepusta baza: 409 zanim plik trafi do pamięci (wczytanie arkusza to setki MB na małej instancji)
+    try { assertEmpty(db); } catch (e) { if (e instanceof NotEmptyError) throw new HTTPException(409, { message: e.message }); throw e; }
     const f = ((await c.req.parseBody().catch(() => ({}))) as Record<string, unknown>)['file'];
     if (!(f instanceof File)) throw new HTTPException(400, { message: 'Brak pliku' });
     if (f.size > XLSX_MAX) throw new HTTPException(413, { message: 'Plik jest za duży (max 10 MB).' });

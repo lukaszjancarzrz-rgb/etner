@@ -81,6 +81,9 @@ describe('przeniesienie – wgranie arkusza', () => {
     const again = await post(app, admin, xlsx, '?naprawde=1');
     expect(again.status).toBe(409);
     expect((await again.json() as { error: string }).error).toMatch(/Baza nie jest pusta/);
+    // niepusta baza: 409 bez czytania pliku, także w próbie i dla pliku, który nie jest arkuszem
+    expect((await post(app, admin, xlsx)).status).toBe(409);
+    expect((await post(app, admin, Buffer.from('nie arkusz'))).status).toBe(409);
     expect(JSON.stringify(deps.db.$client.prepare('select * from errors').all())).not.toContain(real.konta[0]!.haslo);
   });
 
