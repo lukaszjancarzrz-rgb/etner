@@ -14,6 +14,9 @@ import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
 import { tmpId } from '../../core/write.js';
 import type { Ctx } from './Harmonogram.js';
+
+/** Kategoria i rodzaj zlecenia w podpowiedzi (dwa zlecenia u tego samego klienta, np. elektryka i klima). */
+const kind = (j: Rec) => { const k = [j.kategoria, j.rodzaj].filter(Boolean).join(', '); return k ? ` – ${k}` : ''; };
 import { cellKey, cellsOf, cellText, komorek, overwriteCount, rangeDays, sameCell, type Slot } from './model.js';
 
 type Rodzaj = Slot['rodzaj'];
@@ -51,7 +54,7 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
   const options = useMemo(() => [...ctx.jobs.values()]
     .filter((j) => !j._tmp && group(j.status) === 'aktualne')
     .sort((a, b) => Number(b.ekipa === ekipa) - Number(a.ekipa === ekipa) || String(b.numer).localeCompare(String(a.numer)))
-    .map((j) => ({ value: j.id, label: [j.numer, j.client?.nazwa, j.site?.miejscowosc].filter(Boolean).join(', ') })), [ctx.jobs, group, ekipa]);
+    .map((j) => ({ value: j.id, label: [j.numer, j.client?.nazwa, j.site?.miejscowosc].filter(Boolean).join(', ') + kind(j) })), [ctx.jobs, group, ekipa]);
 
   const set = (i: number, p: Partial<Draft>) => setSlots((xs) => xs.map((x, k) => (k === i ? { ...x, ...p } : x)));
 
