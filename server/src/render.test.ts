@@ -8,11 +8,9 @@ const { services } = parse(readFileSync(new URL('../../render.yaml', import.meta
 const env = (s: Svc) => Object.fromEntries(s.envVars.map((e) => [e.key, e]));
 
 describe('render.yaml', () => {
-  it('jeden Blueprint: demo (free, modul-1) i produkcja (0.5c-512mb, produkcja, dysk 1 GB = DATA_DIR)', () => {
-    expect(services.map((s) => s.name)).toEqual(['etner-demo', 'etner']);
-    const [demo, prod] = services as [Svc, Svc];
-    expect(demo).toMatchObject({ plan: 'free', branch: 'modul-1' });
-    expect(env(demo).DEMO?.value).toBe('1');
+  it('jeden Blueprint: tylko produkcja (0.5c-512mb, produkcja, dysk 1 GB = DATA_DIR)', () => {
+    expect(services.map((s) => s.name)).toEqual(['etner']);
+    const [prod] = services as [Svc];
     expect(prod).toMatchObject({ plan: '0.5c-512mb', branch: 'produkcja', autoDeployTrigger: 'commit', disk: { mountPath: '/var/data', sizeGB: 1 } });
     const e = env(prod);
     expect(e.DATA_DIR?.value).toBe(prod.disk!.mountPath);

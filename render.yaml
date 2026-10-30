@@ -1,51 +1,7 @@
-# Render Blueprint ETNER: jeden plik, dwie usługi. Tworzy się go raz (New → Blueprint); kolejne zmiany tego pliku Render stosuje sam.
-# etner-demo – wersja testowa z danymi przykładowymi (gałąź modul-1), etner – produkcja z prawdziwymi danymi (gałąź produkcja).
+# Render Blueprint ETNER: jeden plik, jedna usługa (produkcja). Tworzy się go raz (New → Blueprint); kolejne zmiany tego pliku Render stosuje sam.
+# etner – produkcja z prawdziwymi danymi (gałąź produkcja). Wersja demo usunięta 2026-10-30 (właściciel: niepotrzebna, zjadała minuty budowania).
 # Sekrety (sync: false) wkleja właściciel w panelu Render; w tym pliku nie ma żadnych kluczy ani haseł.
 services:
-  # Dane w /tmp/etner znikają przy każdym wdrożeniu lub uśpieniu (plan free) i wracają jako dane demo.
-  - type: web
-    name: etner-demo
-    runtime: node
-    plan: free
-    branch: modul-1
-    # Zmiany samych dokumentów (plan, dziennik, README) nie uruchamiają budowania – oszczędza minuty budowania Render.
-    buildFilter:
-      ignoredPaths:
-        - docs/**
-        - "**/*.md"
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
-    # NODE_ENV tylko przy starcie: przy budowaniu pnpm pominąłby devDependencies; w produkcji ciasteczko jest Secure.
-    startCommand: NODE_ENV=production node server/dist/main.js
-    healthCheckPath: /api/health
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: DEMO
-        value: "1"
-      - key: DATA_DIR
-        value: /tmp/etner
-      - key: APP_SECRET
-        generateValue: true
-      # Testowy bucket R2 (osobny od produkcyjnego); puste = zdjęcia na dysku w DATA_DIR.
-      - key: R2_BUCKET
-        sync: false
-      - key: R2_ENDPOINT
-        sync: false
-      - key: R2_KEY
-        sync: false
-      - key: R2_SECRET
-        sync: false
-      # Push: stałe klucze VAPID (README, „Powiadomienia push”); puste = klucze losowane w /tmp przy każdym starcie.
-      - key: VAPID_PUBLIC
-        sync: false
-      - key: VAPID_PRIVATE
-        sync: false
-      - key: VAPID_SUBJECT
-        value: mailto:etner@etner-instalacje.pl
-      # Pumble: klucz z dodatku „API Keys”; puste = kanały zleceń wyłączone.
-      - key: PUMBLE_API_KEY
-        sync: false
-
   # Produkcja: instancja 0,5 CPU / 512 MB (dawniej „Starter”, ok. 7 USD/mies.) + dysk 1 GB na bazę. Wdraża się po każdym pushu na gałąź produkcja (robi to Claude na polecenie właściciela).
   # Polecenia budowania i startu (oraz cały ten plik) Render bierze z gałęzi Blueprintu (modul-1), kod aplikacji z gałęzi produkcja.
   # Usługa z dyskiem nie ma wdrożeń bez przerwy: przy nowej wersji aplikacja jest niedostępna przez około minutę.

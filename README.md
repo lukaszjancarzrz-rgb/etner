@@ -28,7 +28,7 @@ Nie są częścią `pnpm test`, żeby testy jednostkowe w CI zostały szybkie.
 
 ## Wersja testowa na Render
 
-Usługa `etner-demo` z pliku `render.yaml` ma dane przykładowe (tryb demo). Dane leżą w `/tmp/etner`, więc po każdym wdrożeniu lub uśpieniu darmowej usługi wracają do stanu początkowego. Zakłada ją ten sam Blueprint co produkcję (zob. „Produkcja na Render”, krok 2).
+Wersji demo nie ma już w `render.yaml` (usunięta 2026-10-30). Można ją uruchomić lokalnie z `DEMO=1` albo jako osobną darmową usługę, jeśli kiedyś znów będzie potrzebna. Opis poniżej dotyczy takiej usługi: Dane leżą w `/tmp/etner`, więc po każdym wdrożeniu lub uśpieniu darmowej usługi wracają do stanu początkowego. Zakłada ją ten sam Blueprint co produkcję (zob. „Produkcja na Render”, krok 2).
 
 1. Po założeniu Blueprintu otwórz adres usługi (np. `https://etner-demo.onrender.com`). W `etner-demo` zmienne `R2_*` można zostawić puste (zdjęcia zapiszą się wtedy na dysku usługi).
    Jeśli budowanie zatrzyma się na `corepack enable`, w ustawieniach usługi (Settings → Build Command) wpisz: `npx pnpm@10.28.0 install --frozen-lockfile && npx pnpm@10.28.0 build` i wdroż ponownie.
@@ -72,7 +72,6 @@ Bez `ADMIN_PASSWORD` skrypt zapyta o hasło w terminalu. Odmówi, gdy login już
 
 Plik `render.yaml` to jeden Blueprint z dwiema usługami:
 
-- **`etner-demo`** – wersja do oglądania nowych zmian, dane przykładowe, darmowa (gałąź `modul-1`).
 - **`etner`** – wersja z prawdziwymi danymi firmy (gałąź `produkcja`): instancja 0,5 CPU / 512 MB (dawniej „Starter”, ok. 7 USD/mies.), region Frankfurt i trwały dysk 1 GB na bazę (0,25 USD/mies.). Plan, region i dysk są wpisane w `render.yaml`, nic nie trzeba wybierać ręcznie.
 
 Zdjęcia i ciągła kopia bazy leżą w Cloudflare R2 (darmowe do 10 GB). Razem wychodzi poniżej 10 USD miesięcznie. Usługa `etner` jest płatna, więc Render poprosi o kartę płatniczą (w ustawieniach konta, Billing).
@@ -107,9 +106,9 @@ Zbierz wartości z listy niżej, zanim założysz Blueprint. Wklejasz je tylko w
 Wcześniej powstało kilka Blueprintów z wersją demo. Zamiast je poprawiać, zakładamy **jeden nowy** i usuwamy stare.
 
 1. [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint** → repozytorium ETNER, gałąź `modul-1` (z niej Render czyta `render.yaml`, także polecenia budowania i startu produkcji).
-2. Render pokaże usługi `etner-demo` i `etner` i zapyta o sekrety. Wklej wymagane, opcjonalne możesz pominąć. Kliknij **Apply** (nazwa może się różnić). Pierwsze budowanie trwa kilka minut.
+2. Render pokaże usługę `etner` i zapyta o sekrety. Wklej wymagane, opcjonalne możesz pominąć. Kliknij **Apply** (nazwa może się różnić). Pierwsze budowanie trwa kilka minut.
 3. Region i dysku produkcji nie da się później zmienić bez zakładania usługi od nowa – dlatego są wpisane w `render.yaml`.
-4. Usuń stare usługi z poprzednich Blueprintów (np. `etner-demo-xxxx`): usługa → **Settings** → na dole **Delete Web Service**. Potem usuń same stare Blueprinty: **Blueprints** → stary Blueprint → **Settings** → **Delete Blueprint** (nazwy mogą się różnić). Zostaje tylko nowy Blueprint z `etner-demo` i `etner`. Nigdy nie usuwaj usługi `etner` z prawdziwymi danymi.
+4. Usuń stare usługi z poprzednich Blueprintów (np. `etner-demo-xxxx`): usługa → **Settings** → na dole **Delete Web Service**. Potem usuń same stare Blueprinty: **Blueprints** → stary Blueprint → **Settings** → **Delete Blueprint** (nazwy mogą się różnić). Zostaje tylko nowy Blueprint z usługą `etner`. Ważne: najpierw odłącz stary Blueprint (**Disconnect Blueprint**), potem usuń jego usługi – usługa usunięta przy podłączonym Blueprincie wraca przy następnej synchronizacji. Nigdy nie usuwaj usługi `etner` z prawdziwymi danymi.
 
 Później nie zakładasz już żadnego Blueprintu: zmiany `render.yaml` Render stosuje sam.
 
@@ -143,7 +142,6 @@ Na każdym telefonie otwórz adres produkcji, zaloguj się, dodaj aplikację do 
 
 ### Jak przychodzą nowe wersje
 
-- **Demo** (`etner-demo`) aktualizuje się samo po każdej zmianie na gałęzi `modul-1` – tam oglądasz nowości.
 - **Produkcja** (`etner`) zmienia się tylko wtedy, gdy powiesz Claude „wydaj na produkcję”: Claude wypycha sprawdzoną wersję na gałąź `produkcja`, a Render sam ją wdraża. W trakcie wdrożenia aplikacja jest niedostępna przez około minutę (usługa z dyskiem); zapisy z telefonów czekają w kolejce i wysyłają się same.
 
 - **Ustawienia usług** (plik `render.yaml`, m.in. polecenia budowania i startu produkcji) Render bierze z gałęzi `modul-1`, z której założono Blueprint – nawet dla usługi `etner`. Kod aplikacji produkcji pochodzi z gałęzi `produkcja`.
