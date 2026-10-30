@@ -8,6 +8,11 @@ services:
     runtime: node
     plan: free
     branch: modul-1
+    # Zmiany samych dokumentów (plan, dziennik, README) nie uruchamiają budowania – oszczędza minuty budowania Render.
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - "**/*.md"
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
     # NODE_ENV tylko przy starcie: przy budowaniu pnpm pominąłby devDependencies; w produkcji ciasteczko jest Secure.
     startCommand: NODE_ENV=production node server/dist/main.js
@@ -50,6 +55,11 @@ services:
     plan: 0.5c-512mb
     region: frankfurt
     branch: produkcja
+    # Zmiany samych dokumentów (plan, dziennik, README) nie uruchamiają budowania – oszczędza minuty budowania Render.
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - "**/*.md"
     autoDeployTrigger: commit
     # Litestream (ciągła kopia bazy do R2) jako jeden plik wykonywalny w bin/ – runtime node go nie ma; suma SHA-256 przypięta.
     buildCommand: >-
