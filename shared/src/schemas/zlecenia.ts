@@ -1,0 +1,51 @@
+import { z } from 'zod';
+import { clientCreateSchema, siteInputSchema } from './klienci.js';
+
+const txt = z.string().trim();
+
+const fields = {
+  opId: z.string().min(1).optional(),
+  clientId: z.string().min(1).optional(),
+  newClient: clientCreateSchema.omit({ opId: true, site: true }).optional(),
+  siteId: z.string().min(1).nullish(),
+  newSite: siteInputSchema.optional(),
+  leadId: z.string().min(1).nullish(),
+  rodzaj: txt,
+  status: txt.min(1, 'Podaj status zlecenia'),
+  kategoria: txt,
+  /** Miesiąc realizacji, YYYY-MM. */
+  termin: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Termin w formacie RRRR-MM').nullish(),
+  ekipa: txt.min(1).nullish(),
+  zakres: txt,
+  uwagiAdmin: txt,
+};
+
+const defaults = { rodzaj: txt.default(''), kategoria: txt.default(''), zakres: txt.default(''), uwagiAdmin: txt.default('') };
+export const jobCreateSchema = z.object({ ...fields, ...defaults }).refine((d) => d.clientId || d.newClient, { message: 'Wskaż klienta', path: ['clientId'] });
+export type JobCreate = z.infer<typeof jobCreateSchema>;
+
+export const jobUpdateSchema = z.object(fields).partial();
+export type JobUpdate = z.infer<typeof jobUpdateSchema>;
+
+/** Wejście zapisu: tworzenie (bez id) lub zmiana (z id). */
+export type JobSaveInput = Partial<JobCreate> & { id?: string };
+
+/** Punkt zakresu prac: tekst + zdjęcia (wgrane wcześniej przez POST /api/uploads). */
+const scopeTekst = txt.min(1, 'Wpisz treść punktu').max(5000, 'Tekst jest za długi');
+const uploads = z.array(z.string().min(1)).max(30);
+export const scopeCreateSchema = z.object({ opId: z.string().min(1).optional(), tekst: scopeTekst, uploads: uploads.default([]) });
+export type ScopeCreate = z.infer<typeof scopeCreateSchema>;
+// Bez default (zod 4: .partial() nad default nadpisałby zapisane pola); uploads = zdjęcia dokładane, removePhotos = usuwane.
+// Kolejność tylko przez POST /api/jobs/:id/scope/order.
+export const scopeUpdateSchema = z.object({ opId: z.string().min(1).optional(), tekst: scopeTekst, uploads, removePhotos: uploads }).partial();
+export type ScopeUpdate = z.infer<typeof scopeUpdateSchema>;
+export const scopeOrderSchema = z.object({ opId: z.string().min(1).optional(), ids: z.array(z.string().min(1)).min(1).max(500) });
+
+/** Wiadomość do kanału Pumble zlecenia (wysyła serwer jako bot, z imieniem autora). */
+export const pumbleSendSchema = z.object({ opId: z.string().min(1).optional(), text: txt.min(1, 'Wpisz wiadomość').max(4000, 'Wiadomość jest za długa') });
+
+/** „Ostatnio widziane” zleceń (Task 26): jobId → chwila ISO; `base`: baza użytkownika z urządzenia (zapisywana tylko, gdy jej nie ma). */
+export const seenSchema = z.object({
+  jobs: z.record(z.string().min(1).max(40), z.iso.datetime()).refine((o) => Object.keys(o).length <= 2000, 'Za dużo zleceń naraz'),
+  base: z.iso.datetime().optional(),
+});

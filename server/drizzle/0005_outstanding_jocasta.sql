@@ -1,0 +1,40 @@
+CREATE TABLE `lead_contacts` (
+	`id` text PRIMARY KEY NOT NULL,
+	`created_at` text NOT NULL,
+	`created_by` text,
+	`updated_at` text NOT NULL,
+	`deleted_at` text,
+	`lead_id` text NOT NULL,
+	`dzien` text NOT NULL,
+	`plan` text DEFAULT '' NOT NULL,
+	`notatka` text NOT NULL,
+	`nastepny` text DEFAULT '' NOT NULL,
+	`status` text NOT NULL,
+	`by` text NOT NULL,
+	FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `leads` (
+	`id` text PRIMARY KEY NOT NULL,
+	`created_at` text NOT NULL,
+	`created_by` text,
+	`updated_at` text NOT NULL,
+	`deleted_at` text,
+	`firma_id` text NOT NULL,
+	`numer` text NOT NULL,
+	`client_id` text,
+	`site_id` text,
+	`status` text NOT NULL,
+	`kategoria` text DEFAULT '' NOT NULL,
+	`temat` text NOT NULL,
+	`zrodlo` text DEFAULT '' NOT NULL,
+	`opis` text DEFAULT '' NOT NULL,
+	`wartosc_gr` integer,
+	`nastepny` text DEFAULT '' NOT NULL,
+	`ostatni` text DEFAULT '' NOT NULL,
+	`uwagi` text DEFAULT '' NOT NULL,
+	`zamkniete_at` text,
+	FOREIGN KEY (`firma_id`) REFERENCES `firmy`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`site_id`) REFERENCES `sites`(`id`) ON UPDATE no action ON DELETE no action
+);

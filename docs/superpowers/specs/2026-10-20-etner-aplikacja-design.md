@@ -14,7 +14,7 @@ Szczegóły pierwszego modułu: `2026-10-20-etner-modul-1-design.md`. Szczegół
   - aplikacja nie jest teraz używana, więc nie potrzeba ciągłości działania.
 - Arkusz Google zostaje tylko jako kopia do odzyskania danych, w dowolnym układzie.
 - Bez zasięgu działa jak dziś.
-- Bez Pumble: dziennik, zakupy i „na jutro” są w aplikacji.
+- Zakupy i „na jutro” są w aplikacji. Dziennik (zdjęcia, notatki) też. Zmiana 2026-10-21: każde zlecenie ma kanał w Pumble do rozmów, tworzony automatycznie; karta zlecenia pokazuje ostatnie wiadomości na żywo, pozwala pisać i ma „Przejdź do Pumble”.
 - Zdjęcia w Cloudflare R2, w pełnej jakości plus lżejsze wersje do podglądu.
 - Fundament przemyślany od razu pod paszport, finanse i płace.
 - Karta klienta. Klient ma swoje obiekty (adresy).
@@ -90,7 +90,7 @@ firma ─┬─ klient ── obiekt (adres, mapa) ─┬─ zlecenie (rodzaj: m
 
 - **Dostęp:**
   - role: `pracownik`, `admin`, plus uprawnienie `finanse` (moduły 3–4, na start obaj admini),
-  - osobiste linki dla ludzi z firmy, potem sesja na urządzeniu,
+  - osobiste konta dla ludzi z firmy: login (imię lub krótka nazwa) i hasło, potem sesja na urządzeniu; hasło startowe nadaje admin, pracownik może je zmienić (zmiana 2026-10-21, zamiast osobistych linków),
   - **linki publiczne** (moduł 2): osobny rodzaj dostępu, token tylko do jednego paszportu, tylko odczyt, tylko elementy `dla_klienta`, można go unieważnić i wygenerować nowy, bez dostępu do API pracowników,
   - uprawnienia sprawdza wyłącznie serwer, w jednym miejscu (`core/permissions`).
 - **Synchronizacja:**

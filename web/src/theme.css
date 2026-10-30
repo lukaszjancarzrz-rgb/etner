@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* Tokeny ETNER (Global Constraints). Tryb: html[data-theme] = light | dark, brak = systemowy. */
+:root {
+  --bg: #f2f5f8;
+  --card: #ffffff;
+  --ink: #0a2240;
+  --ink-2: #3f5368;
+  --line: #d3dce5;
+  --action: #0070ab;
+  --action-ink: #ffffff;
+  --ok: #00736b;
+  --danger: #b3261e;
+  --ok-ink: #ffffff; /* tekst na tle ok / danger */
+  --danger-ink: #ffffff;
+  --new: #c62828; /* znaczniki „nowe”, biały tekst */
+  --grid: rgb(10 34 64 / 0.035);
+  --shadow: 0 1px 2px rgb(10 34 64 / 0.06), 0 4px 16px rgb(10 34 64 / 0.06);
+  --crew-mix: 0%;
+  --logo-pulse: #262b6b;
+  --logo-word: #1e2a4a;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a2240;
+    --card: #102e52;
+    --ink: #eef3f8;
+    --ink-2: #b4c4d4;
+    --line: #27497a;
+    --action: #5cbcf0;
+    --action-ink: #0a2240;
+    --ok: #45cdbb;
+    --danger: #ff8a80;
+    --ok-ink: #0a2240;
+    --danger-ink: #0a2240;
+    --new: #d32f2f;
+    --grid: rgb(255 255 255 / 0.03);
+    --shadow: 0 1px 2px rgb(0 8 20 / 0.3), 0 6px 20px rgb(0 8 20 / 0.25);
+    --crew-mix: 50%;
+    --logo-pulse: #ffffff;
+    --logo-word: #ffffff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a2240;
+  --card: #102e52;
+  --ink: #eef3f8;
+  --ink-2: #b4c4d4;
+  --line: #27497a;
+  --action: #5cbcf0;
+  --action-ink: #0a2240;
+  --ok: #45cdbb;
+  --danger: #ff8a80;
+  --ok-ink: #0a2240;
+  --danger-ink: #0a2240;
+  --new: #d32f2f;
+  --grid: rgb(255 255 255 / 0.03);
+  --shadow: 0 1px 2px rgb(0 8 20 / 0.3), 0 6px 20px rgb(0 8 20 / 0.25);
+  --crew-mix: 50%;
+  --logo-pulse: #ffffff;
+  --logo-word: #ffffff;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-line: var(--line);
+  --color-action: var(--action);
+  --color-action-ink: var(--action-ink);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --color-ok-ink: var(--ok-ink);
+  --color-danger-ink: var(--danger-ink);
+  --color-new: var(--new);
+  --shadow-card: var(--shadow);
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --breakpoint-desk: 1100px;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    /* delikatna siatka w tle */
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 100;
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+}
+
+/* Komputer (≥1100 px, mysz; iPad poziomo zostaje dotykowy): wyraźnie gęściej. Rozmiary w rem i odstępy Tailwind (--spacing) maleją razem; telefon bez zmian (16 px, cele dotyku 44–48 px). */
+@media (min-width: 1100px) and (pointer: fine) {
+  html { font-size: 87.5%; }
+  :root { --spacing: 0.22rem; }
+}
+
+@utility font-wide { font-variation-settings: "wdth" 125; }
+@utility font-narrow { font-variation-settings: "wdth" 75; }
+/* ukośne pasy „oklejenia busa”: tylko nagłówek i logowanie */
+@utility stripes {
+  background-image: repeating-linear-gradient(-55deg, var(--action) 0 10px, transparent 10px 20px, var(--ok) 20px 30px, transparent 30px 40px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

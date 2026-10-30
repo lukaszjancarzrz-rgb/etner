@@ -1,0 +1,310 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-10-20-etner-modul-1.md
+
+Spec: docs/superpowers/specs/2026-10-20-etner-aplikacja-design.md + 2026-10-20-etner-modul-1-design.md
+Branch: modul-1 (worktree /home/claude/etner-m1), base main 312a013
+
+## Pre-flight scan
+
+| Tasks | Produces vs consumes | Finding |
+|---|---|---|
+| T1–T18 | createApp serves API; T18 render start serves web/dist | T1 has no static serving → Ruling R1 |
+| T3–T5 | recordChange (T3) must trigger broadcast (T5) | T3 is before T5 → Ruling R2 |
+| T3–T15 | export needs list of tables | TABLES_FOR_EXPORT undefined → Ruling R3 |
+| T8–T10/T13 | users.crewMembers/admins → notify recipients | consistent |
+| T9–T10 | klienci.get / create used by zlecenia.save(newClient) | consistent; worker visibility vague → Ruling R4 |
+| T10–T14 | zlecenia.active → harmonogram; jobDays used by zlecenia lists (web) | consistent |
+| T11–T12 | leady.toJob uses dziennik.addSystem (T12 later) | order → Ruling R5 |
+| T12–T14 | dziennik uses harmonogram.peopleForJob (T14 later) | plan says stub; Ruling R6 |
+| T16 | seed needs all modules | after T14, ok |
+| T17–T18/19 | web core consumed by screens | consistent |
+| T21–T22 | OldData fixture → migration | consistent |
+| each task | own text self-consistent | T2 fmtZl uses Intl narrow nbsp: test must use the exact char Intl produces → Ruling R7 |
+
+## Rulings
+- Ruling R1: Task 1 createApp also serves `web/dist` statically (SPA fallback to index.html) when the folder exists — needed by T18 single-service deploy — cost if wrong: trivial removal.
+- Ruling R2: Task 3 `recordChange` emits on an in-process `changeBus` (EventEmitter) after transaction commit (`tx` collects seqs and emits after COMMIT); Task 5 subscribes — cost if wrong: refactor of one emitter.
+- Ruling R3: `ModuleDef` gets `tables?: Record<string, SQLiteTable>`; export = all module tables + core `firmy`, `users` (without token hash), excluding sessions, op_ids, push_subscriptions, changes — cost: small.
+- Ruling R4: workers receive a client (projection `forWorker`) only if the client has ≥1 non-deleted job; lead-only clients are hidden; sites likewise — matches spec "pracownik nie dostaje danych klienta poza tym, co jest na zleceniu" — cost: visibility tweak.
+- Ruling R5: Task 11 takes `deps.diary?.addSystem` optional (no-op when absent); Task 12 registers it into AppDeps — cost: minor wiring.
+- Ruling R6: Task 12 uses `deps.schedule?.peopleForJob` defaulting to `() => []`; Task 14 provides it — cost: minor wiring.
+- Ruling R7: money format tests compare against `Intl.NumberFormat('pl-PL')` output char (U+00A0) — cost: none.
+
+## Progress
+Task 1: BLOCKED — registry.npmjs.org denied by session egress proxy (403 CONNECT, DNS bypass fails); uncommitted scaffold in worktree; waiting for owner to enable npm access
+
+## Sesja 2 (2026-10-21)
+- npm/pnpm registry reachable again (npm view OK) — Task 1 unblocked.
+- Ruling R8: work happens on session branch `claude/great-lovelace-gwkc9f` (fast-forwarded from `origin/modul-1`); after each task both `claude/great-lovelace-gwkc9f` and `modul-1` are pushed (fast-forward only) — the owner named `modul-1` as the working branch — cost if wrong: delete one remote branch.
+- Ruling R9: commit trailer uses the current session URL (session_01HTiD5JyMBT5NuhkatKv4V7) instead of the plan's old one — trailer must point at the session that made the commit — cost: none.
+- Ruling R10: ledger stays committed here (docs/superpowers/ledger) instead of only in git-ignored .superpowers/sdd — cloud containers are ephemeral; briefs/reports live in .superpowers/sdd — cost: none.
+Task 1: BASE 6da7c8c; impl 8a50857; review: Important — deps majors (TS7/React19) vs plan
+- Ruling R11: pin typescript ^5, react ^18 (plan stack); vite/vitest majors chosen by peerDeps of vite-plugin-pwa and @tailwindcss/vite — cost if wrong: one version bump later.
+Task 1: minor (deferred): index.html read once at startup (needs restart after web rebuild) — fine for deploy model
+Task 1: fix round 1/5 (4 addressed, 0 open; commits 8a50857..87a3a70)
+Task 1: minor (deferred): two vite majors in lockfile (vitest optional peer resolves vite 8 in server/shared) — collapse when web plugins are added
+Task 1: minor (deferred): SPA fallback 404s client routes whose last segment has a dot (e.g. /x/1.5)
+Task 1: complete (commits 6da7c8c..87a3a70, review clean)
+Task 2: minor (deferred): dayOf lacks 23:30-local and DST-boundary test cases (Review Focus 3) — add 2026-10-20T21:30Z→10-20, 2026-01-15T23:30Z→01-16, 2026-03-29T01:30Z→03-29
+Task 2: minor (deferred): Wigilia returned for years <2025; newId re-export exposes seedTime; fmtZl(-0.4) → "-0,00 zł"
+Task 2: complete (commits d8e45e4..ba408a3, review clean)
+- Ruling R13: logError takes db first: logError(db, where, err, userId?) (no global db); recentErrors(db) helper for Task 4 — cost: none.
+Task 3: BASE 2900590; impl e1f057f; review: Important — global modules list; controller adds per-db changeBus, emit outside try, opId user check
+Task 3: minor (deferred): nested tx has no SAVEPOINT; undefined result stored as null; runOp accepts Promise fn; no index changes(entity,entity_id); recentErrors unused until T4
+Task 3: fix round 1/5 (4 addressed, 0 open; commits e1f057f..d7ea7bf)
+Task 3: minor (deferred): foreign-user opId throws plain Error → 500; map to 409 when routes use runOp
+Task 3: complete (commits 2900590..d7ea7bf, review clean)
+Task 4: minor (deferred): requireAdmin wraps requireUser with custom next; old session not deleted on re-login, expired sessions never purged; cookie Path / limit / forged-cookie tests missing; deleteCookie without flags
+Task 4: complete (commits e605ed1..f213c91, review clean)
+Task 5: BASE 5820237; impl ac6dc6e; review: Important — swallowed SSE drain error; controller adds session recheck, Last-Event-ID, Object.hasOwn
+Task 5: minor (deferred): clients list write-only; tests lack since>0 SSE, hidden rows between since, concurrent backlog/live
+Task 5: fix round 1/5 (4 addressed, 0 open; commits ac6dc6e..57e85ad)
+Task 5: minor (deferred): ping-path .catch(stop) unlogged; client-abort during drain logs a noise error row; ping-path session check untested
+Task 5: complete (commits 5820237..57e85ad, review clean)
+Task 6: BASE a87ca96; impl ec5fef0; review: Important — empty APP_SECRET fallback (forgeable links)
+Task 6: minor (deferred): makeVariants decodes image 3x (perf); disk content-type from extension only
+Task 6: fix round 1/5 (4 addressed, 0 open; commits ec5fef0..6c56d9c)
+Task 6: minor (deferred): serve() checks KEY_RE but not ./.. segments — validly signed bad key → 500 (needs APP_SECRET)
+Task 6: complete (commits a87ca96..6c56d9c, review clean)
+- Ruling R14: notify is `notify(deps, userIds, n)`; push sender injected as AppDeps.push; morning job: core `settings` key-value table (key `rano_godzina`, default '07:00'); CronDef.schedule may be the literal 'rano' — registerCron checks every minute (Europe/Warsaw) and runs 'rano' defs when HH:MM matches; VAPID missing outside demo → push disabled with a warning (notify returns 0) — cost: small.
+Task 7: BASE eefa69a; impl b184987; review: Important — disabled push logs error per subscription
+Task 7: minor (deferred): rano tick no overlap / once-per-day guard; corrupt vapid.json throws at start; real web-push sender untested
+Task 7: fix round 1/5 (4 addressed, 0 open; commits b184987..6824695)
+Task 7: minor (deferred): rankoGodzina DB read outside try/catch in minute tick
+Task 7: complete (commits eefa69a..6824695, review clean)
+- Ruling R15: real Parametry lists are not in the repo (O3 not delivered) — Task 8 seeds best-guess dictionaries matching every value later tasks/tests name ('Rozliczone'→zamkniete, 'Na później'→pozniej, lead 4th value 'Przyjęta', 'ekipa Bartek', 'mieszane', 'Do zrobienia'/'Zrobione'); owner edits in app, Task 22 imports real lists — cost: owner corrects values.
+- Ruling R16: personal link format `<origin>/login#<token>` (token in hash, never sent to server logs); origin from env BASE_URL or request — cost: trivial.
+- Ruling R17: Task 8 also seeds one firma 'ETNER' when none exists (needed by firm-scoped tables) — cost: none.
+Task 8: BASE 0759566; impl d695a59; review: Important — plaintext login link cached in op_ids.result
+Task 8: minor (deferred): no test for PUT /api/dict opId replay / update+resurrect branches; users.admins/crewMembers return ids
+Task 8: fix round 1/5 (4 addressed, 0 open; commits d695a59..0f94d1a)
+Task 8: minor (deferred): op_ids test checks '/login#' not raw token; BASE_URL test deletes rather than restores; lost-response replay gets link:null (use new-link)
+Task 8: complete (commits 0759566..0f94d1a, review clean)
+- Ruling R18: klienci.visibleTo for workers asks an injected `deps.clientHasJobs?(clientId)` (default false → hidden); Task 10 provides it. When a job is created or its client/site changes, zlecenia records an 'update' change for that client and site (re-emit) so workers who never got the earlier client change receive it — cost: extra change rows.
+Task 9: minor (deferred): snapshot leak assertion weak (no length/whitelist check); no worker-403 tests on write routes; '+48 727' partial phone query; szukaj updates not in changes; Record<string,any> in projections
+Task 9: minor → carried into Task 10: addSite spreads Partial input (explicit undefined → NOT NULL) — Task 10 calls it directly
+Task 9: complete (commits f86fca0..12653e4, review clean)
+Task 10: BASE 1253d86; impl 241e714; review: Important — zod4 .partial() keeps defaults → partial PUT wipes fields (check all modules)
+Task 10: minor (deferred): newClient silently ignores clientId; no invalid-status PUT test; next numer scans all jobs (shortcut); notify title tail = job number
+Task 10: fix round 1/5 (3 addressed, 0 open; commits 241e714..322e559)
+Task 10: minor (deferred): push-failure test doesn't exercise the route-level .catch (notify already absorbs sender errors)
+Task 10: complete (commits 1253d86..322e559, review clean)
+Task 11: minor (deferred): untested no-client toJob path, diary-absent, opId replay on contact/to-job, soft-deleted numbering; save uses new Date() not injectable now; toJob needs explicit job.status; cron test doesn't assert worker excluded
+Task 11: complete (commits 52b537e..a369664, review clean)
+- Ruling R19 (Task 12): pending uploads are attachments rows with owner_type/owner_id NULL owned by the uploader (no change recorded until attached); variants made at upload; file bytes reached via GET /api/attachments/:id/file?v=orig|view|thumb (requireUser + owner visibility) → 302 to a signed URL, so <img src> works with the session cookie; attachment visibility follows its entry; lead diary URL '#ld/<leadId>~<entryId>' — cost: small.
+Task 12: BASE a5ec363; impl 1ba8261; review: Important — 25 MB limit applied after buffering whole body
+Task 12: minor (deferred): never-attached pending uploads not cleaned; files.put before DB insert can orphan files; diary entry dla_klienta default untested
+Task 12: fix round 1/5 (3 addressed, 0 open; commits 1ba8261..e521af2)
+Task 12: minor (deferred): 413 shapes differ ({error} from bodyLimit vs HTTPException message) — final review: check API error shape consistency app-wide
+Task 12: complete (commits a5ec363..e521af2, review clean)
+- Ruling R20 (Task 13): checklist text edits are admin-only (crew members only toggle `zabrane`; author or admin deletes); crew = users with user.ekipa === checklist.ekipa; add allowed for crew members and admins; add → push to crew minus author — cost: small permission tweak.
+Task 13: BASE 906a5c1; impl 03d7e3b; review: Important — checklist move leaks to old crew; core/body.ts 6th verbatim copy
+Task 13: minor (deferred): author who changed crew can't delete own item; PUT ekipa not validated; pending() filters in JS; missing tests (admin-author Kupione no push, non-author co edit 403, cron skip without subs)
+Task 13: fix round 1/5 (4 addressed, 0 open; commits 03d7e3b..4fe01f2) — core/sync toOut now honours the action returned by visibleTo
+Task 13: complete (commits 906a5c1..4fe01f2, review clean)
+- Ruling R21 (Task 14): draft key = `<dzien>|<personId>` or `<dzien>|uwagi`; proposal = full desired cell (array of 0–2 slot values {rodzaj, jobId?, kod?, tekst?, polDnia}) or {tekst} for notes; proposalHash = sha256 of canonical JSON of proposal; approve applies only drafts whose current hash matches; schedule entries unique (dzien, person_id, slot) as a partial unique index WHERE deleted_at IS NULL (soft delete kept); peopleForJob = users of schedule_people having any non-deleted entry for the job; module sets deps.schedule = {peopleForJob} — cost: moderate if owner wants other draft semantics.
+Task 14: minor (deferred, worth fixing before T18 review): cellLabel ignores polDnia (full→half on same job sends no push); approve items with no live draft missing from skipped; dzien_wolny info = bare date (should read e.g. "Dzień wolny"); timestamps use new Date() not deps.now; jobId not re-validated at approve; no DB-level one-draft-per-key index
+Task 14: plan-mandated note: peopleForJob counts past entries (R21 literal) — owner may want only current crew
+Task 14: complete (commits 7181209..0b3da51, review clean)
+- Ruling R22 (Task 15): TABLES_FOR_EXPORT = every registered module's tables + core firmy + users (token_hash column dropped); excluded sessions, op_ids, push_subscriptions, changes, errors, settings; columns ending `_gr` exported as zł number (2 decimals); SheetsClient injected (googleapis impl from GOOGLE_SA_JSON + SHEETS_ID); kopia-zdjec copies keys of attachments created since the last run (settings key) from R2_BUCKET to R2_BACKUP_BUCKET via S3 CopyObject, skipped (logged) without R2 — cost: small.
+Task 15: BASE 9ddc052; impl b746829; review: Important — non-atomic clear+single huge batchUpdate; missing failed-copy cursor test
+Task 15: minor (deferred): CopyObject uses one R2 key for both buckets (owner must grant it both); litestream config untested against real version
+Task 15: fix round 1/5 (4 addressed, 0 open; commits b746829..8a1e6b1)
+Task 15: minor (deferred): chunking by rows only (request size); ~2 requests/table vs 60/min write quota, no backoff; silent 50k truncation; failed-copy test starts without cursor
+Task 15: complete (commits 9ddc052..8a1e6b1, review clean)
+- Ruling R23 (Task 16): DEMO tokens are deterministic (HMAC(APP_SECRET, 'demo:<login>')) so links survive restarts on Render (/tmp is wiped → reseed); links printed in the log at start AND listed by GET /api/demo/links (only when DEMO=1) so the owner can pick a user on a phone — data is invented, so the public list is acceptable for the demo; never enabled without DEMO=1 — cost: remove route before production (DEMO off).
+Task 16: minor (deferred): seed inserts attachments directly (duplicates upload route row shape); orphan files if seed tx fails; demoLinks prints links without checking stored hash; checklist test doesn't check both crews per day
+Task 16: complete (commits c9d8653..41c0014, review clean)
+- Ruling R24 (Task 17): synced data lives in a small custom store (Map per entity + useSyncExternalStore, persisted with idb-keyval) as the plan's Interfaces describe; TanStack Query is NOT added until a screen needs ad-hoc server queries (YAGNI vs plan stack line) — cost: add it later in one place.
+- Ruling R25 (Task 17): routing is a tiny hash router matching the notification URL format `#<screen>/<param>~<highlightId>` (e.g. `#zl/<id>~<entryId>`, `#harm/<day>`, `#jutro~<id>`); React Router not added — HashRouter would need `#/zl`, breaking the URLs the server already sends; `/login#<token>` is handled before the router — cost: swap to React Router later if nesting grows.
+Task 17: BASE 0a62c66; impl f044e4c (resumed after API rate limit); review dispatched
+Task 17: review: Important — multi-tab outbox overwrite (data loss), 401 on SSE reconnect not detected, undo overwrites newer server data
+Task 17: minor (deferred): snapshot replace drops optimistic records during first sync; misleading 'Błąd serwera' text for 4xx without error string
+Task 17: fix round 1/5 (4 addressed, 0 open; commits f044e4c..16e3280)
+Task 17: minor (deferred): tab B may send tab A's item → A's awaiting caller hangs / no rollback in A on 4xx; two rejected writes to same record leave first optimistic value; wake() skips catch-up when stream reports open; stop() may wait on another tab's lock
+Task 17: complete (commits 0a62c66..16e3280, review clean)
+- Ruling R26 (Task 18): this session has no Render credentials (owner step O2) — Task 18 delivers render.yaml (Blueprint, branch modul-1, free plan, DEMO=1, DATA_DIR=/tmp/etner, APP_SECRET generated by Render, R2 vars as sync:false secrets) + local e2e on the production build + phone/desktop screenshots; the owner creates the service from the Blueprint — cost: one manual step for the owner.
+Task 18: BASE 0d3fb75; impl 4951fd9..6156d48; review dispatched
+Task 18: review: Important — withoutEchoes hides genuinely new look-alike entries (offline duplicates); demo cookie not Secure; month view missing
+- Ruling R27: month view dropped for the owner checkpoint (week table + prev/next on desktop); owner decides after review — cost: one more screen later if wanted.
+Task 18: minor (deferred): no worker-role e2e; job form / Zakupy admin controls / „Pokaż klientowi” / swipe only checked by eye; corepack on Render unverified until owner deploys
+Task 18: fix round 1/5 (all addressed, 0 open; commits 85b9752..4bdb655)
+Task 18: minor (deferred): 30 s echo window assumes phone clock within 30 s of server
+Task 18: complete (commits 0d3fb75..4bdb655, review clean) — controller verified: unit 12/21/128 pass, build clean, e2e 2/2 pass
+STOP: owner checkpoint after Task 18 (deploy via render.yaml Blueprint = owner step O2). Final whole-branch review runs after the last task.
+
+## Zmiana właściciela 2026-10-21: login i hasło zamiast linków
+- Owner decision (not a ruling): replace personal links with login (first name / short name) + password; admin sets the initial password and resets it, worker may change own password; done now as Task 18a, before Task 19. Spec + plan amended (plan section "Zmiana 2026-10-21", new Task 18a).
+- Ruling R28: scrypt from node:crypto (no new dependency), format `scrypt$<salt b64>$<hash b64>` with timingSafeEqual; failed-attempt limit in process memory (5 per login / 15 min → 429), shortcut acceptable for one process; token_hash column dropped; R16/R23 superseded (demo: fixed demo password, GET /api/demo/konta only with DEMO=1, login screen lists demo accounts); Task 22 will not carry old link tokens — cost: owner hands out passwords at go-live.
+Task 18a: BASE 8b83f13; impl a239af4; review dispatched
+Task 18a: review Approved (no Critical/Important)
+- Ruling R29: security minors from the 18a review are fixed now in one hardening round instead of deferring (async scrypt + race-free limiter, capped limiter map, limit on /api/me/haslo, password length cap, revoke incoming session on login, dummy scrypt for null hash, demo password single source, first-admin CLI create-admin for fresh production DB) — the app is a security boundary and each fix is small — cost: one extra fix round.
+Task 18a: minor (deferred): soft-deleted users keep their login in the unique index (cannot be reused); no way back from the login screen to cached data when expired
+Task 18a: hardening round d4d4fee (R29 items 1–9)
+Owner withdrew both 2026-10-21 (2) changes ("zostawmy to na razie"): Task 18b removed from plan/spec; nothing in code changed. Client editing UI and „pokaż klientowi” scope remain open questions for later.
+Task 18a: hardening re-review — all 9 addressed, no new breakage (commits a239af4..d4d4fee)
+Task 18a: minor (deferred): 5000 distinct logins can fill limiter (429 for new keys ≤15 min); anyone can lock a known login with 5 bad attempts (accepted)
+Task 18a: complete (commits 8b83f13..d4d4fee, review clean)
+Note: klienci worker-visibility test failed once (1/9 runs) while a reviewer subagent was concurrently running/checking out the repo (it left HEAD detached at d4d4fee — reviewer violated read-only; fixed by cherry-pick); 8 later runs green — watch for flakiness in final review
+## Zmiany właściciela 2026-10-21 (3): harmonogram → Task 18c
+- Owner: multi-person / multi-day entry in the cell editor; month view on desktop (supersedes R27); admins have no schedule rows at all. Plan amended (Task 18c).
+- Owner: existing clients must be editable → Task 18d (plan amended); dispatched together with 18c.
+- Owner: remove shopping group 'Biuro' (R15 seed correction) — added to the 18c/18d implementer as a separate commit.
+Tasks 18c/18d + 'Biuro': implemented (581955d, b720240, 13778cb; container restarted after the agent finished — report in task-18cd-report.md); review dispatched
+## Zmiany właściciela 2026-10-21 (4) → Task 18e (plan amended)
+- Shopping: only co + uwagi; no kwota/sklep/grupa; statuses Do kupienia / Kupione only. Job scope: list of points (text + photos), admin-edited (owner picked this over Pumble-style threads). Nav badges with counts (na jutro untaken, schedule changes, jobs with news, shopping to buy for admin).
+Tasks 18c/18d: review Approved; Important — multi-person/day save silently overwrites others' different entries (drafts, reviewable) → fix queued as a separate commit after 18e (overwrite warning + confirm); minor: PUT clients returns duplicates on every save (queued too)
+Tasks 18c/18d: minor (deferred): client form "Zapisywanie…" waits for queued retry when server unreachable; server doesn't validate e-mail format; plHolidays per month cell; week→month shows Monday's month; no unit test for optimistic multi-cell; existing DBs keep 'Biuro' (edit in Ustawienia)
+Task 18e: BASE bce12dd; impl f4fbfff..13bda48 (+18c overwrite warning e97ac49); review: Important — migrated scope points stamped with migration time (false 'nowe'); fix round 1 dispatched with minors (worker phantom news, badges computed once, midnight, sklep→uwagi, armed warning reset, duplicates only on change, scope kolejnosc, URL revoke, remove single scope photo)
+Task 18e: fix round 1/5 (all addressed; commit 1e16c87) — controller verified: unit 12/31/148, build clean, e2e 11 passed 1 skipped
+Task 18e: minor (deferred): migrations 0010/0011 edited in place before any deploy (local DBs need fresh DATA_DIR); client PUT replay returns duplicates []
+Tasks 18c/18d/18e: complete (commits 1f6c50e..1e16c87, review clean). Owner checkpoint again.
+## Zmiany właściciela 2026-10-21 (5) → Task 18f (plan amended)
+- Week nav fixed arrows + „Dziś” (scroll to today); month view = same cards as week, horizontal arrows; chip colour = job kategoria (elektryka blue, fotowoltaika red, rekuperacja green, klimatyzacja purple, inne yellow); dict kategoria/rodzaj changed (+przygotówka, −gwarancja, −Pompa ciepła, −Serwis kategoria); zakupy: delete only admin/author, admin checkbox instead of status select; „nowe” persists until the changed day / job is actually seen; push enable button + test push (pulled forward from Task 19 so the owner can test push on Render).
+- Ruling R30: user said „rodzaj zlecenia” for colours but the example values are the kategoria list → colour by kategoria — cost: switch the colour source if owner meant rodzaj.
+Task 18f: BASE 77bca35; impl 69c7e7e..b02beb9; review: Important — push subscription owned per browser not per user (stale 'włączone', notifications after logout); fix round 1 dispatched with minors
+Task 18f: fix round 1/5 (all addressed; commit ee32122)
+Task 18f: minor (deferred): iOS <16.4 standalone told to add to home screen; old endpoint row lingers after VAPID key change until 410; push enabled path never run in a browser (needs a real phone); 10 s test cooldown in memory
+Task 18f: complete (commits 77bca35..ee32122, review clean). Owner checkpoint.
+Owner tweaks (direct, controller commit f7e2703): Galeria input image/* only + separate „Plik PDF” button (Android opened files instead of gallery); kategoria pill above ekipa on job list.
+## Zmiana właściciela 2026-10-21 (6): Pumble channel per job → Task 18g (spec + plan amended)
+- Owner: preview + write (as bot with author name), diary stays, private channel with admins + crew, now before Task 19.
+- Ruling R31: Pumble "API Keys" add-on has no events → server polls listMessages for channels of non-closed jobs (interval ~20 s, cap per tick), stores recent messages in a module table and emits them as changes (SSE), so phones update without refresh; Pumble user mapping by e-mail (users get optional `email`, matched against Pumble listUsers); deep link built from myInfo workspace id with app.pumble.com fallback — cost: ~20 s delay, polling cost grows with active jobs.
+- Owner: push texts name the job by client surname – miejscowość (not numer); schedule push opens #harm/<day>~<personId> scrolled + highlighted → queued to the 18g implementer as a follow-up commit.
+Task 18g: BASE 744d920; impl 37eeeab..2f8da5c; review: Important — asBot to private channel forbidden by spec (plan-mandated); membership never retried; error log flood on outage; job save blocks on Pumble (~40 s)
+- Ruling R32: send with asBot:false (appears as key owner, keeps „Imię: ” prefix); createChannel type lowercase 'private' verified via getChannel (not private → log, no members); backfill only 'aktualne' jobs, ≤5 per tick — cost: messages from the app look like the key owner in Pumble.
+Task 18g: fix round 1/5 (all addressed; 81b1d61); small follow-up dispatched (log throttle, 429 global, idempotent DELETE, opId on DB failure, sync throw in later())
+Task 18g: follow-up 214190a (log throttle, 429 global, idempotent DELETE, opId on DB failure, sync throw caught)
+Task 18g: minor (deferred): real Pumble channel type / key-owner posting unverified (fake follows spec); retry state in memory; e2e failed once right after build, then 3/3 green (no failing test name captured) — watch for flakiness
+Task 18g: complete (commits 744d920..214190a, review clean). Owner checkpoint.
+## Zmiany właściciela 2026-10-22 → Task 18h (nowe until leaving screen / click; red markers; schedule chips without numer, with kategoria label). Pumble live: owner reports channel creation fails in real Pumble → debug with a live key (owner offered).
+Pumble live check with owner's test key (2026-10-22): createChannel needs type 'PRIVATE'/'PUBLIC' uppercase (lowercase → 403 "Allowed values are PUBLIC|PRIVATE") — the R32 lowercase instruction was wrong and caused the owner's "nie można utworzyć kanału"; getChannel returns {channel:{…channelType}} (wrapped) and 403 when missing; sendMessage asBot:true works in private channels (spec wrong); listMessages {messages}; myInfo.workspaceId present. Controller fix: uppercase type, unwrap getChannel, asBot:true, fake aligned to live behaviour. Test channel `etner-test-private` left in owner's Pumble (API has no delete).
+- Ruling R33 (supersedes R32 parts): channel type 'PRIVATE'; app messages sent as bot (asBot:true) with „Imię: ” prefix — verified live — cost: none.
+Task 18h: BASE 9caa774; impl ee5a1eb; review: Important — viewed days stamped with leave time (later change silently seen); fix round 1 dispatched
+Task 18h: fix round 1/5 (0143555) — finding 1 & 3 addressed; finding 2 'NOT ADDRESSED' was a controller wording error in the re-review prompt (implementation matches the original review: min-w-0 + truncate) → closed
+Task 18h: minor (deferred): change landing on a day while it is already on screen (after its 1 s stamp) stays „nowe” after leaving
+Task 18h: complete (commits 49185db..0143555, review clean)
+## Owner 2026-10-22: proceed to Task 19 (split 19a / 19b); lead → job emphasised; Task 18i Pumble faster refresh + channel files
+- Ruling R34: watched channels (job card open, client heartbeat every 15 s) polled every ~3 s, others every 30 s, max 20 watched — cost: ~400 req/min worst case.
+- Ruling R35: Pumble file schema/download auth undocumented and test key revoked → store raw `files` JSON now, show file names; finish image preview after a short live check with a temporary key from the owner — cost: one more owner step.
+Task 18i: implemented c8454ae (watch fast poll 3 s / others 30 s, max 20; files JSON stored; file info line „wrzucił zdjęcie/plik”). Live check with owner's 2nd temp key: Pumble file objects = {name, mimeType, path, thumbnails[{path,width,height}], publicPath:null}; files.pumble.com returns 401 without user session and with ApiKey → thumbnails impossible via API key (R35 resolved: info line only; code ignores `path`, so no broken images).
+## Owner 2026-10-22: predefined checklists per job kind (local-only ticking, suggested by the day's job) → planned as Task 18j, built when the owner sends the lists.
+Task 18i: fix round 1/5 (all addressed; 8f14e8d). Owner refinement (no file names; „<autor> wrzucił zdjęcie/plik” line) is the owner's 2026-10-22 message — supersedes the brief's "file name" line.
+Task 18i: minor (deferred): per-mode dedup → up to 2 pumble:obieg rows/hour per channel; files+attachments summed without dedup (no live sample with attachments); onConflictDoNothing without target
+Task 18i: complete (commits b9e232b..8f14e8d, review clean)
+Task 19a: review Approved (commits 6ce1867..08530a3); minors folded into the first commit of 19b: leady→zlecenia scope import via zlecenia service (module boundary), „Zrób zlecenie” pending state + optimistic lead status, server 409 on second to-job for the same lead, money „12.500” guard; deferred: Zadania row double tab stop, #jutro~ to crew outside options, admin default crew, task text length client check, #zl~ e2e replaced by #ld~
+Task 19a: complete
+Task 19b: BASE 8c4676d; impl 9662fd8..e31b759; review: Important — dictionary rename/remove breaks records using the value; empty status list allowed
+- Ruling R36: real rename — PUT /api/dict items carry id; changed wartosc updates the dict row in place and cascades the new text to every referencing record (jobs, leads, users, checklists, schedule kod, tasks, shopping) in one tx with changes; removing a value in use → 409 WARTOSC_W_UZYCIU; empty status dictionaries rejected; status_zakupu exactly 2 values — cost: wider tx on rename (rare admin action).
+Task 19b: fix round 1/5 (all addressed; 2780673)
+Task 19b: minor (deferred): renamed kod stays inside unapproved schedule draft proposals; lead_contacts.status snapshot not renamed; no test for rename+reorder+add in one PUT; admin screens save without offline queue
+Task 19b: complete (commits 8c4676d..2780673, review clean). Task 19 done → owner checkpoint (plan STOP after 19).
+## Owner notes 2026-10-22 (14 points) recorded as Task 19c — WAITING for owner's go (do not start).
+Owner go for Task 19c (2026-10-22, "limit reset, continue").
+- Ruling R37: 19c point 5 — contacts grouped by the lead status saved at contact time; a single contact can be soft-deleted by an admin — cost: regroup if owner meant something else.
+- Ruling R38: 19c point 6 — e-mail via SMTP (nodemailer; env SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM; recipient setting default etner@etner-instalacje.pl); missing config → skipped + one logError per day — cost: owner pastes SMTP secrets.
+- Split: 19c-A (points 5,6,7,8,9,12,13 – leady, klienci, zadania, e-mail) and 19c-B (points 1,2,3,4,10,11,14 – Pumble existing jobs, desktop density, na jutro, lists 18j, avatars) in parallel with disjoint files.
+Task 19c-B: review — Important: template matching breaks on category rename; rano push opens tomorrow; fix round 1 dispatched (+ sharp pixel limit, old avatar delete, pointer:fine density, awaitingChannel cleanup, Pumble author→user avatar, 1100/1280 px check)
+Task 19c-B: fix round 1/5 (all addressed; 274b8c2) — complete (commits 60834a9..274b8c2)
+Task 19c-B: minor (deferred): matching lists not shown next to the day in the schedule (only in Na jutro); Pumble retry state in memory (admin button after restart)
+Task 19c-A: review — Important: lead numbers still in diary entry + push title; fix round 1 dispatched (+ leady_email to Ustawienia, idempotent deletes, once-per-day mail guard, SMTP log, soft-deleted client, types)
+Task 19c-A: fix round 1/5 (all addressed; 4862f36) — complete (commits 4df041e..4862f36)
+Task 19c: complete. Owner checkpoint.
+## Owner 2026-10-27: lists for the next working day + modules „Utrzymanie samochodów”, „Stan narzędzi”, „Nietypowe rzeczy na magazynie” → Tasks 19d, 19e, 19f, 19g
+- Ruling R39: „następny dzień” = next day with isWorkday (skips weekends and PL holidays); used as Na jutro default day, list highlight day and the Na jutro menu badge — cost: on Friday the badge counts Monday's items.
+- Ruling R40: cars/tools/items are visible and usable by every user; admin edits cars (name, crew), schedules/deletes repairs; tools: everyone adds/edits/moves, delete admin+author; magazyn items: everyone adds/takes/returns, delete admin+author — cost: none if owner agrees, small perm change otherwise.
+- Ruling R41: repair mark is a schedule overlay computed from the car's current crew (not written into schedule entries); push „naprawa” goes to all active users — cost: crew reassignment moves past marks too.
+- Ruling R42: tool locations reference cars by id (+ Magazyn = no car), so renaming a car renames the location — cost: none.
+- Split: 19d (web na-jutro, badges) in parallel with 19e→19f→19g (one implementer, sequential, one migration per task to avoid drizzle journal clashes).
+Task 19d: BASE 2ba6107; impl 4f173a5 (nextWorkday in shared, Na jutro default day + badge, Listy on top); review dispatched; seed-demo next-workday fix handed to 19e implementer
+Task 19d: review Approved (commit 4f173a5)
+Task 19d: minor (deferred): default day not recomputed past midnight while screen open; no component test for list order; e2e demo.spec.ts:375 (#harm/<dzień>~<osoba>, iPhone) failure to recheck after 19e
+Task 19d: complete
+Task 19e: impl db61cb6, b071b09 (seed nextWorkday), 42f5906 (migration 0017); review dispatched
+Task 19f: impl 4af475f..d5cd4e3 (migration 0018); review dispatched
+Task 19g: impl d620376..51e1c9d (migration 0019) + 50dc1e5 (e2e date fix: 11.11 holiday has no cells on phone); review dispatched
+Task 19f: review Approved; minors: Select aria-describedby, placeholder „Wybierz miejsce”, seed cast 'as never', rename test checks only carId, tools of soft-deleted car (no car delete yet) — 2,3 to fold into next fix round
+Task 19g: review Approved; minors: giveBack without 'is taken' guard (fold into fix round), cleanup boundary test, seed order, e2e extraOff [] — rest deferred
+Task 19e: review Approved; polish round dispatched with 19f/19g minors (fault replay 404, impossible dates, nextWorkday dup, giveBack guard, Select aria/placeholder, seed cast); deferred: repairs re-fetch whole /api/schedule, no web unit test for overlay
+Task 19e–19g: polish round 1/5 (all addressed; 50882d6) — complete
+Tasks 19d–19g: controller verification — shared 15, web 57, server 198, build clean, e2e 50 passed / 2 skipped. Owner checkpoint.
+## Owner 2026-10-28: 10 notes after 19d–19g → Task 19h; then Task 20
+- Ruling R43: tools are admin-only for writes (supersedes R40 for narzędzia); workers search only.
+- Ruling R44: repair history = faults with naprawione_at set (admin „Naprawione”) or repair day before today; never auto-deleted; badge „Samochody” = active faults without repair day, for everyone.
+- Ruling R45: list highlight for a worker = jobs of his own schedule row that day (not crew-wide); admin = members of the selected crew.
+- Split: 19h-A (points 2,3,4,6,7,9 – samochody, narzędzia, magazyn, badges) and 19h-B (points 1,5,8,10 – na-jutro, harmonogram, leady) in parallel, disjoint files.
+Task 19h: impl A 63a8721..7da214d (migration 0020), B 1a6dca8..c632b29; push root cause = Render demo (DATA_DIR /tmp + no fixed VAPID) → render.yaml VAPID secrets sync:false + README; review Approved
+Task 19h: polish round dispatched (desktop double auta badge + aria, More.tsx dup, reschedule missed repair from history, shortcut comment NOT_FROM_LEAD, VAPID warning both keys)
+Task 19h: polish round 1/5 (all addressed; c639fd6) — complete. Controller verification: shared 15, web 58, server 199, build clean, e2e 50 passed / 2 skipped.
+## Owner 2026-10-28: proceed to Task 20 (a11y and performance).
+Task 20: impl 5d124ff..de24149 (axe 0 serious/critical all screens light+dark; JS 248.2 kB gzip; warm LCP 740–892 ms; cold 7.8 s — no compression); review dispatched
+Task 20: review Approved; polish round dispatched (a11y #wiecej + pracownik pass + no fixed wait, JobChip sr text, session start-order test if feasible)
+- Ruling R46: remembered account rendered before /api/me (warm LCP) — accepted: a revoked/demoted user sees already-cached data for ~1 round trip online (same data was visible offline anyway); outbox/sync stay gated — cost: brief stale admin screens after demotion.
+Task 20: minor (deferred): JS headroom ~2 kB (plan route-level splitting before next big feature); cold visit ~8 s on 3G (no compression; decide with SSE-safe compression at Task 23); preload of Harmonogram chunk on logged-out cold start
+Task 20: polish round 1/5 (all addressed; 7b8f785, 3a94b33) — complete. Controller verification: shared 15, web 59, server 199, build clean, size ≤ 250 kB, e2e 54 passed / 2 skipped.
+Owner checkpoint: next = Tasks 21–22 (need O3 exports of the old app: Firma_2026 sheets, app DB, Firestore read access) and 23 (needs O4: Hetzner, R2, domain).
+- Ruling R47 (owner 2026-10-28, app will grow): JS budget split — start (index-* + Harmonogram chunks) ≤ 150 kB gzip (now 121 kB), whole app ≤ 500 kB gzip (now 248 kB); replaces the single 250 kB limit of Task 20.
+## Owner 2026-10-28: real workbook Firma_2026_9.xlsx uploaded (session-only, never committed); structure analysis in .superpowers/sdd/…/firma-2026-analiza.md (no personal data). Basis for migration (21–22) and modules 2–4. Questions sent to owner.
+## Owner 2026-10-28 answers (workbook questions 1–7) → Task 19i (categories) + scope of Tasks 21–22 updated in plan
+- Ruling R48: Tasks 21–22 = workbook (xlsx) only for module-1 sheets; old app DB/Firestore/Drive photos later when access is given; costs/revenue with module 3.
+- Ruling R49: real data never on Render demo (DEMO=1 lists accounts with a known password) nor in the repo; trial migration only locally, report without personal data — cost: owner sees real data only after Task 23 (or a non-demo instance).
+- Ruling R50: new category colours Alarmy i monitoring #455a64, Smart home #00838f, Sprzedaż #6d4c41; templates Alarm/Kamery also match Alarmy i monitoring, Elektryka also Smart home — cost: owner may retune colours.
+- Split: 19i (slowniki seed, seed-demo, templates, tests) in parallel with 21→22 (new files under server/src/scripts/migrate-old only).
+Task 19i: impl e661562 (8 categories, templates, demo); controller review of the 15-line diff: matches brief/R50 — complete. Tests: shared 15, server 199, web 59, e2e 54/2 skipped (implementer run).
+Task 21: impl e3d9953; Task 22: impl aa71dc6 (real-file dry-run local: diff 0 on all sheets, 60 review items); controller privacy check: fixture tokens vs workbook — only town names match, no names/phones; review dispatched
+Task 21–22: review — Needs fixes: silent longest-hasło wins + substring matches; 222 text cells hidden behind grouped review rows; >2-part cells lose text; contact status at contact time dropped (R37); review screen missing
+- Ruling R51: „do przejrzenia” stored in a DB table (admin-only), shown in Ustawienia with a „przejrzane” tick, filled by the migration in the same transaction — cost: one table + one screen section.
+Task 21–22: fix round 1 dispatched (Important 1–3, R51, R37 + minors 4–15)
+Task 21–22: fix round 1/5 (ba09de8; migration 0021 przeniesienie); controller privacy check clean; re-review dispatched. Real dry-run: diff 0, entries zlecenie/kod/tekst 383/79/257, 420 review items.
+Task 21–22: re-review clean (all findings addressed) — complete (commits e3d9953..ba09de8). Controller verification: shared 15, web 61, server 220, build clean, size 121.29/248.94 kB, e2e 56 passed / 2 skipped.
+Task 21–22: minor (deferred): an „A / B” cell can yield two review items; checkDict skips shopping 'Kupione'; review list same createdAt (web sorts)
+Open owner questions: pay status of added absence codes (na żądanie, okolicznościowy = paid; bezpłatny = unpaid). Next: Task 23 (needs O4) or modules 3–4 specs.
+## Owner 2026-10-28: production on Render instead of Hetzner (< 10 USD/month, simple) → Task 23 rewritten
+- Ruling R52: one Blueprint with two services — etner-demo (free, modul-1) and etner (starter + 1 GB disk, branch `produkcja`); production updated only when the owner says „wydaj na produkcję” (Claude pushes to `produkcja`); new branch `produkcja` allowed for this (extends R8) — cost: one more branch.
+- Ruling R53: no terminal for the owner — first admin from ADMIN_* env on an empty DB; workbook migration via admin upload in Ustawienia (dry-run then apply, empty DB only, file kept in memory only, start passwords shown once) — cost: one endpoint + one screen section.
+Task 23: impl e3444d6..4a803c2 (env admin, upload import, render.yaml prod service + Litestream, README); controller check of Render blueprint spec: plan id 0.5c-512mb (starter not listed), autoDeployTrigger, sync:false prompted only at initial creation; review dispatched
+Task 23: review — Needs fixes: real import would queue Pumble channels for every migrated open job (in-memory awaitingChannel); plan `starter`/autoDeploy vs current spec; README flow ignores sync:false prompt-only-at-creation; duplicate Litestream secrets
+- Ruling R54: Litestream kept with zero extra secrets — reuses R2_KEY/R2_SECRET/R2_ENDPOINT and the photo bucket under prefix `db/`; tarball sha256-pinned; owner creates ONE fresh Blueprint (prompted for secrets) and deletes earlier ones — cost: DB copy shares the photo bucket.
+Task 23: fix round 1 dispatched
+Task 23: fix round 1/5 (274f703..9176084); re-review dispatched
+Task 23: re-review clean; controller folded the 2 restore-swap minors (timestamped aside copy, SQLite header check). Verification: shared 15, web 61, server 227, build clean, e2e 56 passed / 2 skipped. Task 23 code complete. Branch `produkcja` not yet created (needs owner's explicit go — first production release). Then STOP: owner deploys the Blueprint, pastes secrets, imports the workbook, checks phones.
+- Ruling R55 (owner can't run npx): VAPID keys auto-generated once into DATA_DIR/vapid.json in every mode (prod disk is persistent); VAPID_* removed from prod render.yaml; env still overrides — cost: losing the disk means re-enabling push on phones.
+## Owner 2026-10-28: „puszczaj na produkcję”; app not in use yet → every finished change goes to `produkcja` immediately (Ruling R56, until the owner says otherwise); owner creates a fresh Blueprint, old ones unused.
+## Owner 2026-10-28: production live; 12 notes → Task 24 (points 2 data check, 6 dictionary change are owner actions in the app; 7 and 12 incomplete – asked)
+- Ruling R57: „Gdzie jedziesz” switches at 16:00 to the next working day (R39), labelled „Jutro” or the weekday name.
+- Ruling R58: duplicate clients merged by an admin action (suggested pairs + manual), moving jobs/leads/sites/contacts, soft-deleting the duplicate — not an automatic merge.
+- Split: 24-A (push-sw, manifest, harmonogram, zlecenia list, badges) and 24-B (dziennik viewer + delete, klienci merge) in parallel, disjoint files.
+Hotfix 2026-10-28 (owner: Render 'exceeded memory limit' e-mail): makeVariants decoded the full photo to raw just to read dimensions and ran resizes in parallel; now metadata-only dims (+pixel limit check), serial queue, sharp.cache(false)/concurrency(1), MALLOC_ARENA_MAX=2 in prod env. Local measure: 5 parallel 27 MP uploads 161 MB RSS (before: 3 parallel 266 MB). Cherry-picked alone onto produkcja (cbe9955) to keep unreviewed 24-A/B work off production.
+Task 24-B: review Approved; polish c50ee52 (delete reaches workers trimmed, notes appended, comment) — complete
+Task 24-A: review — Needs fixes: „Gdzie jedziesz” memo never re-evaluates the 16:00 cut-off while the app stays open; fix round 1 dispatched
+- R57 refinement (accepted): after 16:00 the card shows the first day with the person's entries from tomorrow on (empty weekends/holidays drop out; a Saturday with work is shown).
+Task 24-A: minor (deferred): SW focuses the first in-scope window (tab vs PWA); old windows without the message listener only focus until updated; system change keeps previous author; re-snapshot drops _by (unseen others' changes lose „nowe” once); admin Na jutro badge only in Więcej on phone; flaky iPhone „na jutro” timeout and order-dependent harmonogram „nowe” e2e
+Task 24-A: fix round 1/5 (8ee1f1f) — clock-driven „Gdzie jedziesz”, long category wrap — complete. Task 24 controller verification: shared 15, web 66, server 234, build clean, e2e 63 passed / 3 skipped. Released to produkcja (R56).
+## Owner 2026-10-28: point 7 = P1 task badge; 12 = nothing; absence codes „na żądanie”, „okolicznościowy” removed, „bezpłatny” unpaid → Task 25
+- Ruling R59: removing a dictionary value in use offers „Zamień na…” (cascade like rename R36, then delete) — owner removes the two codes himself in Ustawienia → Słowniki (no direct production DB access) — cost: one dialog + one endpoint option.
+Task 25: impl 774a287, 7d0d4a8; review Approved; controller folded minors 1 (Object.hasOwn) and 5 (doc) — complete. Tests shared 15, web 67, server 236, build clean; e2e 65/3 skipped (implementer run). Released to produkcja.
+Task 25: minor (deferred): soft-deleted rows / lead_contacts.status snapshot / unapproved schedule drafts keep the removed value (drafts fail loudly on approval); core→features import of isDone; no test for chain A→B with B removed
+Owner 2026-10-28: repair day shown in Na jutro for the car's crew (crewRepairs + banner linking #auta~fault) — done by controller, unit test + screenshot; released. Next: final whole-branch review of module 1 (SDD), then module order decision (2 Paszport / 3 Finanse / 4 Płace).
+Owner 2026-10-28: admin menu order Harmonogram, Zlecenia, Leady, Zakupy; jobs sorted by termin month desc (none last), then first schedule day asc (none after), month headers — Ruling R60: „najświeższe na górze” read as latest termin month first — cost: flip comparator if owner meant the current month first. Released.
+Owner 2026-10-28: R60 corrected — oldest termin month first (owner misspoke). Bug: a second admin on the same device saw no „nowe” for another admin's diary entry — job „seen” keys were per device; now per user (`seen:<user>:<job>`, `seen0:<user>`), first run of a user on a device = now − 3 days — Ruling R61 — cost: after release every user sees others' changes from the last 3 days as „nowe” once. e2e added; full e2e 67 passed / 3 skipped. Released.
+Deferred: snapshot records have no `_by`, so job-field changes by others made before a fresh login are not „nowe” (diary entries are, via authorId).
+## Owner 2026-10-28: per-item „nowe” on the job card (entries, scope, Pumble, changed fields) → Task 26; Ruling R62: field-level „nowe” from a client-side version history (_hist ≤5 for jobs/clients/sites) — cost: none after fresh login (no history), slightly bigger local store.
+- Ruling R63 (owner: markers after logout and on other computers): „seen” stored server-side per user (job_seen + baseline), field changes computed server-side from the changes table through the same per-user visibility trimming; local data only as offline fallback — cost: one table, two endpoints.
+Task 26: impl de75337, 4e92e40 (migration 0022 job_seen), 104592d, 3079156 (Leady badge); review dispatched. Earlier: 4dba418 (Użytkownicy/Ustawienia only in Więcej on desktop) cherry-picked alone to produkcja.
+## Owner 2026-10-29: cyclic tasks need „cykliczność” + next termin on done (feature existed since 19c; migrated tasks have no cycle) and compact Leady list like Zlecenia → Task 27 (UI: default „co tydzień”, group „Cykliczne” auto-ticks, warning for cyclic without cycle; Leady desktop compact rows).
+Task 26: review — Needs fixes: card fixes since/posts markSeen before first sync (fresh login on a deep-linked card overwrites server seen → no „nowe”); fix round 1 dispatched with minors 2,3,5–9
+Task 27: impl 784a04b (Leady desktop compact), b9e5141 (cyclic UX); controller review (diff + screenshot) OK; cherry-picked to produkcja with typecheck + unit tests in a worktree.
+Task 26: fix round 1/5 (ec72565) re-review clean; controller folded the „waits forever after re-login with open stream” minor (sync.cycle sets tried when es open) — complete. Verification: shared 15, web 79, server 241, build clean, e2e 71 passed / 3 skipped. Released (merge of produkcja cherry-picks).
+Task 26: minor (deferred): 60 s server skip can resurface a change seen live within that window as „nowe”; visits shorter than the first sync aren't recorded; no test for /api/seen 413
+## Owner 2026-10-29: final whole-branch review of module 1 first, then decide next module. Final review dispatched (base 312a013, head b3b002c).
+Final review: With fixes — no Critical; Important: (1) role/perms/ekipa change keeps old data (SSE user frozen, phone store not cleared), (2) inactive users still get push/Pumble, (3) DB restore silently breaks phone sync. One fix dispatch with selected minors (idempotent deletes, non-blocking push + timeout, import emptiness before parse, JSON body limit, avatars in backup, graceful shutdown, error codes, security headers, sliding sessions, pruning op_ids/errors).
+- Ruling R64: skipped from the final review — admin-check unification (style only), ADMIN_PASSWORD note (README already says remove it); `changes` never pruned (sync history) — cost: table grows slowly.
+Final fix round (4d06b6b..55aea44): all 3 Important + listed minors addressed; scoped re-review dispatched
+Final fix round: scoped re-review — all addressed; controller folded minors (avatar backup own cursor incl. old avatars; catchUp generation guard against stale response after resync). Verification: shared 15, web 85, server 252, build clean, e2e 71 passed / 3 skipped. Released to produkcja.
+Final review deferred minors: op_ids replay after 30 days not deduped; multipart content-type skips JSON limit (logged-in only); cookie renewal lost on a 403 response; multi-tab resync (T17/T18).
+## Module 1 complete (Tasks 1–27 + final review). Next: owner chooses module 2 (Paszport) / 3 (Finanse) / 4 (Płace).
+## Owner 2026-10-29: passport (module 2) paused after the first question; Task 28 transposed schedule on desktop approved (bounded, in-chat design).
+Task 28: impl 6ba0d1e; controller review (screenshots week/month 1440/1100, e2e incl. new layout test + a11y) OK; folded month-title truncation fix. Verification: shared 15, web 85, server 252, build clean, e2e 72 passed / 4 skipped. Released.
+## Module 2 (Paszport) brainstorming 2026-10-29: owner goal A+B (service reminders + client documentation); passport per client, sub-folder per job category, montaż+serwis in one folder, documents (PDF, invoices, settlement note), editable service sheet, QR label printable from phone (logo, contacts), access from client and job. Concept mockups sent (scratchpad/mock). Awaiting answers before spec; nothing implemented.
+Module 2: concept approved by owner 2026-10-29; spec written docs/superpowers/specs/2026-10-29-etner-modul-2-paszport-design.md — awaiting owner review (no implementation).
+Owner 2026-10-30: Render 70% of 500 free pipeline minutes — cause: every push (incl. ledger-only) to modul-1 and produkcja built both services. Fix: buildFilter ignoredPaths docs/** and **/*.md on both services; from now on doc-only commits go to the working branch only; recommend turning off/deleting etner-demo autodeploy (owner decision).
+Owner 2026-10-30: 8 Blueprint instances (16 services) found in Render; demo service removed from render.yaml (owner: not needed); owner cleans up duplicates (disconnect blueprint, then delete services).

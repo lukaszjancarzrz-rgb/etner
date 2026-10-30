@@ -1,0 +1,167 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1792556233752,
+      "tag": "0000_mature_hercules",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792557151701,
+      "tag": "0001_true_black_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792557455755,
+      "tag": "0002_same_shocker",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792557825488,
+      "tag": "0003_short_thor_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792558022036,
+      "tag": "0004_mighty_gladiator",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792558598015,
+      "tag": "0005_outstanding_jocasta",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792558783808,
+      "tag": "0006_steep_vanisher",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1792559214356,
+      "tag": "0007_regular_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792559820095,
+      "tag": "0008_lyrical_outlaw_kid",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1792586869659,
+      "tag": "0009_cute_grey_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792601194995,
+      "tag": "0010_good_ted_forrester",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1792601433526,
+      "tag": "0011_worthless_solo",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1792606411423,
+      "tag": "0012_kategorie_rodzaje",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1792610729208,
+      "tag": "0013_pumble",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1792681437084,
+      "tag": "0014_strong_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1792697771139,
+      "tag": "0015_zadania_cykl_klient",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1792698001587,
+      "tag": "0016_avatar_listy",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1793136745101,
+      "tag": "0017_samochody",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1793137229423,
+      "tag": "0018_narzedzia",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1793137468500,
+      "tag": "0019_magazyn",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1793165753428,
+      "tag": "0020_naprawione",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1793184205321,
+      "tag": "0021_przeniesienie",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1793222972447,
+      "tag": "0022_widziane",
+      "breakpoints": true
+    }
+  ]
+}

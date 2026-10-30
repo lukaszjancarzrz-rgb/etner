@@ -1,0 +1,102 @@
+import { nextWorkday } from '@etner/shared';
+import type { Rec } from './store.js';
+import { isDone } from '../features/zadania/model.js';
+import { isOverdue } from '../features/leady/model.js';
+
+/** Zmiana przez inną osobę (`_by` ze strumienia zmian); bez `_by` (snapshot) nie jest nowa. Też dla wersji z `_hist` na karcie. */
+export const byOther = (r: Rec, meId: string | undefined) => !r._tmp && !!r._by && r._by !== meId;
+/** Pojedyncze „nowe” (lista zleceń, menu i karta liczą tak samo): wpis dziennika, wiadomość Pumble, punkt zakresu nowsze niż `since`. */
+export const freshEntry = (e: Rec, meId: string | undefined, since: string) => !e._tmp && e.authorId !== meId && e.createdAt > since;
+export const freshPumble = (p: Rec, meId: string | undefined, since: string) => p.createdBy !== meId && p.createdAt > since;
+export const freshScope = (p: Rec, meId: string | undefined, since: string) => byOther(p, meId) && p.updatedAt > since;
+
+/**
+ * „Nowe” w zleceniach (jedno źródło dla listy i menu): wpisy dziennika innych osób, wiadomości Pumble innych osób, punkty
+ * zakresu i zlecenie zmienione przez inną osobę (`_by` ze strumienia zmian), nowsze niż `since(jobId)`.
+ * Rekord bez `_by` (snapshot przy pierwszej synchronizacji, przyszedł przed wersją z `_by`) nie jest nowy:
+ * inaczej własne zmiany (z innego urządzenia, z przeniesienia arkusza) liczyły się jako nowe.
+ * Zmiana samego zlecenia liczy się tylko dla admina (`jobRow`).
+ * Lista liczy cały wiersz zlecenia (każda zmiana po `since`, też samego kanału Pumble z `_by` poprzedniej osoby), a karta
+ * zaznacza tylko pola karty zmienione przez inną osobę – licznik na liście może więc być „1 nowy” bez znacznika na karcie.
+ */
+export function freshByJob(jobs: Rec[], entries: Rec[], scope: Rec[], meId: string | undefined, since: (jobId: string) => string, jobRow = true, pumble: Rec[] = []): Map<string, number> {
+  const m = new Map<string, number>();
+  const s = new Map<string, string>();
+  const at = (id: string) => s.get(id) ?? (s.set(id, since(id)), s.get(id)!);
+  const bump = (id: string) => m.set(id, (m.get(id) ?? 0) + 1);
+  for (const e of entries) if (e.ownerType === 'job' && freshEntry(e, meId, at(e.ownerId))) bump(e.ownerId);
+  for (const p of pumble) if (freshPumble(p, meId, at(p.jobId))) bump(p.jobId);
+  for (const p of scope) if (freshScope(p, meId, at(p.jobId))) bump(p.jobId);
+  // pracownik (jobRow=false): wiersz zlecenia pomijamy, bo zmiana mogła dotyczyć tylko uwag admina
+  if (jobRow) for (const j of jobs) if (byOther(j, meId) && j.updatedAt > at(j.id)) bump(j.id);
+  return m;
+}
+
+/** Na jutro: niezabrane na następny dzień roboczy (Warszawa); pracownik tylko swojej ekipy, admin wszystkich. */
+export function naJutroCount(items: Rec[], today: string, me: { role: string; ekipa?: string | null } | null | undefined, extraOff: string[] = []): number {
+  if (!me) return 0;
+  const jutro = nextWorkday(today, extraOff);
+  return items.filter((i) => !i.zabrane && i.dzien === jutro && (me.role === 'admin' || i.ekipa === me.ekipa)).length;
+}
+
+/**
+ * Harmonogram: dzień → najpóźniejsza zmiana wpisów mojego wiersza (admin bez wiersza: wszystkich osób).
+ * Własne zmiany (zatwierdzone przeze mnie) pomijamy; dni przed `from` też (stare obejrzenia są czyszczone).
+ * shortcut: wyczyszczona komórka znika ze sklepu i nie jest liczona; liczyć usunięcia, gdy synchronizacja zacznie je przechowywać.
+ */
+export function changedDays(entries: Rec[], people: Rec[], me: { id: string; role: string } | null | undefined, from = ''): Map<string, string> {
+  const m = new Map<string, string>();
+  if (!me) return m;
+  const mine = new Set(people.filter((p) => p.userId === me.id).map((p) => p.id));
+  const all = !mine.size && me.role === 'admin';
+  if (!mine.size && !all) return m;
+  for (const e of entries) {
+    if (e._tmp || e.dzien < from || e.createdBy === me.id || (!all && !mine.has(e.personId))) continue;
+    if (e.updatedAt > (m.get(e.dzien) ?? '')) m.set(e.dzien, e.updatedAt);
+  }
+  return m;
+}
+
+/** Zmienione dni, których po zmianie nie było widać na ekranie (`seen(dzien)`: ostatnie obejrzenie dnia). */
+export const unseenDays = (changed: Map<string, string>, seen: (dzien: string) => string): string[] =>
+  [...changed].filter(([d, at]) => at > seen(d)).map(([d]) => d).sort();
+
+/** Dni obejrzane na ekranie harmonogramu: zapis „widziane” dopiero przy wyjściu z ekranu (`flush`), żeby „nowe” zostało na ekranie. */
+export class ViewedDays {
+  private days = new Map<string, string>();
+  /** Dzień obejrzany o `at` (ISO); późniejsze obejrzenie nadpisuje wcześniejsze. */
+  add(d: string, at = new Date().toISOString()) { this.days.set(d, at); }
+  delete(d: string) { this.days.delete(d); }
+  /** Zapisuje obejrzane dni z czasem ostatniego obejrzenia (`mark`) i czyści; zmiana późniejsza niż obejrzenie zostaje „nowa”. */
+  flush(mark: (d: string, at: string) => void): string[] {
+    const out = [...this.days].sort(([a], [b]) => (a < b ? -1 : 1));
+    this.days.clear();
+    for (const [d, at] of out) mark(d, at);
+    return out.map(([d]) => d);
+  }
+}
+
+/** Klucze `harm-day:<user>:<dzień>` z dniem przed `cut` (do usunięcia z localStorage). */
+export const staleDayKeys = (keys: string[], cut: string): string[] => keys.filter((k) => k.startsWith('harm-day:') && k.slice(-10) < cut);
+
+/** Zakupy: admin widzi liczbę „Do kupienia” (pierwszy status słownika), pracownik nic. */
+export const zakupyCount = (items: Rec[], firstStatus: string | undefined, admin: boolean): number =>
+  admin && firstStatus ? items.filter((i) => i.status === firstStatus).length : 0;
+
+/** Samochody (R44): usterki bez dnia naprawy i nieoznaczone „Naprawione”, dla wszystkich. */
+export const autaCount = (faults: Rec[]): number => faults.filter((f) => !f.naprawaDzien && !f.naprawioneAt).length;
+
+/** Zadania (admin): otwarte z priorytetem 1. */
+export const zadaniaCount = (tasks: Rec[], admin: boolean): number => (admin ? tasks.filter((t) => t.priorytet === 1 && !isDone(t)).length : 0);
+
+/** Leady (admin): zaległe kontakty, ta sama reguła co sekcja „Zaległe kontakty” na ekranie Leady. */
+export const leadyCount = (leads: Rec[], group: (status: string) => string, today: string, admin: boolean): number =>
+  admin ? leads.filter((l) => isOverdue(l, group(l.status), today)).length : 0;
+
+const zaleglych = (n: number) => (n === 1 ? 'zaległy kontakt' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zaległe kontakty' : 'zaległych kontaktów');
+
+/** Dopisek licznika do nazwy pozycji menu dla czytnika (cała nazwa w sr-only, bez spacji przed przecinkiem): Samochody i Więcej – usterki bez terminu, Zadania – priorytet 1, Leady – zaległe kontakty, reszta – nowości. */
+export const badgeLabel = (screen: string, n: number) => `, ${n} ${screen === 'auta' || screen === 'wiecej' ? 'bez terminu naprawy' : screen === 'zad' ? 'z priorytetem 1' : screen === 'leady' ? zaleglych(n) : 'nowe'}`;
+
+/** „99+” powyżej 99. */
+export const badgeText = (n: number) => (n > 99 ? '99+' : String(n));

@@ -1,0 +1,14 @@
+# Ciągła kopia bazy do R2: ten sam bucket i klucz co zdjęcia (R2_BUCKET, R2_KEY, R2_SECRET), osobny prefiks db/.
+# Aplikacja nie zapisuje ani nie kasuje plików pod db/ (core/files.ts odrzuca takie klucze). Wartości ze zmiennych środowiska, nie wpisujemy ich tutaj.
+access-key-id: ${R2_KEY}
+secret-access-key: ${R2_SECRET}
+
+dbs:
+  - path: ${DATA_DIR}/etner.db
+    replicas:
+      - type: s3
+        bucket: ${R2_BUCKET}
+        path: db
+        endpoint: ${R2_ENDPOINT}
+        region: auto
+        retention: 720h
