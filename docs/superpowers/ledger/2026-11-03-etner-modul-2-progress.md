@@ -9,3 +9,4 @@ Tasks 1–3: review — Needs fixes: seeded activity dictionary unsavable (dupli
 - Ruling R67: default service cycle lives in the dictionary (`dict.cykl_mies` on kategoria rows, seeded 6/12/12), editable in Ustawienia (Task 4) — replaces the name-based default; migration 0023 amended (not released yet).
 - Ruling R68: category merge merges passport folders (children moved, source folder soft-deleted) instead of failing.
 Tasks 1–3: fix round 1/5 (e5f968c); re-review dispatched. Task 4 (screens) dispatched in parallel (web files).
+Tasks 1–3: re-review clean; controller folded 2 minors (old-client cyklMies wipe, empty PATCH) — complete (5640d1a..e5f968c + controller fix).
