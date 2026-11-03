@@ -145,6 +145,8 @@ export function canSeeAttachment(db: Db, user: User, a: AttachmentRow): boolean 
 
 export function patchAttachment(db: Db, userId: string, old: AttachmentRow, d: Partial<Pick<AttachmentRow, 'dlaKlienta' | 'typDok'>>): AttachmentRow {
   const set = Object.fromEntries(Object.entries(d).filter(([, v]) => v !== undefined));
+  // faktura zawsze wewnętrzna (właściciel 2026-11-03)
+  if ((d.typDok ?? old.typDok) === 'faktura') set.dlaKlienta = false;
   const row = db.update(attachments).set({ ...set, updatedAt: NOW() }).where(eq(attachments.id, old.id)).returning().get();
   recordChange(db, userId, 'attachments', old.id, 'update', old, row);
   return row;

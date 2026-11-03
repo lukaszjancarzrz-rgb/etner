@@ -144,9 +144,9 @@ function DocControls({ a, admin, mine }: { a: Rec; admin: boolean; mine: boolean
   const typEdit = admin || (mine && a.typDok !== 'faktura');
   return (
     <>
-      {typEdit ? <div className="w-44"><Select aria-label={`Typ dokumentu: ${a.nazwa}`} value={a.typDok ?? undefined} placeholder="Typ dokumentu" onValueChange={(typDok) => patch({ typDok })} options={typOptions(admin)} className="h-10 text-sm" /></div>
+      {typEdit ? <div className="w-44"><Select aria-label={`Typ dokumentu: ${a.nazwa}`} value={a.typDok ?? undefined} placeholder="Typ dokumentu" onValueChange={(typDok) => patch({ typDok, ...(typDok === 'faktura' && { dlaKlienta: false }) })} options={typOptions(admin)} className="h-10 text-sm" /></div>
         : a.typDok && <span className="text-sm text-ink-2">{TYP_LABEL[a.typDok]}</span>}
-      {admin && <KlientToggle on={!!a.dlaKlienta} onChange={(dlaKlienta) => patch({ dlaKlienta })} label="W paszporcie dla klienta" />}
+      {admin && a.typDok !== 'faktura' && <KlientToggle on={!!a.dlaKlienta} onChange={(dlaKlienta) => patch({ dlaKlienta })} label="W paszporcie dla klienta" />}
     </>
   );
 }

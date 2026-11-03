@@ -292,7 +292,7 @@ export function DocSheet({ a: a0, onClose }: { a: Rec; onClose: () => void }) {
   const admin = useIsAdmin();
   const canEdit = useCanEdit();
   const [ask, setAsk] = useState(false);
-  const typ = (v: string) => void updateVia('attachments', a.id, { typDok: v }, { kind: 'paszport', url: `/api/attachments/${a.id}`, method: 'PATCH', body: { typDok: v } }).catch(fail('Nie zmieniono typu'));
+  const typ = (v: string) => void updateVia('attachments', a.id, { typDok: v, ...(v === 'faktura' && { dlaKlienta: false }) }, { kind: 'paszport', url: `/api/attachments/${a.id}`, method: 'PATCH', body: { typDok: v } }).catch(fail('Nie zmieniono typu'));
   const klient = (v: boolean) => void updateVia('attachments', a.id, { dlaKlienta: v }, { kind: 'paszport', url: `/api/attachments/${a.id}`, method: 'PATCH', body: { dlaKlienta: v } }).catch(fail('Nie zapisano'));
   const remove = () => {
     void outbox.enqueue({ kind: 'paszport', url: `/api/folder-files/${a.id}`, method: 'DELETE', optimistic: (s) => s.remove('attachments', a.id) }).catch(fail('Nie usunięto pliku'));
@@ -304,7 +304,7 @@ export function DocSheet({ a: a0, onClose }: { a: Rec; onClose: () => void }) {
       <Sheet title={a.nazwa ?? 'Plik'} description="Typ dokumentu i widoczność w paszporcie.">
         <div className="grid gap-4">
           {typEdit && <Field label="Typ dokumentu">{(id) => <Select id={id} value={a.typDok ?? undefined} onValueChange={typ} placeholder="Wybierz typ" options={typOptions(admin)} />}</Field>}
-          {admin && <div><KlientToggle on={!!a.dlaKlienta} onChange={klient} label="W paszporcie dla klienta" /></div>}
+          {admin && a.typDok !== 'faktura' && <div><KlientToggle on={!!a.dlaKlienta} onChange={klient} label="W paszporcie dla klienta" /></div>}
           <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-4">
             {a.ownerType === 'teczka' && canEdit(a.authorId) && (ask
               ? <Button variant="danger" onClick={remove} autoFocus><Trash className="h-4 w-4" />Na pewno usunąć plik?</Button>
@@ -323,12 +323,12 @@ function UploadForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () 
   const me = useMe();
   const { files, busy, previews, buttons } = usePicker();
   const [typ, setTyp] = useState('projekt');
-  const [klient, setKlient] = useState(false);
+  const [klient, setKlient] = useState(true); // dodane w teczce: domyślnie w paszporcie (faktura zawsze wewnętrzna)
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!files.length) return;
     for (const f of files) {
-      const body = { ...target(t, siteId, t.kategoria), typDok: typ, dlaKlienta: admin && klient };
+      const body = { ...target(t, siteId, t.kategoria), typDok: typ, dlaKlienta: typ !== 'faktura' && (!admin || klient) };
       void createVia('attachments', { kind: 'paszport', url: '/api/folder-files', method: 'POST', body, files: [f.file], uploadsAs: 'uploadId' },
         { ownerType: 'teczka', ownerId: t.folder?.id ?? '', siteId, kategoria: t.kategoria, rodzaj: f.img ? 'zdjecie' : 'plik', nazwa: f.name, typDok: typ, dlaKlienta: body.dlaKlienta, _src: f.url, authorId: me?.id })
         .then(() => URL.revokeObjectURL(f.url), fail(`Nie dodano pliku ${f.name}`));
@@ -342,7 +342,7 @@ function UploadForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () 
           <div className="flex flex-wrap gap-2">{buttons}</div>
           {previews}
           <Field label="Typ dokumentu">{(id) => <Select id={id} value={typ} onValueChange={setTyp} options={typOptions(admin)} />}</Field>
-          {admin && <label className="flex min-h-11 cursor-pointer items-center gap-3 font-semibold"><Checkbox checked={klient} onCheckedChange={(v) => setKlient(v === true)} />W paszporcie dla klienta</label>}
+          {admin && typ !== 'faktura' && <label className="flex min-h-11 cursor-pointer items-center gap-3 font-semibold"><Checkbox checked={klient} onCheckedChange={(v) => setKlient(v === true)} />W paszporcie dla klienta</label>}
           <div className="flex justify-end gap-3 border-t border-line pt-4">
             <Button variant="secondary" onClick={onClose}>Anuluj</Button>
             <Button type="submit" disabled={!files.length || busy}><UploadSimple className="h-5 w-5" />Dodaj {files.length > 1 ? `(${files.length})` : ''}</Button>

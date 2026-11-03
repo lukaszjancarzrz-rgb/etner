@@ -337,6 +337,27 @@ describe('paszport – urządzenia, karta serwisowa, dokumenty', () => {
     expect((await s.app.request(`/api/attachments/${inst}/file`, req(s.worker2, 'GET'))).status).toBe(302);
     expect((await s.app.request(`/api/attachments/${fv}/file`, req(s.worker2, 'GET'))).status).toBe(404);
   });
+
+  it('pliki i zdjęcia dodane w teczce: domyślnie w paszporcie dla klienta; faktura zawsze wewnętrzna', async () => {
+    const s = await setup();
+    const file = (cookie: string, uploadId: string, over: Record<string, unknown> = {}) =>
+      call(s, cookie, 'POST', '/api/folder-files', { siteId: s.site.id, kategoria: 'Klimatyzacja', uploadId, typDok: 'instrukcja', ...over });
+    expect((await file(s.worker, await upload(s, s.worker, pdf(), 'i.pdf'))).body).toMatchObject({ dlaKlienta: true });
+    expect((await file(s.admin, await upload(s, s.admin, pdf(), 'p.pdf'), { dlaKlienta: false })).body).toMatchObject({ dlaKlienta: false });
+    const fv = (await file(s.admin, await upload(s, s.admin, pdf(), 'fv.pdf'), { typDok: 'faktura', dlaKlienta: true })).body;
+    expect(fv).toMatchObject({ typDok: 'faktura', dlaKlienta: false });
+    expect((await call(s, s.admin, 'PATCH', `/api/attachments/${fv.id}`, { dlaKlienta: true })).body).toMatchObject({ dlaKlienta: false });
+    const doc = (await file(s.admin, await upload(s, s.admin, pdf(), 'o.pdf'))).body;
+    expect((await call(s, s.admin, 'PATCH', `/api/attachments/${doc.id}`, { typDok: 'faktura' })).body).toMatchObject({ typDok: 'faktura', dlaKlienta: false });
+    const photo = await upload(s, s.worker);
+    await call(s, s.worker, 'POST', '/api/service-entries', { siteId: s.site.id, kategoria: 'Klimatyzacja', dzien: '2026-11-03', dlaKlienta: true, uploadIds: [photo] });
+    expect(s.deps.db.$client.prepare(`select dla_klienta d from attachments where id = '${photo}'`).get()).toEqual({ d: 1 });
+    // dziennik zlecenia bez zmian: domyślnie wewnętrzne
+    const j = job(s, 'Klimatyzacja');
+    const dp = await upload(s, s.admin);
+    expect((await diary(s, s.admin, j.id, [dp])).status).toBe(200);
+    expect(s.deps.db.$client.prepare(`select owner_type o, dla_klienta d from attachments where id = '${dp}'`).get()).toEqual({ o: 'entry', d: 0 });
+  });
 });
 
 describe('paszport – pliki: typ dokumentu, dla klienta, usuwanie', () => {

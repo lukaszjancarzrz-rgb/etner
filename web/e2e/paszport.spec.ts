@@ -140,10 +140,14 @@ test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie wi
   await docs.getByRole('button', { name: 'Plik', exact: true }).click();
   const dlg = page.getByRole('dialog', { name: 'Dodaj plik do teczki' });
   await dlg.locator('input[data-file]').setInputFiles(pdf(`faktura-${t}.pdf`));
+  // dodane w teczce: domyślnie w paszporcie dla klienta; faktura zawsze wewnętrzna (bez przełącznika)
+  await expect(dlg.getByRole('checkbox', { name: 'W paszporcie dla klienta' })).toBeChecked();
   await dlg.getByLabel('Typ dokumentu').click();
   await page.getByRole('option', { name: 'Faktura' }).click();
+  await expect(dlg.getByRole('checkbox', { name: 'W paszporcie dla klienta' })).toHaveCount(0);
   await dlg.getByRole('button', { name: /^Dodaj/ }).click();
   await expect(docs.getByRole('listitem').filter({ hasText: `faktura-${t}.pdf` })).not.toContainText('wysyłanie');
+  await expect(docs.getByRole('listitem').filter({ hasText: `faktura-${t}.pdf` })).not.toContainText('dla klienta');
   await docs.getByRole('button', { name: /Rozliczenie \(notatka\)/ }).click();
   await page.getByLabel('Notatka z rozliczeniem').fill(`Zaliczka ${t}`);
   await page.getByRole('button', { name: 'Zapisz', exact: true }).click();

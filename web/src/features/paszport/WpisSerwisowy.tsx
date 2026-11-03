@@ -96,7 +96,7 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
     } else {
       const id = tmpId(), now = new Date().toISOString();
       const folderTmp = t.folder ? undefined : tmpId();
-      const extra = sent.map((f, i) => ({ entity: 'attachments', rec: { id: `${id}-${i}`, ownerType: 'service', ownerId: id, rodzaj: 'zdjecie', nazwa: f.name, _src: f.url, createdAt: now } }));
+      const extra = sent.map((f, i) => ({ entity: 'attachments', rec: { id: `${id}-${i}`, ownerType: 'service', ownerId: id, rodzaj: 'zdjecie', nazwa: f.name, dlaKlienta: true, _src: f.url, createdAt: now } }));
       // offline bez teczki: teczka tymczasowa z terminem (prawdziwa przychodzi z synchronizacji)
       if (folderTmp) extra.push({ entity: 'passport_folders', rec: { id: folderTmp, siteId, kategoria, nastepnySerwis: nextDay || null, cyklMies: cykl ?? null, przypomnienia: true, createdAt: now } as never });
       const f0 = t.folder;

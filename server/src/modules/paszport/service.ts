@@ -229,7 +229,7 @@ export function createEntry(db: Db, by: string, d: Omit<ServiceEntryCreate, 'opI
   const now = NOW();
   const row = db.insert(serviceEntries).values({ ...clean(f), dzien: f.dzien, dlaKlienta: f.dlaKlienta, id: newId(), folderId: folder.id, authorId: by, createdAt: now, createdBy: by, updatedAt: now }).returning().get();
   recordChange(db, by, 'service_entries', row.id, 'create', null, row);
-  dziennik.attach(db, by, ups, 'service', row.id);
+  dziennik.attach(db, by, ups, 'service', row.id, { dlaKlienta: true }); // zdjęcia dodane w teczce: domyślnie w paszporcie
   if (nastepnySerwis !== undefined && nastepnySerwis !== folder.nastepnySerwis) updateFolder(db, by, folder.id, { nastepnySerwis });
   return row;
 }
@@ -240,7 +240,7 @@ export function updateEntry(db: Db, by: string, old: ServiceEntryRow, d: Omit<Se
   const ups = dziennik.checkUploads(db, by, uploadIds ?? []);
   const row = db.update(serviceEntries).set({ ...clean(f), updatedAt: NOW() }).where(eq(serviceEntries.id, old.id)).returning().get();
   recordChange(db, by, 'service_entries', old.id, 'update', old, row);
-  dziennik.attach(db, by, ups, 'service', old.id);
+  dziennik.attach(db, by, ups, 'service', old.id, { dlaKlienta: true });
   return row;
 }
 
@@ -257,5 +257,5 @@ export function removeEntry(db: Db, by: string, old: ServiceEntryRow): void {
 export function addFolderFile(db: Db, by: string, d: Omit<FolderFile, 'opId'>): dziennik.AttachmentRow {
   const ups = dziennik.checkUploads(db, by, [d.uploadId]);
   const folder = folderFor(db, by, d);
-  return dziennik.attach(db, by, ups, 'teczka', folder.id, { typDok: d.typDok, dlaKlienta: d.dlaKlienta })[0]!;
+  return dziennik.attach(db, by, ups, 'teczka', folder.id, { typDok: d.typDok, dlaKlienta: d.typDok !== 'faktura' && (d.dlaKlienta ?? true) })[0]!;
 }
