@@ -264,6 +264,7 @@ const DICT_HINT: Record<string, string> = {
   status_zakupu: 'Dokładnie dwie wartości: pierwsza = do kupienia, druga = kupione.',
   ekipa: '„mieszane” to zlecenie dla kilku ekip.',
   dzien_wolny: 'Dodatkowe dni wolne poza świętami, np. 2026-12-24.',
+  kategoria: 'Cykl serwisu: ile miesięcy do następnego serwisu w nowej teczce kategorii (puste = bez cyklu).',
 };
 const GRUPA_LABEL: Record<string, string> = { aktualne: 'Aktualne', pozniej: 'Na później', zamkniete: 'Zamknięte' };
 const WITH_GRUPA = new Set(['status_zlecenia', 'status_leada']);
@@ -285,7 +286,14 @@ function Dictionaries() {
   // 409: usuwana wartość w użyciu → okno „Zamień na” (`zamien` = wybrane już zamiany tego zapisu)
   const [swap, setSwap] = useState<{ value: string; count: number; zamien: Record<string, string> } | null>(null);
   const [na, setNa] = useState('');
+  const kats = useMemo(() => dict.filter((d) => d.rodzaj === 'kategoria').sort((a, b) => a.kolejnosc - b.kolejnosc).map((d) => d.wartosc as string), [dict]);
+  const [kat, setKat] = useState<string>(''); // czynności serwisowe: lista jednej kategorii
+  const czyn = rodzaj === 'czynnosc_serwisowa';
+  const katNow = kat || kats[0] || '';
   const list = items ?? saved;
+  const shown = list.map((x, i) => ({ x, i })).filter(({ x }) => !czyn || x.kategoria === katNow);
+  /** Przesunięcie w widocznej liście (czynności: w obrębie kategorii). */
+  const moveShown = (k: number, d: -1 | 1) => { const a = shown[k]!.i, b = shown[k + d]!.i; const next = [...list]; [next[a], next[b]] = [next[b]!, next[a]!]; edit(next); };
   const edit = (next: Item[]) => { setItems(next); setErr(''); };
   const patch = (i: number, p: Partial<Item>) => edit(list.map((x, k) => (k === i ? { ...x, ...p } : x)));
   const switchTo = (r: string) => { setRodzaj(r); setItems(null); setErr(''); setNowa(''); setSwap(null); };
@@ -294,8 +302,9 @@ function Dictionaries() {
     e.preventDefault();
     const w = nowa.trim();
     if (!w) return;
-    if (list.some((x) => dictKey(rodzaj, x) === dictKey(rodzaj, { wartosc: w }))) return setErr('Taka wartość już jest');
-    edit([...list, { key: `n${Date.now()}`, wartosc: w, grupa: WITH_GRUPA.has(rodzaj) ? 'aktualne' : null, kolor: WITH_KOLOR.has(rodzaj) ? '#8896a5' : null, platne: rodzaj === 'kod_nieobecnosci' ? true : null }]);
+    const kategoria = czyn ? katNow : null;
+    if (list.some((x) => dictKey(rodzaj, x) === dictKey(rodzaj, { wartosc: w, kategoria }))) return setErr('Taka wartość już jest');
+    edit([...list, { key: `n${Date.now()}`, wartosc: w, grupa: WITH_GRUPA.has(rodzaj) ? 'aktualne' : null, kolor: WITH_KOLOR.has(rodzaj) ? '#8896a5' : null, platne: rodzaj === 'kod_nieobecnosci' ? true : null, kategoria, cyklMies: null }]);
     setNowa('');
   }
   async function save(zamien: Record<string, string> = {}) {
@@ -325,8 +334,9 @@ function Dictionaries() {
     <Card title="Słowniki" icon={BookOpen} hint="Listy wyboru w formularzach. Zmiana nazwy zmienia ją też we wszystkich zapisanych rekordach. Usuwając wartość w użyciu, wybierasz, na co ją zamienić.">
       <Field label="Słownik">{(id) => <Select id={id} value={rodzaj} onValueChange={switchTo} options={DICT_RODZAJE.map((r) => ({ value: r, label: DICT_LABEL[r] ?? r }))} />}</Field>
       {DICT_HINT[rodzaj] && <p className="rounded-xl bg-action/8 px-3 py-2 text-sm">{DICT_HINT[rodzaj]}</p>}
-      <ol className="grid gap-2" aria-label={`Wartości: ${DICT_LABEL[rodzaj]}`}>
-        {list.map((x, i) => (
+      {czyn && <Field label="Kategoria" hint="Lista do odhaczenia we wpisie serwisowym tej kategorii.">{(id, d) => <Select id={id} aria-describedby={d} value={katNow || undefined} onValueChange={(k) => { setKat(k); setErr(''); }} options={kats.map((k) => ({ value: k, label: k }))} />}</Field>}
+      <ol className="grid gap-2" aria-label={`Wartości: ${DICT_LABEL[rodzaj]}${czyn ? `, ${katNow}` : ''}`}>
+        {shown.map(({ x, i }, k) => (
           <li key={x.key} className="grid gap-2 rounded-xl border border-line p-2">
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] items-center gap-0.5 min-[560px]:gap-1">
               {WITH_KOLOR.has(rodzaj) && (
@@ -334,10 +344,17 @@ function Dictionaries() {
                   className="h-10 w-9 min-[560px]:w-10 cursor-pointer rounded-lg border border-line bg-card p-1" />
               )}
               <Input aria-label={`Wartość ${i + 1}`} value={x.wartosc} onChange={(e) => patch(i, { wartosc: e.target.value })} className={cn('h-11', !WITH_KOLOR.has(rodzaj) && 'col-span-2')} />
-              <Button variant="ghost" size="iconTight" aria-label={`W górę: ${x.wartosc}`} disabled={i === 0} onClick={() => edit(move(list, i, -1))}><ArrowUp className="h-5 w-5" /></Button>
-              <Button variant="ghost" size="iconTight" aria-label={`W dół: ${x.wartosc}`} disabled={i === list.length - 1} onClick={() => edit(move(list, i, 1))}><ArrowDown className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="iconTight" aria-label={`W górę: ${x.wartosc}`} disabled={k === 0} onClick={() => moveShown(k, -1)}><ArrowUp className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="iconTight" aria-label={`W dół: ${x.wartosc}`} disabled={k === shown.length - 1} onClick={() => moveShown(k, 1)}><ArrowDown className="h-5 w-5" /></Button>
               <Button variant="ghost" size="iconTight" aria-label={`Usuń: ${x.wartosc}`} onClick={() => edit(list.filter((_, k) => k !== i))} className="text-danger"><Trash className="h-5 w-5" /></Button>
             </div>
+            {rodzaj === 'kategoria' && (
+              <label className="flex min-h-10 items-center gap-2 pl-1 text-sm font-semibold">
+                Cykl serwisu
+                <Input inputMode="numeric" aria-label={`Cykl serwisu (miesiące): ${x.wartosc}`} value={x.cyklMies ?? ''} placeholder="brak" onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 3); patch(i, { cyklMies: Math.min(120, Number(v)) || null }); }} className="h-10 w-20 text-center" />
+                <span className="font-normal text-ink-2">mies.</span>
+              </label>
+            )}
             {(WITH_GRUPA.has(rodzaj) || rodzaj === 'kod_nieobecnosci') && (
               <div className="flex flex-wrap items-center gap-3 pl-1">
                 {WITH_GRUPA.has(rodzaj) && (
@@ -352,7 +369,7 @@ function Dictionaries() {
             )}
           </li>
         ))}
-        {!list.length && <li className="text-sm text-ink-2">Pusty słownik.</li>}
+        {!shown.length && <li className="text-sm text-ink-2">{czyn ? `Brak czynności dla kategorii ${katNow}.` : 'Pusty słownik.'}</li>}
       </ol>
       <form onSubmit={add} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <Input aria-label="Nowa wartość" value={nowa} onChange={(e) => setNowa(e.target.value)} placeholder="Nowa wartość" />
