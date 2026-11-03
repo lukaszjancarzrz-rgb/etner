@@ -103,7 +103,7 @@ describe('migracje z danymi', () => {
     expect(after('j2')).toMatchObject({ rodzaj: 'inne' });
     expect(Object.keys(after('l1')).sort()).toEqual(Object.keys(getTableColumns(leads)).sort());
     const k1 = after('k1');
-    expect(Object.keys(k1).sort()).toEqual(Object.keys(getTableColumns(dictT)).sort());
+    expect(Object.keys(k1).sort()).toEqual(Object.keys(getTableColumns(dictT)).filter((k) => k !== 'kategoria').sort()); // 0023: kategoria czynności
     expect(k1).toMatchObject({ wartosc: 'Rekuperacja', kolejnosc: 2, kolor: '#2e7d32', platne: null });
     expect(after(ids.map((x) => x.split(':')[1]!).find((id) => after(id).wartosc === 'przygotówka')!)).toMatchObject({ rodzaj: 'rodzaj_zlecenia', kolejnosc: 1, deletedAt: null });
   });

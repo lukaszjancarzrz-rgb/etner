@@ -12,10 +12,15 @@ import { dictRefs as zadania } from '../zadania/service.js';
 import { dictRefs as zakupy } from '../zakupy/service.js';
 import { dictRefs as zlecenia } from '../zlecenia/service.js';
 import { dictRefs as uzytkownicy } from '../uzytkownicy/service.js';
+import { dictRefs as paszport } from '../paszport/service.js';
+import { dictRefsFor } from '../../core/dict-refs.js';
+import { dict } from './schema.js';
 import { listAll, replace, ValueInUseError } from './service.js';
 
 // Moduły, których rekordy przechowują wartości słowników (zmiana nazwy idzie do nich, usunięcie używanej jest blokowane).
-const refs = [zlecenia, leady, uzytkownicy, naJutro, listy, harmonogram, zadania, zakupy, samochody];
+// czynności serwisowe trzymają nazwę kategorii w `dict.kategoria`
+const czynnosci = dictRefsFor('dict', dict, { kategoria: dict.kategoria });
+const refs = [zlecenia, leady, uzytkownicy, naJutro, listy, harmonogram, zadania, zakupy, samochody, paszport, czynnosci];
 const STATUSY = new Set(['status_zlecenia', 'status_leada', 'status_zadania', 'status_zakupu']);
 
 export function routes(app: Hono, { db }: AppDeps): void {
@@ -31,6 +36,10 @@ export function routes(app: Hono, { db }: AppDeps): void {
     if (STATUSY.has(rodzaj.data) && !values.length) throw new HTTPException(400, { message: 'Słownik statusów nie może być pusty' });
     // pierwszy = do kupienia, ostatni = kupione
     if (rodzaj.data === 'status_zakupu' && values.length !== 2) throw new HTTPException(400, { message: 'Statusy zakupów: dokładnie dwie wartości (do kupienia, kupione)' });
+    if (rodzaj.data === 'czynnosc_serwisowa') {
+      const kat = new Set(listAll(db).filter((d) => d.rodzaj === 'kategoria').map((d) => d.wartosc));
+      if (body.data.items.some((i) => i.kategoria && !kat.has(i.kategoria))) throw new HTTPException(400, { message: 'Nieznana kategoria czynności' });
+    }
     const user = c.get('user');
     try {
       return c.json(runOp(db, body.data.opId, user.id, () => replace(db, user.id, rodzaj.data, body.data.items, refs, body.data.zamien)).result);

@@ -11,10 +11,10 @@ export const diaryEntries = sqliteTable('diary_entries', {
   dlaKlienta: integer('dla_klienta', { mode: 'boolean' }).notNull().default(false),
 });
 
-/** owner_type NULL = plik wgrany, ale jeszcze niepodpięty do wpisu. */
+/** owner_type NULL = plik wgrany, ale jeszcze niepodpięty do wpisu; `teczka` = plik dodany w teczce paszportu (owner_id = passport_folders.id). */
 export const attachments = sqliteTable('attachments', {
   ...baseCols(),
-  ownerType: text('owner_type', { enum: ['entry', 'scope', 'device', 'service'] }),
+  ownerType: text('owner_type', { enum: ['entry', 'scope', 'device', 'service', 'teczka'] }),
   ownerId: text('owner_id'),
   rodzaj: text('rodzaj', { enum: ['zdjecie', 'plik'] }).notNull(),
   keyOrig: text('key_orig').notNull(),
@@ -27,4 +27,6 @@ export const attachments = sqliteTable('attachments', {
   h: integer('h'),
   dlaKlienta: integer('dla_klienta', { mode: 'boolean' }).notNull().default(false),
   authorId: text('author_id').notNull(),
+  /** Typ dokumentu (moduł 2); `faktura` widzi tylko admin. */
+  typDok: text('typ_dok', { enum: ['faktura', 'projekt', 'oferta', 'instrukcja', 'inne'] }),
 });

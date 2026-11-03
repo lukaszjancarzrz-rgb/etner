@@ -3,9 +3,18 @@ import { addDays, addMonths } from './dates.js';
 
 export const DICT_RODZAJE = [
   'status_zlecenia', 'status_leada', 'kategoria', 'ekipa', 'zrodlo', 'kod_nieobecnosci',
-  'grupa_zadan', 'status_zadania', 'rodzaj_zlecenia', 'status_zakupu', 'dzien_wolny',
+  'grupa_zadan', 'status_zadania', 'rodzaj_zlecenia', 'status_zakupu', 'dzien_wolny', 'czynnosc_serwisowa',
 ] as const;
 export type DictRodzaj = (typeof DICT_RODZAJE)[number];
+
+/** Typ dokumentu załącznika (moduł 2); faktury widzi tylko admin. */
+export const TYP_DOK = ['faktura', 'projekt', 'oferta', 'instrukcja', 'inne'] as const;
+export type TypDok = (typeof TYP_DOK)[number];
+
+// shortcut: domyślny cykl po nazwie kategorii; po zmianie nazwy kategoria traci domyślny cykl – przenieść do słownika, gdy właściciel zechce go ustawiać
+const CYKL_SERWISU: Record<string, number> = { Rekuperacja: 6, Klimatyzacja: 12, Fotowoltaika: 12 };
+/** Domyślny cykl serwisu teczki w miesiącach; null = bez cyklu. */
+export const defaultCycle = (kategoria: string): number | null => (Object.hasOwn(CYKL_SERWISU, kategoria) ? CYKL_SERWISU[kategoria]! : null);
 
 export const DICT_GRUPY = ['aktualne', 'pozniej', 'zamkniete'] as const;
 export type DictGrupa = (typeof DICT_GRUPY)[number];

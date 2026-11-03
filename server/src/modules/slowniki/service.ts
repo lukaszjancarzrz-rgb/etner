@@ -57,7 +57,7 @@ export function replace(db: Db, userId: string, rodzaj: DictRodzaj, items: DictP
   for (const [from, to] of swaps) for (const r of refs) r.rename(db, userId, rodzaj, from, to);
 
   items.forEach((it, kolejnosc) => {
-    const vals = { wartosc: it.wartosc, kolejnosc, grupa: it.grupa ?? null, platne: it.platne ?? null, kolor: it.kolor ?? null };
+    const vals = { wartosc: it.wartosc, kolejnosc, grupa: it.grupa ?? null, platne: it.platne ?? null, kolor: it.kolor ?? null, kategoria: it.kategoria ?? null };
     const old = matched[kolejnosc];
     if (!old) {
       const row = db.insert(dict).values({ id: newId(), rodzaj, ...vals, createdAt: now, createdBy: userId, updatedAt: now }).returning().get();

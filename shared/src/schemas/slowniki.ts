@@ -13,6 +13,8 @@ export const dictPutSchema = z.object({
     grupa: z.enum(DICT_GRUPY).nullish(),
     platne: z.boolean().nullish(),
     kolor: z.string().trim().min(1).nullish(),
+    /** Czynność serwisowa: kategoria, do której należy. */
+    kategoria: z.string().trim().min(1).nullish(),
   })),
   /** Usuwana wartość w użyciu → wartość z `items`, którą dostają jej rekordy (stara → nowa). */
   zamien: z.record(z.string(), z.string().trim().min(1)).optional(),

@@ -9,4 +9,6 @@ export const dict = sqliteTable('dict', {
   grupa: text('grupa', { enum: ['aktualne', 'pozniej', 'zamkniete'] }),
   platne: integer('platne', { mode: 'boolean' }),
   kolor: text('kolor'),
+  /** Rodzaj `czynnosc_serwisowa`: wartość słownika `kategoria`, do której należy czynność. */
+  kategoria: text('kategoria'),
 });

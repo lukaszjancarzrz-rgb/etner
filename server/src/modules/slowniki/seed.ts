@@ -1,5 +1,6 @@
-import { count } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { newId, type DictGrupa, type DictRodzaj } from '@etner/shared';
+import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import { firmy } from '../../core/schema-base.js';
 import { dict } from './schema.js';
@@ -7,10 +8,11 @@ import { seedTemplates } from '../na-jutro/service.js';
 import { seedCars } from '../samochody/service.js';
 
 // Najlepsze przypuszczenie (R15): prawdziwe listy Parametry nie były dostępne. Właściciel poprawia je tu lub w aplikacji.
-type Item = string | [wartosc: string, extra: { grupa?: DictGrupa; platne?: boolean; kolor?: string }];
+type Item = string | [wartosc: string, extra: { grupa?: DictGrupa; platne?: boolean; kolor?: string; kategoria?: string }];
 const g = (grupa: DictGrupa, ...w: string[]): Item[] => w.map((x) => [x, { grupa }]);
 const kod = (w: string, platne: boolean, kolor: string): Item => [w, { platne, kolor }];
 const kol = (w: string, kolor: string): Item => [w, { kolor }];
+const cz = (kategoria: string, ...w: string[]): Item[] => w.map((x) => [x, { kategoria }]);
 
 export const SEED: Record<DictRodzaj, Item[]> = {
   status_zlecenia: [
@@ -35,18 +37,31 @@ export const SEED: Record<DictRodzaj, Item[]> = {
   grupa_zadan: ['Firma', 'Klienci', 'Sprzęt'],
   status_zakupu: ['Do kupienia', 'Kupione'],
   dzien_wolny: [],
+  // P11 (moduł 2): robocze, właściciel ustandaryzuje w Ustawieniach
+  czynnosc_serwisowa: [
+    ...cz('Rekuperacja', 'Wymiana filtrów F7', 'Wymiana filtrów G4', 'Czyszczenie wymiennika', 'Kontrola odpływu skroplin', 'Dezynfekcja kanałów'),
+    ...cz('Klimatyzacja', 'Czyszczenie filtrów', 'Odgrzybianie', 'Kontrola ciśnienia i szczelności', 'Kontrola odpływu skroplin'),
+    ...cz('Fotowoltaika', 'Przegląd falownika', 'Kontrola zabezpieczeń DC/AC', 'Odczyt produkcji'),
+    ...cz('Elektryka', 'Pomiary instalacji', 'Kontrola zabezpieczeń'),
+  ],
 };
 
-/** Idempotentne: słowniki wstawiamy tylko do pustej tabeli, firmę tylko gdy nie ma żadnej. Bez wpisów w changes (klient startuje od snapshotu). */
+const LATE = ['czynnosc_serwisowa'];
+
+/**
+ * Idempotentne: słowniki wstawiamy do pustej tabeli bez wpisów w changes (klient startuje od snapshotu); firmę tylko gdy nie ma żadnej.
+ * Rodzaje dodane po starcie produkcji (LATE) dostają wartości w działającej bazie, gdy nie mają żadnego wiersza (usunięte też się liczą) – z wpisami w changes.
+ */
 export function seedBase(db: Db): void {
   const now = new Date().toISOString();
-  if (db.select({ n: count() }).from(dict).get()!.n === 0) {
-    for (const [rodzaj, items] of Object.entries(SEED)) {
-      items.forEach((it, kolejnosc) => {
-        const [wartosc, extra] = typeof it === 'string' ? [it, {}] : it;
-        db.insert(dict).values({ id: newId(), rodzaj, wartosc, kolejnosc, grupa: extra.grupa ?? null, platne: extra.platne ?? null, kolor: extra.kolor ?? null, createdAt: now, updatedAt: now }).run();
-      });
-    }
+  const fresh = db.select({ n: count() }).from(dict).get()!.n === 0;
+  for (const [rodzaj, items] of Object.entries(SEED)) {
+    if (!fresh && (!LATE.includes(rodzaj) || db.select({ n: count() }).from(dict).where(eq(dict.rodzaj, rodzaj)).get()!.n > 0)) continue;
+    items.forEach((it, kolejnosc) => {
+      const [wartosc, extra] = typeof it === 'string' ? [it, {}] : it;
+      const row = db.insert(dict).values({ id: newId(), rodzaj, wartosc, kolejnosc, grupa: extra.grupa ?? null, platne: extra.platne ?? null, kolor: extra.kolor ?? null, kategoria: extra.kategoria ?? null, createdAt: now, updatedAt: now }).returning().get();
+      if (!fresh) recordChange(db, null, 'dict', row.id, 'create', null, row);
+    });
   }
   if (db.select({ n: count() }).from(firmy).get()!.n === 0) {
     db.insert(firmy).values({ id: newId(), nazwa: 'ETNER', skrot: 'ETNER', prefiksZ: 'Z', prefiksL: 'L', createdAt: now, updatedAt: now }).run();

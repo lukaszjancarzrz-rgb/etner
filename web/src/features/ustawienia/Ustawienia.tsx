@@ -255,7 +255,7 @@ function ErrorLog() {
 const DICT_LABEL: Record<string, string> = {
   status_zlecenia: 'Statusy zleceń', status_leada: 'Statusy leadów', kategoria: 'Kategorie', ekipa: 'Ekipy', zrodlo: 'Źródła leadów',
   kod_nieobecnosci: 'Kody nieobecności', grupa_zadan: 'Grupy zadań', status_zadania: 'Statusy zadań', rodzaj_zlecenia: 'Rodzaje zleceń',
-  status_zakupu: 'Statusy zakupów', dzien_wolny: 'Dni wolne (RRRR-MM-DD)',
+  status_zakupu: 'Statusy zakupów', dzien_wolny: 'Dni wolne (RRRR-MM-DD)', czynnosc_serwisowa: 'Czynności serwisowe',
 };
 // Wartości, na których polega aplikacja (pozycja albo nazwa).
 const DICT_HINT: Record<string, string> = {
@@ -268,14 +268,14 @@ const DICT_HINT: Record<string, string> = {
 const GRUPA_LABEL: Record<string, string> = { aktualne: 'Aktualne', pozniej: 'Na później', zamkniete: 'Zamknięte' };
 const WITH_GRUPA = new Set(['status_zlecenia', 'status_leada']);
 const WITH_KOLOR = new Set(['kategoria', 'kod_nieobecnosci']);
-type Item = { key: string; id?: string; wartosc: string; grupa: string | null; kolor: string | null; platne: boolean | null };
+type Item = { key: string; id?: string; wartosc: string; grupa: string | null; kolor: string | null; platne: boolean | null; kategoria?: string | null };
 
 /** Edytor słowników: pełna lista wartości rodzaju, zapis jednym PUT (usunięte znikają miękko). */
 function Dictionaries() {
   const dict = useEntities('dict');
   const [rodzaj, setRodzaj] = useState<string>('kategoria');
   const saved = useMemo(() => dict.filter((d) => d.rodzaj === rodzaj).sort((a, b) => a.kolejnosc - b.kolejnosc)
-    .map((d): Item => ({ key: d.id, id: d.id, wartosc: d.wartosc, grupa: d.grupa ?? null, kolor: d.kolor ?? null, platne: d.platne ?? null })), [dict, rodzaj]);
+    .map((d): Item => ({ key: d.id, id: d.id, wartosc: d.wartosc, grupa: d.grupa ?? null, kolor: d.kolor ?? null, platne: d.platne ?? null, kategoria: d.kategoria ?? null })), [dict, rodzaj]);
   const [items, setItems] = useState<Item[] | null>(null); // null = bez zmian (pokazujemy zapisane)
   const [nowa, setNowa] = useState('');
   const [err, setErr] = useState('');
@@ -302,7 +302,7 @@ function Dictionaries() {
     if (new Set(vals).size !== vals.length) return setErr('Wartości w słowniku muszą być różne');
     setBusy(true);
     try {
-      const rows = await api<Rec[]>(`/api/dict/${rodzaj}`, { method: 'PUT', json: { opId: newId(), zamien, items: list.map((x, i) => ({ id: x.id, wartosc: vals[i], grupa: x.grupa, kolor: x.kolor, platne: x.platne })) } });
+      const rows = await api<Rec[]>(`/api/dict/${rodzaj}`, { method: 'PUT', json: { opId: newId(), zamien, items: list.map((x, i) => ({ id: x.id, wartosc: vals[i], grupa: x.grupa, kolor: x.kolor, platne: x.platne, kategoria: x.kategoria })) } });
       const keep = new Set(rows.map((r) => r.id));
       for (const d of dict) if (d.rodzaj === rodzaj && !keep.has(d.id)) store.remove('dict', d.id);
       for (const r of rows) store.put('dict', r);
