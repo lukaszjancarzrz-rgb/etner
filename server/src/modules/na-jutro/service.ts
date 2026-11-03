@@ -64,7 +64,7 @@ export function createTemplate(db: Db, userId: string | null, d: TemplateInput &
   return row;
 }
 
-export function updateTemplate(db: Db, userId: string, id: string, d: TemplateInput, del = false): TemplateRow | undefined {
+export function updateTemplate(db: Db, userId: string | null, id: string, d: TemplateInput, del = false): TemplateRow | undefined {
   const old = getTemplate(db, id);
   if (!old) return undefined;
   const now = new Date().toISOString();
