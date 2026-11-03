@@ -89,10 +89,10 @@ export function Diary({ ownerType, ownerId, highlight, disabled, since }: { owne
                   {ownerType === 'job' && !a._tmp && <DocControls a={a} admin={admin} mine={a.authorId === me?.id} />}
                 </div>
               ))}
-              {!e._tmp && ((admin && e.authorId) || canDelete(e)) && (
+              {/* R69: klient nie widzi wpisów dziennika, tylko zdjęcia i pliki („W paszporcie dla klienta” przy nich) */}
+              {!e._tmp && canDelete(e) && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-2">
-                  {admin && e.authorId && <KlientToggle on={!!e.dlaKlienta} onChange={(v) => void updateVia('diary_entries', e.id, { dlaKlienta: v }, { kind: 'dziennik', url: `/api/diary/${e.id}`, method: 'PATCH', body: { dla_klienta: v } }).catch((x: Error) => toast('Nie zapisano', { body: x.message, tone: 'error' }))} />}
-                  {canDelete(e) && <DeleteEntry id={e.id} files={files.length} />}
+                  <DeleteEntry id={e.id} files={files.length} />
                 </div>
               )}
             </li>
@@ -134,7 +134,7 @@ function DocControls({ a, admin, mine }: { a: Rec; admin: boolean; mine: boolean
   );
 }
 
-export function KlientToggle({ on, onChange, dark, label = 'Pokaż klientowi' }: { on: boolean; onChange: (v: boolean) => void; dark?: boolean; label?: string }) {
+export function KlientToggle({ on, onChange, dark, label = 'W paszporcie dla klienta' }: { on: boolean; onChange: (v: boolean) => void; dark?: boolean; label?: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)}
       className={cn('inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors duration-200', on ? (dark ? 'bg-ok text-ok-ink' : 'bg-ok/12 text-ok') : dark ? 'text-white/85 hover:bg-white/10' : 'text-ink-2 hover:bg-ink/5')}>

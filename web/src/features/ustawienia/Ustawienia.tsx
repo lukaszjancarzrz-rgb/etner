@@ -303,6 +303,7 @@ function Dictionaries() {
     const w = nowa.trim();
     if (!w) return;
     const kategoria = czyn ? katNow : null;
+    if (czyn && !kategoria) return;
     if (list.some((x) => dictKey(rodzaj, x) === dictKey(rodzaj, { wartosc: w, kategoria }))) return setErr('Taka wartość już jest');
     edit([...list, { key: `n${Date.now()}`, wartosc: w, grupa: WITH_GRUPA.has(rodzaj) ? 'aktualne' : null, kolor: WITH_KOLOR.has(rodzaj) ? '#8896a5' : null, platne: rodzaj === 'kod_nieobecnosci' ? true : null, kategoria, cyklMies: null }]);
     setNowa('');
@@ -371,10 +372,12 @@ function Dictionaries() {
         ))}
         {!shown.length && <li className="text-sm text-ink-2">{czyn ? `Brak czynności dla kategorii ${katNow}.` : 'Pusty słownik.'}</li>}
       </ol>
-      <form onSubmit={add} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-        <Input aria-label="Nowa wartość" value={nowa} onChange={(e) => setNowa(e.target.value)} placeholder="Nowa wartość" />
-        <Button type="submit" variant="secondary"><Plus className="h-5 w-5" weight="bold" />Dodaj</Button>
-      </form>
+      {czyn && !katNow ? <p className="text-sm text-ink-2">Najpierw dodaj kategorię w słowniku „Kategorie” – każda czynność należy do kategorii.</p> : (
+        <form onSubmit={add} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+          <Input aria-label="Nowa wartość" value={nowa} onChange={(e) => setNowa(e.target.value)} placeholder="Nowa wartość" />
+          <Button type="submit" variant="secondary"><Plus className="h-5 w-5" weight="bold" />Dodaj</Button>
+        </form>
+      )}
       {err && <p role="alert" className="text-sm font-semibold text-danger">{err}</p>}
       <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-4">
         {items && <Button variant="secondary" onClick={() => switchTo(rodzaj)}>Cofnij zmiany</Button>}
