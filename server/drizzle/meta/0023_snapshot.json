@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4bbc02d2-be6b-46d9-ba22-2269b60a8ad9",
+  "id": "2b32149d-dd20-4e06-9a71-77da050ec330",
   "prevId": "628c3ec7-188a-48a9-8432-62936ba2df82",
   "tables": {
     "changes": {
@@ -2782,6 +2782,13 @@
         "kategoria": {
           "name": "kategoria",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cykl_mies": {
+          "name": "cykl_mies",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

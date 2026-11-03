@@ -66,4 +66,5 @@ CREATE TABLE `service_entries` (
 );
 --> statement-breakpoint
 ALTER TABLE `attachments` ADD `typ_dok` text;--> statement-breakpoint
-ALTER TABLE `dict` ADD `kategoria` text;
+ALTER TABLE `dict` ADD `kategoria` text;--> statement-breakpoint
+ALTER TABLE `dict` ADD `cykl_mies` integer;

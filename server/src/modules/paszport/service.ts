@@ -1,27 +1,73 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
-import { defaultCycle, newId, type DeviceCreate, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
+import { newId, type DeviceCreate, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
 import { tx, type Db } from '../../core/db.js';
 import { can } from '../../core/permissions.js';
-import { dictRefsFor } from '../../core/dict-refs.js';
+import type { DictRefs } from '../../core/dict-refs.js';
 import * as dziennik from '../dziennik/service.js';
 import * as klienci from '../klienci/service.js';
 import * as slowniki from '../slowniki/service.js';
 import * as zlecenia from '../zlecenia/service.js';
 import { devices, passportFolders, passports, serviceEntries } from './schema.js';
 
-export { defaultCycle };
+/** Domyślny cykl serwisu kategorii w miesiącach ze słownika (R67); null = bez cyklu. */
+export const defaultCycle = (db: Db, kategoria: string): number | null =>
+  slowniki.list(db, 'kategoria').find((d) => d.wartosc === kategoria)?.cyklMies ?? null;
 
-/** Słowniki: zmiana nazwy kategorii zmienia nazwę teczki (P2, R36). */
-export const dictRefs = dictRefsFor('passport_folders', passportFolders, { kategoria: passportFolders.kategoria });
+/**
+ * Słowniki: zmiana nazwy kategorii zmienia nazwę teczki (P2, R36). Gdy obiekt ma już teczkę kategorii docelowej („Zamień na…”),
+ * teczki się scalają: urządzenia, wpisy i pliki przechodzą do docelowej, puste pola serwisu dostają wartości źródłowej
+ * (wcześniejszy termin), notatki się łączą, a źródłowa jest usuwana miękko.
+ */
+export const dictRefs: DictRefs = {
+  count: (db, rodzaj, value) => (rodzaj === 'kategoria' ? db.select({ id: passportFolders.id }).from(passportFolders).where(and(eq(passportFolders.kategoria, value), isNull(passportFolders.deletedAt))).all().length : 0),
+  rename(db, userId, rodzaj, from, to) {
+    if (rodzaj !== 'kategoria') return;
+    const now = NOW();
+    for (const old of db.select().from(passportFolders).where(and(eq(passportFolders.kategoria, from), isNull(passportFolders.deletedAt))).all()) {
+      const target = findFolder(db, old.siteId, to);
+      if (!target) {
+        const row = db.update(passportFolders).set({ kategoria: to, updatedAt: now }).where(eq(passportFolders.id, old.id)).returning().get();
+        recordChange(db, userId, 'passport_folders', old.id, 'update', old, row);
+        continue;
+      }
+      for (const t of [devices, serviceEntries]) {
+        const entity = t === devices ? 'devices' : 'service_entries';
+        for (const r of db.select().from(t).where(and(eq(t.folderId, old.id), isNull(t.deletedAt))).all()) {
+          const row = db.update(t).set({ folderId: target.id, updatedAt: now }).where(eq(t.id, r.id)).returning().get();
+          recordChange(db, userId, entity, r.id, 'update', r, row);
+        }
+      }
+      dziennik.moveAttachments(db, userId, 'teczka', old.id, target.id);
+      const terms = [target.nastepnySerwis, old.nastepnySerwis].filter((d): d is string => !!d).sort();
+      const merged = db.update(passportFolders).set({
+        nastepnySerwis: terms[0] ?? null,
+        cyklMies: target.cyklMies ?? old.cyklMies,
+        notatkaRozliczenie: [target.notatkaRozliczenie, old.notatkaRozliczenie].filter(Boolean).join('\n\n'),
+        updatedAt: now,
+      }).where(eq(passportFolders.id, target.id)).returning().get();
+      recordChange(db, userId, 'passport_folders', target.id, 'update', target, merged);
+      const gone = db.update(passportFolders).set({ deletedAt: now, updatedAt: now }).where(eq(passportFolders.id, old.id)).returning().get();
+      recordChange(db, userId, 'passport_folders', old.id, 'delete', old, gone);
+    }
+  },
+};
 
 export type PassportRow = typeof passports.$inferSelect;
 export type FolderRow = typeof passportFolders.$inferSelect;
 export type DeviceRow = typeof devices.$inferSelect;
 export type ServiceEntryRow = typeof serviceEntries.$inferSelect;
 
+const NOW = () => new Date().toISOString();
 const bad = (m: string) => new HTTPException(400, { message: m });
+const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
+/** Teczka urządzenia / wpisu (404, gdy jej już nie ma). */
+function parentOf(db: Db, folderId: string): FolderRow {
+  const f = getFolder(db, folderId);
+  if (!f) throw notFound();
+  return f;
+}
 
 export const getFolder = (db: Db, id: string): FolderRow | undefined =>
   db.select().from(passportFolders).where(and(eq(passportFolders.id, id), isNull(passportFolders.deletedAt))).get();
@@ -35,7 +81,7 @@ export function ensureFolder(db: Db, by: string, siteId: string, kategoria: stri
   if (!klienci.getSite(db, siteId)) throw bad('Nie znaleziono obiektu');
   if (!slowniki.list(db, 'kategoria').some((d) => d.wartosc === kategoria)) throw bad('Nieznana kategoria');
   const now = new Date().toISOString();
-  const row = db.insert(passportFolders).values({ id: newId(), siteId, kategoria, cyklMies: defaultCycle(kategoria), createdAt: now, createdBy: by, updatedAt: now }).returning().get();
+  const row = db.insert(passportFolders).values({ id: newId(), siteId, kategoria, cyklMies: defaultCycle(db, kategoria), createdAt: now, createdBy: by, updatedAt: now }).returning().get();
   recordChange(db, by, 'passport_folders', row.id, 'create', null, row);
   return row;
 }
@@ -97,7 +143,6 @@ export function updateFolder(db: Db, by: string, id: string, d: Omit<FolderUpdat
   return row;
 }
 
-const NOW = () => new Date().toISOString();
 const clean = <T extends Record<string, unknown>>(d: T) => Object.fromEntries(Object.entries(d).filter(([, v]) => v !== undefined)) as Partial<T>;
 /** Zlecenie przy urządzeniu / wpisie musi być z obiektu teczki. */
 const checkJob = (db: Db, siteId: string, jobId: string | null | undefined) => {
@@ -113,11 +158,15 @@ export const getEntry = (db: Db, id: string): ServiceEntryRow | undefined =>
   db.select().from(serviceEntries).where(and(eq(serviceEntries.id, id), isNull(serviceEntries.deletedAt))).get();
 export const anyEntry = (db: Db, id: string): ServiceEntryRow | undefined => db.select().from(serviceEntries).where(eq(serviceEntries.id, id)).get();
 
+type DoTeczki = { folderId?: string; siteId?: string; kategoria?: string };
+/** Teczka zapisu: po id (404, gdy jej nie ma) albo (obiekt, kategoria) – tworzona, gdy jej nie ma. */
+const folderFor = (db: Db, by: string, d: DoTeczki): FolderRow => (d.folderId ? parentOf(db, d.folderId) : ensureFolder(db, by, d.siteId!, d.kategoria!));
+
 /** Wywołuj w runOp. */
 export function createDevice(db: Db, by: string, d: Omit<DeviceCreate, 'opId'>): DeviceRow {
-  const { siteId, kategoria, ...f } = d;
-  checkJob(db, siteId, f.jobId);
-  const folder = ensureFolder(db, by, siteId, kategoria);
+  const { siteId: _s, kategoria: _k, folderId: _f, ...f } = d;
+  const folder = folderFor(db, by, d);
+  checkJob(db, folder.siteId, f.jobId);
   const now = NOW();
   const row = db.insert(devices).values({ ...clean(f), nazwa: f.nazwa, dlaKlienta: f.dlaKlienta, id: newId(), folderId: folder.id, createdAt: now, createdBy: by, updatedAt: now }).returning().get();
   recordChange(db, by, 'devices', row.id, 'create', null, row);
@@ -125,7 +174,7 @@ export function createDevice(db: Db, by: string, d: Omit<DeviceCreate, 'opId'>):
 }
 
 export function updateDevice(db: Db, by: string, old: DeviceRow, d: Omit<DeviceUpdate, 'opId'>): DeviceRow {
-  checkJob(db, getFolder(db, old.folderId)!.siteId, d.jobId);
+  checkJob(db, parentOf(db, old.folderId).siteId, d.jobId);
   const row = db.update(devices).set({ ...clean(d), updatedAt: NOW() }).where(eq(devices.id, old.id)).returning().get();
   recordChange(db, by, 'devices', old.id, 'update', old, row);
   return row;
@@ -142,10 +191,10 @@ export function removeDevice(db: Db, by: string, old: DeviceRow): void {
 
 /** Wywołuj w runOp: teczka (gdy jej nie ma), wpis, zdjęcia i następny serwis w jednej transakcji (RF #3). */
 export function createEntry(db: Db, by: string, d: Omit<ServiceEntryCreate, 'opId'>): ServiceEntryRow {
-  const { siteId, kategoria, uploadIds, nastepnySerwis, ...f } = d;
-  checkJob(db, siteId, f.jobId);
+  const { siteId: _s, kategoria: _k, folderId: _f, uploadIds, nastepnySerwis, ...f } = d;
+  const folder = folderFor(db, by, d);
+  checkJob(db, folder.siteId, f.jobId);
   const ups = dziennik.checkUploads(db, by, uploadIds);
-  const folder = ensureFolder(db, by, siteId, kategoria);
   const now = NOW();
   const row = db.insert(serviceEntries).values({ ...clean(f), dzien: f.dzien, dlaKlienta: f.dlaKlienta, id: newId(), folderId: folder.id, authorId: by, createdAt: now, createdBy: by, updatedAt: now }).returning().get();
   recordChange(db, by, 'service_entries', row.id, 'create', null, row);
@@ -156,7 +205,7 @@ export function createEntry(db: Db, by: string, d: Omit<ServiceEntryCreate, 'opI
 
 export function updateEntry(db: Db, by: string, old: ServiceEntryRow, d: Omit<ServiceEntryUpdate, 'opId'>): ServiceEntryRow {
   const { uploadIds, ...f } = d;
-  checkJob(db, getFolder(db, old.folderId)!.siteId, f.jobId);
+  checkJob(db, parentOf(db, old.folderId).siteId, f.jobId);
   const ups = dziennik.checkUploads(db, by, uploadIds ?? []);
   const row = db.update(serviceEntries).set({ ...clean(f), updatedAt: NOW() }).where(eq(serviceEntries.id, old.id)).returning().get();
   recordChange(db, by, 'service_entries', old.id, 'update', old, row);
@@ -176,6 +225,6 @@ export function removeEntry(db: Db, by: string, old: ServiceEntryRow): void {
 /** Wywołuj w runOp: plik z POST /api/uploads podpięty do teczki (P5). Fakturę sprawdza trasa (tylko admin). */
 export function addFolderFile(db: Db, by: string, d: Omit<FolderFile, 'opId'>): dziennik.AttachmentRow {
   const ups = dziennik.checkUploads(db, by, [d.uploadId]);
-  const folder = ensureFolder(db, by, d.siteId, d.kategoria);
+  const folder = folderFor(db, by, d);
   return dziennik.attach(db, by, ups, 'teczka', folder.id, { typDok: d.typDok, dlaKlienta: d.dlaKlienta })[0]!;
 }

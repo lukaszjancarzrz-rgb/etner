@@ -61,6 +61,14 @@ export function attach(db: Db, userId: string, ups: AttachmentRow[], ownerType: 
     return a;
   });
 }
+/** Przeniesienie załączników do innego właściciela tego samego typu (scalanie teczek paszportu). */
+export function moveAttachments(db: Db, userId: string, ownerType: Owner, fromId: string, toId: string): void {
+  const now = NOW();
+  for (const a of attachmentsOf(db, ownerType, fromId)) {
+    const row = db.update(attachments).set({ ownerId: toId, updatedAt: now }).where(eq(attachments.id, a.id)).returning().get();
+    recordChange(db, userId, 'attachments', a.id, 'update', a, row);
+  }
+}
 /** Miękkie usunięcie załączników właściciela (razem z wpisem, punktem zakresu, wpisem serwisowym, urządzeniem); `ids` = tylko te (każde musi należeć do właściciela, inaczej 400). */
 export function removeAttachmentsOf(db: Db, userId: string, ownerType: Owner, ownerId: string, ids?: string[]): void {
   const now = NOW();
@@ -116,18 +124,28 @@ export function remove(db: Db, user: User, id: string): boolean {
   return true;
 }
 
-export function setKlient(db: Db, userId: string, kind: 'entry' | 'attachment', id: string, v: boolean): EntryRow | AttachmentRow | undefined {
-  const now = NOW();
-  if (kind === 'entry') {
-    const old = getEntry(db, id);
-    if (!old) return undefined;
-    const row = db.update(diaryEntries).set({ dlaKlienta: v, updatedAt: now }).where(eq(diaryEntries.id, id)).returning().get();
-    recordChange(db, userId, 'diary_entries', id, 'update', old, row);
-    return row;
-  }
-  const old = getAttachment(db, id);
-  if (!old || (old.ownerType !== 'entry' && old.ownerType !== 'scope')) return undefined;
-  const row = db.update(attachments).set({ dlaKlienta: v, updatedAt: now }).where(eq(attachments.id, id)).returning().get();
-  recordChange(db, userId, 'attachments', id, 'update', old, row);
+export function setKlient(db: Db, userId: string, id: string, v: boolean): EntryRow | undefined {
+  const old = getEntry(db, id);
+  if (!old) return undefined;
+  const row = db.update(diaryEntries).set({ dlaKlienta: v, updatedAt: NOW() }).where(eq(diaryEntries.id, id)).returning().get();
+  recordChange(db, userId, 'diary_entries', id, 'update', old, row);
+  return row;
+}
+
+/** Wiersz załącznika także usunięty (powtórzone usunięcie z kolejki). */
+export const anyAttachment = (db: Db, id: string): AttachmentRow | undefined => db.select().from(attachments).where(eq(attachments.id, id)).get();
+
+/** Czy użytkownik widzi podpięty załącznik: pliki zakresu prac i teczek paszportu każdy, plik wpisu jak wpis; faktury tylko admin (P6). */
+export function canSeeAttachment(db: Db, user: User, a: AttachmentRow): boolean {
+  if (a.typDok === 'faktura' && !can(user, 'admin')) return false;
+  if (a.ownerType === 'scope' || a.ownerType === 'teczka' || a.ownerType === 'device' || a.ownerType === 'service') return true;
+  const e = a.ownerType === 'entry' && a.ownerId ? getEntry(db, a.ownerId) : undefined;
+  return !!e && canSee(user, e);
+}
+
+export function patchAttachment(db: Db, userId: string, old: AttachmentRow, d: Partial<Pick<AttachmentRow, 'dlaKlienta' | 'typDok'>>): AttachmentRow {
+  const set = Object.fromEntries(Object.entries(d).filter(([, v]) => v !== undefined));
+  const row = db.update(attachments).set({ ...set, updatedAt: NOW() }).where(eq(attachments.id, old.id)).returning().get();
+  recordChange(db, userId, 'attachments', old.id, 'update', old, row);
   return row;
 }

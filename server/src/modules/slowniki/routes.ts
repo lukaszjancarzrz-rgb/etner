@@ -13,14 +13,10 @@ import { dictRefs as zakupy } from '../zakupy/service.js';
 import { dictRefs as zlecenia } from '../zlecenia/service.js';
 import { dictRefs as uzytkownicy } from '../uzytkownicy/service.js';
 import { dictRefs as paszport } from '../paszport/service.js';
-import { dictRefsFor } from '../../core/dict-refs.js';
-import { dict } from './schema.js';
-import { listAll, replace, ValueInUseError } from './service.js';
+import { czynnosciRefs, dictKey, listAll, replace, ValueInUseError } from './service.js';
 
 // Moduły, których rekordy przechowują wartości słowników (zmiana nazwy idzie do nich, usunięcie używanej jest blokowane).
-// czynności serwisowe trzymają nazwę kategorii w `dict.kategoria`
-const czynnosci = dictRefsFor('dict', dict, { kategoria: dict.kategoria });
-const refs = [zlecenia, leady, uzytkownicy, naJutro, listy, harmonogram, zadania, zakupy, samochody, paszport, czynnosci];
+const refs = [zlecenia, leady, uzytkownicy, naJutro, listy, harmonogram, zadania, zakupy, samochody, paszport, czynnosciRefs];
 const STATUSY = new Set(['status_zlecenia', 'status_leada', 'status_zadania', 'status_zakupu']);
 
 export function routes(app: Hono, { db }: AppDeps): void {
@@ -32,7 +28,9 @@ export function routes(app: Hono, { db }: AppDeps): void {
     if (!rodzaj.success) throw new HTTPException(400, { message: 'Nieznany rodzaj słownika' });
     if (!body.success) throw new HTTPException(400, { message: body.error.issues[0]?.message ?? 'Błędne dane' });
     const values = body.data.items.map((i) => i.wartosc);
-    if (new Set(values).size !== values.length) throw new HTTPException(400, { message: 'Wartości w słowniku muszą być różne' });
+    if (new Set(body.data.items.map(dictKey(rodzaj.data))).size !== values.length) {
+      throw new HTTPException(400, { message: rodzaj.data === 'czynnosc_serwisowa' ? 'Czynności w jednej kategorii muszą być różne' : 'Wartości w słowniku muszą być różne' });
+    }
     if (STATUSY.has(rodzaj.data) && !values.length) throw new HTTPException(400, { message: 'Słownik statusów nie może być pusty' });
     // pierwszy = do kupienia, ostatni = kupione
     if (rodzaj.data === 'status_zakupu' && values.length !== 2) throw new HTTPException(400, { message: 'Statusy zakupów: dokładnie dwie wartości (do kupienia, kupione)' });

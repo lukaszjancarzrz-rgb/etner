@@ -1,4 +1,4 @@
-import { diaryCreateSchema, klientFlagSchema, newId } from '@etner/shared';
+import { attachmentPatchSchema, diaryCreateSchema, klientFlagSchema, newId } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
@@ -73,16 +73,23 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.patch('/api/diary/:id', auth, async (c) => {
     admin(c);
     const b = await body(c, klientFlagSchema);
-    const r = svc.setKlient(db, c.get('user').id, 'entry', c.req.param('id'), b.dla_klienta);
+    const r = svc.setKlient(db, c.get('user').id, c.req.param('id'), b.dla_klienta);
     if (!r) throw notFound();
     return c.json(r);
   });
+  // „W paszporcie dla klienta” – admin; typ dokumentu – admin albo autor pliku, faktura tylko admin (P6)
   app.patch('/api/attachments/:id', auth, async (c) => {
-    admin(c);
-    const b = await body(c, klientFlagSchema);
-    const r = svc.setKlient(db, c.get('user').id, 'attachment', c.req.param('id'), b.dla_klienta);
-    if (!r) throw notFound();
-    return c.json(r);
+    const { opId, dla_klienta, dlaKlienta = dla_klienta, typDok } = await body(c, attachmentPatchSchema);
+    const user = c.get('user');
+    const isAdmin = can(user, 'admin');
+    const { result } = runOp(db, opId, user.id, () => {
+      const a = svc.getAttachment(db, c.req.param('id'));
+      if (!a?.ownerType || !svc.canSeeAttachment(db, user, a)) throw notFound();
+      if (dlaKlienta !== undefined && !isAdmin) throw forbidden();
+      if (typDok !== undefined && !isAdmin && (typDok === 'faktura' || a.authorId !== user.id)) throw forbidden();
+      return svc.patchAttachment(db, user.id, a, { dlaKlienta, typDok });
+    });
+    return c.json(result);
   });
 
   app.delete('/api/diary/:id', auth, (c) => {
@@ -92,12 +99,7 @@ export function routes(app: Hono, deps: AppDeps): void {
 
   app.get('/api/attachments/:id/file', auth, async (c) => {
     const a = svc.getAttachment(db, c.req.param('id'));
-    const e = a?.ownerType === 'entry' && a.ownerId ? svc.getEntry(db, a.ownerId) : undefined;
-    // zdjęcie punktu zakresu widzi każdy, jak zlecenie (usunięty punkt usuwa też swoje zdjęcia)
-    // pliki teczek paszportu (teczka, urządzenie, wpis serwisowy) widzi każdy, jak teczkę
-    const open = a?.ownerType === 'scope' || a?.ownerType === 'teczka' || a?.ownerType === 'device' || a?.ownerType === 'service';
-    if (!a || !(open || (e && svc.canSee(c.get('user'), e)))) throw notFound();
-    if (a.typDok === 'faktura' && !can(c.get('user'), 'admin')) throw notFound(); // faktury tylko admin (P6)
+    if (!a?.ownerType || !svc.canSeeAttachment(db, c.get('user'), a)) throw notFound();
     const v = c.req.query('v');
     const key = (v === 'thumb' ? a.keyThumb : v === 'view' ? a.keyView : null) ?? a.keyOrig;
     return c.redirect(await files.url(key), 302);

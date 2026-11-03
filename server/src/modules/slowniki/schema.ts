@@ -11,4 +11,6 @@ export const dict = sqliteTable('dict', {
   kolor: text('kolor'),
   /** Rodzaj `czynnosc_serwisowa`: wartość słownika `kategoria`, do której należy czynność. */
   kategoria: text('kategoria'),
+  /** Rodzaj `kategoria`: domyślny cykl serwisu teczki w miesiącach (R67); null = bez cyklu. */
+  cyklMies: integer('cykl_mies'),
 });

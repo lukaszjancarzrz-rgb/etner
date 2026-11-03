@@ -1,9 +1,6 @@
 import sharp from 'sharp';
-import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
-import { recordChange } from '../../core/changes.js';
-import { attachments } from '../dziennik/schema.js';
 import * as zlecenia from '../zlecenia/service.js';
 import { runOp } from '../../core/ops.js';
 import { dict } from '../slowniki/schema.js';
@@ -62,40 +59,92 @@ describe('paszport – dane', () => {
     expect(() => s.deps.db.$client.prepare("insert into passport_folders (id, created_at, updated_at, site_id, kategoria) values ('x', '', '', ?, 'Rekuperacja')").run(s.site.id)).toThrow(/UNIQUE/);
   });
 
-  it('defaultCycle: rekuperacja 6, klimatyzacja i fotowoltaika 12, pozostałe brak', () => {
-    expect(defaultCycle('Rekuperacja')).toBe(6);
-    expect(defaultCycle('Klimatyzacja')).toBe(12);
-    expect(defaultCycle('Fotowoltaika')).toBe(12);
-    expect(defaultCycle('Elektryka')).toBeNull();
-    expect(defaultCycle('constructor')).toBeNull();
+  it('defaultCycle ze słownika kategorii (R67): rekuperacja 6, klimatyzacja i fotowoltaika 12, pozostałe brak; zmiana w słowniku działa', async () => {
+    const s = await setup();
+    expect(['Rekuperacja', 'Klimatyzacja', 'Fotowoltaika', 'Elektryka', 'constructor'].map((k) => defaultCycle(s.deps.db, k))).toEqual([6, 12, 12, null, null]);
+    const items = list(s.deps.db, 'kategoria').map((d) => ({ id: d.id, wartosc: d.wartosc === 'Rekuperacja' ? 'Wentylacja' : d.wartosc, kolor: d.kolor, cyklMies: d.wartosc === 'Elektryka' ? 24 : d.cyklMies }));
+    expect((await s.app.request('/api/dict/kategoria', req(s.admin, 'PUT', { items }))).status).toBe(200);
+    expect(defaultCycle(s.deps.db, 'Wentylacja')).toBe(6); // cykl idzie za wierszem, nie za nazwą
+    expect(ensureFolder(s.deps.db, s.a.user.id, s.site.id, 'Elektryka').cyklMies).toBe(24);
   });
 
-  it('słownik czynności serwisowych z kategorią; w działającej bazie dosiewany raz, z wpisami w changes', async () => {
+  it('w działającej bazie (raz, w transakcji, z changes): czynności – kategoria tylko istniejąca; cykl tylko pustym kategoriom z SEED', async () => {
     const s = await setup();
     expect(list(s.deps.db, 'czynnosc_serwisowa').find((d) => d.wartosc === 'Wymiana filtrów F7')).toMatchObject({ kategoria: 'Rekuperacja' });
     // baza sprzed modułu 2: słowniki są, czynności nie
     s.deps.db.delete(dict).run();
-    s.deps.db.$client.prepare("insert into dict (id, created_at, updated_at, rodzaj, wartosc, kolejnosc) values ('k1', '', '', 'kategoria', 'Elektryka', 0)").run();
+    const ins = s.deps.db.$client.prepare("insert into dict (id, created_at, updated_at, rodzaj, wartosc, kolejnosc, cykl_mies) values (?, '', '', 'kategoria', ?, 0, ?)");
+    ins.run('k1', 'Rekuperacja', null); ins.run('k2', 'Klimatyzacja', 3); ins.run('k3', 'Elektryka', null);
     seedBase(s.deps.db);
+    s.deps.db.$client.prepare("update dict set cykl_mies = null where id = 'k1'").run(); // właściciel wyczyścił cykl – nie wraca
     seedBase(s.deps.db);
-    expect(list(s.deps.db, 'czynnosc_serwisowa')).toHaveLength(14);
+    const cz = list(s.deps.db, 'czynnosc_serwisowa');
+    expect(cz).toHaveLength(14);
+    expect(cz.find((d) => d.wartosc === 'Wymiana filtrów F7')?.kategoria).toBe('Rekuperacja');
+    expect(cz.find((d) => d.wartosc === 'Przegląd falownika')?.kategoria).toBeNull(); // brak kategorii Fotowoltaika
+    expect(list(s.deps.db, 'kategoria').map((d) => [d.wartosc, d.cyklMies])).toEqual([['Rekuperacja', null], ['Klimatyzacja', 3], ['Elektryka', null]]);
     expect(list(s.deps.db, 'ekipa')).toHaveLength(0); // inne rodzaje bez zmian
-    expect(count(s, "select count(*) n from changes where entity = 'dict'")).toBe(14);
+    expect(count(s, "select count(*) n from changes where entity = 'dict'")).toBe(15); // 14 czynności + cykl Rekuperacji
   });
 
   it('zmiana nazwy kategorii w słowniku zmienia nazwę teczki i kategorię czynności (R36)', async () => {
     const s = await setup();
     const f = ensureFolder(s.deps.db, s.a.user.id, s.site.id, 'Rekuperacja');
-    const items = list(s.deps.db, 'kategoria').map((d) => ({ id: d.id, wartosc: d.wartosc === 'Rekuperacja' ? 'Wentylacja' : d.wartosc, kolor: d.kolor }));
+    const items = list(s.deps.db, 'kategoria').map((d) => ({ id: d.id, wartosc: d.wartosc === 'Rekuperacja' ? 'Wentylacja' : d.wartosc, kolor: d.kolor, cyklMies: d.cyklMies }));
     expect((await s.app.request('/api/dict/kategoria', req(s.admin, 'PUT', { items }))).status).toBe(200);
     expect(findFolder(s.deps.db, s.site.id, 'Wentylacja')?.id).toBe(f.id);
     expect(list(s.deps.db, 'czynnosc_serwisowa').find((d) => d.wartosc === 'Wymiana filtrów F7')).toMatchObject({ kategoria: 'Wentylacja' });
     expect(count(s, `select count(*) n from changes where entity = 'passport_folders' and action = 'update'`)).toBe(1);
   });
 
-  it('PUT czynności: kategoria zostaje zapisana, nieznana kategoria → 400', async () => {
+  it('„Zamień na…”: teczki obiektu scalają się (urządzenia, wpisy, pliki, termin, notatka), czynności bez duplikatów', async () => {
+    const s = await setup();
+    const site2 = (await import('../klienci/service.js')).addSite(s.deps.db, s.a.user.id, s.site.clientId, { adres: 'Długa 2' })!;
+    const kl = (await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Klimatyzacja' })).body;
+    await call(s, s.admin, 'PUT', `/api/folders/${kl.id}`, { nastepnySerwis: '2027-06-01', notatkaRozliczenie: 'Klima zapłacona', cyklMies: null });
+    const rek = (await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Rekuperacja' })).body;
+    await call(s, s.admin, 'PUT', `/api/folders/${rek.id}`, { nastepnySerwis: '2027-05-01', notatkaRozliczenie: 'Reku zapłacona' });
+    const rek2 = (await call(s, s.admin, 'POST', '/api/folders', { siteId: site2.id, kategoria: 'Rekuperacja' })).body;
+    const dev = (await call(s, s.worker, 'POST', '/api/devices', { folderId: rek.id, nazwa: 'Rekuperator', dlaKlienta: true })).body;
+    const e = (await call(s, s.worker, 'POST', '/api/service-entries', { folderId: rek.id, dzien: '2026-11-03', czynnosci: ['Wymiana filtrów F7'], dlaKlienta: true, uploadIds: [await upload(s, s.worker)] })).body;
+    const doc = await upload(s, s.worker, pdf(), 'i.pdf');
+    await call(s, s.worker, 'POST', '/api/folder-files', { folderId: rek.id, uploadId: doc, typDok: 'instrukcja', dlaKlienta: true });
+
+    const items = list(s.deps.db, 'kategoria').filter((d) => d.wartosc !== 'Rekuperacja').map((d) => ({ id: d.id, wartosc: d.wartosc, kolor: d.kolor, cyklMies: d.cyklMies }));
+    const r = await s.app.request('/api/dict/kategoria', req(s.admin, 'PUT', { items, zamien: { Rekuperacja: 'Klimatyzacja' } }));
+    expect(r.status).toBe(200);
+    expect(findFolder(s.deps.db, s.site.id, 'Klimatyzacja')).toMatchObject({ id: kl.id, nastepnySerwis: '2027-05-01', cyklMies: 6, notatkaRozliczenie: 'Klima zapłacona\n\nReku zapłacona' });
+    expect(findFolder(s.deps.db, site2.id, 'Klimatyzacja')?.id).toBe(rek2.id); // bez teczki docelowej: zmiana nazwy
+    expect(count(s, `select count(*) n from passport_folders where id = '${rek.id}' and deleted_at is not null`)).toBe(1);
+    expect(s.deps.db.$client.prepare('select folder_id f from devices').get()).toEqual({ f: kl.id });
+    expect(s.deps.db.$client.prepare('select folder_id f from service_entries').get()).toEqual({ f: kl.id });
+    expect(s.deps.db.$client.prepare(`select owner_id o from attachments where id = '${doc}'`).get()).toEqual({ o: kl.id });
+    const t = (await teczki(s, s.admin)).find((x) => x.kategoria === 'Klimatyzacja');
+    expect(t).toMatchObject({ photos: 1, docs: 1 });
+    // telefon pracownika: przeniesienia i usunięcie źródłowej teczki
+    const ch = (await call(s, s.worker, 'GET', '/api/changes?since=0')).body.changes as any[];
+    expect(ch.some((c) => c.entity === 'passport_folders' && c.id === rek.id && c.action === 'delete')).toBe(true);
+    expect(ch.filter((c) => (c.id === dev.id || c.id === e.id) && c.action === 'update').map((c) => c.data.folderId)).toEqual([kl.id, kl.id]);
+    // czynność „Kontrola odpływu skroplin” była w obu kategoriach – zostaje jedna
+    const cz = list(s.deps.db, 'czynnosc_serwisowa').filter((d) => d.kategoria === 'Klimatyzacja').map((d) => d.wartosc);
+    expect(cz.filter((w) => w === 'Kontrola odpływu skroplin')).toHaveLength(1);
+    expect(cz).toContain('Wymiana filtrów F7');
+    // zapis z kolejki do scalonej teczki: 404, nie błąd serwera
+    expect((await call(s, s.worker, 'POST', '/api/service-entries', { folderId: rek.id, dzien: '2026-11-04', uwagi: 'x', dlaKlienta: true })).status).toBe(404);
+  });
+
+  it('PUT czynności: unikalne w kategorii (ta sama nazwa w dwóch kategoriach dozwolona), zapis seeda bez zmian → 200', async () => {
     const s = await setup();
     const put = (items: unknown[]) => s.app.request('/api/dict/czynnosc_serwisowa', req(s.admin, 'PUT', { items }));
+    const seeded = list(s.deps.db, 'czynnosc_serwisowa').map((d) => ({ id: d.id, wartosc: d.wartosc, kategoria: d.kategoria }));
+    const n = count(s, "select count(*) n from changes where entity = 'dict'");
+    expect((await put(seeded)).status).toBe(200);
+    expect(count(s, "select count(*) n from changes where entity = 'dict'")).toBe(n); // nic się nie zmieniło
+    expect((await put([...seeded, { wartosc: 'Odgrzybianie', kategoria: 'Klimatyzacja' }])).status).toBe(400);
+    expect((await put([...seeded, { wartosc: 'Odgrzybianie', kategoria: 'Rekuperacja' }])).status).toBe(200);
+    // zmiana nazwy na istniejącą w tej samej kategorii → 400
+    const now = list(s.deps.db, 'czynnosc_serwisowa').map((d) => ({ id: d.id, wartosc: d.wartosc === 'Odgrzybianie' && d.kategoria === 'Rekuperacja' ? 'Dezynfekcja kanałów' : d.wartosc, kategoria: d.kategoria }));
+    expect((await put(now)).status).toBe(400);
     expect((await put([{ wartosc: 'Mycie', kategoria: 'Nie ma' }])).status).toBe(400);
     expect(await (await put([{ wartosc: 'Mycie', kategoria: 'Klimatyzacja' }])).json()).toMatchObject([{ wartosc: 'Mycie', kategoria: 'Klimatyzacja' }]);
   });
@@ -165,10 +214,8 @@ describe('paszport – teczki z danych zleceń', () => {
     const fv = await upload(s, s.admin, pdf(), 'fv.pdf');
     const proj = await upload(s, s.admin, pdf(), 'projekt.pdf');
     await diary(s, s.admin, j.id, [fv, proj]);
-    // typ dokumentu ustawiony po dodaniu (np. w dzienniku): zmiana „update” → pracownik dostaje „delete”
-    const old = s.deps.db.select().from(attachments).where(eq(attachments.id, fv)).get()!;
-    const row = s.deps.db.update(attachments).set({ typDok: 'faktura' }).where(eq(attachments.id, fv)).returning().get();
-    recordChange(s.deps.db, s.a.user.id, 'attachments', fv, 'update', old, row);
+    // typ dokumentu ustawiony po dodaniu (w dzienniku): zmiana „update” → pracownik dostaje „delete”
+    expect((await call(s, s.admin, 'PATCH', `/api/attachments/${fv}`, { opId: 'op-fv', typDok: 'faktura' })).body).toMatchObject({ typDok: 'faktura' });
 
     const snap = (await call(s, s.worker, 'GET', '/api/snapshot')).body.records as any[];
     const folder = snap.find((r) => r.entity === 'passport_folders');
@@ -289,5 +336,63 @@ describe('paszport – urządzenia, karta serwisowa, dokumenty', () => {
     expect(snap.filter((r) => r.entity === 'attachments').map((r) => r.id)).toEqual([inst]);
     expect((await s.app.request(`/api/attachments/${inst}/file`, req(s.worker2, 'GET'))).status).toBe(302);
     expect((await s.app.request(`/api/attachments/${fv}/file`, req(s.worker2, 'GET'))).status).toBe(404);
+  });
+});
+
+describe('paszport – pliki: typ dokumentu, dla klienta, usuwanie', () => {
+  it('PATCH załącznika: dla klienta admin; typ dokumentu admin albo autor, faktura tylko admin; stare „dla_klienta” działa', async () => {
+    const s = await setup();
+    const j = job(s, 'Rekuperacja');
+    const mine = await upload(s, s.worker, pdf(), 'p.pdf');
+    await diary(s, s.worker, j.id, [mine]);
+    const doc = await upload(s, s.worker2, pdf(), 'i.pdf');
+    await call(s, s.worker2, 'POST', '/api/folder-files', { siteId: s.site.id, kategoria: 'Rekuperacja', uploadId: doc, typDok: 'inne', dlaKlienta: false });
+    const patch = (cookie: string, id: string, b: unknown) => call(s, cookie, 'PATCH', `/api/attachments/${id}`, b);
+    expect((await patch(s.worker, mine, { typDok: 'projekt' })).body).toMatchObject({ typDok: 'projekt', dlaKlienta: false });
+    expect((await patch(s.worker, mine, { typDok: 'faktura' })).status).toBe(403);
+    expect((await patch(s.worker, mine, { dlaKlienta: true })).status).toBe(403);
+    expect((await patch(s.worker, doc, { typDok: 'projekt' })).status).toBe(403); // cudzy plik
+    expect((await patch(s.admin, doc, { dlaKlienta: true, typDok: 'oferta' })).body).toMatchObject({ dlaKlienta: true, typDok: 'oferta', ownerType: 'teczka' });
+    expect((await patch(s.admin, mine, { dla_klienta: true })).body).toMatchObject({ dlaKlienta: true });
+    expect((await patch(s.admin, mine, { typDok: 'faktura' })).body).toMatchObject({ typDok: 'faktura' });
+    expect((await patch(s.worker, mine, { typDok: 'inne' })).status).toBe(404); // faktury pracownik nie widzi
+    expect((await patch(s.admin, mine, { typDok: null })).body).toMatchObject({ typDok: null });
+    expect((await patch(s.admin, 'nie-ma', { typDok: null })).status).toBe(404);
+  });
+
+  it('DELETE pliku teczki: admin albo autor, powtórka 200, faktura pracownikowi 404', async () => {
+    const s = await setup();
+    const add = async (cookie: string, typDok = 'instrukcja') => {
+      const id = await upload(s, cookie, pdf(), 'x.pdf');
+      await call(s, cookie, 'POST', '/api/folder-files', { siteId: s.site.id, kategoria: 'Rekuperacja', uploadId: id, typDok, dlaKlienta: false });
+      return id;
+    };
+    const mine = await add(s.worker);
+    const theirs = await add(s.worker2);
+    const fv = await add(s.admin, 'faktura');
+    expect((await call(s, s.worker, 'DELETE', `/api/folder-files/${theirs}`)).status).toBe(403);
+    expect((await call(s, s.worker, 'DELETE', `/api/folder-files/${fv}`)).status).toBe(404);
+    expect((await call(s, s.worker, 'DELETE', `/api/folder-files/${mine}`)).status).toBe(200);
+    expect((await call(s, s.worker, 'DELETE', `/api/folder-files/${mine}`)).status).toBe(200);
+    expect((await call(s, s.admin, 'DELETE', `/api/folder-files/${theirs}`)).status).toBe(200);
+    expect((await call(s, s.admin, 'DELETE', '/api/folder-files/nie-ma')).status).toBe(404);
+    expect(count(s, "select count(*) n from attachments where owner_type = 'teczka' and deleted_at is null")).toBe(1);
+    expect((await teczki(s, s.admin))[0]).toMatchObject({ docs: 1 });
+  });
+
+  it('zapis po folderId: wpis i urządzenie trafiają do teczki także po zmianie nazwy kategorii; bez teczki → 400/404', async () => {
+    const s = await setup();
+    const f = (await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Rekuperacja' })).body;
+    const items = list(s.deps.db, 'kategoria').map((d) => ({ id: d.id, wartosc: d.wartosc === 'Rekuperacja' ? 'Wentylacja' : d.wartosc, kolor: d.kolor, cyklMies: d.cyklMies }));
+    await s.app.request('/api/dict/kategoria', req(s.admin, 'PUT', { items }));
+    const e = await call(s, s.worker, 'POST', '/api/service-entries', { folderId: f.id, dzien: '2026-11-03', czynnosci: ['Wymiana filtrów F7'], dlaKlienta: true, nastepnySerwis: '2027-05-03' });
+    expect(e.body).toMatchObject({ folderId: f.id });
+    expect(findFolder(s.deps.db, s.site.id, 'Wentylacja')?.nastepnySerwis).toBe('2027-05-03');
+    expect((await call(s, s.worker, 'POST', '/api/devices', { folderId: f.id, nazwa: 'Centrala', dlaKlienta: true })).body).toMatchObject({ folderId: f.id });
+    expect((await call(s, s.worker, 'POST', '/api/devices', { nazwa: 'Centrala', dlaKlienta: true })).status).toBe(400);
+    expect((await call(s, s.worker, 'POST', '/api/devices', { folderId: 'nie-ma', nazwa: 'Centrala', dlaKlienta: true })).status).toBe(404);
+    // teczka wpisu usunięta (np. scalona): edycja 404, nie błąd serwera
+    s.deps.db.$client.prepare(`update passport_folders set deleted_at = 'x' where id = '${f.id}'`).run();
+    expect((await call(s, s.worker, 'PUT', `/api/service-entries/${e.body.id}`, { jobId: null })).status).toBe(404);
   });
 });

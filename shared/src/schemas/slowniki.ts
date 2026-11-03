@@ -15,6 +15,8 @@ export const dictPutSchema = z.object({
     kolor: z.string().trim().min(1).nullish(),
     /** Czynność serwisowa: kategoria, do której należy. */
     kategoria: z.string().trim().min(1).nullish(),
+    /** Kategoria: domyślny cykl serwisu w miesiącach (R67). */
+    cyklMies: z.number().int().min(1).max(120).nullish(),
   })),
   /** Usuwana wartość w użyciu → wartość z `items`, którą dostają jej rekordy (stara → nowa). */
   zamien: z.record(z.string(), z.string().trim().min(1)).optional(),

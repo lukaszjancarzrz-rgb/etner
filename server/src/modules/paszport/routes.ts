@@ -6,6 +6,7 @@ import { requireAdmin, requireUser } from '../../core/auth.js';
 import { body } from '../../core/body.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
+import * as dziennik from '../dziennik/service.js';
 import * as klienci from '../klienci/service.js';
 import * as svc from './service.js';
 
@@ -79,5 +80,13 @@ export function routes(app: Hono, deps: AppDeps): void {
     const { opId, ...d } = await body(c, folderFileSchema);
     if (d.typDok === 'faktura' && !isAdmin(c)) throw forbidden(); // faktury tylko admin (P6)
     return c.json(runOp(db, opId, me(c).id, () => svc.addFolderFile(db, me(c).id, d)).result);
+  });
+  // usunięcie pliku teczki: admin albo autor; już usunięty = 200 (powtórka z kolejki)
+  app.delete('/api/folder-files/:id', auth, (c) => {
+    const a = dziennik.anyAttachment(db, c.req.param('id'));
+    if (a?.ownerType !== 'teczka' || !a.ownerId || (a.typDok === 'faktura' && !isAdmin(c))) throw notFound();
+    if (!svc.canEdit(me(c), a.authorId)) throw forbidden();
+    if (!a.deletedAt) dziennik.removeAttachmentsOf(db, me(c).id, 'teczka', a.ownerId, [a.id]);
+    return c.json({ ok: true });
   });
 }

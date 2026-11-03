@@ -268,14 +268,16 @@ const DICT_HINT: Record<string, string> = {
 const GRUPA_LABEL: Record<string, string> = { aktualne: 'Aktualne', pozniej: 'Na później', zamkniete: 'Zamknięte' };
 const WITH_GRUPA = new Set(['status_zlecenia', 'status_leada']);
 const WITH_KOLOR = new Set(['kategoria', 'kod_nieobecnosci']);
-type Item = { key: string; id?: string; wartosc: string; grupa: string | null; kolor: string | null; platne: boolean | null; kategoria?: string | null };
+type Item = { key: string; id?: string; wartosc: string; grupa: string | null; kolor: string | null; platne: boolean | null; kategoria?: string | null; cyklMies?: number | null };
+/** Czynność serwisowa jest unikalna w swojej kategorii (jak na serwerze). */
+const dictKey = (rodzaj: string, x: { wartosc: string; kategoria?: string | null }) => (rodzaj === 'czynnosc_serwisowa' ? `${x.kategoria ?? ''}\u0000${x.wartosc}` : x.wartosc);
 
 /** Edytor słowników: pełna lista wartości rodzaju, zapis jednym PUT (usunięte znikają miękko). */
 function Dictionaries() {
   const dict = useEntities('dict');
   const [rodzaj, setRodzaj] = useState<string>('kategoria');
   const saved = useMemo(() => dict.filter((d) => d.rodzaj === rodzaj).sort((a, b) => a.kolejnosc - b.kolejnosc)
-    .map((d): Item => ({ key: d.id, id: d.id, wartosc: d.wartosc, grupa: d.grupa ?? null, kolor: d.kolor ?? null, platne: d.platne ?? null, kategoria: d.kategoria ?? null })), [dict, rodzaj]);
+    .map((d): Item => ({ key: d.id, id: d.id, wartosc: d.wartosc, grupa: d.grupa ?? null, kolor: d.kolor ?? null, platne: d.platne ?? null, kategoria: d.kategoria ?? null, cyklMies: d.cyklMies ?? null })), [dict, rodzaj]);
   const [items, setItems] = useState<Item[] | null>(null); // null = bez zmian (pokazujemy zapisane)
   const [nowa, setNowa] = useState('');
   const [err, setErr] = useState('');
@@ -292,17 +294,17 @@ function Dictionaries() {
     e.preventDefault();
     const w = nowa.trim();
     if (!w) return;
-    if (list.some((x) => x.wartosc === w)) return setErr('Taka wartość już jest');
+    if (list.some((x) => dictKey(rodzaj, x) === dictKey(rodzaj, { wartosc: w }))) return setErr('Taka wartość już jest');
     edit([...list, { key: `n${Date.now()}`, wartosc: w, grupa: WITH_GRUPA.has(rodzaj) ? 'aktualne' : null, kolor: WITH_KOLOR.has(rodzaj) ? '#8896a5' : null, platne: rodzaj === 'kod_nieobecnosci' ? true : null }]);
     setNowa('');
   }
   async function save(zamien: Record<string, string> = {}) {
     const vals = list.map((x) => x.wartosc.trim());
     if (vals.some((v) => !v)) return setErr('Wartość nie może być pusta');
-    if (new Set(vals).size !== vals.length) return setErr('Wartości w słowniku muszą być różne');
+    if (new Set(list.map((x, i) => dictKey(rodzaj, { ...x, wartosc: vals[i]! }))).size !== vals.length) return setErr('Wartości w słowniku muszą być różne');
     setBusy(true);
     try {
-      const rows = await api<Rec[]>(`/api/dict/${rodzaj}`, { method: 'PUT', json: { opId: newId(), zamien, items: list.map((x, i) => ({ id: x.id, wartosc: vals[i], grupa: x.grupa, kolor: x.kolor, platne: x.platne, kategoria: x.kategoria })) } });
+      const rows = await api<Rec[]>(`/api/dict/${rodzaj}`, { method: 'PUT', json: { opId: newId(), zamien, items: list.map((x, i) => ({ id: x.id, wartosc: vals[i], grupa: x.grupa, kolor: x.kolor, platne: x.platne, kategoria: x.kategoria, cyklMies: x.cyklMies })) } });
       const keep = new Set(rows.map((r) => r.id));
       for (const d of dict) if (d.rodzaj === rodzaj && !keep.has(d.id)) store.remove('dict', d.id);
       for (const r of rows) store.put('dict', r);
