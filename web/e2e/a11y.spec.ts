@@ -57,6 +57,17 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByRole('link', { name: /Józef Bukowski/ }).first().click();
     await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
     found.push(...(await audit(page, 'karta zlecenia')));
+    // paszport (moduł 2): teczka, wpis serwisowy, karta klienta z sekcją teczek
+    await page.getByRole('link', { name: 'Paszport → Rekuperacja' }).click();
+    await expect(page.getByRole('region', { name: 'Karta serwisowa' })).toBeVisible();
+    found.push(...(await audit(page, 'teczka')));
+    await page.getByRole('link', { name: 'Wpis', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Wpis serwisowy', level: 2 })).toBeVisible();
+    found.push(...(await audit(page, 'wpis serwisowy')));
+    await page.goBack();
+    await page.getByRole('link', { name: 'Józef Bukowski', exact: true }).click();
+    await expect(page.getByRole('region', { name: /Paszport instalacji/ })).toBeVisible();
+    found.push(...(await audit(page, 'karta klienta')));
 
     await page.goto('/#leady');
     await page.getByRole('link', { name: /Instalacja elektryczna w garażu/ }).click();
