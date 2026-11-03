@@ -10,3 +10,4 @@ Tasks 1–3: review — Needs fixes: seeded activity dictionary unsavable (dupli
 - Ruling R68: category merge merges passport folders (children moved, source folder soft-deleted) instead of failing.
 Tasks 1–3: fix round 1/5 (e5f968c); re-review dispatched. Task 4 (screens) dispatched in parallel (web files).
 Tasks 1–3: re-review clean; controller folded 2 minors (old-client cyklMies wipe, empty PATCH) — complete (5640d1a..e5f968c + controller fix).
+Task 4: impl 7839722..5f5bd33 (screens, e2e paszport.spec, a11y); review dispatched. Gap: „nowe” in folder (spec §7).
