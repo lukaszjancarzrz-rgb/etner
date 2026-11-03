@@ -157,3 +157,9 @@
 
 - [ ] **Step 1: Testy:** e-mail 30 dni wysłany raz (drugi przebieg crona – nic), 7 dni osobno; zmiana `nastepny_serwis` po wysyłce → nowy termin dostaje nowe przypomnienia; brak e-maila klienta / mailera → bez wysyłki, `logError`; obiekt bez paszportu też dostaje (P15); `przypomnienia=0` → nic; „Zrób zlecenie serwisowe” tworzy zlecenie w tej teczce (Task 2 grupuje je do niej); licznik menu; e2e: lista i przycisk.
 - [ ] **Step 2:** FAIL. **Step 3:** Implementacja (treść e-maila po polsku z danymi firmy i linkiem do paszportu, jeśli istnieje). **Step 4:** PASS. **Step 5:** Commit. **Wydanie 2c na produkcję.** Końcowy przegląd całego modułu 2.
+
+### Task 4b: Uwagi właściciela po wydaniu 2a (2026-11-03)
+
+1. **Zakładka „Paszporty”** (menu boczne / Więcej, admin i pracownicy): lista obiektów z teczkami (klient, obiekt, miejscowość, numer paszportu jeśli jest, kafelki/kategorie teczek, znacznik serwisu, licznik „nowe”), wyszukiwanie (klient, miejscowość, adres, numer PSZ, kategoria), klik → teczka. Sortowanie: najpierw zaległy / najbliższy serwis, potem alfabetycznie.
+2. **Zdublowane obiekty (z przeniesienia arkusza):** obiekty tego samego klienta o tej samej znormalizowanej nazwie, adresie i miejscowości łączone automatycznie – jednorazowo przy starcie serwera (idempotentnie) i przy zapisie: utworzenie obiektu identycznego z istniejącym zwraca istniejący. Łączenie przenosi zlecenia, leady, paszport i teczki (teczki tej samej kategorii scalane jak w R68), pozostały obiekt dostaje puste pola z duplikatu, duplikat miękko usunięty, wszystko z `recordChange` w jednej transakcji. Admin dostaje też ręczne „Połącz z…” na obiekcie (jak przy klientach) dla obiektów różniących się pisownią.
+3. **Dziennik – przełącznik przy miniaturach:** przy każdym zdjęciu i pliku we wpisie (telefon i komputer) widoczny od razu przełącznik / ikonka „W paszporcie dla klienta” (admin), bez otwierania podglądu; typ dokumentu dla plików jak dotąd.
