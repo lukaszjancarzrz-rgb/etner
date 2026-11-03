@@ -84,6 +84,39 @@ describe('outbox', () => {
     await o.stop();
   });
 
+  it('next: POST i PUT na id z odpowiedzi w jednym elemencie; zamknięcie aplikacji po POST nie gubi PUT', async () => {
+    let online = true;
+    let posts = 0;
+    const got: string[] = [];
+    server.use(
+      http.post(`${B}/api/folders`, async ({ request }) => { posts++; got.push(`POST ${((await request.json()) as { opId: string }).opId}`); return HttpResponse.json({ id: 'f1' }); }),
+      http.put(`${B}/api/folders/:id`, async ({ params, request }) => {
+        if (!online) return HttpResponse.error();
+        const b = (await request.json()) as { opId: string; cyklMies: number };
+        got.push(`PUT ${params.id} ${b.cyklMies} ${b.opId}`);
+        return HttpResponse.json({ id: params.id, cyklMies: b.cyklMies });
+      }),
+    );
+    online = false; // POST przechodzi, PUT nie: „zamknięcie aplikacji” między nimi
+    const o1 = createOutbox({ store: createStore(), ...fast });
+    o1.start();
+    o1.enqueue({ kind: 't', url: '/api/folders', method: 'POST', body: { siteId: 's', kategoria: 'K' }, next: { url: '/api/folders/:id', method: 'PUT', body: { cyklMies: 6 } } }).catch(() => {});
+    await until(() => posts === 1);
+    await new Promise((r) => setTimeout(r, 30));
+    await o1.stop();
+    expect(await stored()).toBe(1);
+    online = true;
+    const o2 = createOutbox({ store: createStore(), ...fast });
+    await o2.start();
+    await until(() => o2.pending() === 0);
+    expect(posts).toBe(1);
+    const op = got[0]!.split(' ')[1]!;
+    expect(got[1]).toBe(`PUT f1 6 ${op}-2`);
+    // w jednej sesji obietnica kończy się odpowiedzią PUT
+    await expect(o2.enqueue({ kind: 't', url: '/api/folders', method: 'POST', body: {}, next: { url: '/api/folders/:id', method: 'PUT', body: { cyklMies: 12 } } })).resolves.toEqual({ id: 'f1', cyklMies: 12 });
+    await o2.stop();
+  });
+
   it('401: kolejka wstrzymana, nie skasowana, zdarzenie session-expired; po zalogowaniu wysyła', async () => {
     let ok = false;
     server.use(http.post(`${B}/api/x`, () => (ok ? HttpResponse.json({ done: 1 }) : HttpResponse.json({ error: 'SESJA' }, { status: 401 }))));

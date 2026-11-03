@@ -12,13 +12,18 @@ export type Write = {
   files?: Blob[];
   /** Pole z id wysłanych plików: `uploads` (domyślnie, lista), `uploadIds` (lista) albo `uploadId` (pierwszy plik). */
   uploadsAs?: 'uploads' | 'uploadIds' | 'uploadId';
+  /**
+   * Drugi zapis po pierwszym, w tym samym elemencie kolejki (przetrwa zamknięcie aplikacji): `:id` w `url` = id z odpowiedzi pierwszego,
+   * np. POST /api/folders, potem PUT /api/folders/:id. Obietnica kończy się odpowiedzią drugiego.
+   */
+  next?: { url: string; method: Write['method']; body: Record<string, unknown> };
   /** Zmiana sklepu od razu; cofana automatycznie przy odrzuceniu (4xx). */
   optimistic?: (s: Store) => void;
   rollback?: (s: Store) => void;
 };
 
 /** Element w IndexedDB pod `ob:<opId>` (opId rosnący = kolejność). `uploads[i]` = id już wysłanego pliku `files[i]`. */
-type Item = { opId: string; kind: string; url: string; method: string; body: Record<string, unknown>; files: Blob[]; uploads: (string | null)[]; uploadsAs?: Write['uploadsAs']; undo: Undo[] };
+type Item = { opId: string; kind: string; url: string; method: string; body: Record<string, unknown>; files: Blob[]; uploads: (string | null)[]; uploadsAs?: Write['uploadsAs']; next?: Write['next']; undo: Undo[] };
 
 // Każdy zapis ma własny klucz: dwie karty nie nadpisują sobie kolejki (brak read-modify-write całej listy).
 const PREFIX = 'ob:';
@@ -71,6 +76,17 @@ export function createOutbox({ store = defaultStore, backoff = defaultBackoff } 
       try {
         const res = await send(it);
         attempt = 0;
+        if (it.next) {
+          // drugi zapis pod kluczem tuż za pierwszym (ta sama kolejność); powtórka pierwszego po restarcie scala serwer po opId
+          const id = (res as { id?: string } | null)?.id ?? '';
+          const opId = `${it.opId}-2`;
+          await set(key(opId), { ...it, opId, url: it.next.url.replace(':id', encodeURIComponent(id)), method: it.next.method, body: it.next.body, files: [], uploads: [], next: undefined });
+          await del(key(it.opId));
+          const w = waiting.get(it.opId);
+          waiting.delete(it.opId);
+          if (w) waiting.set(opId, w);
+          continue;
+        }
         await del(key(it.opId));
         setCount(count - 1);
         waiting.get(it.opId)?.resolve(res);
@@ -123,7 +139,7 @@ export function createOutbox({ store = defaultStore, backoff = defaultBackoff } 
     enqueue(w: Write): Promise<unknown> {
       const opId = newOrderedId();
       const undo = w.optimistic ? store.record(w.optimistic) : [];
-      const it: Item = { opId, kind: w.kind, url: w.url, method: w.method, body: w.body ?? {}, files: w.files ?? [], uploads: (w.files ?? []).map(() => null), ...(w.uploadsAs && { uploadsAs: w.uploadsAs }), undo };
+      const it: Item = { opId, kind: w.kind, url: w.url, method: w.method, body: w.body ?? {}, files: w.files ?? [], uploads: (w.files ?? []).map(() => null), ...(w.uploadsAs && { uploadsAs: w.uploadsAs }), ...(w.next && { next: w.next }), undo };
       const p = new Promise((resolve, reject) => waiting.set(opId, { resolve, reject, rollback: w.rollback }));
       const saved = set(key(opId), it);
       saves.add(saved);
