@@ -10,13 +10,15 @@ export type Write = {
   body?: Record<string, unknown>;
   /** Pliki: najpierw POST /api/uploads, potem zapis z `uploads: [...]`. */
   files?: Blob[];
+  /** Pole z id wysłanych plików: `uploads` (domyślnie, lista), `uploadIds` (lista) albo `uploadId` (pierwszy plik). */
+  uploadsAs?: 'uploads' | 'uploadIds' | 'uploadId';
   /** Zmiana sklepu od razu; cofana automatycznie przy odrzuceniu (4xx). */
   optimistic?: (s: Store) => void;
   rollback?: (s: Store) => void;
 };
 
 /** Element w IndexedDB pod `ob:<opId>` (opId rosnący = kolejność). `uploads[i]` = id już wysłanego pliku `files[i]`. */
-type Item = { opId: string; kind: string; url: string; method: string; body: Record<string, unknown>; files: Blob[]; uploads: (string | null)[]; undo: Undo[] };
+type Item = { opId: string; kind: string; url: string; method: string; body: Record<string, unknown>; files: Blob[]; uploads: (string | null)[]; uploadsAs?: Write['uploadsAs']; undo: Undo[] };
 
 // Każdy zapis ma własny klucz: dwie karty nie nadpisują sobie kolejki (brak read-modify-write całej listy).
 const PREFIX = 'ob:';
@@ -52,7 +54,8 @@ export function createOutbox({ store = defaultStore, backoff = defaultBackoff } 
       await set(key(it.opId), it); // po restarcie plik nie pójdzie drugi raz
     }
     const body: Record<string, unknown> = { ...it.body, opId: it.opId };
-    if (it.files.length) body.uploads = [...((it.body.uploads as string[]) ?? []), ...it.uploads];
+    const k = it.uploadsAs ?? 'uploads';
+    if (it.files.length) body[k] = k === 'uploadId' ? it.uploads[0] : [...((it.body[k] as string[]) ?? []), ...it.uploads];
     return api(it.url, { method: it.method, json: body });
   }
 
@@ -120,7 +123,7 @@ export function createOutbox({ store = defaultStore, backoff = defaultBackoff } 
     enqueue(w: Write): Promise<unknown> {
       const opId = newOrderedId();
       const undo = w.optimistic ? store.record(w.optimistic) : [];
-      const it: Item = { opId, kind: w.kind, url: w.url, method: w.method, body: w.body ?? {}, files: w.files ?? [], uploads: (w.files ?? []).map(() => null), undo };
+      const it: Item = { opId, kind: w.kind, url: w.url, method: w.method, body: w.body ?? {}, files: w.files ?? [], uploads: (w.files ?? []).map(() => null), ...(w.uploadsAs && { uploadsAs: w.uploadsAs }), undo };
       const p = new Promise((resolve, reject) => waiting.set(opId, { resolve, reject, rollback: w.rollback }));
       const saved = set(key(opId), it);
       saves.add(saved);

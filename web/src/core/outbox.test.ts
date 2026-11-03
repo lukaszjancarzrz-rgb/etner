@@ -66,6 +66,24 @@ describe('outbox', () => {
     await o2.stop();
   });
 
+  it('uploadsAs: id plików w polu zapisu (uploadIds – lista, uploadId – pierwszy plik)', async () => {
+    let uploads = 0;
+    const bodies: any[] = [];
+    server.use(
+      http.post(`${B}/api/uploads`, () => HttpResponse.json({ uploadId: `u${++uploads}` })),
+      http.post(`${B}/api/y`, async ({ request }) => { bodies.push(await request.json()); return HttpResponse.json({ ok: true }); }),
+    );
+    const o = createOutbox({ store: createStore(), ...fast });
+    await o.start();
+    const f = () => new Blob(['x'], { type: 'image/jpeg' });
+    await o.enqueue({ kind: 't', url: '/api/y', method: 'POST', body: { n: 1 }, files: [f(), f()], uploadsAs: 'uploadIds' });
+    await o.enqueue({ kind: 't', url: '/api/y', method: 'POST', body: { n: 2 }, files: [f()], uploadsAs: 'uploadId' });
+    expect(bodies[0]).toMatchObject({ n: 1, uploadIds: ['u1', 'u2'] });
+    expect(bodies[0].uploads).toBeUndefined();
+    expect(bodies[1]).toMatchObject({ n: 2, uploadId: 'u3' });
+    await o.stop();
+  });
+
   it('401: kolejka wstrzymana, nie skasowana, zdarzenie session-expired; po zalogowaniu wysyła', async () => {
     let ok = false;
     server.use(http.post(`${B}/api/x`, () => (ok ? HttpResponse.json({ done: 1 }) : HttpResponse.json({ error: 'SESJA' }, { status: 401 }))));
