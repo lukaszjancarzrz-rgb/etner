@@ -1,5 +1,6 @@
 import { and, asc, eq, isNull, like, or, sql } from 'drizzle-orm';
 import { newId, norm, phoneDigits, type ClientCreate, type ClientUpdate, type SiteInput, type SiteUpdate } from '@etner/shared';
+import { HTTPException } from 'hono/http-exception';
 import { recordChange } from '../../core/changes.js';
 import type { DictRefs } from '../../core/dict-refs.js';
 import { tx, type Db } from '../../core/db.js';
@@ -93,10 +94,61 @@ export function merge(db: Db, userId: string, mainId: string, dupId: string, ref
   });
 }
 
+/** Klucz duplikatu obiektu (R70): nazwa, adres i miejscowość jak `norm`, bez interpunkcji; '' = obiekt bez danych (nigdy nie łączony sam). */
+export const siteKey = (s: Pick<SiteRow, 'nazwa' | 'adres' | 'miejscowosc'>): string =>
+  [s.nazwa, s.adres, s.miejscowosc].map((x) => norm(x.replace(/[^\p{L}\p{N}\s]/gu, ' '))).join('|').replace(/^\|+$/, '');
+
+/**
+ * Łączy obiekt `dupId` z obiektem `keepId` tego samego klienta: odwołania innych modułów (`refs`, kolumna `siteId`: zlecenia, leady,
+ * teczki i paszport) przechodzą do głównego, puste pola głównego z duplikatu, duplikat miękko usunięty. Jedna transakcja, każdy wiersz
+ * w changes. Duplikat już usunięty = bez zmian (powtórka). `by` null = zadanie przy starcie.
+ */
+export function mergeSites(db: Db, by: string | null, keepId: string, dupId: string, refs: DictRefs[]): SiteRow | undefined {
+  return tx(db, () => {
+    const keep = getSite(db, keepId);
+    const dup = db.select().from(sites).where(eq(sites.id, dupId)).get();
+    if (!keep || !dup || keepId === dupId) return undefined;
+    if (dup.deletedAt) return keep;
+    if (dup.clientId !== keep.clientId) throw new HTTPException(400, { message: 'Obiekty różnych klientów – najpierw połącz klientów' });
+    const now = new Date().toISOString();
+    for (const r of refs) r.rename(db, by, 'siteId', dupId, keepId);
+    const merged = {
+      nazwa: keep.nazwa || dup.nazwa, adres: keep.adres || dup.adres, miejscowosc: keep.miejscowosc || dup.miejscowosc, mapa: keep.mapa || dup.mapa,
+      opis: keep.opis && dup.opis && keep.opis !== dup.opis ? `${keep.opis}\n${dup.opis}` : keep.opis || dup.opis,
+    };
+    // zawsze z wpisem w changes: pracownik dostaje obiekt, gdy właśnie przeszły do niego zlecenia
+    const row = db.update(sites).set({ ...merged, szukaj: siteText(merged), updatedAt: now }).where(eq(sites.id, keepId)).returning().get();
+    recordChange(db, by, 'sites', keepId, 'update', keep, row);
+    const gone = db.update(sites).set({ deletedAt: now, updatedAt: now }).where(eq(sites.id, dupId)).returning().get();
+    recordChange(db, by, 'sites', dupId, 'delete', dup, gone);
+    refreshSzukaj(db, keep.clientId);
+    return row;
+  });
+}
+
+/** R70: jednorazowo przy starcie – obiekty klienta o tym samym `siteKey` łączone z najstarszym, każda para w osobnej transakcji. Zwraca liczbę połączonych. */
+export function mergeDuplicateSites(db: Db, refs: DictRefs[]): number {
+  const seen = new Map<string, string>();
+  let n = 0;
+  for (const s of db.select().from(sites).where(isNull(sites.deletedAt)).orderBy(asc(sites.createdAt), asc(sites.id)).all()) {
+    const k = siteKey(s);
+    if (!k) continue;
+    const keepId = seen.get(`${s.clientId}|${k}`);
+    if (!keepId) { seen.set(`${s.clientId}|${k}`, s.id); continue; }
+    mergeSites(db, null, keepId, s.id, refs);
+    n++;
+  }
+  return n;
+}
+
+/** Obiekt identyczny (siteKey) z istniejącym obiektem klienta zwraca istniejący (R70). */
 export function addSite(db: Db, userId: string, clientId: string, input: Partial<SiteInput>): SiteRow | undefined {
   if (!get(db, clientId)) return undefined;
   const now = new Date().toISOString();
   const v = { nazwa: '', adres: '', miejscowosc: '', mapa: '', opis: '', ...Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) };
+  const k = siteKey(v);
+  const same = k && activeSites(db, clientId).find((s) => siteKey(s) === k);
+  if (same) return same;
   const row = db.insert(sites).values({ id: newId(), clientId, ...v, szukaj: siteText(v), createdAt: now, createdBy: userId, updatedAt: now }).returning().get();
   recordChange(db, userId, 'sites', row.id, 'create', null, row);
   refreshSzukaj(db, clientId);

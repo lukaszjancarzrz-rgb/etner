@@ -17,6 +17,7 @@ import { leadContacts, leads } from './schema.js';
 export const dictRefs = dictRefsFor('leads', leads, { status_leada: leads.status, kategoria: leads.kategoria, zrodlo: leads.zrodlo });
 /** Łączenie klientów (klienci.merge): przepina `client_id` z duplikatu na głównego klienta. */
 export const clientRefs = dictRefsFor('leads', leads, { clientId: leads.clientId });
+export const siteRefs = dictRefsFor('leads', leads, { siteId: leads.siteId });
 
 export type LeadRow = typeof leads.$inferSelect;
 export type ContactRow = typeof leadContacts.$inferSelect;

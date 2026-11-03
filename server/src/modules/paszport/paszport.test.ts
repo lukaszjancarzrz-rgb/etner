@@ -396,3 +396,71 @@ describe('paszport – pliki: typ dokumentu, dla klienta, usuwanie', () => {
     expect((await call(s, s.worker, 'PUT', `/api/service-entries/${e.body.id}`, { jobId: null })).status).toBe(404);
   });
 });
+
+describe('łączenie obiektów (R70)', () => {
+  const kl = () => import('../klienci/service.js');
+  const refs = async () => (await import('../klienci/routes.js')).siteRefs;
+  const psz = (s: S, id: string, siteId: string, numer: string) =>
+    s.deps.db.$client.prepare("insert into passports (id, created_at, updated_at, site_id, numer) values (?, '', '', ?, ?)").run(id, siteId, numer);
+
+  it('ręcznie: zlecenia, leady, teczki (tej samej kategorii scalone), paszport; puste pola; duplikat usunięty; powtórka bez zmian', async () => {
+    const s = await setup();
+    const { addSite, getSite } = await kl();
+    const dup = addSite(s.deps.db, s.a.user.id, s.site.clientId, { nazwa: 'Dom', adres: 'Krotka 1.', miejscowosc: 'Zawoja', mapa: 'geo:1', opis: 'kod do bramy' })!;
+    const j = job(s, 'Rekuperacja', 'serwis', dup.id);
+    const keepRek = (await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Rekuperacja' })).body;
+    const dupRek = (await call(s, s.admin, 'POST', '/api/folders', { siteId: dup.id, kategoria: 'Rekuperacja' })).body;
+    const dupKl = (await call(s, s.admin, 'POST', '/api/folders', { siteId: dup.id, kategoria: 'Klimatyzacja' })).body;
+    const dev = (await call(s, s.worker, 'POST', '/api/devices', { folderId: dupRek.id, nazwa: 'Rekuperator', dlaKlienta: true })).body;
+    const doc = await upload(s, s.worker, pdf(), 'i.pdf');
+    await call(s, s.worker, 'POST', '/api/folder-files', { folderId: dupRek.id, uploadId: doc, typDok: 'instrukcja', dlaKlienta: true });
+    psz(s, 'p-keep', s.site.id, 'PSZ-2026-001');
+    psz(s, 'p-dup', dup.id, 'PSZ-2026-002');
+
+    expect((await call(s, s.worker, 'POST', `/api/sites/${s.site.id}/merge`, { from: dup.id })).status).toBe(403);
+    const r = await call(s, s.admin, 'POST', `/api/sites/${s.site.id}/merge`, { from: dup.id, opId: 'sm1' });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ id: s.site.id, nazwa: 'Dom', adres: 'Krótka 1', mapa: 'geo:1', opis: 'kod do bramy' });
+    expect(getSite(s.deps.db, dup.id)).toBeUndefined();
+    expect(zlecenia.get(s.deps.db, j.id)!.siteId).toBe(s.site.id);
+    expect(findFolder(s.deps.db, s.site.id, 'Rekuperacja')!.id).toBe(keepRek.id);
+    expect(findFolder(s.deps.db, s.site.id, 'Klimatyzacja')!.id).toBe(dupKl.id);
+    expect(s.deps.db.$client.prepare(`select folder_id f from devices where id = '${dev.id}'`).get()).toEqual({ f: keepRek.id });
+    expect(s.deps.db.$client.prepare(`select owner_id o from attachments where id = '${doc}'`).get()).toEqual({ o: keepRek.id });
+    expect(count(s, "select count(*) n from passports where deleted_at is null")).toBe(1);
+    expect(count(s, "select count(*) n from passports where id = 'p-keep' and deleted_at is null")).toBe(1);
+    expect((await teczki(s, s.admin)).map((t) => t.kategoria).sort()).toEqual(['Klimatyzacja', 'Rekuperacja']);
+
+    const n = count(s, 'select count(*) n from changes');
+    expect((await call(s, s.admin, 'POST', `/api/sites/${s.site.id}/merge`, { from: dup.id, opId: 'sm1' })).status).toBe(200);
+    expect((await call(s, s.admin, 'POST', `/api/sites/${s.site.id}/merge`, { from: dup.id })).status).toBe(200);
+    expect(count(s, 'select count(*) n from changes')).toBe(n);
+    // obiekt innego klienta: 400, nic nie zmienione
+    const other = newClient(s.deps.db, s.a.user.id, { typ: 'osoba', nazwa: 'Inny', telefony: [], emaile: [], nip: '', notatki: '', site: { nazwa: '', adres: 'X', miejscowosc: 'Y', mapa: '', opis: '' } });
+    expect((await call(s, s.admin, 'POST', `/api/sites/${s.site.id}/merge`, { from: other.site!.id })).status).toBe(400);
+    expect(getSite(s.deps.db, other.site!.id)).toBeDefined();
+  });
+
+  it('dodanie identycznego obiektu zwraca istniejący; przy starcie: dokładne duplikaty łączone, drugi przebieg 0', async () => {
+    const s = await setup();
+    const { addSite, mergeDuplicateSites, listSites } = await kl();
+    expect(addSite(s.deps.db, s.a.user.id, s.site.clientId, { adres: ' krótka  1 ', miejscowosc: 'ZAWOJA' })!.id).toBe(s.site.id);
+    // duplikaty jak z przeniesienia arkusza (wstawione z pominięciem addSite) + różniący się obiekt + obiekt bez danych
+    const ins = s.deps.db.$client.prepare("insert into sites (id, created_at, updated_at, client_id, nazwa, adres, miejscowosc) values (?, ?, '', ?, '', ?, ?)");
+    ins.run('d1', '2030-01-01', s.site.clientId, 'Krótka 1', 'Zawoja');
+    ins.run('d2', '2030-01-02', s.site.clientId, 'Krótka, 1', 'zawoja');
+    ins.run('e1', '2030-01-03', s.site.clientId, '', '');
+    ins.run('e2', '2030-01-04', s.site.clientId, '', '');
+    ins.run('o1', '2030-01-05', s.site.clientId, 'Krótka 11', 'Zawoja');
+    const j = job(s, 'Rekuperacja', 'serwis', 'd2');
+    await call(s, s.admin, 'POST', '/api/folders', { siteId: 'd1', kategoria: 'Rekuperacja' });
+    await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Rekuperacja' });
+    expect(mergeDuplicateSites(s.deps.db, await refs())).toBe(2);
+    expect(listSites(s.deps.db, s.site.clientId).map((x) => x.id).sort()).toEqual([s.site.id, 'e1', 'e2', 'o1'].sort());
+    expect(zlecenia.get(s.deps.db, j.id)!.siteId).toBe(s.site.id);
+    expect(count(s, 'select count(*) n from passport_folders where deleted_at is null')).toBe(1);
+    const n = count(s, 'select count(*) n from changes');
+    expect(mergeDuplicateSites(s.deps.db, await refs())).toBe(0);
+    expect(count(s, 'select count(*) n from changes')).toBe(n);
+  });
+});

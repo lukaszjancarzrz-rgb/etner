@@ -11,7 +11,7 @@ export interface DictRefs {
   /** Ile nieusuniętych rekordów ma tę wartość. */
   count(db: Db, rodzaj: string, value: string): number;
   /** Zmiana nazwy wartości we wszystkich rekordach (z wpisem w changes). Wywołuj w transakcji. */
-  rename(db: Db, userId: string, rodzaj: string, from: string, to: string): void;
+  rename(db: Db, userId: string | null, rodzaj: string, from: string, to: string): void;
 }
 
 /** `clean` = co trafia do changes (np. bez password_hash). */

@@ -32,27 +32,58 @@ export const dictRefs: DictRefs = {
         recordChange(db, userId, 'passport_folders', old.id, 'update', old, row);
         continue;
       }
-      for (const t of [devices, serviceEntries]) {
-        const entity = t === devices ? 'devices' : 'service_entries';
-        for (const r of db.select().from(t).where(and(eq(t.folderId, old.id), isNull(t.deletedAt))).all()) {
-          const row = db.update(t).set({ folderId: target.id, updatedAt: now }).where(eq(t.id, r.id)).returning().get();
-          recordChange(db, userId, entity, r.id, 'update', r, row);
-        }
-      }
-      dziennik.moveAttachments(db, userId, 'teczka', old.id, target.id);
-      const terms = [target.nastepnySerwis, old.nastepnySerwis].filter((d): d is string => !!d).sort();
-      const merged = db.update(passportFolders).set({
-        nastepnySerwis: terms[0] ?? null,
-        cyklMies: target.cyklMies ?? old.cyklMies,
-        notatkaRozliczenie: [target.notatkaRozliczenie, old.notatkaRozliczenie].filter(Boolean).join('\n\n'),
-        updatedAt: now,
-      }).where(eq(passportFolders.id, target.id)).returning().get();
-      recordChange(db, userId, 'passport_folders', target.id, 'update', target, merged);
-      const gone = db.update(passportFolders).set({ deletedAt: now, updatedAt: now }).where(eq(passportFolders.id, old.id)).returning().get();
-      recordChange(db, userId, 'passport_folders', old.id, 'delete', old, gone);
+      mergeFolder(db, userId, old, target);
     }
   },
 };
+
+/** R68: urządzenia, wpisy i pliki teczki `old` przechodzą do `target`; puste pola serwisu z `old` (wcześniejszy termin), notatki łączone, `old` usunięta miękko. Wywołuj w transakcji. */
+function mergeFolder(db: Db, userId: string | null, old: FolderRow, target: FolderRow): void {
+  const now = NOW();
+  for (const t of [devices, serviceEntries]) {
+    const entity = t === devices ? 'devices' : 'service_entries';
+    for (const r of db.select().from(t).where(and(eq(t.folderId, old.id), isNull(t.deletedAt))).all()) {
+      const row = db.update(t).set({ folderId: target.id, updatedAt: now }).where(eq(t.id, r.id)).returning().get();
+      recordChange(db, userId, entity, r.id, 'update', r, row);
+    }
+  }
+  dziennik.moveAttachments(db, userId, 'teczka', old.id, target.id);
+  const terms = [target.nastepnySerwis, old.nastepnySerwis].filter((d): d is string => !!d).sort();
+  const merged = db.update(passportFolders).set({
+    nastepnySerwis: terms[0] ?? null,
+    cyklMies: target.cyklMies ?? old.cyklMies,
+    notatkaRozliczenie: [target.notatkaRozliczenie, old.notatkaRozliczenie].filter(Boolean).join('\n\n'),
+    updatedAt: now,
+  }).where(eq(passportFolders.id, target.id)).returning().get();
+  recordChange(db, userId, 'passport_folders', target.id, 'update', target, merged);
+  const gone = db.update(passportFolders).set({ deletedAt: now, updatedAt: now }).where(eq(passportFolders.id, old.id)).returning().get();
+  recordChange(db, userId, 'passport_folders', old.id, 'delete', old, gone);
+}
+
+/**
+ * Łączenie obiektów (klienci.mergeSites): teczki duplikatu przechodzą do obiektu głównego, a teczki tej samej kategorii się scalają (R68).
+ * Paszport duplikatu przechodzi, gdy główny go nie ma; gdy oba mają – zostaje paszport głównego, drugi usunięty miękko. Wywołuj w transakcji.
+ */
+export const siteRefs: DictRefs = {
+  count: () => 0,
+  rename(db, userId, rodzaj, from, to) {
+    if (rodzaj !== 'siteId') return;
+    const now = NOW();
+    for (const old of foldersOf(db, from)) {
+      const target = findFolder(db, to, old.kategoria);
+      if (target) { mergeFolder(db, userId, old, target); continue; }
+      const row = db.update(passportFolders).set({ siteId: to, updatedAt: now }).where(eq(passportFolders.id, old.id)).returning().get();
+      recordChange(db, userId, 'passport_folders', old.id, 'update', old, row);
+    }
+    const p = passportOf(db, from);
+    if (!p) return;
+    const keep = passportOf(db, to);
+    const row = db.update(passports).set(keep ? { deletedAt: now, updatedAt: now } : { siteId: to, updatedAt: now }).where(eq(passports.id, p.id)).returning().get();
+    recordChange(db, userId, 'passports', p.id, keep ? 'delete' : 'update', p, row);
+  },
+};
+const passportOf = (db: Db, siteId: string): PassportRow | undefined =>
+  db.select().from(passports).where(and(eq(passports.siteId, siteId), isNull(passports.deletedAt))).get();
 
 export type PassportRow = typeof passports.$inferSelect;
 export type FolderRow = typeof passportFolders.$inferSelect;

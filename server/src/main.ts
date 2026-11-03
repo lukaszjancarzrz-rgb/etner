@@ -14,6 +14,8 @@ import { pumbleClient, type PumbleClient } from './core/pumble.js';
 import { fakePumble } from './core/pumble-fake.js';
 import { startPoll } from './modules/zlecenia/pumble.js';
 import { modules } from './modules/index.js';
+import { mergeDuplicateSites } from './modules/klienci/service.js';
+import { siteRefs } from './modules/klienci/routes.js';
 import { kopieCrons } from './scripts/kopie.js';
 import { seedBase } from './modules/slowniki/seed.js';
 import { bootstrapAdmin } from './scripts/create-admin.js';
@@ -39,6 +41,9 @@ if (swapRestored(dataDir)) console.log('Odtworzona baza (restore.db) podmieniona
 const db = openDb(join(dataDir, 'etner.db'));
 migrate(db);
 seedBase(db);
+// R70: zdublowane obiekty z przeniesienia arkusza (ten sam klient, nazwa, adres, miejscowość); w logu tylko liczba
+const mergedSites = mergeDuplicateSites(db, siteRefs);
+if (mergedSites) console.log(`Połączono zdublowane obiekty: ${mergedSites}.`);
 const demo = process.env.DEMO === '1';
 if (demo && (await seedDemo(db, files))) console.log('Dane demo załadowane.');
 // Pierwszy administrator z ADMIN_LOGIN / ADMIN_PASSWORD (tylko pusta baza); w logu sam login.

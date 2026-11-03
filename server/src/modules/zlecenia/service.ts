@@ -16,6 +16,7 @@ import { jobs } from './schema.js';
 export const dictRefs = dictRefsFor('jobs', jobs, { status_zlecenia: jobs.status, kategoria: jobs.kategoria, rodzaj_zlecenia: jobs.rodzaj, ekipa: jobs.ekipa });
 /** Łączenie klientów (klienci.merge): przepina `client_id` z duplikatu na głównego klienta. */
 export const clientRefs = dictRefsFor('jobs', jobs, { clientId: jobs.clientId });
+export const siteRefs = dictRefsFor('jobs', jobs, { siteId: jobs.siteId });
 
 export type JobRow = typeof jobs.$inferSelect;
 /** Dla harmonogramu: nowe osoby zlecenia trafiają do jego kanału Pumble. */

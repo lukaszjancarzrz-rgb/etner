@@ -62,7 +62,7 @@ export function attach(db: Db, userId: string, ups: AttachmentRow[], ownerType: 
   });
 }
 /** Przeniesienie załączników do innego właściciela tego samego typu (scalanie teczek paszportu). */
-export function moveAttachments(db: Db, userId: string, ownerType: Owner, fromId: string, toId: string): void {
+export function moveAttachments(db: Db, userId: string | null, ownerType: Owner, fromId: string, toId: string): void {
   const now = NOW();
   for (const a of attachmentsOf(db, ownerType, fromId)) {
     const row = db.update(attachments).set({ ownerId: toId, updatedAt: now }).where(eq(attachments.id, a.id)).returning().get();

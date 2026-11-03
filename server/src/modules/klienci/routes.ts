@@ -6,10 +6,14 @@ import { body } from '../../core/body.js';
 import { requireAdmin, requireUser } from '../../core/auth.js';
 import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
-import { clientRefs as leady } from '../leady/service.js';
+import { clientRefs as leady, siteRefs as leadySites } from '../leady/service.js';
+import { siteRefs as paszport } from '../paszport/service.js';
 import { clientRefs as zadania } from '../zadania/service.js';
-import { clientRefs as zlecenia } from '../zlecenia/service.js';
+import { clientRefs as zlecenia, siteRefs as zleceniaSites } from '../zlecenia/service.js';
 import * as svc from './service.js';
+
+/** Tabele z site_id (R70): zlecenia, leady, teczki i paszport. */
+export const siteRefs = [zleceniaSites, leadySites, paszport];
 
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
 export function routes(app: Hono, deps: AppDeps): void {
@@ -65,6 +69,13 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.put('/api/sites/:id', admin, async (c) => {
     const { opId, ...d } = await body(c, siteUpdateSchema);
     const { result } = runOp(db, opId, me(c), () => svc.updateSite(db, me(c), c.req.param('id'), d));
+    if (!result) throw notFound();
+    return c.json(result);
+  });
+
+  app.post('/api/sites/:id/merge', admin, async (c) => {
+    const { opId, from } = await body(c, clientMergeSchema);
+    const { result } = runOp(db, opId, me(c), () => svc.mergeSites(db, me(c), c.req.param('id'), from, siteRefs));
     if (!result) throw notFound();
     return c.json(result);
   });

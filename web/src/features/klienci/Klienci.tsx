@@ -12,7 +12,7 @@ import type { Route } from '../../routes.js';
 import { fmtTermin } from '../zlecenia/JobCard.js';
 import { ClientForm, SiteForm } from './ClientForms.js';
 import { duplicatePairs, type DupPair } from './forms.js';
-import { MergeDialog } from './Merge.js';
+import { MergeDialog, SiteMergeDialog } from './Merge.js';
 import { PaszportSekcja } from '../paszport/Paszport.js';
 
 export function Klienci({ route }: { route: Route }) {
@@ -97,7 +97,7 @@ function ClientCard({ id }: { id: string }) {
   const allJobs = useEntities('jobs');
   const allLeads = useEntities('leads');
   const sites = useMemo(() => withoutEchoes(allSites.filter((s) => s.clientId === id), ['nazwa', 'adres', 'miejscowosc']), [allSites, id]);
-  const [form, setForm] = useState<null | { kind: 'client' } | { kind: 'site'; site?: Rec } | { kind: 'merge' }>(null);
+  const [form, setForm] = useState<null | { kind: 'client' } | { kind: 'site'; site?: Rec } | { kind: 'merge' } | { kind: 'site-merge'; site: Rec }>(null);
   const jobs = useMemo(() => allJobs.filter((j) => j.clientId === id).sort((a, b) => String(b.numer).localeCompare(String(a.numer), 'pl', { numeric: true })), [allJobs, id]);
   const leads = useMemo(() => allLeads.filter((l) => l.clientId === id), [allLeads, id]);
 
@@ -137,6 +137,7 @@ function ClientCard({ id }: { id: string }) {
                   </span>
                   <span className="flex shrink-0 flex-wrap gap-2 pl-7 min-[560px]:pl-0">
                     {admin && <Button variant="ghost" size="sm" className="h-11" aria-label={`Edytuj obiekt ${s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ')}`} onClick={() => setForm({ kind: 'site', site: s })}><PencilSimple className="h-4 w-4" />Edytuj</Button>}
+                    {admin && sites.length > 1 && !s._tmp && <Button variant="ghost" size="sm" className="h-11 text-ink-2" aria-label={`Połącz obiekt ${s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ')} z innym`} onClick={() => setForm({ kind: 'site-merge', site: s })}><ArrowsMerge className="h-4 w-4" />Połącz z…</Button>}
                     {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><NavigationArrow className="h-4 w-4" />Nawiguj</a>}
                   </span>
                 </li>
@@ -151,6 +152,7 @@ function ClientCard({ id }: { id: string }) {
 
       {form?.kind === 'client' && <ClientForm client={c} onClose={() => setForm(null)} />}
       {form?.kind === 'merge' && <MergeDialog a={c} onClose={() => setForm(null)} />}
+      {form?.kind === 'site-merge' && <SiteMergeDialog a={form.site} sites={sites} onClose={() => setForm(null)} />}
       {form?.kind === 'site' && <SiteForm clientId={id} site={form.site} onClose={() => setForm(null)} />}
 
       {admin && (

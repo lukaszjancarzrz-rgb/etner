@@ -87,3 +87,72 @@ export function MergeDialog({ a, b: initialB, onClose }: { a: Rec; b?: Rec; onCl
     </Dialog>
   );
 }
+
+const siteLabel = (s: Rec) => s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ') || 'Obiekt';
+
+/**
+ * „Połącz z…” na obiekcie (admin, R70): obiekty tego samego klienta różniące się pisownią. Zlecenia, leady, teczki i paszport
+ * przechodzą do obiektu, który zostaje (teczki tej samej kategorii się scalają), puste pola są uzupełniane, drugi znika.
+ */
+export function SiteMergeDialog({ a, sites, onClose }: { a: Rec; sites: Rec[]; onClose: () => void }) {
+  const jobs = useEntities('jobs');
+  const others = sites.filter((s) => s.id !== a.id && !s._tmp);
+  const [bId, setBId] = useState(others.length === 1 ? others[0]!.id : '');
+  const b = others.find((s) => s.id === bId);
+  const [mainId, setMainId] = useState(a.id);
+
+  function submit() {
+    if (!b) return;
+    const [main, dup] = mainId === b.id ? [b, a] : [a, b];
+    void outbox.enqueue({
+      kind: 'klient', url: `/api/sites/${main.id}/merge`, method: 'POST', body: { from: dup.id },
+      optimistic: (s) => {
+        for (const e of ['jobs', 'leads'] as const) for (const r of s.all(e).filter((x) => x.siteId === dup.id)) s.put(e, { ...r, siteId: main.id });
+        // teczka tej samej kategorii scala się na serwerze; do synchronizacji widać teczkę głównego obiektu
+        const kats = new Set(s.all('passport_folders').filter((f) => f.siteId === main.id).map((f) => f.kategoria));
+        for (const f of s.all('passport_folders').filter((x) => x.siteId === dup.id)) {
+          if (kats.has(f.kategoria)) s.remove('passport_folders', f.id);
+          else s.put('passport_folders', { ...f, siteId: main.id });
+        }
+        const fill = (k: string) => main[k] || dup[k] || '';
+        s.put('sites', { ...main, nazwa: fill('nazwa'), adres: fill('adres'), miejscowosc: fill('miejscowosc'), mapa: fill('mapa'), opis: main.opis && dup.opis && main.opis !== dup.opis ? `${main.opis}\n${dup.opis}` : fill('opis') });
+        s.remove('sites', dup.id);
+      },
+    }).then(() => toast('Obiekty połączone', { body: `${siteLabel(dup)} → ${siteLabel(main)}` }), (x: Error) => toast('Nie połączono obiektów', { body: x.message, tone: 'error' }));
+    if (location.hash.startsWith(`#psz/${dup.id}`)) go(location.hash.replace(dup.id, main.id));
+    onClose();
+  }
+
+  const side = (s: Rec) => (
+    <button type="button" role="radio" aria-checked={s.id === mainId} onClick={() => setMainId(s.id)}
+      className={cn('grid gap-0.5 rounded-xl border-2 p-3 text-left transition-colors duration-200', s.id === mainId ? 'border-ok bg-ok/6' : 'border-line hover:border-ink-2')}>
+      <span className={cn('text-xs font-semibold uppercase tracking-wide', s.id === mainId ? 'text-ok' : 'text-ink-2')}>{s.id === mainId ? 'Zostaje' : 'Znika, dane przechodzą'}</span>
+      <span className="font-semibold">{siteLabel(s)}</span>
+      <span className="text-sm text-ink-2 tabular-nums">{[[s.adres, s.miejscowosc].filter(Boolean).join(', '), `zleceń ${jobs.filter((j) => j.siteId === s.id).length}`].filter(Boolean).join(' · ')}</span>
+    </button>
+  );
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <Sheet title="Połącz obiekty" description="Zlecenia, leady, teczki i paszport przejdą do obiektu, który zostaje. Teczki tej samej kategorii się scalą, brakujące dane uzupełnimy." className="desk:w-[min(640px,92vw)]">
+        <div className="grid gap-3">
+          {others.length > 1 && (
+            <Field label="Połącz z">
+              {(id) => <Combobox id={id} value={bId} onValueChange={(v) => { setBId(v); setMainId(a.id); }} options={others.map((s) => ({ value: s.id, label: [siteLabel(s), s.nazwa ? [s.adres, s.miejscowosc].filter(Boolean).join(', ') : ''].filter(Boolean).join(' – ') }))} placeholder="Wybierz obiekt" search="Adres, miejscowość" empty="Nie ma takiego obiektu." />}
+            </Field>
+          )}
+          {b && (
+            <>
+              <p className="text-sm font-semibold" id="merge-site-main">Który obiekt zostaje</p>
+              <div role="radiogroup" aria-labelledby="merge-site-main" className="grid gap-2 min-[560px]:grid-cols-2">{side(a)}{side(b)}</div>
+            </>
+          )}
+          <div className="flex justify-end gap-3 border-t border-line pt-4">
+            <Button variant="secondary" onClick={onClose}>Anuluj</Button>
+            <Button onClick={submit} disabled={!b}><ArrowsMerge className="h-5 w-5" />Połącz</Button>
+          </div>
+        </div>
+      </Sheet>
+    </Dialog>
+  );
+}
