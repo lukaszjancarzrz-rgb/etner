@@ -37,9 +37,9 @@ export const useCanEdit = () => {
 };
 
 /** Znacznik terminu serwisu na kafelku i w teczce. */
-export function SerwisBadge({ nastepny }: { nastepny?: string | null }) {
+export function SerwisBadge({ nastepny, soonOnly }: { nastepny?: string | null; soonOnly?: boolean }) {
   const s = serwisStan(nastepny, today());
-  return s ? <Badge tone={s.tone === 'later' ? 'line' : 'new'}>{s.label}</Badge> : null;
+  return s && !(soonOnly && s.tone === 'later') ? <Badge tone={s.tone === 'later' ? 'line' : 'new'}>{s.label}</Badge> : null;
 }
 
 /** Sekcja „Paszport instalacji” obiektu na karcie klienta: kafelki teczek (P3: widoczne także bez paszportu). */

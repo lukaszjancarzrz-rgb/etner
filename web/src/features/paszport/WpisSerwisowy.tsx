@@ -127,8 +127,8 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
           <Field label="Data">{(id) => <Input id={id} type="date" required value={dzien} onChange={(e) => setDzien(e.target.value)} />}</Field>
         </div>
 
-        <fieldset className="grid gap-1 rounded-2xl border border-line bg-card p-4">
-          <legend className="mb-2 text-sm font-semibold">Wykonane czynności</legend>
+        <div role="group" aria-labelledby="wpis-czynnosci" className="grid gap-1 rounded-2xl border border-line bg-card p-4">
+          <p id="wpis-czynnosci" className="mb-1 text-sm font-semibold">Wykonane czynności</p>
           {!items.length && <p className="text-sm text-ink-2">Brak listy czynności dla kategorii {kategoria}. Wpisz je poniżej albo dodaj w Ustawieniach (słownik „Czynności serwisowe”).</p>}
           {items.map((c) => (
             <label key={c} className="flex min-h-12 cursor-pointer items-center gap-3 text-base">
@@ -136,7 +136,7 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
             </label>
           ))}
           <div className="mt-2"><Field label="Inne" hint="Kilka czynności oddziel przecinkiem.">{(id, d) => <Input id={id} aria-describedby={d} value={inne} onChange={(e) => setInne(e.target.value)} placeholder="Np. regulacja przepływów" />}</Field></div>
-        </fieldset>
+        </div>
 
         <Field label="Uwagi">{(id) => <Textarea id={id} value={uwagi} onChange={(e) => setUwagi(e.target.value)} placeholder="Stan filtrów, zalecenia dla klienta" />}</Field>
 

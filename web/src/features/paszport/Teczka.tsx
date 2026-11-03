@@ -92,7 +92,7 @@ function ServiceBar({ t, siteId }: { t: T; siteId: string }) {
     <div className={cn('flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border px-4 py-3', t.nastepnySerwis ? 'border-action/40 bg-action/8' : 'border-line bg-card')}>
       <Bell className="h-6 w-6 shrink-0 text-action" weight="duotone" aria-hidden />
       <p className="min-w-0 flex-1">
-        {t.nastepnySerwis ? <><span className="font-semibold">Następny serwis: <span className="tabular-nums">{fmtDay(t.nastepnySerwis)}</span></span> <SerwisBadge nastepny={t.nastepnySerwis} /></>
+        {t.nastepnySerwis ? <><span className="font-semibold">Następny serwis: <span className="tabular-nums">{fmtDay(t.nastepnySerwis)}</span></span> <SerwisBadge nastepny={t.nastepnySerwis} soonOnly /></>
           : <span className="font-semibold">Bez terminu następnego serwisu</span>}
         <span className="block text-sm text-ink-2">
           {[f?.cyklMies ? `co ${f.cyklMies} mies.` : 'bez cyklu', t.nastepnySerwis && (f?.przypomnienia === false ? 'bez przypomnień klientowi' : 'przypomnienie e-mail 30 i 7 dni wcześniej')].filter(Boolean).join(' · ')}
@@ -164,7 +164,7 @@ function Devices({ t, siteId }: { t: T; siteId: string }) {
   return (
     <Card title="Urządzenia" count={list.length} action={<Button variant="secondary" size="sm" onClick={() => setForm({})}><Plus className="h-4 w-4" weight="bold" />Urządzenie</Button>}>
       {!list.length ? <p className="text-sm text-ink-2">Brak urządzeń. Dodaj rekuperator, jednostkę, falownik – z numerem seryjnym i gwarancją.</p> : (
-        <ul className="grid divide-y divide-line">
+        <ul className="grid grid-cols-[minmax(0,1fr)] divide-y divide-line">
           {list.map((d) => (
             <li key={d.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
               <Cpu className="mt-0.5 h-5 w-5 shrink-0 text-ink-2" aria-hidden />
@@ -238,7 +238,7 @@ function Documents({ t, siteId }: { t: T; siteId: string }) {
   return (
     <Card title="Dokumenty" count={docs.length} action={<Button variant="secondary" size="sm" onClick={() => setUpload(true)}><UploadSimple className="h-4 w-4" />Plik</Button>}>
       {!docs.length && !(admin && n) && <p className="text-sm text-ink-2">Brak dokumentów. Projekty, oferty i instrukcje dodane tu albo w dzienniku zlecenia trafiają do teczki.</p>}
-      <ul className="grid divide-y divide-line">
+      <ul className="grid grid-cols-[minmax(0,1fr)] divide-y divide-line">
         {docs.map(({ a, jobId }) => {
           const I = docIcon(a);
           return (
@@ -371,7 +371,7 @@ function Jobs({ t }: { t: T }) {
   return (
     <Card title="Zlecenia w teczce" count={jobs.length}>
       {!jobs.length ? <p className="text-sm text-ink-2">Brak zleceń tej kategorii na obiekcie.</p> : (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
           {jobs.map((j) => (
             <li key={j.id}>
               <a href={`#zl/${j.id}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-line px-3 py-2.5 hover:border-ink-2">
