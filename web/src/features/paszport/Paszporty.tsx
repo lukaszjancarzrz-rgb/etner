@@ -7,7 +7,7 @@ import { catStripe, useCatColor } from '../../core/ui/category.js';
 import { Search } from '../../core/ui/search.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { withoutEchoes } from '../../core/write.js';
-import { freshIn, seenKey, sortPaszporty, teczkiObiektu, type Teczka } from './model.js';
+import { freshIn, indeks, seenKey, sortPaszporty, teczkiObiektu, type Teczka } from './model.js';
 import { pszHash, SerwisBadge } from './Paszport.js';
 
 type Wiersz = { site: Rec; klient: string; numer?: string; teczki: (Teczka & { nowe: number })[]; termin?: string };
@@ -34,13 +34,12 @@ export function Paszporty() {
   const rows = useMemo((): Wiersz[] => {
     const d = { jobs, folders, diary, scope, attachments: withoutEchoes(attachments, ['nazwa', 'rodzaj']), devices, service };
     const order = kat.map((k) => k.wartosc as string);
-    const has = new Set([...jobs.filter((j) => j.kategoria).map((j) => j.siteId), ...folders.map((f) => f.siteId)]);
     const klient = new Map(clients.map((c) => [c.id, c.nazwa as string]));
     const numer = new Map(passports.map((p) => [p.siteId, p.numer as string]));
     const seen = me ? seenFor(me.id) : undefined;
-    // shortcut: teczki liczone dla każdego obiektu z teczkami (pełny przegląd załączników na obiekt); przy tysiącach obiektów – indeks po obiekcie
-    return sites.filter((s) => !s._tmp && has.has(s.id)).map((site) => {
-      const teczki = teczkiObiektu(site.id, d, order).map((t) => ({ ...t, nowe: me ? freshIn(t, seen!(seenKey(site.id, t.kategoria)), me.id).size : 0 }));
+    const idx = indeks(d); // raz dla wszystkich obiektów
+    return sites.filter((s) => !s._tmp && (idx.jobs.has(s.id) || idx.folders.has(s.id))).map((site) => {
+      const teczki = teczkiObiektu(site.id, d, order, idx).map((t) => ({ ...t, nowe: me ? freshIn(t, seen!(seenKey(site.id, t.kategoria)), me.id).size : 0 }));
       const termin = teczki.map((t) => t.nastepnySerwis).filter((x): x is string => !!x).sort()[0];
       return { site, klient: klient.get(site.clientId) ?? '', numer: numer.get(site.id), teczki, ...(termin && { termin }) };
     }).filter((r) => r.teczki.length);

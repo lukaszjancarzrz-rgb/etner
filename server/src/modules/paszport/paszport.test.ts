@@ -352,10 +352,14 @@ describe('paszport – urządzenia, karta serwisowa, dokumenty', () => {
     const photo = await upload(s, s.worker);
     await call(s, s.worker, 'POST', '/api/service-entries', { siteId: s.site.id, kategoria: 'Klimatyzacja', dzien: '2026-11-03', dlaKlienta: true, uploadIds: [photo] });
     expect(s.deps.db.$client.prepare(`select dla_klienta d from attachments where id = '${photo}'`).get()).toEqual({ d: 1 });
+    // zdjęcia wpisu wewnętrznego też wewnętrzne
+    const ph2 = await upload(s, s.worker);
+    await call(s, s.worker, 'POST', '/api/service-entries', { siteId: s.site.id, kategoria: 'Klimatyzacja', dzien: '2026-11-04', dlaKlienta: false, uploadIds: [ph2] });
+    expect(s.deps.db.$client.prepare(`select dla_klienta d from attachments where id = '${ph2}'`).get()).toEqual({ d: 0 });
     // „+ Zdjęcie” w teczce: bez typu dokumentu, liczy się do zdjęć, nie do dokumentów
     const fp = (await file(s.worker, await upload(s, s.worker), { typDok: undefined })).body;
     expect(fp).toMatchObject({ rodzaj: 'zdjecie', typDok: null, dlaKlienta: true });
-    expect((await teczki(s, s.admin)).find((x) => x.kategoria === 'Klimatyzacja')).toMatchObject({ photos: 2, docs: 4 });
+    expect((await teczki(s, s.admin)).find((x) => x.kategoria === 'Klimatyzacja')).toMatchObject({ photos: 3, docs: 4 });
     // dziennik zlecenia bez zmian: domyślnie wewnętrzne
     const j = job(s, 'Klimatyzacja');
     const dp = await upload(s, s.admin);
@@ -487,5 +491,64 @@ describe('łączenie obiektów (R70)', () => {
     const n = count(s, 'select count(*) n from changes');
     expect(mergeDuplicateSites(s.deps.db, await refs())).toBe(0);
     expect(count(s, 'select count(*) n from changes')).toBe(n);
+  });
+
+  it('sama miejscowość (bez nazwy i adresu) też jest duplikatem – zachowanie przypięte', async () => {
+    const s = await setup();
+    const { mergeDuplicateSites, listSites } = await kl();
+    const ins = s.deps.db.$client.prepare("insert into sites (id, created_at, updated_at, client_id, miejscowosc) values (?, ?, '', ?, ?)");
+    ins.run('t1', '2030-01-01', s.site.clientId, 'Zawoja');
+    ins.run('t2', '2030-01-02', s.site.clientId, ' zawoja. ');
+    expect(mergeDuplicateSites(s.deps.db, await refs())).toBe(1);
+    expect(listSites(s.deps.db, s.site.clientId).map((x) => x.id).sort()).toEqual([s.site.id, 't1'].sort());
+  });
+
+  it('jednorazowo przy starcie (znacznik): obiekty i faktury „dla klienta” → wewnętrzne; para z błędem pominięta, start nie pada', async () => {
+    const s = await setup();
+    const { runOnceR70 } = await import('../../scripts/r70.js');
+    const ins = s.deps.db.$client.prepare("insert into sites (id, created_at, updated_at, client_id, adres, miejscowosc) values (?, ?, '', ?, 'Krótka 1', 'Zawoja')");
+    ins.run('d1', '2030-01-01', s.site.clientId);
+    ins.run('d2', '2030-01-02', s.site.clientId);
+    const fv = await upload(s, s.admin, pdf(), 'fv.pdf');
+    s.deps.db.$client.prepare(`update attachments set owner_type = 'teczka', owner_id = 'x', typ_dok = 'faktura', dla_klienta = 1 where id = '${fv}'`).run();
+    const boom = { count: () => 0, rename: (_db: unknown, _u: unknown, _r: string, from: string) => { if (from === 'd1') throw new Error('x'); } };
+    const err = console.error;
+    console.error = () => {};
+    try {
+      expect(runOnceR70(s.deps.db, [...await refs(), boom])).toEqual({ sites: 1, invoices: 1 });
+    } finally { console.error = err; }
+    expect(count(s, "select count(*) n from sites where id = 'd1' and deleted_at is null")).toBe(1); // para z błędem: bez zmian
+    expect(count(s, "select count(*) n from sites where id = 'd2' and deleted_at is not null")).toBe(1);
+    expect(s.deps.db.$client.prepare(`select dla_klienta d from attachments where id = '${fv}'`).get()).toEqual({ d: 0 });
+    expect(count(s, `select count(*) n from changes where entity = 'attachments' and entity_id = '${fv}'`)).toBeGreaterThan(0);
+    const n = count(s, 'select count(*) n from changes');
+    expect(runOnceR70(s.deps.db, await refs())).toBeNull();
+    expect(count(s, 'select count(*) n from changes')).toBe(n);
+  });
+
+  it('pracownik dostaje po łączeniu: usunięcie obiektu, zlecenie i teczki na obiekcie głównym', async () => {
+    const s = await setup();
+    s.deps.clientHasJobs = (id) => zlecenia.clientHasJobs(s.deps.db, id);
+    const { addSite } = await kl();
+    const dup = addSite(s.deps.db, s.a.user.id, s.site.clientId, { adres: 'Krotka 1a', miejscowosc: 'Zawoja' })!;
+    const j = job(s, 'Rekuperacja', 'serwis', dup.id);
+    const f = (await call(s, s.admin, 'POST', '/api/folders', { siteId: dup.id, kategoria: 'Rekuperacja' })).body;
+    const since = count(s, 'select max(seq) n from changes');
+    expect((await call(s, s.admin, 'POST', `/api/sites/${s.site.id}/merge`, { from: dup.id })).status).toBe(200);
+    const ch = (await call(s, s.worker, 'GET', `/api/changes?since=${since}`)).body.changes as any[];
+    expect(ch.some((c) => c.entity === 'sites' && c.id === dup.id && c.action === 'delete')).toBe(true);
+    expect(ch.find((c) => c.entity === 'jobs' && c.id === j.id)?.data).toMatchObject({ siteId: s.site.id });
+    expect(ch.find((c) => c.entity === 'passport_folders' && c.id === f.id)?.data).toMatchObject({ siteId: s.site.id });
+    expect(ch.find((c) => c.entity === 'sites' && c.id === s.site.id)?.data).toMatchObject({ adres: 'Krótka 1' });
+  });
+
+  it('łączenie klientów od razu łączy identyczne obiekty (bez czekania na start)', async () => {
+    const s = await setup();
+    const { create, listSites } = await kl();
+    const dupC = create(s.deps.db, s.a.user.id, { typ: 'osoba', nazwa: 'Jan Nowak 2', telefony: [], emaile: [], nip: '', notatki: '', site: { nazwa: '', adres: 'Krótka 1', miejscowosc: 'Zawoja', mapa: '', opis: '' } });
+    const j = job(s, 'Rekuperacja', 'serwis', s.site.id);
+    expect((await call(s, s.admin, 'POST', `/api/clients/${s.site.clientId}/merge`, { from: dupC.client.id })).status).toBe(200);
+    expect(listSites(s.deps.db, s.site.clientId).map((x) => x.id)).toEqual([s.site.id]);
+    expect(zlecenia.get(s.deps.db, j.id)!.siteId).toBe(s.site.id);
   });
 });

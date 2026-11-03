@@ -1,6 +1,6 @@
 import { Plus, Trash, WarningCircle } from '@phosphor-icons/react';
 import { useState } from 'react';
-import type { Rec } from '../../core/store.js';
+import { store, type Rec } from '../../core/store.js';
 import { Segmented, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Field, Input } from '../../core/ui/input.js';
@@ -134,9 +134,12 @@ export function SiteForm({ clientId, site, onClose }: { clientId: string; site?:
     const body = Object.fromEntries(SITE_FIELDS.map((k) => [k, f[k].trim()])) as SiteDraft;
     if (!body.nazwa && !body.adres && !body.miejscowosc) return setErr({ adres: 'Podaj adres, miejscowość albo nazwę obiektu' });
     setErr({});
+    const had = new Set(store.all('sites').filter((s) => s.clientId === clientId && !s._tmp).map((s) => s.id));
     const p = site
       ? updateVia('sites', site.id, body, { kind: 'klient', url: `/api/sites/${site.id}`, method: 'PUT', body })
-      : createVia('sites', { kind: 'klient', url: `/api/clients/${clientId}/sites`, method: 'POST', body }, { ...body, clientId });
+      // R70: identyczny obiekt klienta – serwer zwraca istniejący
+      : createVia<Rec>('sites', { kind: 'klient', url: `/api/clients/${clientId}/sites`, method: 'POST', body }, { ...body, clientId })
+        .then((r) => { if (had.has(r?.id)) toast('Taki obiekt już jest – użyto istniejącego'); return r; });
     void send(p, 'Obiekt', setErr, setBusy, {}, onClose, onClose);
   }
 

@@ -54,7 +54,7 @@ export function routes(app: Hono, deps: AppDeps): void {
   // R58: tylko admin; wszystkie tabele z client_id (zlecenia, leady z kontaktami, zadania; obiekty w samym klienci.merge)
   app.post('/api/clients/:id/merge', admin, async (c) => {
     const { opId, from } = await body(c, clientMergeSchema);
-    const { result } = runOp(db, opId, me(c), () => svc.merge(db, me(c), c.req.param('id'), from, [zlecenia, leady, zadania]));
+    const { result } = runOp(db, opId, me(c), () => svc.merge(db, me(c), c.req.param('id'), from, [zlecenia, leady, zadania], siteRefs));
     if (!result) throw notFound();
     return c.json(result);
   });

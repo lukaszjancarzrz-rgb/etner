@@ -60,10 +60,10 @@ export function findDuplicates(db: Db, c: Pick<ClientRow, 'telefony' | 'emaile'>
 
 /**
  * Łączy duplikat `dupId` z klientem głównym `mainId` (R58): obiekty i odwołania innych modułów (`refs`, kolumna `clientId`)
- * przechodzą do głównego, puste pola głównego uzupełniane z duplikatu, telefony i e-maile sumowane, duplikat miękko usunięty.
+ * przechodzą do głównego (identyczne obiekty łączone przez `siteRefs`, R70), puste pola głównego uzupełniane z duplikatu, telefony i e-maile sumowane, duplikat miękko usunięty.
  * Jedna transakcja, każdy zmieniony wiersz w changes. Duplikat już usunięty = bez zmian (powtórka).
  */
-export function merge(db: Db, userId: string, mainId: string, dupId: string, refs: DictRefs[]): ClientRow | undefined {
+export function merge(db: Db, userId: string, mainId: string, dupId: string, refs: DictRefs[], siteRefs: DictRefs[] = []): ClientRow | undefined {
   return tx(db, () => {
     const main = get(db, mainId);
     if (!main) return undefined;
@@ -77,6 +77,8 @@ export function merge(db: Db, userId: string, mainId: string, dupId: string, ref
     }
     // tylko żywe wiersze: usunięte (zlecenia, leady, zadania, obiekty) zostają przy starym id duplikatu
     for (const r of refs) r.rename(db, userId, 'clientId', dupId, mainId);
+    // R70: obiekty identyczne z obiektami głównego (po przejściu) łączone od razu, nie dopiero przy starcie
+    for (const [keepId, sid] of duplicateSites(activeSites(db, mainId))) mergeSites(db, userId, keepId, sid, siteRefs);
     const union = (a: string[], b: string[], key: (x: string) => string) => [...a, ...b.filter((x) => !a.some((y) => key(y) === key(x)))];
     const merged = {
       ...main,
@@ -126,17 +128,33 @@ export function mergeSites(db: Db, by: string | null, keepId: string, dupId: str
   });
 }
 
-/** R70: jednorazowo przy starcie – obiekty klienta o tym samym `siteKey` łączone z najstarszym, każda para w osobnej transakcji. Zwraca liczbę połączonych. */
-export function mergeDuplicateSites(db: Db, refs: DictRefs[]): number {
+/** Pary [zostaje, duplikat] obiektów tego samego klienta o tym samym `siteKey` (zostaje najstarszy); `rows` od najstarszego. */
+function duplicateSites(rows: SiteRow[]): [string, string][] {
   const seen = new Map<string, string>();
-  let n = 0;
-  for (const s of db.select().from(sites).where(isNull(sites.deletedAt)).orderBy(asc(sites.createdAt), asc(sites.id)).all()) {
+  const out: [string, string][] = [];
+  for (const s of rows) {
     const k = siteKey(s);
     if (!k) continue;
     const keepId = seen.get(`${s.clientId}|${k}`);
-    if (!keepId) { seen.set(`${s.clientId}|${k}`, s.id); continue; }
-    mergeSites(db, null, keepId, s.id, refs);
-    n++;
+    if (keepId) out.push([keepId, s.id]);
+    else seen.set(`${s.clientId}|${k}`, s.id);
+  }
+  return out;
+}
+
+/**
+ * R70: obiekty klienta o tym samym `siteKey` łączone z najstarszym, każda para w osobnej transakcji. Para z błędem jest pomijana
+ * (w logu tylko id i błąd), reszta idzie dalej – start serwera nigdy przez to nie pada. Zwraca liczbę połączonych.
+ */
+export function mergeDuplicateSites(db: Db, refs: DictRefs[]): number {
+  let n = 0;
+  for (const [keepId, dupId] of duplicateSites(db.select().from(sites).where(isNull(sites.deletedAt)).orderBy(asc(sites.createdAt), asc(sites.id)).all())) {
+    try {
+      mergeSites(db, null, keepId, dupId, refs);
+      n++;
+    } catch (e) {
+      console.error(`Nie połączono obiektów ${keepId} ← ${dupId}: ${e instanceof Error ? e.message : e}`);
+    }
   }
   return n;
 }

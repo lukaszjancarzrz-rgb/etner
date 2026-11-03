@@ -61,6 +61,16 @@ export function attach(db: Db, userId: string, ups: AttachmentRow[], ownerType: 
     return a;
   });
 }
+/** Jednorazowo (R70/4b): faktury oznaczone „dla klienta” przed regułą „faktura zawsze wewnętrzna” → wewnętrzne. Zwraca liczbę. */
+export function internalInvoices(db: Db): number {
+  const now = NOW();
+  const rows = db.select().from(attachments).where(and(eq(attachments.typDok, 'faktura'), eq(attachments.dlaKlienta, true), isNull(attachments.deletedAt))).all();
+  for (const a of rows) {
+    const row = db.update(attachments).set({ dlaKlienta: false, updatedAt: now }).where(eq(attachments.id, a.id)).returning().get();
+    recordChange(db, null, 'attachments', a.id, 'update', a, row);
+  }
+  return rows.length;
+}
 /** Przeniesienie załączników do innego właściciela tego samego typu (scalanie teczek paszportu). */
 export function moveAttachments(db: Db, userId: string | null, ownerType: Owner, fromId: string, toId: string): void {
   const now = NOW();

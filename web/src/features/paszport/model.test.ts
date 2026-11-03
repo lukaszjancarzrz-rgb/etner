@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Rec } from '../../core/store.js';
-import { freshIn, isPhoto, plural, serwisStan, sortPaszporty, teczkiObiektu, type Dane } from './model.js';
+import { freshIn, indeks, isPhoto, plural, serwisStan, sortPaszporty, teczkiObiektu, type Dane } from './model.js';
 
 const ORDER = ['Elektryka', 'Fotowoltaika', 'Rekuperacja', 'Klimatyzacja'];
 const at = (n: number) => `2026-10-${String(n).padStart(2, '0')}T10:00:00.000Z`;
@@ -18,6 +18,11 @@ describe('teczkiObiektu', () => {
     scope: [{ id: 'z1', jobId: 'j3' }],
     attachments: [att('a1', 'entry', 'e1', 'zdjecie', 1), att('a2', 'entry', 'e2', 'zdjecie', 2), att('a3', 'scope', 'z1', 'zdjecie', 3), att('a4', 'entry', 'e4'), att('a5', 'entry', 'e5'), att('p1', 'entry', 'e1', 'plik')],
   };
+
+  it('wspólny indeks dla wielu obiektów daje to samo co liczenie osobno (lista Paszporty)', () => {
+    const idx = indeks(d);
+    for (const site of ['s1', 's2', 'brak']) expect(teczkiObiektu(site, d, ORDER, idx)).toEqual(teczkiObiektu(site, d, ORDER));
+  });
 
   it('grupuje zlecenia i zdjęcia obiektu w teczki kategorii, w kolejności słownika', () => {
     const t = teczkiObiektu('s1', d, ORDER);

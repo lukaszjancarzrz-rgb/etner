@@ -15,33 +15,54 @@ export type Teczka = {
 };
 export type Dane = { jobs: Rec[]; folders: Rec[]; diary: Rec[]; scope: Rec[]; attachments: Rec[]; devices: Rec[]; service: Rec[] };
 
+type Idx = Map<string, Rec[]>;
+const push = (m: Idx, k: string, r: Rec) => { const l = m.get(k); if (l) l.push(r); else m.set(k, [r]); };
+/** Indeksy danych sklepu liczone raz (lista „Paszporty”: wiele obiektów naraz). */
+export type Indeks = { jobs: Idx; folders: Idx; byJob: Idx; byOwner: Idx; devices: Idx; service: Idx; teczka: Idx };
+export function indeks(d: Dane): Indeks {
+  const jobOfEntry = new Map(d.diary.filter((e) => e.ownerType === 'job').map((e) => [e.id, e.ownerId as string]));
+  const jobOfScope = new Map(d.scope.map((s) => [s.id, s.jobId as string]));
+  const i: Indeks = { jobs: new Map(), folders: new Map(), byJob: new Map(), byOwner: new Map(), devices: new Map(), service: new Map(), teczka: new Map() };
+  for (const j of d.jobs) if (j.kategoria) push(i.jobs, j.siteId, j);
+  for (const f of d.folders) push(i.folders, f.siteId, f);
+  // urządzenia, wpisy i pliki teczki: po teczce albo (obiekt, kategoria) – zapisy z kolejki przed utworzeniem teczki
+  const byTeczka = (m: Idx, r: Rec, folderId: string) => { push(m, `f:${folderId}`, r); if (r.siteId && r.kategoria) push(m, `s:${r.siteId}|${r.kategoria}`, r); };
+  for (const x of d.devices) byTeczka(i.devices, x, x.folderId);
+  for (const x of d.service) byTeczka(i.service, x, x.folderId);
+  for (const a of d.attachments) {
+    const job = a.ownerType === 'entry' ? jobOfEntry.get(a.ownerId) : a.ownerType === 'scope' ? jobOfScope.get(a.ownerId) : undefined;
+    if (job) push(i.byJob, job, a);
+    else if (a.ownerType === 'teczka') byTeczka(i.teczka, a, a.ownerId);
+    else if (a.ownerType === 'service' || a.ownerType === 'device') push(i.byOwner, `${a.ownerType}:${a.ownerId}`, a);
+  }
+  return i;
+}
+
 /**
  * Teczki obiektu jak na serwerze (GET /api/sites/:id/teczki), ze sklepu – działa offline:
  * kategorie zleceń obiektu ∪ wiersze teczek, w kolejności słownika `order`. Zdjęcia i pliki z dzienników i zakresu prac zleceń,
  * dodane w teczce, przy wpisach serwisowych i urządzeniach. Zapisy z kolejki (bez teczki na serwerze) mają `siteId` i `kategoria`.
+ * `idx` – indeksy `indeks(d)` policzone raz dla wielu obiektów.
  */
-export function teczkiObiektu(siteId: string, d: Dane, order: string[]): Teczka[] {
-  const jobs = d.jobs.filter((j) => j.siteId === siteId && j.kategoria);
-  const folders = d.folders.filter((f) => f.siteId === siteId);
+export function teczkiObiektu(siteId: string, d: Dane, order: string[], idx: Indeks = indeks(d)): Teczka[] {
+  const jobs = idx.jobs.get(siteId) ?? [];
+  const folders = idx.folders.get(siteId) ?? [];
   const pos = (k: string) => (order.includes(k) ? order.indexOf(k) : order.length);
   const kats = [...new Set([...jobs.map((j) => j.kategoria as string), ...folders.map((f) => f.kategoria as string)])].sort((a, b) => pos(a) - pos(b));
-  const jobOfEntry = new Map(d.diary.filter((e) => e.ownerType === 'job').map((e) => [e.id, e.ownerId as string]));
-  const jobOfScope = new Map(d.scope.map((s) => [s.id, s.jobId as string]));
   return kats.map((kategoria) => {
     const fs = folders.filter((f) => f.kategoria === kategoria);
     const folder = fs.find((f) => !f._tmp) ?? fs[0];
-    const ids = new Set(fs.map((f) => f.id));
-    const mine = (r: Rec) => ids.has(r.folderId) || (r.siteId === siteId && r.kategoria === kategoria);
-    const jobIds = jobs.filter((j) => j.kategoria === kategoria).map((j) => j.id);
-    const js = new Set(jobIds);
-    const devices = d.devices.filter(mine);
-    const entries = d.service.filter(mine).sort((a, b) => (a.dzien === b.dzien ? (a.createdAt < b.createdAt ? 1 : -1) : a.dzien < b.dzien ? 1 : -1));
-    const dev = new Set(devices.map((x) => x.id)), ent = new Set(entries.map((x) => x.id));
-    const files: Plik[] = [];
-    for (const a of d.attachments) {
-      const job = a.ownerType === 'entry' ? jobOfEntry.get(a.ownerId) : a.ownerType === 'scope' ? jobOfScope.get(a.ownerId) : undefined;
-      if (job ? js.has(job) : (a.ownerType === 'teczka' && mine({ ...a, folderId: a.ownerId })) || (a.ownerType === 'service' && ent.has(a.ownerId)) || (a.ownerType === 'device' && dev.has(a.ownerId))) files.push({ a, ...(job && { jobId: job }) });
-    }
+    // jeden rekord pod oboma kluczami (teczka i obiekt+kategoria) liczony raz
+    const own = (m: Idx) => [...new Set([...fs.flatMap((f) => m.get(`f:${f.id}`) ?? []), ...(m.get(`s:${siteId}|${kategoria}`) ?? [])])];
+    const jobIds = jobs.filter((j) => j.kategoria === kategoria).map((j) => j.id as string);
+    const devices = own(idx.devices);
+    const entries = own(idx.service).sort((a, b) => (a.dzien === b.dzien ? (a.createdAt < b.createdAt ? 1 : -1) : a.dzien < b.dzien ? 1 : -1));
+    const files: Plik[] = [
+      ...jobIds.flatMap((jobId) => (idx.byJob.get(jobId) ?? []).map((a) => ({ a, jobId }))),
+      ...own(idx.teczka).map((a) => ({ a })),
+      ...entries.flatMap((e) => idx.byOwner.get(`service:${e.id}`) ?? []).map((a) => ({ a })),
+      ...devices.flatMap((x) => idx.byOwner.get(`device:${x.id}`) ?? []).map((a) => ({ a })),
+    ];
     files.sort((x, y) => (x.a.createdAt < y.a.createdAt ? 1 : -1));
     return {
       kategoria, jobIds, devices, entries,
