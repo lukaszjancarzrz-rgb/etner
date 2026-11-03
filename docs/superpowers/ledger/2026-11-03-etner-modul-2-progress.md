@@ -8,3 +8,4 @@ Tasks 1–3: impl 6de362e (migration 0023), 2e49a18, 1d23d0d; review dispatched.
 Tasks 1–3: review — Needs fixes: seeded activity dictionary unsavable (duplicate name across categories), category merge via „Zamień na…” → 500 on the unique folder index, no PATCH typDok/dla_klienta for passport attachments nor folder-file delete. Fix round 1 dispatched.
 - Ruling R67: default service cycle lives in the dictionary (`dict.cykl_mies` on kategoria rows, seeded 6/12/12), editable in Ustawienia (Task 4) — replaces the name-based default; migration 0023 amended (not released yet).
 - Ruling R68: category merge merges passport folders (children moved, source folder soft-deleted) instead of failing.
+Tasks 1–3: fix round 1/5 (e5f968c); re-review dispatched. Task 4 (screens) dispatched in parallel (web files).
