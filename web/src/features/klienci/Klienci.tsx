@@ -13,6 +13,7 @@ import { fmtTermin } from '../zlecenia/JobCard.js';
 import { ClientForm, SiteForm } from './ClientForms.js';
 import { duplicatePairs, type DupPair } from './forms.js';
 import { MergeDialog } from './Merge.js';
+import { PaszportSekcja } from '../paszport/Paszport.js';
 
 export function Klienci({ route }: { route: Route }) {
   return route.param ? <ClientCard id={route.param} /> : <ClientList />;
@@ -145,6 +146,8 @@ function ClientCard({ id }: { id: string }) {
         )}
         {admin && <Button variant="ghost" size="sm" className="justify-self-start text-action" onClick={() => setForm({ kind: 'site' })}><Plus className="h-4 w-4" weight="bold" />Dodaj obiekt</Button>}
       </div>
+
+      {sites.filter((s) => !s._tmp).map((s) => <PaszportSekcja key={s.id} site={s} label={sites.length > 1 ? s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ') : undefined} />)}
 
       {form?.kind === 'client' && <ClientForm client={c} onClose={() => setForm(null)} />}
       {form?.kind === 'merge' && <MergeDialog a={c} onClose={() => setForm(null)} />}

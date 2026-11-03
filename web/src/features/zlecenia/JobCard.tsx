@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarCheck, MapPin, NavigationArrow, PencilSimple, Phone, User } from '@phosphor-icons/react';
+import { ArrowLeft, CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, User } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api.js';
 import { useSynced } from '../../core/layout/status.js';
@@ -9,6 +9,7 @@ import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { CategoryPill, useCatColor } from '../../core/ui/category.js';
 import { Diary } from '../dziennik/Diary.js';
+import { pszHash } from '../paszport/Paszport.js';
 import { JobForm } from './JobForm.js';
 import { Pumble } from './Pumble.js';
 import { Scope } from './Scope.js';
@@ -31,6 +32,8 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const cat = useCatColor();
   const [editing, setEditing] = useState(false);
   const days = useMemo(() => jobDays(sched, id), [sched, id]);
+  const service = useEntities('service_entries');
+  const wpis = useMemo(() => service.filter((e) => e.jobId === id).sort((a, b) => (a.dzien < b.dzien ? 1 : -1))[0], [service, id]);
 
   // „nowe” liczone od ostatniej wizyty; wpisy przeczytane podczas otwartej karty też się liczą
   const me = useMe();
@@ -72,6 +75,8 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const nav = mapsUrl(site);
   const phones = (client?.telefony as string[] | undefined) ?? [];
   const color = crew(job.ekipa);
+  const psz = job.siteId && job.kategoria && !job._tmp ? pszHash(job.siteId, job.kategoria) : undefined;
+  const serwis = !!psz && /serwis/i.test(job.rodzaj ?? '');
 
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
@@ -92,8 +97,9 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
             </div>
             {admin && <Button variant="secondary" size="sm" onClick={() => setEditing(true)}><PencilSimple className="h-4 w-4" />Edytuj</Button>}
           </div>
-          {(phones.length > 0 || nav) && (
+          {(phones.length > 0 || nav || psz) && (
             <div className="flex flex-wrap gap-2">
+              {psz && <a href={psz} className="inline-flex h-12 items-center gap-2 rounded-full border border-action px-5 font-semibold text-action hover:bg-action/8"><IdentificationCard className="h-5 w-5" weight="duotone" />Paszport → {job.kategoria}</a>}
               {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-full bg-action px-5 font-semibold text-action-ink"><NavigationArrow className="h-5 w-5" weight="fill" />Nawiguj</a>}
               {phones.map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-full border border-line px-5 font-semibold"><Phone className="h-5 w-5" />{t}</a>)}
               {fc.has('telefony') && <span className="self-center"><NewMark sr="zmienione telefony klienta" /></span>}
@@ -113,6 +119,15 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
           )}
         </div>
       </div>
+      {serwis && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-action/40 bg-action/8 px-4 py-3">
+          <ClipboardText className="h-6 w-6 shrink-0 text-action" weight="duotone" aria-hidden />
+          <p className="min-w-0 flex-1">{wpis
+            ? <>Wpis w karcie serwisowej z <span className="font-semibold tabular-nums">{fmtDay(wpis.dzien)}</span>, teczka <span className="font-semibold">{job.kategoria}</span>.</>
+            : <>To zlecenie jest w teczce <span className="font-semibold">{job.kategoria}</span>. Po serwisie dodaj wpis do karty serwisowej.</>}</p>
+          {!wpis && <a href={`${psz}/wpis~${id}`} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-sm font-semibold text-action-ink hover:brightness-110"><Plus className="h-4 w-4" weight="bold" />Dodaj wpis do karty serwisowej</a>}
+        </div>
+      )}
       <Scope jobId={id} disabled={!!job._tmp} since={since} />
       <Pumble job={job} since={since} />
       <Diary ownerType="job" ownerId={id} highlight={highlight} disabled={!!job._tmp} since={since} />

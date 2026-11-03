@@ -12,6 +12,8 @@ import { toast } from '../../core/ui/toast.js';
 import { createVia, tmpId, updateVia, withoutEchoes } from '../../core/write.js';
 import { Viewer } from './Viewer.js';
 import { Avatar } from '../../core/ui/avatar.js';
+import { Select } from '../../core/ui/select.js';
+import { TYP_LABEL, typOptions } from '../paszport/model.js';
 
 export const fileUrl = (a: Rec, v: 'thumb' | 'view' | 'orig') => a._src ?? `/api/attachments/${a.id}/file?v=${v}`;
 
@@ -82,7 +84,10 @@ export function Diary({ ownerType, ownerId, highlight, disabled, since }: { owne
                 </ul>
               )}
               {docs.map((a) => (
-                <a key={a.id} href={fileUrl(a, 'orig')} target="_blank" rel="noreferrer" className="mt-2 inline-flex h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><FilePdf className="h-5 w-5" />{a.nazwa}</a>
+                <div key={a.id} className="mt-2 flex flex-wrap items-center gap-2">
+                  <a href={fileUrl(a, 'orig')} target="_blank" rel="noreferrer" className="inline-flex h-11 min-w-0 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><FilePdf className="h-5 w-5 shrink-0" /><span className="truncate">{a.nazwa}</span></a>
+                  {ownerType === 'job' && !a._tmp && <DocControls a={a} admin={admin} mine={a.authorId === me?.id} />}
+                </div>
               ))}
               {!e._tmp && ((admin && e.authorId) || canDelete(e)) && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-2">
@@ -115,12 +120,26 @@ function DeleteEntry({ id, files }: { id: string; files: number }) {
   );
 }
 
-export function KlientToggle({ on, onChange, dark }: { on: boolean; onChange: (v: boolean) => void; dark?: boolean }) {
+/** Plik z dziennika zlecenia w teczce paszportu (P4): typ dokumentu (admin albo autor; faktura tylko admin) i „W paszporcie dla klienta” (admin). */
+function DocControls({ a, admin, mine }: { a: Rec; admin: boolean; mine: boolean }) {
+  const patch = (p: Record<string, unknown>) => void updateVia('attachments', a.id, p, { kind: 'dziennik', url: `/api/attachments/${a.id}`, method: 'PATCH', body: p })
+    .catch((x: Error) => toast('Nie zapisano', { body: x.message, tone: 'error' }));
+  const typEdit = admin || (mine && a.typDok !== 'faktura');
+  return (
+    <>
+      {typEdit ? <div className="w-40"><Select aria-label={`Typ dokumentu: ${a.nazwa}`} value={a.typDok ?? undefined} placeholder="Typ dokumentu" onValueChange={(typDok) => patch({ typDok })} options={typOptions(admin)} className="h-10 text-sm" /></div>
+        : a.typDok && <span className="text-sm text-ink-2">{TYP_LABEL[a.typDok]}</span>}
+      {admin && <KlientToggle on={!!a.dlaKlienta} onChange={(dlaKlienta) => patch({ dlaKlienta })} label="W paszporcie dla klienta" />}
+    </>
+  );
+}
+
+export function KlientToggle({ on, onChange, dark, label = 'Pokaż klientowi' }: { on: boolean; onChange: (v: boolean) => void; dark?: boolean; label?: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)}
       className={cn('inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors duration-200', on ? (dark ? 'bg-ok text-ok-ink' : 'bg-ok/12 text-ok') : dark ? 'text-white/85 hover:bg-white/10' : 'text-ink-2 hover:bg-ink/5')}>
       {on ? <Eye className="h-5 w-5" weight="bold" aria-hidden /> : <EyeSlash className="h-5 w-5" aria-hidden />}
-      Pokaż klientowi
+      {label}
     </button>
   );
 }

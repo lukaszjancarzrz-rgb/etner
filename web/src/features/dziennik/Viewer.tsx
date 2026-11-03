@@ -26,7 +26,7 @@ export function useBackClose(onClose: () => void): void {
   }, []);
 }
 
-/** Podgląd pełnoekranowy: strzałki, klawiatura, przesunięcie palcem; admin przełącza „Pokaż klientowi”. */
+/** Podgląd pełnoekranowy: strzałki, klawiatura, przesunięcie palcem; admin przełącza „W paszporcie dla klienta”. */
 export function Viewer({ photos, index, onIndex, onClose, admin }: { photos: Rec[]; index: number; onIndex: (i: number) => void; onClose: () => void; admin: boolean }) {
   const a = photos[index]!;
   const n = photos.length;
@@ -68,7 +68,7 @@ export function Viewer({ photos, index, onIndex, onClose, admin }: { photos: Rec
             )}
           </div>
           <div className="flex min-h-14 items-center justify-center gap-3 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {admin && !a._tmp && <KlientToggle on={!!a.dlaKlienta} onChange={toggle} dark />}
+            {admin && !a._tmp && <KlientToggle on={!!a.dlaKlienta} onChange={toggle} dark label="W paszporcie dla klienta" />}
             <button type="button" onClick={() => setOrig(true)} className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold text-white/85 hover:bg-white/10"><MagnifyingGlassPlus className="h-5 w-5" aria-hidden />Oryginał</button>
           </div>
           {orig && <Original a={a} onClose={() => setOrig(false)} />}
