@@ -95,6 +95,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     const e = a?.ownerType === 'entry' && a.ownerId ? svc.getEntry(db, a.ownerId) : undefined;
     // zdjęcie punktu zakresu widzi każdy, jak zlecenie (usunięty punkt usuwa też swoje zdjęcia)
     if (!a || !(a.ownerType === 'scope' || (e && svc.canSee(c.get('user'), e)))) throw notFound();
+    if (a.typDok === 'faktura' && !can(c.get('user'), 'admin')) throw notFound(); // faktury tylko admin (P6)
     const v = c.req.query('v');
     const key = (v === 'thumb' ? a.keyThumb : v === 'view' ? a.keyView : null) ?? a.keyOrig;
     return c.redirect(await files.url(key), 302);

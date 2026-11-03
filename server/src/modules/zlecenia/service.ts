@@ -22,6 +22,8 @@ export type JobRow = typeof jobs.$inferSelect;
 export { addPeopleLater as pumbleAddPeople } from './pumble.js';
 /** Dla leadów: pierwszy punkt zakresu zlecenia utworzonego z leada. */
 export { create as addScopeItem } from './scope.js';
+/** Dla paszportu: zdjęcia punktów zakresu należą do teczki zlecenia. */
+export { itemsOf as scopeItemsOf } from './scope.js';
 export type JobRef = { id: string; numer: string; klient: string; miejscowosc: string; status: string };
 /** Powiadomienie do wysłania dopiero po zatwierdzeniu transakcji. */
 export type Outbox = { userIds: string[]; n: Notification }[];

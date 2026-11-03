@@ -25,6 +25,13 @@ export const getAttachment = (db: Db, id: string): AttachmentRow | undefined =>
 const attachmentsOf = (db: Db, ownerType: 'entry' | 'scope', ownerId: string): AttachmentRow[] =>
   db.select().from(attachments).where(and(eq(attachments.ownerType, ownerType), eq(attachments.ownerId, ownerId), isNull(attachments.deletedAt))).all();
 
+/** Nieusunięte załączniki właścicieli danego typu (teczki paszportu: zdjęcia i pliki zleceń, wpisów serwisowych, urządzeń). */
+export const attachmentsFor = (db: Db, ownerType: NonNullable<AttachmentRow['ownerType']>, ownerIds: string[]): AttachmentRow[] =>
+  ownerIds.length ? db.select().from(attachments).where(and(eq(attachments.ownerType, ownerType), inArray(attachments.ownerId, ownerIds), isNull(attachments.deletedAt))).all() : [];
+/** Id nieusuniętych wpisów dziennika zleceń. */
+export const jobEntryIds = (db: Db, jobIds: string[]): string[] =>
+  jobIds.length ? db.select({ id: diaryEntries.id }).from(diaryEntries).where(and(eq(diaryEntries.ownerType, 'job'), inArray(diaryEntries.ownerId, jobIds), isNull(diaryEntries.deletedAt))).all().map((r) => r.id) : [];
+
 /** Wpis leada widzi tylko osoba z uprawnieniem `leady`; wpis zlecenia każdy. */
 export const canSee = (user: Pick<User, 'role' | 'perms'>, e: Pick<EntryRow, 'ownerType'>): boolean =>
   e.ownerType === 'job' || can(user, 'leady');
