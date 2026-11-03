@@ -1,4 +1,4 @@
-import { CaretRight, DotsThreeCircle, GearSix, Handshake, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
+import { CaretRight, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
 import { badgeLabel, badgeText } from '../core/badges.js';
 import { useBadges } from '../core/layout/useBadges.js';
 import { logout, useSession } from '../core/session.js';
@@ -20,6 +20,7 @@ type T = { k: string; icon: Icon; title: string; hint: string | ((admin: boolean
 /** Kafelki w grupach; `admin`: grupa tylko dla admina. Klucz = ekran (`#k`). */
 const GROUPS: { admin?: true; tiles: T[] }[] = [
   { tiles: [
+    { k: 'paszporty', icon: IdentificationCard, title: 'Paszporty', hint: 'Teczki obiektów, terminy serwisów' },
     { k: 'auta', icon: Van, title: 'Samochody', hint: 'Usterki aut, terminy napraw' },
     { k: 'narz', icon: Wrench, title: 'Narzędzia', hint: 'Gdzie leży narzędzie: samochody i Magazyn' },
     { k: 'mag', icon: Package, title: 'Rzeczy nietypowe', hint: 'Co leży na magazynie, kto zabrał' },

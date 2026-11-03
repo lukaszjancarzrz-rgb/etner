@@ -92,3 +92,7 @@ export function freshIn(t: Teczka | undefined, since: string | undefined, meId: 
   for (const { a } of [...t.docs, ...t.photos]) if (a.ownerType === 'teczka' || a.ownerType === 'service' || a.ownerType === 'device') add(a, a.authorId);
   return out;
 }
+
+/** Najbliższy termin serwisu obiektu (zaległy jest najwcześniejszy), potem klient i obiekt alfabetycznie. */
+export const sortPaszporty = <T extends { klient: string; site: Rec; termin?: string }>(rows: T[]): T[] =>
+  [...rows].sort((a, b) => (a.termin ?? '9999').localeCompare(b.termin ?? '9999') || a.klient.localeCompare(b.klient, 'pl') || String(a.site.miejscowosc ?? '').localeCompare(String(b.site.miejscowosc ?? ''), 'pl'));

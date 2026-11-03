@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 /** Ekrany z menu (hash → nagłówek h1); karta zlecenia i leada otwierane z listy. */
 const SCREENS: [string, string][] = [
   ['#harm', 'Harmonogram'], ['#jutro', 'Na jutro'], ['#zl', 'Zlecenia'], ['#zakupy', 'Zakupy'], ['#auta', 'Samochody'],
-  ['#narz', 'Narzędzia'], ['#mag', 'Rzeczy nietypowe'], ['#leady', 'Leady'], ['#zad', 'Zadania'], ['#uz', 'Użytkownicy'], ['#ust', 'Ustawienia'],
+  ['#narz', 'Narzędzia'], ['#mag', 'Rzeczy nietypowe'], ['#paszporty', 'Paszporty'], ['#leady', 'Leady'], ['#zad', 'Zadania'], ['#uz', 'Użytkownicy'], ['#ust', 'Ustawienia'],
 ];
 
 /** Naruszenia WCAG 2.1 A/AA o wadze „serious” i „critical”, opisane do komunikatu błędu. */

@@ -38,6 +38,7 @@ const Samochody = lazyScreen(() => import('./features/samochody/Samochody.js').t
 const Narzedzia = lazyScreen(() => import('./features/narzedzia/Narzedzia.js').then((m) => ({ default: m.Narzedzia })));
 const Magazyn = lazyScreen(() => import('./features/magazyn/Magazyn.js').then((m) => ({ default: m.Magazyn })));
 const Teczka = lazyScreen(() => import('./features/paszport/Teczka.js').then((m) => ({ default: m.Teczka })));
+const Paszporty = lazyScreen(() => import('./features/paszport/Paszporty.js').then((m) => ({ default: m.Paszporty })));
 const Klienci = lazyScreen(() => import('./features/klienci/Klienci.js').then((m) => ({ default: m.Klienci })));
 
 /** Ekrany w kolejności menu. */
@@ -46,6 +47,7 @@ export const screens: Record<string, Screen> = {
   jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true }, // admin rzadko: koniec menu
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
   leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
+  paszporty: { title: 'Paszporty', icon: IdentificationCard, component: Paszporty, nav: 'side' },
   zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
   auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side' },
   narz: { title: 'Narzędzia', icon: Wrench, component: Narzedzia, nav: 'side' },
@@ -76,8 +78,8 @@ export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.n
 /** Czy ekran jest w menu bocznym komputera (bez Więcej). */
 export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && !screens[k]!.moreOnly && (!screens[k]!.admin || admin);
 
-/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `kl`, `psz` (paszport) i ekrany tylko z Więcej → Więcej. */
-export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'kl' || screen === 'psz' || screens[screen]?.moreOnly ? 'wiecej' : screen);
+/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `psz` (teczka) → Paszporty, `kl` i ekrany tylko z Więcej → Więcej. */
+export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'psz' ? 'paszporty' : screen === 'kl' || screens[screen]?.moreOnly ? 'wiecej' : screen);
 
 // poprzedni adres w aplikacji (np. po zapisie wpisu: „wstecz”, gdy przyszliśmy z teczki – bez podwójnego wpisu historii)
 let prevHash = '';
