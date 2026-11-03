@@ -78,7 +78,8 @@ export function Diary({ ownerType, ownerId, highlight, disabled, since }: { owne
                       <button type="button" onClick={() => setView(photos.indexOf(a))} className="block w-full overflow-hidden rounded-xl bg-line/50" aria-label={`Zdjęcie ${a.nazwa ?? ''}, powiększ`}>
                         <img src={fileUrl(a, 'thumb')} alt="" loading="lazy" decoding="async" width={160} height={160} className="aspect-square h-auto w-full object-cover" />
                       </button>
-                      {admin && a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-ok-ink" title="Widoczne dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>}
+                      {admin && (ownerType === 'job' && !a._tmp ? <PhotoToggle a={a} />
+                        : a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-ok-ink" title="Widoczne dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>)}
                     </li>
                   ))}
                 </ul>
@@ -120,14 +121,30 @@ function DeleteEntry({ id, files }: { id: string; files: number }) {
   );
 }
 
+/** „W paszporcie dla klienta” (admin) wprost przy zdjęciu dziennika zlecenia; PATCH przez kolejkę jak w podglądzie. */
+const patchAttachment = (a: Rec, p: Record<string, unknown>) => void updateVia('attachments', a.id, p, { kind: 'dziennik', url: `/api/attachments/${a.id}`, method: 'PATCH', body: p })
+  .catch((x: Error) => toast('Nie zapisano', { body: x.message, tone: 'error' }));
+
+/** Przełącznik na miniaturze: duże pole dotyku w rogu, widoczna ikonka (oko – w paszporcie, przekreślone – tylko wewnętrzne). */
+function PhotoToggle({ a }: { a: Rec }) {
+  const on = !!a.dlaKlienta;
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={`W paszporcie dla klienta: ${a.nazwa ?? 'zdjęcie'}`} title={on ? 'W paszporcie dla klienta' : 'Tylko wewnętrzne – dodaj do paszportu'}
+      onClick={() => patchAttachment(a, { dlaKlienta: !on })} className="group absolute bottom-0 left-0 grid h-11 w-11 place-items-center">
+      <span className={cn('grid h-7 w-7 place-items-center rounded-full shadow-card transition-colors duration-200', on ? 'bg-ok text-ok-ink' : 'bg-card/90 text-ink-2 group-hover:text-ink')}>
+        {on ? <Eye className="h-4 w-4" weight="bold" aria-hidden /> : <EyeSlash className="h-4 w-4" aria-hidden />}
+      </span>
+    </button>
+  );
+}
+
 /** Plik z dziennika zlecenia w teczce paszportu (P4): typ dokumentu (admin albo autor; faktura tylko admin) i „W paszporcie dla klienta” (admin). */
 function DocControls({ a, admin, mine }: { a: Rec; admin: boolean; mine: boolean }) {
-  const patch = (p: Record<string, unknown>) => void updateVia('attachments', a.id, p, { kind: 'dziennik', url: `/api/attachments/${a.id}`, method: 'PATCH', body: p })
-    .catch((x: Error) => toast('Nie zapisano', { body: x.message, tone: 'error' }));
+  const patch = (p: Record<string, unknown>) => patchAttachment(a, p);
   const typEdit = admin || (mine && a.typDok !== 'faktura');
   return (
     <>
-      {typEdit ? <div className="w-40"><Select aria-label={`Typ dokumentu: ${a.nazwa}`} value={a.typDok ?? undefined} placeholder="Typ dokumentu" onValueChange={(typDok) => patch({ typDok })} options={typOptions(admin)} className="h-10 text-sm" /></div>
+      {typEdit ? <div className="w-44"><Select aria-label={`Typ dokumentu: ${a.nazwa}`} value={a.typDok ?? undefined} placeholder="Typ dokumentu" onValueChange={(typDok) => patch({ typDok })} options={typOptions(admin)} className="h-10 text-sm" /></div>
         : a.typDok && <span className="text-sm text-ink-2">{TYP_LABEL[a.typDok]}</span>}
       {admin && <KlientToggle on={!!a.dlaKlienta} onChange={(dlaKlienta) => patch({ dlaKlienta })} label="W paszporcie dla klienta" />}
     </>

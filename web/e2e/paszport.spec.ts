@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 
 const shots = fileURLToPath(new URL('../../.superpowers/sdd/2026-11-03-etner-modul-2-paszport/shots/', import.meta.url));
+const photo = fileURLToPath(new URL('./fixtures/zdjecie.jpg', import.meta.url));
 const pdf = (name: string) => ({ name, mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n') });
 const fmt = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
 
@@ -191,4 +192,39 @@ test('zakładka Paszporty: lista obiektów z teczkami, wyszukiwanie, klik → te
   await row.getByRole('link', { name: /^Rekuperacja/ }).click();
   await expect(page.getByRole('heading', { name: 'Rekuperacja', level: 2 })).toBeVisible();
   if (!phone(info)) await expect(page.getByRole('navigation').getByRole('link', { name: 'Paszporty' })).toHaveAttribute('aria-current', 'page');
+});
+
+test('dziennik: „W paszporcie dla klienta” na miniaturach zdjęć (admin), bez podglądu, także offline', async ({ page }, info) => {
+  const tag = `Miniatury ${info.project.name} ${Date.now() % 100000}`;
+  await login(page, 'Tomasz Wrona');
+  await bukowski(page);
+  await page.getByPlaceholder('Co zrobiono, czego brakuje').fill(tag);
+  await page.locator('input[data-gallery]').setInputFiles([photo, photo]);
+  await page.locator('input[data-file]').setInputFiles(pdf(`plan-${Date.now() % 100000}.pdf`));
+  await page.getByRole('button', { name: 'Dodaj wpis' }).click();
+  const entry = page.locator('li[id^="e-"]', { hasText: tag });
+  await expect(entry).not.toContainText('wysyłanie');
+  const sws = entry.getByRole('switch', { name: /^W paszporcie dla klienta: zdjecie/ });
+  await expect(sws).toHaveCount(2);
+  await expect(sws.first()).toHaveAttribute('aria-checked', 'false');
+  // plik: przełącznik w wierszu jak dotąd
+  await expect(entry.getByRole('switch', { name: 'W paszporcie dla klienta', exact: true })).toBeVisible();
+
+  // bez zasięgu: przełączenie od razu na miniaturze, zapis w kolejce
+  await page.context().setOffline(true);
+  await sws.first().click();
+  await expect(sws.first()).toHaveAttribute('aria-checked', 'true');
+  await expect(sws.nth(1)).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByTitle('Zapisy czekające na wysłanie')).toBeVisible();
+  await entry.scrollIntoViewIfNeeded();
+  if (!phone(info)) await entry.screenshot({ path: `${shots}task4b-desktop-diary-toggles.png` });
+  else await entry.screenshot({ path: `${shots}task4b-phone-diary-toggles.png` });
+  await page.context().setOffline(false);
+  await expect(page.getByTitle('Zapisy czekające na wysłanie')).toBeHidden({ timeout: 20_000 });
+  await page.reload();
+  const again = page.locator('li[id^="e-"]', { hasText: tag }).getByRole('switch', { name: /^W paszporcie dla klienta: zdjecie/ });
+  await expect(again.first()).toHaveAttribute('aria-checked', 'true');
+  // podgląd pokazuje ten sam stan
+  await page.locator('li[id^="e-"]', { hasText: tag }).getByRole('button', { name: /Zdjęcie/ }).first().click();
+  await expect(page.getByRole('dialog').getByRole('switch', { name: 'W paszporcie dla klienta' })).toHaveAttribute('aria-checked', 'true');
 });
