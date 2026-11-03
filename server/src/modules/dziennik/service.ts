@@ -14,6 +14,7 @@ import { attachments, diaryEntries } from './schema.js';
 export type EntryRow = typeof diaryEntries.$inferSelect;
 export type AttachmentRow = typeof attachments.$inferSelect;
 export type Outbox = { userIds: string[]; n: Notification }[];
+type Owner = NonNullable<AttachmentRow['ownerType']>;
 
 const bad = (m: string) => new HTTPException(400, { message: m });
 const NOW = () => new Date().toISOString();
@@ -22,7 +23,7 @@ export const getEntry = (db: Db, id: string): EntryRow | undefined =>
   db.select().from(diaryEntries).where(and(eq(diaryEntries.id, id), isNull(diaryEntries.deletedAt))).get();
 export const getAttachment = (db: Db, id: string): AttachmentRow | undefined =>
   db.select().from(attachments).where(and(eq(attachments.id, id), isNull(attachments.deletedAt))).get();
-const attachmentsOf = (db: Db, ownerType: 'entry' | 'scope', ownerId: string): AttachmentRow[] =>
+const attachmentsOf = (db: Db, ownerType: Owner, ownerId: string): AttachmentRow[] =>
   db.select().from(attachments).where(and(eq(attachments.ownerType, ownerType), eq(attachments.ownerId, ownerId), isNull(attachments.deletedAt))).all();
 
 /** Nieusunięte załączniki właścicieli danego typu (teczki paszportu: zdjęcia i pliki zleceń, wpisów serwisowych, urządzeń). */
@@ -44,7 +45,6 @@ export function addSystem(db: Db, owner: { type: 'job' | 'lead'; id: string }, t
 }
 export const diaryOf = (db: Db): Diary => ({ addSystem: (owner, tekst) => addSystem(db, owner, tekst) });
 
-type Owner = 'entry' | 'scope';
 /** Pliki z POST /api/uploads: wszystkie istnieją, są niepodpięte i wgrał je ten użytkownik (inaczej 400). */
 export function checkUploads(db: Db, userId: string, uploads: string[]): AttachmentRow[] {
   const ids = [...new Set(uploads)];
@@ -53,14 +53,15 @@ export function checkUploads(db: Db, userId: string, uploads: string[]): Attachm
   return ups;
 }
 /** Podpina sprawdzone pliki (checkUploads) do właściciela; dopiero wtedy trafiają do synchronizacji. */
-export function attach(db: Db, userId: string, ups: AttachmentRow[], ownerType: Owner, ownerId: string): void {
+export function attach(db: Db, userId: string, ups: AttachmentRow[], ownerType: Owner, ownerId: string, extra: Partial<Pick<AttachmentRow, 'typDok' | 'dlaKlienta'>> = {}): AttachmentRow[] {
   const now = NOW();
-  for (const u of ups) {
-    const a = db.update(attachments).set({ ownerType, ownerId, updatedAt: now }).where(eq(attachments.id, u.id)).returning().get();
+  return ups.map((u) => {
+    const a = db.update(attachments).set({ ...extra, ownerType, ownerId, updatedAt: now }).where(eq(attachments.id, u.id)).returning().get();
     recordChange(db, userId, 'attachments', a.id, 'create', null, a);
-  }
+    return a;
+  });
 }
-/** Miękkie usunięcie załączników właściciela (razem z wpisem albo punktem zakresu); `ids` = tylko te (każde musi należeć do właściciela, inaczej 400). */
+/** Miękkie usunięcie załączników właściciela (razem z wpisem, punktem zakresu, wpisem serwisowym, urządzeniem); `ids` = tylko te (każde musi należeć do właściciela, inaczej 400). */
 export function removeAttachmentsOf(db: Db, userId: string, ownerType: Owner, ownerId: string, ids?: string[]): void {
   const now = NOW();
   const own = attachmentsOf(db, ownerType, ownerId);

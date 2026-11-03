@@ -94,7 +94,9 @@ export function routes(app: Hono, deps: AppDeps): void {
     const a = svc.getAttachment(db, c.req.param('id'));
     const e = a?.ownerType === 'entry' && a.ownerId ? svc.getEntry(db, a.ownerId) : undefined;
     // zdjęcie punktu zakresu widzi każdy, jak zlecenie (usunięty punkt usuwa też swoje zdjęcia)
-    if (!a || !(a.ownerType === 'scope' || (e && svc.canSee(c.get('user'), e)))) throw notFound();
+    // pliki teczek paszportu (teczka, urządzenie, wpis serwisowy) widzi każdy, jak teczkę
+    const open = a?.ownerType === 'scope' || a?.ownerType === 'teczka' || a?.ownerType === 'device' || a?.ownerType === 'service';
+    if (!a || !(open || (e && svc.canSee(c.get('user'), e)))) throw notFound();
     if (a.typDok === 'faktura' && !can(c.get('user'), 'admin')) throw notFound(); // faktury tylko admin (P6)
     const v = c.req.query('v');
     const key = (v === 'thumb' ? a.keyThumb : v === 'view' ? a.keyView : null) ?? a.keyOrig;

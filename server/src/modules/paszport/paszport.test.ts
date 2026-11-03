@@ -20,8 +20,9 @@ async function setup() {
   const app = createApp(deps, modules);
   const a = addUser(deps, { role: 'admin', name: 'Admin' });
   const w = addUser(deps, { name: 'Bartek' });
+  const w2 = addUser(deps, { name: 'Marek' });
   const k = newClient(deps.db, a.user.id, { typ: 'osoba', nazwa: 'Jan Nowak', telefony: [], emaile: [], nip: '', notatki: '', site: { nazwa: '', adres: 'Krótka 1', miejscowosc: 'Zawoja', mapa: '', opis: '' } });
-  return { deps, app, a, w, site: k.site!, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
+  return { deps, app, a, w, site: k.site!, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login), worker2: await loginCookie(app, w2.login) };
 }
 const req = (cookie: string, method: string, body?: unknown) =>
   ({ method, headers: { cookie, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -187,5 +188,106 @@ describe('paszport – teczki z danych zleceń', () => {
     expect(asnap.find((r) => r.entity === 'passport_folders').data).toMatchObject({ notatkaRozliczenie: 'Rabat 10%' });
     expect(asnap.filter((r) => r.entity === 'attachments')).toHaveLength(2);
     expect((await teczki(s, s.admin))[0]).toMatchObject({ docs: 2 });
+  });
+});
+
+describe('paszport – urządzenia, karta serwisowa, dokumenty', () => {
+  const entry = (s: S, cookie: string, over: Record<string, unknown> = {}) =>
+    call(s, cookie, 'POST', '/api/service-entries', { siteId: s.site.id, kategoria: 'Rekuperacja', dzien: '2026-11-03', czynnosci: ['Wymiana filtrów F7'], dlaKlienta: true, ...over });
+
+  it('wpis serwisowy do obiektu bez teczki tworzy teczkę i ustawia następny serwis; powtórka opId bez duplikatu', async () => {
+    const s = await setup();
+    const j = job(s, 'Rekuperacja');
+    const photo = await upload(s, s.worker);
+    const r = await entry(s, s.worker, { opId: 'op-1', jobId: j.id, uwagi: 'Filtry mocno zabrudzone', nastepnySerwis: '2027-05-03', uploadIds: [photo] });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ dzien: '2026-11-03', jobId: j.id, czynnosci: ['Wymiana filtrów F7'], uwagi: 'Filtry mocno zabrudzone', authorId: s.w.user.id, dlaKlienta: true });
+    expect(findFolder(s.deps.db, s.site.id, 'Rekuperacja')).toMatchObject({ id: r.body.folderId, nastepnySerwis: '2027-05-03', cyklMies: 6 });
+    expect((await entry(s, s.worker, { opId: 'op-1', jobId: j.id, uwagi: 'Filtry mocno zabrudzone', nastepnySerwis: '2027-05-03', uploadIds: [photo] })).body).toEqual(r.body);
+    expect(count(s, 'select count(*) n from service_entries')).toBe(1);
+    expect(count(s, 'select count(*) n from passport_folders')).toBe(1);
+    expect(s.deps.db.$client.prepare('select owner_type, owner_id from attachments').get()).toEqual({ owner_type: 'service', owner_id: r.body.id });
+    expect((await teczki(s, s.worker))[0]).toMatchObject({ photos: 1, nastepnySerwis: '2027-05-03' });
+    expect((await s.app.request(`/api/attachments/${photo}/file`, req(s.worker2, 'GET'))).status).toBe(302);
+    // wpis bez następnego serwisu nie kasuje terminu
+    await entry(s, s.admin, { dzien: '2026-11-04' });
+    expect(findFolder(s.deps.db, s.site.id, 'Rekuperacja')?.nastepnySerwis).toBe('2027-05-03');
+  });
+
+  it('dwa różne opId (dwa telefony offline) dla tej samej teczki → jedna teczka, dwa wpisy (RF #3)', async () => {
+    const s = await setup();
+    const [a, b] = await Promise.all([entry(s, s.worker, { opId: 'op-a' }), entry(s, s.worker2, { opId: 'op-b', kategoria: 'Rekuperacja' })]);
+    expect(a.status).toBe(200);
+    expect(b.body.folderId).toBe(a.body.folderId);
+    expect(count(s, 'select count(*) n from passport_folders')).toBe(1);
+    expect(count(s, 'select count(*) n from service_entries')).toBe(2);
+  });
+
+  it('walidacja: zlecenie z innego obiektu, obce zdjęcie, pusty wpis, nieznana kategoria → 400', async () => {
+    const s = await setup();
+    const site2 = (await import('../klienci/service.js')).addSite(s.deps.db, s.a.user.id, s.site.clientId, { adres: 'Długa 2' })!;
+    const j2 = job(s, 'Rekuperacja', 'serwis', site2.id);
+    expect((await entry(s, s.worker, { jobId: j2.id })).status).toBe(400);
+    expect((await entry(s, s.worker, { uploadIds: [await upload(s, s.admin)] })).status).toBe(400);
+    expect((await entry(s, s.worker, { czynnosci: [] })).status).toBe(400);
+    expect((await entry(s, s.worker, { kategoria: 'Nie ma' })).status).toBe(400);
+    expect(count(s, 'select count(*) n from passport_folders')).toBe(0); // nieudany zapis nie zostawia teczki
+  });
+
+  it('edycja i usuwanie wpisu: admin i autor; cudzy 403; usunięcie miękkie razem ze zdjęciami, powtórka 200', async () => {
+    const s = await setup();
+    const photo = await upload(s, s.worker);
+    const e = (await entry(s, s.worker, { uploadIds: [photo] })).body;
+    expect((await call(s, s.worker2, 'PUT', `/api/service-entries/${e.id}`, { uwagi: 'x' })).status).toBe(403);
+    expect((await call(s, s.worker2, 'DELETE', `/api/service-entries/${e.id}`)).status).toBe(403);
+    const p2 = await upload(s, s.worker);
+    expect((await call(s, s.worker, 'PUT', `/api/service-entries/${e.id}`, { opId: 'op-e', czynnosci: ['Wymiana filtrów G4', 'Inne: mycie kratek'], uploadIds: [p2] })).body)
+      .toMatchObject({ czynnosci: ['Wymiana filtrów G4', 'Inne: mycie kratek'], dzien: '2026-11-03', dlaKlienta: true });
+    expect((await call(s, s.admin, 'PUT', `/api/service-entries/${e.id}`, { dlaKlienta: false })).body).toMatchObject({ dlaKlienta: false });
+    expect(count(s, "select count(*) n from attachments where owner_type = 'service' and deleted_at is null")).toBe(2);
+    expect((await call(s, s.worker, 'DELETE', `/api/service-entries/${e.id}`)).status).toBe(200);
+    expect(count(s, "select count(*) n from attachments where owner_type = 'service' and deleted_at is null")).toBe(0);
+    expect(count(s, "select count(*) n from service_entries where deleted_at is not null")).toBe(1);
+    expect((await call(s, s.worker, 'DELETE', `/api/service-entries/${e.id}`)).status).toBe(200);
+    expect((await call(s, s.worker, 'PUT', `/api/service-entries/${e.id}`, { uwagi: 'x' })).status).toBe(404);
+    expect((await call(s, s.worker, 'DELETE', '/api/service-entries/nie-ma')).status).toBe(404);
+  });
+
+  it('urządzenia: dodaje każdy (tworzy teczkę), edytuje i usuwa admin albo autor', async () => {
+    const s = await setup();
+    const j = job(s, 'Rekuperacja', 'montaż');
+    const d = (await call(s, s.worker, 'POST', '/api/devices', { opId: 'op-d', siteId: s.site.id, kategoria: 'Rekuperacja', nazwa: 'Rekuperator', producent: 'Zehnder', model: 'ComfoAir Q350', nrSeryjny: 'SN123', montaz: '2026-10-01', jobId: j.id, gwarancjaDo: '2031-10-01', dlaKlienta: true })).body;
+    expect(d).toMatchObject({ nazwa: 'Rekuperator', model: 'ComfoAir Q350', uwagi: '', createdBy: s.w.user.id, folderId: findFolder(s.deps.db, s.site.id, 'Rekuperacja')!.id });
+    expect((await call(s, s.worker, 'POST', '/api/devices', { opId: 'op-d', siteId: s.site.id, kategoria: 'Rekuperacja', nazwa: 'Rekuperator', dlaKlienta: true })).body).toEqual(d);
+    expect((await call(s, s.worker2, 'PUT', `/api/devices/${d.id}`, { model: 'Q450' })).status).toBe(403);
+    expect((await call(s, s.admin, 'PUT', `/api/devices/${d.id}`, { model: 'Q450', gwarancjaDo: null })).body).toMatchObject({ model: 'Q450', gwarancjaDo: null, producent: 'Zehnder' });
+    expect((await call(s, s.worker, 'PUT', `/api/devices/${d.id}`, { nazwa: '' })).status).toBe(400);
+    expect((await call(s, s.worker2, 'DELETE', `/api/devices/${d.id}`)).status).toBe(403);
+    expect((await call(s, s.worker, 'DELETE', `/api/devices/${d.id}`)).status).toBe(200);
+    expect((await call(s, s.worker, 'DELETE', `/api/devices/${d.id}`)).status).toBe(200);
+    expect(count(s, 'select count(*) n from devices where deleted_at is null')).toBe(0);
+    expect((await call(s, s.worker, 'GET', '/api/snapshot')).body.records.some((r: any) => r.entity === 'devices')).toBe(false);
+  });
+
+  it('dokumenty teczki: faktura tylko admin; plik w teczce z typem i „dla klienta”, widoczny w teczce', async () => {
+    const s = await setup();
+    const file = (cookie: string, uploadId: string, over: Record<string, unknown> = {}) =>
+      call(s, cookie, 'POST', '/api/folder-files', { siteId: s.site.id, kategoria: 'Klimatyzacja', uploadId, typDok: 'instrukcja', dlaKlienta: true, ...over });
+    const fvW = await upload(s, s.worker, pdf(), 'fv.pdf');
+    expect((await file(s.worker, fvW, { typDok: 'faktura' })).status).toBe(403);
+    expect(count(s, 'select count(*) n from passport_folders')).toBe(0);
+    const inst = await upload(s, s.worker, pdf(), 'instrukcja.pdf');
+    const a = (await file(s.worker, inst, { opId: 'op-i' })).body;
+    expect(a).toMatchObject({ id: inst, ownerType: 'teczka', ownerId: findFolder(s.deps.db, s.site.id, 'Klimatyzacja')!.id, typDok: 'instrukcja', dlaKlienta: true });
+    expect((await file(s.worker, inst, { opId: 'op-i' })).body).toEqual(a);
+    expect((await file(s.worker, inst)).status).toBe(400); // już podpięty
+    const fv = await upload(s, s.admin, pdf(), 'fv.pdf');
+    expect((await file(s.admin, fv, { typDok: 'faktura', dlaKlienta: false })).status).toBe(200);
+    expect((await teczki(s, s.worker))[0]).toMatchObject({ kategoria: 'Klimatyzacja', docs: 1 });
+    expect((await teczki(s, s.admin))[0]).toMatchObject({ docs: 2 });
+    const snap = (await call(s, s.worker2, 'GET', '/api/snapshot')).body.records as any[];
+    expect(snap.filter((r) => r.entity === 'attachments').map((r) => r.id)).toEqual([inst]);
+    expect((await s.app.request(`/api/attachments/${inst}/file`, req(s.worker2, 'GET'))).status).toBe(302);
+    expect((await s.app.request(`/api/attachments/${fv}/file`, req(s.worker2, 'GET'))).status).toBe(404);
   });
 });

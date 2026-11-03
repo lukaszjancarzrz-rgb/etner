@@ -1,8 +1,9 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
-import { defaultCycle, newId, type FolderUpdate } from '@etner/shared';
+import { defaultCycle, newId, type DeviceCreate, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
-import type { Db } from '../../core/db.js';
+import { tx, type Db } from '../../core/db.js';
+import { can } from '../../core/permissions.js';
 import { dictRefsFor } from '../../core/dict-refs.js';
 import * as dziennik from '../dziennik/service.js';
 import * as klienci from '../klienci/service.js';
@@ -94,4 +95,87 @@ export function updateFolder(db: Db, by: string, id: string, d: Omit<FolderUpdat
   const row = db.update(passportFolders).set({ ...set, updatedAt: new Date().toISOString() }).where(eq(passportFolders.id, id)).returning().get();
   recordChange(db, by, 'passport_folders', id, 'update', old, row);
   return row;
+}
+
+const NOW = () => new Date().toISOString();
+const clean = <T extends Record<string, unknown>>(d: T) => Object.fromEntries(Object.entries(d).filter(([, v]) => v !== undefined)) as Partial<T>;
+/** Zlecenie przy urządzeniu / wpisie musi być z obiektu teczki. */
+const checkJob = (db: Db, siteId: string, jobId: string | null | undefined) => {
+  if (jobId && zlecenia.get(db, jobId)?.siteId !== siteId) throw bad('Zlecenie nie należy do tego obiektu');
+};
+/** Edycja i usuwanie urządzenia lub wpisu: admin albo autor (P10). */
+export const canEdit = (user: User, authorId: string | null): boolean => can(user, 'admin') || authorId === user.id;
+
+export const getDevice = (db: Db, id: string): DeviceRow | undefined =>
+  db.select().from(devices).where(and(eq(devices.id, id), isNull(devices.deletedAt))).get();
+export const anyDevice = (db: Db, id: string): DeviceRow | undefined => db.select().from(devices).where(eq(devices.id, id)).get();
+export const getEntry = (db: Db, id: string): ServiceEntryRow | undefined =>
+  db.select().from(serviceEntries).where(and(eq(serviceEntries.id, id), isNull(serviceEntries.deletedAt))).get();
+export const anyEntry = (db: Db, id: string): ServiceEntryRow | undefined => db.select().from(serviceEntries).where(eq(serviceEntries.id, id)).get();
+
+/** Wywołuj w runOp. */
+export function createDevice(db: Db, by: string, d: Omit<DeviceCreate, 'opId'>): DeviceRow {
+  const { siteId, kategoria, ...f } = d;
+  checkJob(db, siteId, f.jobId);
+  const folder = ensureFolder(db, by, siteId, kategoria);
+  const now = NOW();
+  const row = db.insert(devices).values({ ...clean(f), nazwa: f.nazwa, dlaKlienta: f.dlaKlienta, id: newId(), folderId: folder.id, createdAt: now, createdBy: by, updatedAt: now }).returning().get();
+  recordChange(db, by, 'devices', row.id, 'create', null, row);
+  return row;
+}
+
+export function updateDevice(db: Db, by: string, old: DeviceRow, d: Omit<DeviceUpdate, 'opId'>): DeviceRow {
+  checkJob(db, getFolder(db, old.folderId)!.siteId, d.jobId);
+  const row = db.update(devices).set({ ...clean(d), updatedAt: NOW() }).where(eq(devices.id, old.id)).returning().get();
+  recordChange(db, by, 'devices', old.id, 'update', old, row);
+  return row;
+}
+
+export function removeDevice(db: Db, by: string, old: DeviceRow): void {
+  tx(db, () => {
+    dziennik.removeAttachmentsOf(db, by, 'device', old.id);
+    const now = NOW();
+    const row = db.update(devices).set({ deletedAt: now, updatedAt: now }).where(eq(devices.id, old.id)).returning().get();
+    recordChange(db, by, 'devices', old.id, 'delete', old, row);
+  });
+}
+
+/** Wywołuj w runOp: teczka (gdy jej nie ma), wpis, zdjęcia i następny serwis w jednej transakcji (RF #3). */
+export function createEntry(db: Db, by: string, d: Omit<ServiceEntryCreate, 'opId'>): ServiceEntryRow {
+  const { siteId, kategoria, uploadIds, nastepnySerwis, ...f } = d;
+  checkJob(db, siteId, f.jobId);
+  const ups = dziennik.checkUploads(db, by, uploadIds);
+  const folder = ensureFolder(db, by, siteId, kategoria);
+  const now = NOW();
+  const row = db.insert(serviceEntries).values({ ...clean(f), dzien: f.dzien, dlaKlienta: f.dlaKlienta, id: newId(), folderId: folder.id, authorId: by, createdAt: now, createdBy: by, updatedAt: now }).returning().get();
+  recordChange(db, by, 'service_entries', row.id, 'create', null, row);
+  dziennik.attach(db, by, ups, 'service', row.id);
+  if (nastepnySerwis !== undefined && nastepnySerwis !== folder.nastepnySerwis) updateFolder(db, by, folder.id, { nastepnySerwis });
+  return row;
+}
+
+export function updateEntry(db: Db, by: string, old: ServiceEntryRow, d: Omit<ServiceEntryUpdate, 'opId'>): ServiceEntryRow {
+  const { uploadIds, ...f } = d;
+  checkJob(db, getFolder(db, old.folderId)!.siteId, f.jobId);
+  const ups = dziennik.checkUploads(db, by, uploadIds ?? []);
+  const row = db.update(serviceEntries).set({ ...clean(f), updatedAt: NOW() }).where(eq(serviceEntries.id, old.id)).returning().get();
+  recordChange(db, by, 'service_entries', old.id, 'update', old, row);
+  dziennik.attach(db, by, ups, 'service', old.id);
+  return row;
+}
+
+export function removeEntry(db: Db, by: string, old: ServiceEntryRow): void {
+  tx(db, () => {
+    dziennik.removeAttachmentsOf(db, by, 'service', old.id);
+    const now = NOW();
+    const row = db.update(serviceEntries).set({ deletedAt: now, updatedAt: now }).where(eq(serviceEntries.id, old.id)).returning().get();
+    recordChange(db, by, 'service_entries', old.id, 'delete', old, row);
+  });
+}
+
+/** Wywołuj w runOp: plik z POST /api/uploads podpięty do teczki (P5). Fakturę sprawdza trasa (tylko admin). */
+export function addFolderFile(db: Db, by: string, d: Omit<FolderFile, 'opId'>): dziennik.AttachmentRow {
+  const ups = dziennik.checkUploads(db, by, [d.uploadId]);
+  const folder = ensureFolder(db, by, d.siteId, d.kategoria);
+  return dziennik.attach(db, by, ups, 'teczka', folder.id, { typDok: d.typDok, dlaKlienta: d.dlaKlienta })[0]!;
 }

@@ -1,4 +1,4 @@
-import { folderCreateSchema, folderUpdateSchema } from '@etner/shared';
+import { deviceCreateSchema, deviceUpdateSchema, folderCreateSchema, folderFileSchema, folderUpdateSchema, serviceEntryCreateSchema, serviceEntryUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -39,5 +39,45 @@ export function routes(app: Hono, deps: AppDeps): void {
       return r;
     });
     return c.json(folderOut(c, result));
+  });
+
+  // Urządzenia i wpisy serwisowe: dodaje każdy (teczka powstaje przy pierwszym zapisie), edytuje i usuwa admin albo autor (P10).
+  // Odczyt w op: powtórka z kolejki po usunięciu dostaje zapisany wynik, nie 404.
+  const editable = <T extends { createdBy: string | null }>(c: Context, row: T | undefined, author: (r: T) => string | null): T => {
+    if (!row) throw notFound();
+    if (!svc.canEdit(me(c), author(row))) throw forbidden();
+    return row;
+  };
+  const removeRoute = <T extends { createdBy: string | null; deletedAt: string | null }>(path: string, find: (id: string) => T | undefined, author: (r: T) => string | null, remove: (by: string, r: T) => void) =>
+    app.delete(path, auth, (c) => {
+      const row = editable(c, find(c.req.param('id')!), author);
+      if (!row.deletedAt) remove(me(c).id, row); // już usunięty: powtórka z kolejki
+      return c.json({ ok: true });
+    });
+
+  app.post('/api/devices', auth, async (c) => {
+    const { opId, ...d } = await body(c, deviceCreateSchema);
+    return c.json(runOp(db, opId, me(c).id, () => svc.createDevice(db, me(c).id, d)).result);
+  });
+  app.put('/api/devices/:id', auth, async (c) => {
+    const { opId, ...d } = await body(c, deviceUpdateSchema);
+    return c.json(runOp(db, opId, me(c).id, () => svc.updateDevice(db, me(c).id, editable(c, svc.getDevice(db, c.req.param('id')), (r) => r.createdBy), d)).result);
+  });
+  removeRoute('/api/devices/:id', (id) => svc.anyDevice(db, id), (r) => r.createdBy, (by, r) => svc.removeDevice(db, by, r));
+
+  app.post('/api/service-entries', auth, async (c) => {
+    const { opId, ...d } = await body(c, serviceEntryCreateSchema);
+    return c.json(runOp(db, opId, me(c).id, () => svc.createEntry(db, me(c).id, d)).result);
+  });
+  app.put('/api/service-entries/:id', auth, async (c) => {
+    const { opId, ...d } = await body(c, serviceEntryUpdateSchema);
+    return c.json(runOp(db, opId, me(c).id, () => svc.updateEntry(db, me(c).id, editable(c, svc.getEntry(db, c.req.param('id')), (r) => r.authorId), d)).result);
+  });
+  removeRoute('/api/service-entries/:id', (id) => svc.anyEntry(db, id), (r) => r.authorId, (by, r) => svc.removeEntry(db, by, r));
+
+  app.post('/api/folder-files', auth, async (c) => {
+    const { opId, ...d } = await body(c, folderFileSchema);
+    if (d.typDok === 'faktura' && !isAdmin(c)) throw forbidden(); // faktury tylko admin (P6)
+    return c.json(runOp(db, opId, me(c).id, () => svc.addFolderFile(db, me(c).id, d)).result);
   });
 }
