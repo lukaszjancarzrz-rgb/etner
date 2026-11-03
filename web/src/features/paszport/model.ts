@@ -76,3 +76,19 @@ export const typOptions = (admin: boolean) => Object.entries(TYP_LABEL).filter((
 
 /** Teczka zapisu: znana (`folderId`) albo (obiekt, kategoria) – serwer ją założy (zapis z kolejki przed utworzeniem teczki). */
 export const target = (t: Teczka | undefined, siteId: string, kategoria: string) => (t?.folder && !t.folder._tmp ? { folderId: t.folder.id as string } : { siteId, kategoria });
+
+/** Klucz „ostatnio widziane” teczki (localStorage jak przy zleceniach; serwer przyjmuje tylko id zleceń). */
+export const seenKey = (siteId: string, kategoria: string) => `psz:${siteId}:${kategoria}`;
+/**
+ * „Nowe” w teczce od ostatniej wizyty (spec §7): wpisy serwisowe, urządzenia i pliki dodane w teczce (też przy wpisach i urządzeniach)
+ * przez inną osobę. Zdjęcia i pliki z dzienników mają znacznik w karcie zlecenia, tu się nie liczą.
+ */
+export function freshIn(t: Teczka | undefined, since: string | undefined, meId: string | undefined): Set<string> {
+  const out = new Set<string>();
+  if (!t || !since) return out;
+  const add = (r: Rec, by: unknown) => { if (!r._tmp && by !== meId && r.createdAt > since) out.add(r.id); };
+  for (const e of t.entries) add(e, e.authorId);
+  for (const d of t.devices) add(d, d.createdBy);
+  for (const { a } of [...t.docs, ...t.photos]) if (a.ownerType === 'teczka' || a.ownerType === 'service' || a.ownerType === 'device') add(a, a.authorId);
+  return out;
+}

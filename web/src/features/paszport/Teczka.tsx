@@ -1,10 +1,10 @@
 import { ArrowLeft, Bell, Briefcase, ClipboardText, Cpu, Eye, FilePdf, FileText, FolderSimplePlus, Images, Notepad, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { addMonths } from '@etner/shared';
-import { fmtDay, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
+import { fmtDay, markSeen, seenFor, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { useEntities, useEntity, type Rec } from '../../core/store.js';
-import { Badge, Empty, SectionTitle, Textarea } from '../../core/ui/bits.js';
+import { Badge, Empty, NewMark, SectionTitle, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { catStripe, useCatColor } from '../../core/ui/category.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
@@ -19,7 +19,7 @@ import type { Route } from '../../routes.js';
 import { KlientToggle, fileUrl, usePicker } from '../dziennik/Diary.js';
 import { Viewer } from '../dziennik/Viewer.js';
 import { fmtTermin } from '../zlecenia/JobCard.js';
-import { TYP_LABEL, plural, target, typOptions, type Plik, type Teczka as T } from './model.js';
+import { TYP_LABEL, freshIn, plural, seenKey, target, typOptions, type Plik, type Teczka as T } from './model.js';
 import { AddFolder, SerwisBadge, pszHash, useCanEdit, useTeczki } from './Paszport.js';
 import { DeviceForm } from './Urzadzenie.js';
 import { WpisSerwisowy } from './WpisSerwisowy.js';
@@ -28,7 +28,7 @@ const fail = (what: string) => (x: Error) => toast(what, { body: x.message, tone
 
 /** `#psz/<siteId>/<kategoria>` – teczka; `/wpis` – nowy wpis serwisowy, `/wpis/<id>` – edycja. */
 export function Teczka({ route }: { route: Route }) {
-  const [siteId = '', kategoria = '', sub, entryId] = (route.param ?? '').split('/');
+  const [siteId = '', kategoria = '', sub, entryId] = route.parts ?? [route.param ?? ''];
   if (sub === 'wpis') return <WpisSerwisowy key={entryId ?? 'nowy'} siteId={siteId} kategoria={kategoria} entryId={entryId} jobId={route.highlight} />;
   return <Folder siteId={siteId} kategoria={kategoria} />;
 }
@@ -42,6 +42,17 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
   const t = teczki.find((x) => x.kategoria === kategoria);
   const cat = useCatColor();
   const [adding, setAdding] = useState(false);
+  // „nowe” od ostatniej wizyty teczki (jak w karcie zlecenia): chwila z otwarcia trzymana do wyjścia
+  const me = useMe();
+  const key = seenKey(siteId, kategoria);
+  const [opened, setOpened] = useState<{ key: string; at: string } | undefined>();
+  useEffect(() => {
+    if (!me) return;
+    setOpened({ key, at: seenFor(me.id)(key) });
+    markSeen(me.id, key, false); // tylko w telefonie: serwer przyjmuje „widziane” samych zleceń
+    return () => markSeen(me.id, key, false);
+  }, [me?.id, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fresh = useMemo(() => freshIn(t, opened?.key === key ? opened.at : undefined, me?.id), [t, opened, key, me?.id]);
 
   if (!site || !t) {
     return loading ? <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true"><Skeleton className="h-24" /><Skeleton className="h-48" /></div>
@@ -66,10 +77,10 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
       </nav>
       {adding && <AddFolder siteId={siteId} have={teczki.map((x) => x.kategoria)} onClose={() => setAdding(false)} />}
       <ServiceBar t={t} siteId={siteId} />
-      <Devices t={t} siteId={siteId} />
-      <ServiceCard t={t} siteId={siteId} />
-      <Documents t={t} siteId={siteId} />
-      <Photos t={t} />
+      <Devices t={t} siteId={siteId} fresh={fresh} />
+      <ServiceCard t={t} siteId={siteId} fresh={fresh} />
+      <Documents t={t} siteId={siteId} fresh={fresh} />
+      <Photos t={t} fresh={fresh} />
       <Jobs t={t} />
     </article>
   );
@@ -105,7 +116,7 @@ function ServiceBar({ t, siteId }: { t: T; siteId: string }) {
   );
 }
 
-/** Edycja teczki: termin, cykl, przypomnienia; admin – notatka z rozliczeniem. Teczka bez wiersza (admin): najpierw POST /api/folders. */
+/** Edycja teczki: termin, cykl, przypomnienia; admin – notatka z rozliczeniem. Teczka bez wiersza (admin): POST /api/folders, potem PUT. */
 function FolderForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () => void }) {
   const admin = useIsAdmin();
   const f = t.folder;
@@ -121,7 +132,8 @@ function FolderForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () 
     if (c !== null && (!Number.isInteger(c) || c < 1 || c > 120)) return setErr('Cykl: liczba miesięcy od 1 do 120');
     const patch = { nastepnySerwis: d || null, cyklMies: c, przypomnienia: przyp, ...(admin && { notatkaRozliczenie: nota.trim() }) };
     const put = (id: string) => updateVia('passport_folders', id, patch, { kind: 'paszport', url: `/api/folders/${id}`, method: 'PUT', body: patch });
-    const p = f ? put(f.id) : createVia<Rec>('passport_folders', { kind: 'paszport', url: '/api/folders', method: 'POST', body: { siteId, kategoria: t.kategoria } }, { siteId, kategoria: t.kategoria, ...patch }).then((r) => put(r.id));
+    // bez wiersza teczki: POST i PUT w jednym elemencie kolejki (przetrwa zamknięcie aplikacji)
+    const p = f ? put(f.id) : createVia('passport_folders', { kind: 'paszport', url: '/api/folders', method: 'POST', body: { siteId, kategoria: t.kategoria }, next: { url: '/api/folders/:id', method: 'PUT', body: patch } }, { siteId, kategoria: t.kategoria, ...patch });
     p.catch(fail('Nie zapisano teczki'));
     if (!navigator.onLine) toast('Zapisane w telefonie', { body: 'Zmiana wyśle się, gdy wróci zasięg.' });
     onClose();
@@ -155,7 +167,7 @@ const Klient = ({ on }: { on: boolean }) => (on
   ? <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-ok"><Eye className="h-4 w-4" weight="bold" aria-hidden />dla klienta</span>
   : <span className="shrink-0 text-xs font-semibold text-ink-2">wewn.</span>);
 
-function Devices({ t, siteId }: { t: T; siteId: string }) {
+function Devices({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<string> }) {
   const canEdit = useCanEdit();
   const jobs = useEntities('jobs');
   const numer = (id?: string | null) => jobs.find((j) => j.id === id)?.numer;
@@ -173,6 +185,7 @@ function Devices({ t, siteId }: { t: T; siteId: string }) {
                 <p className="text-sm text-ink-2">{[d.nrSeryjny && `nr ser. ${d.nrSeryjny}`, d.montaz && `montaż ${fmtDay(d.montaz)}${numer(d.jobId) ? ` (${numer(d.jobId)})` : ''}`, d.gwarancjaDo && `gwarancja do ${fmtDay(d.gwarancjaDo)}`].filter(Boolean).join(' · ')}</p>
                 {d.uwagi && <p className="mt-1 text-sm whitespace-pre-wrap">{d.uwagi}</p>}
               </div>
+              {fresh.has(d.id) && <NewMark sr="nowe urządzenie od ostatniej wizyty" />}
               <Klient on={!!d.dlaKlienta} />
               {!d._tmp && canEdit(d.createdBy) && <Button variant="ghost" size="icon" className="-my-2 h-11 w-11" aria-label={`Edytuj urządzenie ${d.nazwa}`} onClick={() => setForm({ d })}><PencilSimple className="h-5 w-5" /></Button>}
             </li>
@@ -184,7 +197,7 @@ function Devices({ t, siteId }: { t: T; siteId: string }) {
   );
 }
 
-function ServiceCard({ t, siteId }: { t: T; siteId: string }) {
+function ServiceCard({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<string> }) {
   const names = useNames();
   const canEdit = useCanEdit();
   const photos = useMemo(() => { const m = new Map<string, number>(); for (const p of t.photos) if (p.a.ownerType === 'service') m.set(p.a.ownerId, (m.get(p.a.ownerId) ?? 0) + 1); return m; }, [t.photos]);
@@ -200,6 +213,7 @@ function ServiceCard({ t, siteId }: { t: T; siteId: string }) {
                 <tr key={e.id} className="border-b border-line align-top last:border-0">
                   <td className="px-1 py-2.5 whitespace-nowrap tabular-nums">
                     {!e._tmp && canEdit(e.authorId) ? <a href={pszHash(siteId, t.kategoria, `/wpis/${e.id}`)} className="font-semibold text-action underline-offset-2 hover:underline" aria-label={`Edytuj wpis z ${fmtDay(e.dzien)}`}>{fmtDay(e.dzien)}</a> : fmtDay(e.dzien)}
+                    {fresh.has(e.id) && <span className="mt-1 block"><NewMark sr="nowy wpis od ostatniej wizyty" /></span>}
                     {e._tmp && <span className="block text-xs text-ink-2">wysyłanie…</span>}
                   </td>
                   <td className="px-2 py-2.5">
@@ -225,7 +239,7 @@ const docIcon = (a: Rec) => (a.typDok === 'faktura' ? Receipt : a.mime === 'appl
 const SOURCE: Record<string, string> = { teczka: 'w teczce', service: 'wpis serwisowy', device: 'urządzenie' };
 
 /** Dokumenty: pliki teczki i z dzienników zleceń (P4, P5); faktury i rozliczenie tylko admin (serwer ich pracownikowi nie wysyła). */
-function Documents({ t, siteId }: { t: T; siteId: string }) {
+function Documents({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<string> }) {
   const admin = useIsAdmin();
   const canEdit = useCanEdit();
   const jobs = useEntities('jobs');
@@ -248,6 +262,7 @@ function Documents({ t, siteId }: { t: T; siteId: string }) {
                 <span className="block truncate font-semibold hover:underline">{a.nazwa}</span>
                 <span className="block truncate text-sm text-ink-2">{[a.typDok ? TYP_LABEL[a.typDok] : 'Plik', jobId ? numer(jobId) ?? 'zlecenie' : SOURCE[a.ownerType], a._tmp && 'wysyłanie…'].filter(Boolean).join(' · ')}</span>
               </a>
+              {fresh.has(a.id) && <NewMark sr="nowy plik od ostatniej wizyty" />}
               <Klient on={!!a.dlaKlienta} />
               {!a._tmp && (admin || canEdit(a.authorId)) && <Button variant="ghost" size="icon" className="h-11 w-11" aria-label={`Ustawienia pliku ${a.nazwa}`} onClick={() => setDoc(a)}><PencilSimple className="h-5 w-5" /></Button>}
             </li>
@@ -338,7 +353,7 @@ function UploadForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () 
   );
 }
 
-function Photos({ t }: { t: T }) {
+function Photos({ t, fresh }: { t: T; fresh: Set<string> }) {
   const admin = useIsAdmin();
   const jobs = useEntities('jobs');
   const [view, setView] = useState<number | null>(null);
@@ -355,6 +370,7 @@ function Photos({ t }: { t: T }) {
                 <img src={fileUrl(p.a, 'thumb')} alt="" loading="lazy" decoding="async" width={160} height={160} className="aspect-square h-auto w-full object-cover" />
               </button>
               {numer(p) && <span className="pointer-events-none absolute right-1 bottom-1 rounded-full bg-[#050f1d]/75 px-2 py-0.5 text-xs font-semibold text-white">{numer(p)}</span>}
+              {fresh.has(p.a.id) && <span className="pointer-events-none absolute top-1 left-1"><NewMark sr="nowe zdjęcie od ostatniej wizyty" /></span>}
               {admin && p.a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-ok-ink" title="W paszporcie dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>}
             </li>
           ))}

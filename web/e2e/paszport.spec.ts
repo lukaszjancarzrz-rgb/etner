@@ -54,7 +54,7 @@ test('paszport: klient → teczka Rekuperacja, wpis serwisowy offline z +6 mies.
   await expect(page.getByRole('button', { name: '+6 mies.' })).toHaveAttribute('aria-pressed', 'true');
   const next = addMonths(dayOf(new Date()), 6);
   await expect(page.getByLabel('Data następnego serwisu')).toHaveValue(next);
-  if (phone(info)) await page.screenshot({ path: `${shots}task4-phone-wpis.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}task4-${phone(info) ? 'phone' : 'desktop'}-wpis.png`, fullPage: true });
   await page.getByRole('button', { name: 'Zapisz wpis' }).click();
 
   const card = page.getByRole('region', { name: 'Karta serwisowa' });
@@ -70,7 +70,46 @@ test('paszport: klient → teczka Rekuperacja, wpis serwisowy offline z +6 mies.
   await expect(card.getByRole('row', { name: new RegExp(tag) })).toContainText('Wymiana filtrów F7, Czyszczenie wymiennika');
   await expect(page.getByText(`Następny serwis: ${fmt(next)}`)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
-  if (phone(info)) await page.screenshot({ path: `${shots}task4-phone-folder.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}task4-${phone(info) ? 'phone' : 'desktop'}-folder.png`, fullPage: true });
+  // po zapisie „wstecz” wrócił do teczki (bez formularza w historii): następne „wstecz” to karta klienta
+  await page.goBack();
+  await expect(page.getByRole('region', { name: /Paszport instalacji/ })).toBeVisible();
+});
+
+test('teczka: „nowe” przy cudzym wpisie serwisowym (kafelek i karta), po ponownym otwarciu znika', async ({ page, browser }, info) => {
+  const tag = `E2E cudzy wpis ${info.project.name} ${Date.now() % 100000}`;
+  await login(page, 'Tomasz Wrona');
+  await bukowski(page);
+  await page.getByRole('link', { name: 'Paszport → Rekuperacja' }).click();
+  await expect(page.getByRole('region', { name: 'Karta serwisowa' })).toBeVisible();
+  const folder = new URL(page.url()).hash;
+  await page.getByRole('link', { name: 'Józef Bukowski', exact: true }).click(); // wyjście z teczki: obejrzana teraz
+
+  // pracownik dodaje wpis do tej teczki
+  const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
+  const w = await ctx.newPage();
+  await w.goto('/');
+  await w.getByRole('button', { name: /Bartek Gawlik/ }).click();
+  await expect(w.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
+  await w.goto(`/${folder}`);
+  await w.getByRole('link', { name: 'Wpis', exact: true }).click();
+  await w.getByRole('checkbox', { name: 'Wymiana filtrów G4' }).click();
+  await w.getByLabel('Uwagi').fill(tag);
+  await w.getByRole('button', { name: 'Zapisz wpis' }).click();
+  await expect(w.getByRole('region', { name: 'Karta serwisowa' }).getByRole('row', { name: new RegExp(tag) })).not.toContainText('wysyłanie');
+  await ctx.close();
+
+  // admin: licznik na kafelku i znacznik przy wpisie; po ponownym otwarciu teczki znika
+  const tile = page.getByRole('region', { name: /Paszport instalacji/ }).getByRole('link', { name: /^Rekuperacja/ });
+  await expect(tile).toContainText(/\d+ nowe/);
+  await tile.click();
+  const row = page.getByRole('region', { name: 'Karta serwisowa' }).getByRole('row', { name: new RegExp(tag) });
+  await expect(row).toContainText('nowe');
+  await page.getByRole('link', { name: 'Józef Bukowski', exact: true }).click();
+  await expect(tile).not.toContainText('nowe');
+  await tile.click();
+  await expect(row).toBeVisible();
+  await expect(row).not.toContainText('nowe');
 });
 
 test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie widzi faktur ani rozliczenia', async ({ page, browser }, info) => {

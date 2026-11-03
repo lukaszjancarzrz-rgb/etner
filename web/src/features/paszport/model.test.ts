@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Rec } from '../../core/store.js';
-import { plural, serwisStan, teczkiObiektu, type Dane } from './model.js';
+import { freshIn, plural, serwisStan, teczkiObiektu, type Dane } from './model.js';
 
 const ORDER = ['Elektryka', 'Fotowoltaika', 'Rekuperacja', 'Klimatyzacja'];
 const at = (n: number) => `2026-10-${String(n).padStart(2, '0')}T10:00:00.000Z`;
@@ -80,5 +80,27 @@ describe('serwisStan, plural', () => {
   it('odmiana', () => {
     const z: [string, string, string] = ['zlecenie', 'zlecenia', 'zleceń'];
     expect([1, 2, 5, 12, 22, 25].map((n) => plural(n, z))).toEqual(['1 zlecenie', '2 zlecenia', '5 zleceń', '12 zleceń', '22 zlecenia', '25 zleceń']);
+  });
+});
+
+describe('freshIn', () => {
+  it('nowe od ostatniej wizyty: cudze wpisy, urządzenia i pliki teczki; bez swoich, tymczasowych i plików z dziennika', () => {
+    const t = teczkiObiektu('s1', {
+      ...empty,
+      jobs: [job('j1', 's1', 'Rekuperacja')],
+      diary: [entry('e1', 'j1')],
+      folders: [{ id: 'f1', siteId: 's1', kategoria: 'Rekuperacja' }],
+      service: [
+        { id: 'w-old', folderId: 'f1', dzien: '2026-10-01', authorId: 'u2', createdAt: at(1) },
+        { id: 'w-new', folderId: 'f1', dzien: '2026-10-10', authorId: 'u2', createdAt: at(10) },
+        { id: 'w-mine', folderId: 'f1', dzien: '2026-10-11', authorId: 'u1', createdAt: at(11) },
+        { id: 'w-tmp', folderId: 'f1', dzien: '2026-10-12', authorId: 'u2', createdAt: at(12), _tmp: true },
+      ],
+      devices: [{ id: 'd-new', folderId: 'f1', createdBy: 'u2', createdAt: at(9) }],
+      attachments: [{ ...att('t-new', 'teczka', 'f1', 'plik', 8), authorId: 'u2' }, { ...att('dz', 'entry', 'e1', 'zdjecie', 9), authorId: 'u2' }, { ...att('sv', 'service', 'w-new', 'zdjecie', 10), authorId: 'u2' }],
+    }, ORDER)[0];
+    expect([...freshIn(t, at(5), 'u1')].sort()).toEqual(['d-new', 'sv', 't-new', 'w-new']);
+    expect(freshIn(t, at(20), 'u1').size).toBe(0);
+    expect(freshIn(t, undefined, 'u1').size).toBe(0);
   });
 });

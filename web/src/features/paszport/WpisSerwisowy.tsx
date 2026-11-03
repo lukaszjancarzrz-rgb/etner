@@ -17,6 +17,7 @@ import { fileUrl, usePicker } from '../dziennik/Diary.js';
 import { dayJobIds } from '../na-jutro/model.js';
 import { target } from './model.js';
 import { pszHash, useCanEdit, useTeczki } from './Paszport.js';
+import { cameFrom } from '../../routes.js';
 
 const NO_JOB = '-';
 const QUICK: [number, string][] = [[4, '+4 mies.'], [6, '+6 mies.'], [12, '+1 rok']];
@@ -79,6 +80,8 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
   const fail = (what: string) => (x: Error) => toast(what, { body: x.message, tone: 'error' });
   const toggle = (c: string) => setDone((s) => { const n = new Set(s); if (n.has(c)) n.delete(c); else n.add(c); return n; });
 
+  // po zapisie teczka, nie formularz pod „wstecz”: z teczki – wstecz, z innego miejsca (zlecenie) – zastąpienie adresu
+  const leave = () => { if (cameFrom(back)) history.back(); else location.replace(back); };
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const czynnosci = [...items.filter((c) => done.has(c)), ...inne.split(/[,;\n]/).map((x) => x.trim()).filter(Boolean)];
@@ -104,13 +107,13 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
       }, { id, ...fields, folderId: t.folder?.id ?? folderTmp, siteId, kategoria, authorId: me?.id }, extra).then(revoke, fail('Wpis serwisowy nie został zapisany'));
     }
     if (!navigator.onLine) toast('Zapisane w telefonie', { body: 'Wpis wyśle się, gdy wróci zasięg.' });
-    location.replace(back); // po zapisie teczka, nie formularz pod „wstecz”
+    leave();
   }
   const remove = () => {
     const id = entry!.id;
     void outbox.enqueue({ kind: 'paszport', url: `/api/service-entries/${id}`, method: 'DELETE', optimistic: (s) => { s.remove('service_entries', id); for (const a of s.all('attachments')) if (a.ownerType === 'service' && a.ownerId === id) s.remove('attachments', a.id); } })
       .catch(fail('Nie usunięto wpisu'));
-    location.replace(back);
+    leave();
   };
 
   return (
