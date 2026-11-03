@@ -18,7 +18,7 @@ export const defaultCycle = (db: Db, kategoria: string): number | null =>
 /**
  * Słowniki: zmiana nazwy kategorii zmienia nazwę teczki (P2, R36). Gdy obiekt ma już teczkę kategorii docelowej („Zamień na…”),
  * teczki się scalają: urządzenia, wpisy i pliki przechodzą do docelowej, puste pola serwisu dostają wartości źródłowej
- * (wcześniejszy termin), notatki się łączą, a źródłowa jest usuwana miękko.
+ * (wcześniejszy termin), a źródłowa jest usuwana miękko.
  */
 export const dictRefs: DictRefs = {
   count: (db, rodzaj, value) => (rodzaj === 'kategoria' ? db.select({ id: passportFolders.id }).from(passportFolders).where(and(eq(passportFolders.kategoria, value), isNull(passportFolders.deletedAt))).all().length : 0),
@@ -37,7 +37,7 @@ export const dictRefs: DictRefs = {
   },
 };
 
-/** R68: urządzenia, wpisy i pliki teczki `old` przechodzą do `target`; puste pola serwisu z `old` (wcześniejszy termin), notatki łączone, `old` usunięta miękko. Wywołuj w transakcji. */
+/** R68: urządzenia, wpisy i pliki teczki `old` przechodzą do `target`; puste pola serwisu z `old` (wcześniejszy termin), `old` usunięta miękko (notatka z rozliczeniem bez łączenia, R71). Wywołuj w transakcji. */
 function mergeFolder(db: Db, userId: string | null, old: FolderRow, target: FolderRow): void {
   const now = NOW();
   for (const t of [devices, serviceEntries]) {
@@ -52,7 +52,6 @@ function mergeFolder(db: Db, userId: string | null, old: FolderRow, target: Fold
   const merged = db.update(passportFolders).set({
     nastepnySerwis: terms[0] ?? null,
     cyklMies: target.cyklMies ?? old.cyklMies,
-    notatkaRozliczenie: [target.notatkaRozliczenie, old.notatkaRozliczenie].filter(Boolean).join('\n\n'),
     updatedAt: now,
   }).where(eq(passportFolders.id, target.id)).returning().get();
   recordChange(db, userId, 'passport_folders', target.id, 'update', target, merged);
@@ -117,7 +116,7 @@ export function ensureFolder(db: Db, by: string, siteId: string, kategoria: stri
   return row;
 }
 
-/** Teczka bez notatki z rozliczeniem (P6). */
+/** Teczka bez notatki z rozliczeniem (P6; od R71 pole tylko w bazie, nadal nie idzie do pracownika). */
 export const folderForWorker = <T extends Record<string, any>>(f: T): Omit<T, 'notatkaRozliczenie'> => {
   const { notatkaRozliczenie: _, ...r } = f;
   return r;

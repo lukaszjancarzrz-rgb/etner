@@ -1,10 +1,10 @@
-import { ArrowLeft, Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FilePdf, FileText, FolderSimplePlus, Images, Notepad, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
+import { ArrowLeft, Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FilePdf, FileText, FolderSimplePlus, Images, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { addMonths } from '@etner/shared';
 import { fmtDay, markSeen, seenFor, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { useEntities, useEntity, type Rec } from '../../core/store.js';
-import { Badge, Empty, NewMark, SectionTitle, Textarea } from '../../core/ui/bits.js';
+import { Badge, Empty, NewMark, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { catStripe, useCatColor } from '../../core/ui/category.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
@@ -116,21 +116,19 @@ function ServiceBar({ t, siteId }: { t: T; siteId: string }) {
   );
 }
 
-/** Edycja teczki: termin, cykl, przypomnienia; admin – notatka z rozliczeniem. Teczka bez wiersza (admin): POST /api/folders, potem PUT. */
+/** Edycja teczki: termin, cykl, przypomnienia. Teczka bez wiersza (admin): POST /api/folders, potem PUT. */
 function FolderForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () => void }) {
-  const admin = useIsAdmin();
   const f = t.folder;
   const kat = useDict('kategoria').find((k) => k.wartosc === t.kategoria);
   const [d, setD] = useState<string>(f?.nastepnySerwis ?? '');
   const [cykl, setCykl] = useState<string>(String(f ? f.cyklMies ?? '' : kat?.cyklMies ?? ''));
   const [przyp, setPrzyp] = useState<boolean>(f?.przypomnienia ?? true);
-  const [nota, setNota] = useState<string>(f?.notatkaRozliczenie ?? '');
   const [err, setErr] = useState('');
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const c = cykl.trim() ? Number(cykl) : null;
     if (c !== null && (!Number.isInteger(c) || c < 1 || c > 120)) return setErr('Cykl: liczba miesięcy od 1 do 120');
-    const patch = { nastepnySerwis: d || null, cyklMies: c, przypomnienia: przyp, ...(admin && { notatkaRozliczenie: nota.trim() }) };
+    const patch = { nastepnySerwis: d || null, cyklMies: c, przypomnienia: przyp };
     const put = (id: string) => updateVia('passport_folders', id, patch, { kind: 'paszport', url: `/api/folders/${id}`, method: 'PUT', body: patch });
     // bez wiersza teczki: POST i PUT w jednym elemencie kolejki (przetrwa zamknięcie aplikacji)
     const p = f ? put(f.id) : createVia('passport_folders', { kind: 'paszport', url: '/api/folders', method: 'POST', body: { siteId, kategoria: t.kategoria }, next: { url: '/api/folders/:id', method: 'PUT', body: patch } }, { siteId, kategoria: t.kategoria, ...patch });
@@ -152,7 +150,6 @@ function FolderForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () 
             {(id, ds) => <Input id={id} aria-describedby={ds} aria-invalid={!!err} inputMode="numeric" value={cykl} onChange={(e) => { setCykl(e.target.value.replace(/\D/g, '')); setErr(''); }} />}
           </Field>
           <label className="flex min-h-11 cursor-pointer items-center gap-3 font-semibold"><Checkbox checked={przyp} onCheckedChange={(v) => setPrzyp(v === true)} />Przypomnienia e-mail dla klienta</label>
-          {admin && <Field label="Notatka z rozliczeniem" hint="Widzą ją tylko administratorzy.">{(id, ds) => <Textarea id={id} aria-describedby={ds} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Zaliczka, reszta przelewem…" />}</Field>}
           <div className="flex justify-end gap-3 border-t border-line pt-4">
             <Button variant="secondary" onClick={onClose}>Anuluj</Button>
             <Button type="submit">Zapisz</Button>
@@ -238,20 +235,18 @@ function ServiceCard({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<st
 const docIcon = (a: Rec) => (a.typDok === 'faktura' ? Receipt : a.mime === 'application/pdf' || /\.pdf$/i.test(a.nazwa ?? '') ? FilePdf : FileText);
 const SOURCE: Record<string, string> = { teczka: 'w teczce', service: 'wpis serwisowy', device: 'urządzenie' };
 
-/** Dokumenty: pliki teczki i z dzienników zleceń (P4, P5); faktury i rozliczenie tylko admin (serwer ich pracownikowi nie wysyła). */
+/** Dokumenty: pliki teczki i z dzienników zleceń (P4, P5); faktury tylko admin (serwer ich pracownikowi nie wysyła). */
 function Documents({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<string> }) {
   const admin = useIsAdmin();
   const canEdit = useCanEdit();
   const jobs = useEntities('jobs');
   const [doc, setDoc] = useState<Rec | null>(null);
   const [upload, setUpload] = useState(false);
-  const [nota, setNota] = useState(false);
   const numer = (id?: string) => jobs.find((j) => j.id === id)?.numer;
   const docs = t.docs;
-  const n = t.folder?.notatkaRozliczenie as string | undefined;
   return (
     <Card title="Dokumenty" count={docs.length} action={<Button variant="secondary" size="sm" onClick={() => setUpload(true)}><UploadSimple className="h-4 w-4" />Plik</Button>}>
-      {!docs.length && !(admin && n) && <p className="text-sm text-ink-2">Brak dokumentów. Projekty, oferty i instrukcje dodane tu albo w dzienniku zlecenia trafiają do teczki.</p>}
+      {!docs.length && <p className="text-sm text-ink-2">Brak dokumentów. Projekty, oferty i instrukcje dodane tu albo w dzienniku zlecenia trafiają do teczki.</p>}
       <ul className="grid grid-cols-[minmax(0,1fr)] divide-y divide-line">
         {docs.map(({ a, jobId }) => {
           const I = docIcon(a);
@@ -268,20 +263,9 @@ function Documents({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<stri
             </li>
           );
         })}
-        {admin && (
-          <li className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ok/12 text-ok"><Notepad className="h-6 w-6" aria-hidden /></span>
-            <button type="button" onClick={() => setNota(true)} className="min-w-0 flex-1 text-left">
-              <span className="block font-semibold">Rozliczenie (notatka)</span>
-              <span className="block truncate text-sm text-ink-2">{n || 'Brak notatki – dodaj zaliczki, sposób płatności'}</span>
-            </button>
-            <span className="shrink-0 text-xs font-semibold text-ink-2">tylko admin</span>
-          </li>
-        )}
       </ul>
       {doc && <DocSheet a={doc} onClose={() => setDoc(null)} />}
       {upload && <UploadForm t={t} siteId={siteId} kind="plik" onClose={() => setUpload(false)} />}
-      {nota && <FolderForm t={t} siteId={siteId} onClose={() => setNota(false)} />}
     </Card>
   );
 }

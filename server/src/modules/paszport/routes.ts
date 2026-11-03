@@ -33,7 +33,6 @@ export function routes(app: Hono, deps: AppDeps): void {
   });
   app.put('/api/folders/:id', auth, async (c) => {
     const { opId, ...d } = await body(c, folderUpdateSchema);
-    if (d.notatkaRozliczenie !== undefined && !isAdmin(c)) throw forbidden();
     const { result } = runOp(db, opId, me(c).id, () => {
       const r = svc.updateFolder(db, me(c).id, c.req.param('id'), d);
       if (!r) throw notFound();

@@ -14,13 +14,12 @@ const opt = (max: number) => txt.max(max, 'Tekst jest za długi').optional();
 /** Ręczne „Dodaj teczkę” (admin). */
 export const folderCreateSchema = z.object({ opId, ...teczka });
 export type FolderCreate = z.infer<typeof folderCreateSchema>;
-/** notatkaRozliczenie – tylko admin. */
+/** R71: bez notatki z rozliczeniem (stare zapisy z kolejki z tym polem – pole pomijane). */
 export const folderUpdateSchema = z.object({
   opId,
   nastepnySerwis: day.nullable().optional(),
   cyklMies: z.number().int().min(1).max(120).nullable().optional(),
   przypomnienia: z.boolean().optional(),
-  notatkaRozliczenie: txt.max(5000, 'Notatka jest za długa').optional(),
 });
 export type FolderUpdate = z.infer<typeof folderUpdateSchema>;
 

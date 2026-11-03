@@ -101,9 +101,9 @@ describe('paszport – dane', () => {
     const s = await setup();
     const site2 = (await import('../klienci/service.js')).addSite(s.deps.db, s.a.user.id, s.site.clientId, { adres: 'Długa 2' })!;
     const kl = (await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Klimatyzacja' })).body;
-    await call(s, s.admin, 'PUT', `/api/folders/${kl.id}`, { nastepnySerwis: '2027-06-01', notatkaRozliczenie: 'Klima zapłacona', cyklMies: null });
+    await call(s, s.admin, 'PUT', `/api/folders/${kl.id}`, { nastepnySerwis: '2027-06-01', cyklMies: null });
     const rek = (await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Rekuperacja' })).body;
-    await call(s, s.admin, 'PUT', `/api/folders/${rek.id}`, { nastepnySerwis: '2027-05-01', notatkaRozliczenie: 'Reku zapłacona' });
+    await call(s, s.admin, 'PUT', `/api/folders/${rek.id}`, { nastepnySerwis: '2027-05-01' });
     const rek2 = (await call(s, s.admin, 'POST', '/api/folders', { siteId: site2.id, kategoria: 'Rekuperacja' })).body;
     const dev = (await call(s, s.worker, 'POST', '/api/devices', { folderId: rek.id, nazwa: 'Rekuperator', dlaKlienta: true })).body;
     const e = (await call(s, s.worker, 'POST', '/api/service-entries', { folderId: rek.id, dzien: '2026-11-03', czynnosci: ['Wymiana filtrów F7'], dlaKlienta: true, uploadIds: [await upload(s, s.worker)] })).body;
@@ -113,7 +113,7 @@ describe('paszport – dane', () => {
     const items = list(s.deps.db, 'kategoria').filter((d) => d.wartosc !== 'Rekuperacja').map((d) => ({ id: d.id, wartosc: d.wartosc, kolor: d.kolor, cyklMies: d.cyklMies }));
     const r = await s.app.request('/api/dict/kategoria', req(s.admin, 'PUT', { items, zamien: { Rekuperacja: 'Klimatyzacja' } }));
     expect(r.status).toBe(200);
-    expect(findFolder(s.deps.db, s.site.id, 'Klimatyzacja')).toMatchObject({ id: kl.id, nastepnySerwis: '2027-05-01', cyklMies: 6, notatkaRozliczenie: 'Klima zapłacona\n\nReku zapłacona' });
+    expect(findFolder(s.deps.db, s.site.id, 'Klimatyzacja')).toMatchObject({ id: kl.id, nastepnySerwis: '2027-05-01', cyklMies: 6, notatkaRozliczenie: '' }); // R71: bez notatki z rozliczeniem
     expect(findFolder(s.deps.db, site2.id, 'Klimatyzacja')?.id).toBe(rek2.id); // bez teczki docelowej: zmiana nazwy
     expect(count(s, `select count(*) n from passport_folders where id = '${rek.id}' and deleted_at is not null`)).toBe(1);
     expect(s.deps.db.$client.prepare('select folder_id f from devices').get()).toEqual({ f: kl.id });
@@ -184,7 +184,7 @@ describe('paszport – teczki z danych zleceń', () => {
     expect((await teczki(s, s.admin, site2.id)).map((x) => [x.kategoria, x.photos])).toEqual([['Klimatyzacja', 2]]);
   });
 
-  it('pusta teczka (POST /api/folders, admin, idempotentnie) i ustawienia teczki; rozliczenie tylko admin', async () => {
+  it('pusta teczka (POST /api/folders, admin, idempotentnie) i ustawienia teczki; bez notatki z rozliczeniem (R71)', async () => {
     const s = await setup();
     expect((await call(s, s.worker, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Fotowoltaika' })).status).toBe(403);
     const f = (await call(s, s.admin, 'POST', '/api/folders', { opId: 'op-f', siteId: s.site.id, kategoria: 'Fotowoltaika' })).body;
@@ -193,24 +193,24 @@ describe('paszport – teczki z danych zleceń', () => {
     expect((await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Nie ma' })).status).toBe(400);
     expect((await teczki(s, s.worker)).map((x) => [x.kategoria, x.jobIds, x.folder?.id])).toEqual([['Fotowoltaika', [], f.id]]);
 
-    expect((await call(s, s.worker, 'PUT', `/api/folders/${f.id}`, { notatkaRozliczenie: 'Zapłacone 12 000 zł' })).status).toBe(403);
     const w = await call(s, s.worker, 'PUT', `/api/folders/${f.id}`, { opId: 'op-u', nastepnySerwis: '2027-05-01', przypomnienia: false });
     expect(w.body).toMatchObject({ nastepnySerwis: '2027-05-01', przypomnienia: false, cyklMies: 12 });
     expect(w.body).not.toHaveProperty('notatkaRozliczenie');
-    expect((await call(s, s.admin, 'PUT', `/api/folders/${f.id}`, { notatkaRozliczenie: 'Zapłacone 12 000 zł', cyklMies: null })).body).toMatchObject({ notatkaRozliczenie: 'Zapłacone 12 000 zł', cyklMies: null, nastepnySerwis: '2027-05-01' });
+    // R71: notatka z rozliczeniem usunięta z API – pole pomijane
+    expect((await call(s, s.admin, 'PUT', `/api/folders/${f.id}`, { notatkaRozliczenie: 'Zapłacone 12 000 zł', cyklMies: null })).body).toMatchObject({ notatkaRozliczenie: '', cyklMies: null, nastepnySerwis: '2027-05-01' });
     expect((await call(s, s.worker, 'PUT', `/api/folders/${f.id}`, { nastepnySerwis: '2027-02-30' })).status).toBe(400);
     expect((await call(s, s.worker, 'PUT', '/api/folders/nie-ma', { przypomnienia: true })).status).toBe(404);
     const [tw] = await teczki(s, s.worker);
     expect(tw).toMatchObject({ nastepnySerwis: '2027-05-01' });
     expect(tw.folder).not.toHaveProperty('notatkaRozliczenie');
-    expect((await teczki(s, s.admin))[0].folder).toMatchObject({ notatkaRozliczenie: 'Zapłacone 12 000 zł' });
   });
 
   it('synchronizacja: pracownik bez notatki z rozliczeniem i bez faktur (snapshot i changes); admin wszystko', async () => {
     const s = await setup();
     const j = job(s, 'Rekuperacja');
     const f = (await call(s, s.admin, 'POST', '/api/folders', { siteId: s.site.id, kategoria: 'Rekuperacja' })).body;
-    await call(s, s.admin, 'PUT', `/api/folders/${f.id}`, { notatkaRozliczenie: 'Rabat 10%' });
+    // stara notatka z rozliczeniem (przed R71) zostaje w bazie i dalej nie idzie do pracownika
+    s.deps.db.$client.prepare(`update passport_folders set notatka_rozliczenie = 'Rabat 10%' where id = '${f.id}'`).run();
     const fv = await upload(s, s.admin, pdf(), 'fv.pdf');
     const proj = await upload(s, s.admin, pdf(), 'projekt.pdf');
     await diary(s, s.admin, j.id, [fv, proj]);

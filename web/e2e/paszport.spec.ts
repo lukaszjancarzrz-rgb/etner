@@ -113,7 +113,7 @@ test('teczka: „nowe” przy cudzym wpisie serwisowym (kafelek i karta), po pon
   await expect(row).not.toContainText('nowe');
 });
 
-test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie widzi faktur ani rozliczenia', async ({ page, browser }, info) => {
+test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie widzi faktur; bez notatki z rozliczeniem (R71)', async ({ page, browser }, info) => {
   const t = `${info.project.name.replace(/\s+/g, '')}-${Date.now() % 100000}`;
   await login(page, 'Tomasz Wrona');
   await bukowski(page);
@@ -133,7 +133,7 @@ test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie wi
   await page.reload();
   await expect(page.locator('li[id^="e-"]', { hasText: `Projekt ${t}` }).getByRole('switch', { name: 'W paszporcie dla klienta' })).toHaveAttribute('aria-checked', 'true');
 
-  // teczka: dokument z dziennika z typem i „dla klienta”; admin dodaje fakturę i notatkę z rozliczeniem
+  // teczka: dokument z dziennika z typem i „dla klienta”; admin dodaje fakturę
   await page.getByRole('link', { name: 'Paszport → Rekuperacja' }).click();
   const docs = page.getByRole('region', { name: 'Dokumenty' });
   await expect(docs.getByRole('listitem').filter({ hasText: `projekt-${t}.pdf` })).toContainText(/Projekt · Z\d+.*dla klienta/);
@@ -162,15 +162,13 @@ test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie wi
   await pdlg.getByRole('button', { name: /^Dodaj/ }).click();
   await expect(zdj.getByRole('listitem')).toHaveCount(before + 2);
   await expect(docs).not.toContainText('zdjecie.jpg');
-  await docs.getByRole('button', { name: /Rozliczenie \(notatka\)/ }).click();
-  await page.getByLabel('Notatka z rozliczeniem').fill(`Zaliczka ${t}`);
-  await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
-  await expect(docs).toContainText(`Zaliczka ${t}`);
+  // R71: bez notatki z rozliczeniem (dokumenty i ustawienia teczki)
+  await expect(docs).not.toContainText('Rozliczenie');
   const folder = new URL(page.url()).hash;
   // długie nazwy plików nie poszerzają strony (telefon bez przewijania w bok)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
 
-  // pracownik (ekipa Bartek): teczka bez faktury i bez notatki z rozliczeniem
+  // pracownik (ekipa Bartek): teczka bez faktury
   const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
   const w = await ctx.newPage();
   await w.goto('/');
@@ -180,8 +178,6 @@ test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie wi
   const wdocs = w.getByRole('region', { name: 'Dokumenty' });
   await expect(wdocs).toContainText(`projekt-${t}.pdf`);
   await expect(wdocs).not.toContainText(`faktura-${t}.pdf`);
-  await expect(wdocs).not.toContainText('Rozliczenie');
-  await expect(w.getByText(`Zaliczka ${t}`)).toHaveCount(0);
   // pracownik nie wybierze faktury przy dodawaniu pliku
   await wdocs.getByRole('button', { name: 'Plik', exact: true }).click();
   await w.getByRole('dialog', { name: 'Dodaj plik do teczki' }).getByLabel('Typ dokumentu').click();
