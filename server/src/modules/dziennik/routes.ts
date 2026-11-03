@@ -80,6 +80,7 @@ export function routes(app: Hono, deps: AppDeps): void {
   // „W paszporcie dla klienta” – admin; typ dokumentu – admin albo autor pliku, faktura tylko admin (P6)
   app.patch('/api/attachments/:id', auth, async (c) => {
     const { opId, dla_klienta, dlaKlienta = dla_klienta, typDok } = await body(c, attachmentPatchSchema);
+    if (dlaKlienta === undefined && typDok === undefined) throw new HTTPException(400, { message: 'Brak zmian' });
     const user = c.get('user');
     const isAdmin = can(user, 'admin');
     const { result } = runOp(db, opId, user.id, () => {
