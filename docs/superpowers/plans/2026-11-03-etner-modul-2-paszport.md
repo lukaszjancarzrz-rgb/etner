@@ -17,7 +17,7 @@
 - Widoczność synchronizacji: domyślnie tylko admin; pracownik nie dostaje `notatka_rozliczenie` ani załączników `typ_dok = 'faktura'` (snapshot, changes, SSE).
 - Numer paszportu: `PSZ-RRRR-NNN` (rok utworzenia, kolejny w roku, 3 cyfry).
 - Strona klienta: tylko elementy `dla_klienta`; bez kwot, faktur (chyba że oznaczone), notatek, nazwisk pracowników („technik ETNER”); `noindex`; limit zapytań na IP; pliki tylko przez krótkie podpisane linki.
-- Naklejka: 50×30 mm, obraz PNG 591×354 px (300 dpi).
+- Naklejka: rozmiary 50×30 mm (domyślny), 60×40 mm i 100×50 mm; obraz PNG w 203 dpi (drukarka właściciela: Niimbot B4, druk termiczny do 104 mm) – 50×30 = 400×240 px, 60×40 = 480×320 px, 100×50 = 800×400 px; wybór rozmiaru zapamiętany na urządzeniu.
 - Domyślny cykl serwisu (miesiące): Rekuperacja 6, Klimatyzacja 12, Fotowoltaika 12, pozostałe brak.
 - Przypomnienia e-mail klientowi: 30 i 7 dni przed `nastepny_serwis`, o 7:00 Europe/Warsaw, każde raz na dany termin; brak e-maila klienta / SMTP = pominięcie + jeden `logError` dziennie.
 - Polskie teksty interfejsu; testy, budowanie i rozmiar JS (`pnpm --filter @etner/web size`) muszą przechodzić; wydanie na produkcję po każdej części (2a, 2b, 2c).
@@ -135,9 +135,9 @@
 
 **Interfaces:**
 - Consumes: Task 5 (`POST /api/passports`, `POST /api/passports/:id/link`, dane firmy).
-- Produces: `drawLabel(canvas, {url, numer, klient, firma}) → void` (591×354 px; QR po lewej ~300 px, po prawej logo, „ETNER”, „Paszport instalacji”, numer, nazwisko, telefon, www); `labelBlob(): Promise<Blob>`; przyciski „Udostępnij obraz” (`navigator.share({files})`, gdy `canShare`), „Pobierz obraz”, „Drukuj” (`@page` 50×30 mm), „Arkusz A4” (siatka naklejek do druku), „Unieważnij link i utwórz nowy” (admin, potwierdzenie).
+- Produces: `LABEL_SIZES = { '50x30': [400,240], '60x40': [480,320], '100x50': [800,400] }`; `drawLabel(canvas, size, {url, numer, klient, firma}) → void` (piksele z `LABEL_SIZES`; QR po lewej ~300 px, po prawej logo, „ETNER”, „Paszport instalacji”, numer, nazwisko, telefon, www); `labelBlob(): Promise<Blob>`; przyciski „Udostępnij obraz” (`navigator.share({files})`, gdy `canShare`), „Pobierz obraz”, „Drukuj” (`@page` 50×30 mm), „Arkusz A4” (siatka naklejek do druku), „Unieważnij link i utwórz nowy” (admin, potwierdzenie).
 
-- [ ] **Step 1: Testy:** `naklejka.test.ts` – wymiary 591×354; QR zdekodowany z wygenerowanego obrazu = `url` (dekoder w teście: `jsqr` jako devDependency albo porównanie macierzy `QRCode.create(url)`); e2e: „Załóż paszport” → numer `PSZ-…`; „Kod QR i naklejka” pokazuje podgląd; „Pobierz obraz” zwraca PNG; link z naklejki otwiera stronę klienta.
+- [ ] **Step 1: Testy:** `naklejka.test.ts` – wymiary każdego rozmiaru z `LABEL_SIZES`; QR zdekodowany z wygenerowanego obrazu = `url` (dekoder w teście: `jsqr` jako devDependency albo porównanie macierzy `QRCode.create(url)`); e2e: „Załóż paszport” → numer `PSZ-…`; „Kod QR i naklejka” pokazuje podgląd; „Pobierz obraz” zwraca PNG; link z naklejki otwiera stronę klienta.
 - [ ] **Step 2:** FAIL. **Step 3:** Implementacja (biblioteka QR ładowana dynamicznie tylko na tym ekranie). **Step 4:** PASS, size w limicie startu. **Step 5:** Commit. **Wydanie 2b na produkcję.**
 
 ## Część 2c – serwis

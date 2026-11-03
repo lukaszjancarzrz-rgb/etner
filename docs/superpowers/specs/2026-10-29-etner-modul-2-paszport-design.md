@@ -27,7 +27,7 @@ Makiety koncepcji (zaakceptowane 2026-10-29): 1 klient → paszport, 2 teczka, 3
 - **Wejście do paszportu:** z klienta, ze zlecenia (od razu właściwa teczka) i z wyszukiwarki.
 - **Projekty i oferty** dodane w dzienniku zlecenia trafiają do teczki – z dziennika ustawia się, czy klient je widzi.
 - **Drukarka:**
-  - docelowo Niimbot M2 (termotransfer, etykiety do 50 mm, PET), naklejka 50×30 mm;
+  - drukarka właściciela: Niimbot B4 (druk termiczny, Bluetooth, etykiety do 108 mm); naklejki 50×30, 60×40 lub 100×50 mm (zmiana 2026-11-03);
   - druk przez aplikację drukarki (obraz z ETNER) albo PDF na A4;
   - właściciel jeszcze jej nie ma – przycisk „Udostępnij obraz” dopracowujemy po teście z drukarką.
 - Stary paszport „PSZ-2026-002” to test – nie przenosimy go.
