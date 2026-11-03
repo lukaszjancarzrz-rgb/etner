@@ -14,3 +14,4 @@ Task 4: impl 7839722..5f5bd33 (screens, e2e paszport.spec, a11y); review dispatc
 Task 4: review — Needs fixes: folder settings lost if app closes offline (PUT chained after POST in memory); parseHash breaks for categories with / or ~. Fix round 1 dispatched + minors + spec §7 „nowe” in folder (assigned here).
 - Ruling R69: clients never see diary entries (owner 2026-10-21) — entry-level „Pokaż klientowi” hidden; only files/photos have „W paszporcie dla klienta”.
 - Deferred: device-own instruction file (use folder file type „Instrukcja”).
+Task 4: fix round 1/5 (f0f8f19..98af9a1; outbox Write.next, parseHash split-then-decode, R69, tones, folder „nowe” local-only); re-review dispatched. Deferred: folder „nowe” seen is device-local (POST /api/seen accepts only job ids) — follow-up if owner wants cross-device.
