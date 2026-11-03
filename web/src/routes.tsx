@@ -1,4 +1,4 @@
-import { Briefcase, CalendarDots, DotsThreeCircle, GearSix, Handshake, ListChecks, Package, ShoppingCart, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
+import { Briefcase, CalendarDots, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
 import { lazy, useSyncExternalStore, type ComponentType } from 'react';
 import { More } from './screens/More.js';
 
@@ -32,6 +32,7 @@ const Ustawienia = lazyScreen(() => import('./features/ustawienia/Ustawienia.js'
 const Samochody = lazyScreen(() => import('./features/samochody/Samochody.js').then((m) => ({ default: m.Samochody })));
 const Narzedzia = lazyScreen(() => import('./features/narzedzia/Narzedzia.js').then((m) => ({ default: m.Narzedzia })));
 const Magazyn = lazyScreen(() => import('./features/magazyn/Magazyn.js').then((m) => ({ default: m.Magazyn })));
+const Teczka = lazyScreen(() => import('./features/paszport/Teczka.js').then((m) => ({ default: m.Teczka })));
 const Klienci = lazyScreen(() => import('./features/klienci/Klienci.js').then((m) => ({ default: m.Klienci })));
 
 /** Ekrany w kolejności menu. */
@@ -50,6 +51,7 @@ export const screens: Record<string, Screen> = {
   wiecej: { title: 'Więcej', icon: DotsThreeCircle, component: More },
   kl: { title: 'Klienci', icon: UsersThree, component: Klienci, nav: false },
   ld: { title: 'Leady', icon: Handshake, component: Leady, nav: false, admin: true },
+  psz: { title: 'Paszport', icon: IdentificationCard, component: Teczka, nav: false },
 };
 
 /** Pakiet ekranu z adresu startowego pobierany od razu, równolegle z danymi z urządzenia (krótszy łańcuch do LCP). */
@@ -69,7 +71,7 @@ export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.n
 /** Czy ekran jest w menu bocznym komputera (bez Więcej). */
 export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && !screens[k]!.moreOnly && (!screens[k]!.admin || admin);
 
-/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `kl` i ekrany tylko z Więcej → Więcej. */
-export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'kl' || screens[screen]?.moreOnly ? 'wiecej' : screen);
+/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `kl`, `psz` (paszport) i ekrany tylko z Więcej → Więcej. */
+export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'kl' || screen === 'psz' || screens[screen]?.moreOnly ? 'wiecej' : screen);
 
 export const go = (hash: string): void => { location.hash = hash.replace(/^#?/, '#'); };
