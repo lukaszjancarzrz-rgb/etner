@@ -11,3 +11,6 @@ Tasks 1–3: review — Needs fixes: seeded activity dictionary unsavable (dupli
 Tasks 1–3: fix round 1/5 (e5f968c); re-review dispatched. Task 4 (screens) dispatched in parallel (web files).
 Tasks 1–3: re-review clean; controller folded 2 minors (old-client cyklMies wipe, empty PATCH) — complete (5640d1a..e5f968c + controller fix).
 Task 4: impl 7839722..5f5bd33 (screens, e2e paszport.spec, a11y); review dispatched. Gap: „nowe” in folder (spec §7).
+Task 4: review — Needs fixes: folder settings lost if app closes offline (PUT chained after POST in memory); parseHash breaks for categories with / or ~. Fix round 1 dispatched + minors + spec §7 „nowe” in folder (assigned here).
+- Ruling R69: clients never see diary entries (owner 2026-10-21) — entry-level „Pokaż klientowi” hidden; only files/photos have „W paszporcie dla klienta”.
+- Deferred: device-own instruction file (use folder file type „Instrukcja”).
