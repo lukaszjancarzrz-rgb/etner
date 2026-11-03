@@ -2,15 +2,20 @@ import { Briefcase, CalendarDots, DotsThreeCircle, GearSix, Handshake, Identific
 import { lazy, useSyncExternalStore, type ComponentType } from 'react';
 import { More } from './screens/More.js';
 
-export type Route = { screen: string; param?: string; highlight?: string };
+/** `parts`: odkodowane segmenty parametru, gdy jest ich kilka (np. `#psz/<siteId>/<kategoria>`; w kategorii może być „/” i „~”). */
+export type Route = { screen: string; param?: string; highlight?: string; parts?: string[] };
 
-/** `#<screen>/<param>~<highlightId>`, np. `#zl/01J..~01K..`, `#harm/2026-10-21`, `#jutro~01K..`. */
+const dec = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
+/** Segment adresu: „/” i „~” zakodowane (encodeURIComponent zostawia „~”). */
+export const seg = (s: string) => encodeURIComponent(s).replace(/~/g, '%7E');
+
+/** `#<screen>/<param>~<highlightId>`, np. `#zl/01J..~01K..`, `#harm/2026-10-21`, `#jutro~01K..`. Najpierw podział, potem odkodowanie każdego segmentu. */
 export function parseHash(hash: string): Route {
-  const h = decodeURIComponent(hash.replace(/^#/, ''));
-  const [path = '', highlight] = h.split('~');
-  const [screen, ...rest] = path.split('/');
+  const [path = '', hl] = hash.replace(/^#/, '').split('~');
+  const [screen = '', ...rest] = path.split('/').map(dec);
   const param = rest.join('/');
-  return { screen: screen && screens[screen] ? screen : 'harm', ...(param && { param }), ...(highlight && { highlight }) };
+  const highlight = hl && dec(hl);
+  return { screen: screens[screen] ? screen : 'harm', ...(param && { param }), ...(rest.length > 1 && { parts: rest }), ...(highlight && { highlight }) };
 }
 
 /**
@@ -73,5 +78,11 @@ export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' 
 
 /** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `kl`, `psz` (paszport) i ekrany tylko z Więcej → Więcej. */
 export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'kl' || screen === 'psz' || screens[screen]?.moreOnly ? 'wiecej' : screen);
+
+// poprzedni adres w aplikacji (np. po zapisie wpisu: „wstecz”, gdy przyszliśmy z teczki – bez podwójnego wpisu historii)
+let prevHash = '';
+if (typeof addEventListener === 'function') addEventListener('hashchange', (e) => { prevHash = new URL(e.oldURL).hash; });
+/** Czy poprzedni ekran to `hash` (porównanie po odkodowaniu). */
+export const cameFrom = (hash: string): boolean => !!prevHash && JSON.stringify(parseHash(prevHash)) === JSON.stringify(parseHash(hash));
 
 export const go = (hash: string): void => { location.hash = hash.replace(/^#?/, '#'); };
