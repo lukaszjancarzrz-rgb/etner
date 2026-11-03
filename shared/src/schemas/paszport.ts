@@ -52,8 +52,8 @@ export const serviceEntryUpdateSchema = z.object({ ...entryFields, czynnosci: en
   .partial().extend({ opId });
 export type ServiceEntryUpdate = z.infer<typeof serviceEntryUpdateSchema>;
 
-/** Plik dodany w teczce (z POST /api/uploads); faktura – tylko admin. Bez `dlaKlienta` = w paszporcie dla klienta (faktura zawsze wewnętrzna). */
-export const folderFileSchema = z.object({ opId, ...doTeczki, uploadId: z.string().min(1), typDok: z.enum(TYP_DOK), dlaKlienta: z.boolean().optional() }).refine(...maTeczke);
+/** Plik lub zdjęcie (bez typu) dodane w teczce (z POST /api/uploads); faktura – tylko admin. Bez `dlaKlienta` = w paszporcie dla klienta (faktura zawsze wewnętrzna). */
+export const folderFileSchema = z.object({ opId, ...doTeczki, uploadId: z.string().min(1), typDok: z.enum(TYP_DOK).optional(), dlaKlienta: z.boolean().optional() }).refine(...maTeczke);
 export type FolderFile = z.infer<typeof folderFileSchema>;
 
 /** PATCH /api/attachments/:id: „dla klienta” (admin; `dla_klienta` – starsze wersje aplikacji) i typ dokumentu (admin albo autor; faktura tylko admin). */

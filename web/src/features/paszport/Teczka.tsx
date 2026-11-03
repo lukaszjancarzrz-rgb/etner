@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, Briefcase, ClipboardText, Cpu, Eye, FilePdf, FileText, FolderSimplePlus, Images, Notepad, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
+import { ArrowLeft, Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FilePdf, FileText, FolderSimplePlus, Images, Notepad, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { addMonths } from '@etner/shared';
 import { fmtDay, markSeen, seenFor, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
@@ -80,7 +80,7 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
       <Devices t={t} siteId={siteId} fresh={fresh} />
       <ServiceCard t={t} siteId={siteId} fresh={fresh} />
       <Documents t={t} siteId={siteId} fresh={fresh} />
-      <Photos t={t} fresh={fresh} />
+      <Photos t={t} siteId={siteId} fresh={fresh} />
       <Jobs t={t} />
     </article>
   );
@@ -280,7 +280,7 @@ function Documents({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<stri
         )}
       </ul>
       {doc && <DocSheet a={doc} onClose={() => setDoc(null)} />}
-      {upload && <UploadForm t={t} siteId={siteId} onClose={() => setUpload(false)} />}
+      {upload && <UploadForm t={t} siteId={siteId} kind="plik" onClose={() => setUpload(false)} />}
       {nota && <FolderForm t={t} siteId={siteId} onClose={() => setNota(false)} />}
     </Card>
   );
@@ -317,32 +317,34 @@ export function DocSheet({ a: a0, onClose }: { a: Rec; onClose: () => void }) {
   );
 }
 
-/** Plik dodany w teczce (P5): POST /api/uploads, potem /api/folder-files z typem; przez kolejkę offline. */
-function UploadForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () => void }) {
+/** Plik (z typem) albo zdjęcia dodane w teczce (P5): POST /api/uploads, potem /api/folder-files; przez kolejkę offline. Zdjęcie wybrane w „+ Plik” i tak trafia do „Zdjęć”. */
+function UploadForm({ t, siteId, kind, onClose }: { t: T; siteId: string; kind: 'zdjecie' | 'plik'; onClose: () => void }) {
   const admin = useIsAdmin();
   const me = useMe();
-  const { files, busy, previews, buttons } = usePicker();
+  const { files, busy, previews, buttons } = usePicker(kind === 'zdjecie' ? { pdf: false } : { img: false });
+  const photo = kind === 'zdjecie';
   const [typ, setTyp] = useState('projekt');
   const [klient, setKlient] = useState(true); // dodane w teczce: domyślnie w paszporcie (faktura zawsze wewnętrzna)
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!files.length) return;
+    const typDok = photo ? undefined : typ;
     for (const f of files) {
-      const body = { ...target(t, siteId, t.kategoria), typDok: typ, dlaKlienta: typ !== 'faktura' && (!admin || klient) };
+      const body = { ...target(t, siteId, t.kategoria), ...(typDok && { typDok }), dlaKlienta: typDok !== 'faktura' && (!admin || klient) };
       void createVia('attachments', { kind: 'paszport', url: '/api/folder-files', method: 'POST', body, files: [f.file], uploadsAs: 'uploadId' },
-        { ownerType: 'teczka', ownerId: t.folder?.id ?? '', siteId, kategoria: t.kategoria, rodzaj: f.img ? 'zdjecie' : 'plik', nazwa: f.name, typDok: typ, dlaKlienta: body.dlaKlienta, _src: f.url, authorId: me?.id })
+        { ownerType: 'teczka', ownerId: t.folder?.id ?? '', siteId, kategoria: t.kategoria, rodzaj: f.img ? 'zdjecie' : 'plik', nazwa: f.name, typDok: typDok ?? null, dlaKlienta: body.dlaKlienta, _src: f.url, authorId: me?.id })
         .then(() => URL.revokeObjectURL(f.url), fail(`Nie dodano pliku ${f.name}`));
     }
     onClose();
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <Sheet title="Dodaj plik do teczki" description={`${t.kategoria}: projekt, oferta, instrukcja${admin ? ', faktura' : ''}.`}>
+      <Sheet title={photo ? 'Dodaj zdjęcia do teczki' : 'Dodaj plik do teczki'} description={photo ? `${t.kategoria}: z aparatu albo z galerii, kilka naraz.` : `${t.kategoria}: projekt, oferta, instrukcja${admin ? ', faktura' : ''} (PDF).`}>
         <form onSubmit={submit} className="grid gap-4">
           <div className="flex flex-wrap gap-2">{buttons}</div>
           {previews}
-          <Field label="Typ dokumentu">{(id) => <Select id={id} value={typ} onValueChange={setTyp} options={typOptions(admin)} />}</Field>
-          {admin && typ !== 'faktura' && <label className="flex min-h-11 cursor-pointer items-center gap-3 font-semibold"><Checkbox checked={klient} onCheckedChange={(v) => setKlient(v === true)} />W paszporcie dla klienta</label>}
+          {!photo && <Field label="Typ dokumentu">{(id) => <Select id={id} value={typ} onValueChange={setTyp} options={typOptions(admin)} />}</Field>}
+          {admin && (photo || typ !== 'faktura') && <label className="flex min-h-11 cursor-pointer items-center gap-3 font-semibold"><Checkbox checked={klient} onCheckedChange={(v) => setKlient(v === true)} />W paszporcie dla klienta</label>}
           <div className="flex justify-end gap-3 border-t border-line pt-4">
             <Button variant="secondary" onClick={onClose}>Anuluj</Button>
             <Button type="submit" disabled={!files.length || busy}><UploadSimple className="h-5 w-5" />Dodaj {files.length > 1 ? `(${files.length})` : ''}</Button>
@@ -353,16 +355,18 @@ function UploadForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () 
   );
 }
 
-function Photos({ t, fresh }: { t: T; fresh: Set<string> }) {
+function Photos({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<string> }) {
   const admin = useIsAdmin();
+  const [upload, setUpload] = useState(false);
   const jobs = useEntities('jobs');
   const [view, setView] = useState<number | null>(null);
   const numer = (p: Plik) => (p.jobId ? jobs.find((j) => j.id === p.jobId)?.numer : SOURCE[p.a.ownerType]);
   const from = [...new Set(t.photos.map((p) => p.jobId && jobs.find((j) => j.id === p.jobId)?.numer).filter(Boolean))].join(' · ');
   const photos = t.photos.map((p) => p.a);
   return (
-    <Card title="Zdjęcia" count={photos.length} action={from ? <span className="truncate text-sm text-ink-2">{from}</span> : undefined}>
-      {!photos.length ? <p className="text-sm text-ink-2">Zdjęcia z dzienników zleceń i wpisów serwisowych pojawią się tu same.</p> : (
+    <Card title="Zdjęcia" count={photos.length} action={<Button variant="secondary" size="sm" onClick={() => setUpload(true)}><Camera className="h-4 w-4" />Zdjęcie</Button>}>
+      {from && <p className="-mt-1 truncate text-sm text-ink-2">Ze zleceń {from}</p>}
+      {!photos.length ? <p className="text-sm text-ink-2">Zdjęcia z dzienników zleceń, wpisów serwisowych i dodane tutaj.</p> : (
         <ul className="grid grid-cols-3 gap-2 min-[560px]:grid-cols-4">
           {t.photos.map((p, i) => (
             <li key={p.a.id} className="relative">
@@ -377,6 +381,7 @@ function Photos({ t, fresh }: { t: T; fresh: Set<string> }) {
         </ul>
       )}
       {view !== null && photos[view] && <Viewer photos={photos} index={view} onIndex={setView} onClose={() => setView(null)} admin={admin} />}
+      {upload && <UploadForm t={t} siteId={siteId} kind="zdjecie" onClose={() => setUpload(false)} />}
     </Card>
   );
 }

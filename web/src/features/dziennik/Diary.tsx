@@ -164,7 +164,7 @@ export function KlientToggle({ on, onChange, dark, label = 'W paszporcie dla kli
 export type Picked = { file: Blob; name: string; url: string; img: boolean };
 
 /** Wybór zdjęć (aparat / galeria): zmniejszone przed wysłaniem, podglądy zwalniane przy wyjściu. Też w zakresie prac. */
-export function usePicker(opts: { pdf?: boolean } = {}) {
+export function usePicker(opts: { pdf?: boolean; img?: boolean } = {}) {
   const [files, setFiles] = useState<Picked[]>([]);
   const [busy, setBusy] = useState(false);
   const cam = useRef<HTMLInputElement>(null);
@@ -206,8 +206,8 @@ export function usePicker(opts: { pdf?: boolean } = {}) {
       {/* image/* only: mixing in PDF makes Android open the file manager instead of the gallery */}
       <input ref={gal} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-hidden data-gallery onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
       {opts.pdf !== false && <input ref={doc} type="file" accept="application/pdf" multiple className="sr-only" tabIndex={-1} aria-hidden data-file onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />}
-      <Button variant="secondary" size="sm" onClick={() => cam.current?.click()}><Camera className="h-5 w-5" />Aparat</Button>
-      <Button variant="secondary" size="sm" onClick={() => gal.current?.click()}><ImageSquare className="h-5 w-5" />Galeria</Button>
+      {opts.img !== false && <Button variant="secondary" size="sm" onClick={() => cam.current?.click()}><Camera className="h-5 w-5" />Aparat</Button>}
+      {opts.img !== false && <Button variant="secondary" size="sm" onClick={() => gal.current?.click()}><ImageSquare className="h-5 w-5" />Galeria</Button>}
       {opts.pdf !== false && <Button variant="secondary" size="sm" onClick={() => doc.current?.click()}><FilePdf className="h-5 w-5" />Plik PDF</Button>}
     </>
   );

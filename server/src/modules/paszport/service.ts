@@ -142,6 +142,9 @@ export function filesOf(db: Db, jobIds: string[], folder: FolderRow | undefined)
   ];
 }
 
+/** Zdjęcia osobno od dokumentów, ściśle po rodzaju pliku (właściciel 2026-11-03). */
+const isPhoto = (a: dziennik.AttachmentRow) => a.rodzaj === 'zdjecie' || a.mime.startsWith('image/');
+
 export type Teczka = { kategoria: string; folder?: FolderRow | Omit<FolderRow, 'notatkaRozliczenie'>; jobIds: string[]; photos: number; docs: number; nastepnySerwis?: string };
 
 /** Teczki obiektu: kategorie jego nieusuniętych zleceń ∪ istniejące wiersze teczek, w kolejności słownika (P1, P2). Pracownik bez faktur i rozliczenia. */
@@ -158,8 +161,8 @@ export function teczki(db: Db, siteId: string, admin: boolean): Teczka[] {
     return {
       kategoria, jobIds,
       ...(folder && { folder: admin ? folder : folderForWorker(folder) }),
-      photos: files.filter((a) => a.rodzaj === 'zdjecie').length,
-      docs: files.filter((a) => a.rodzaj === 'plik').length,
+      photos: files.filter(isPhoto).length,
+      docs: files.filter((a) => !isPhoto(a)).length,
       ...(folder?.nastepnySerwis && { nastepnySerwis: folder.nastepnySerwis }),
     };
   });

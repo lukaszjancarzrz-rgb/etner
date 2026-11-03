@@ -148,6 +148,20 @@ test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie wi
   await dlg.getByRole('button', { name: /^Dodaj/ }).click();
   await expect(docs.getByRole('listitem').filter({ hasText: `faktura-${t}.pdf` })).not.toContainText('wysyłanie');
   await expect(docs.getByRole('listitem').filter({ hasText: `faktura-${t}.pdf` })).not.toContainText('dla klienta');
+  // zdjęcia osobno: „+ Zdjęcie” w Zdjęciach (aparat / galeria), „+ Plik” w Dokumentach bez aparatu
+  await docs.getByRole('button', { name: 'Plik', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Dodaj plik do teczki' }).getByRole('button', { name: 'Aparat' })).toHaveCount(0);
+  await page.getByRole('dialog', { name: 'Dodaj plik do teczki' }).getByRole('button', { name: 'Anuluj' }).click();
+  const zdj = page.getByRole('region', { name: 'Zdjęcia' });
+  const before = await zdj.getByRole('listitem').count();
+  await zdj.getByRole('button', { name: 'Zdjęcie', exact: true }).click();
+  const pdlg = page.getByRole('dialog', { name: 'Dodaj zdjęcia do teczki' });
+  await expect(pdlg.getByRole('checkbox', { name: 'W paszporcie dla klienta' })).toBeChecked();
+  await expect(pdlg.getByLabel('Typ dokumentu')).toHaveCount(0);
+  await pdlg.locator('input[data-gallery]').setInputFiles([photo, photo]);
+  await pdlg.getByRole('button', { name: /^Dodaj/ }).click();
+  await expect(zdj.getByRole('listitem')).toHaveCount(before + 2);
+  await expect(docs).not.toContainText('zdjecie.jpg');
   await docs.getByRole('button', { name: /Rozliczenie \(notatka\)/ }).click();
   await page.getByLabel('Notatka z rozliczeniem').fill(`Zaliczka ${t}`);
   await page.getByRole('button', { name: 'Zapisz', exact: true }).click();

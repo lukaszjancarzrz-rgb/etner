@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Rec } from '../../core/store.js';
-import { freshIn, plural, serwisStan, sortPaszporty, teczkiObiektu, type Dane } from './model.js';
+import { freshIn, isPhoto, plural, serwisStan, sortPaszporty, teczkiObiektu, type Dane } from './model.js';
 
 const ORDER = ['Elektryka', 'Fotowoltaika', 'Rekuperacja', 'Klimatyzacja'];
 const at = (n: number) => `2026-10-${String(n).padStart(2, '0')}T10:00:00.000Z`;
@@ -102,6 +102,14 @@ describe('freshIn', () => {
     expect([...freshIn(t, at(5), 'u1')].sort()).toEqual(['d-new', 'sv', 't-new', 'w-new']);
     expect(freshIn(t, at(20), 'u1').size).toBe(0);
     expect(freshIn(t, undefined, 'u1').size).toBe(0);
+  });
+});
+
+describe('isPhoto', () => {
+  it('zdjęcia ściśle po rodzaju albo typie obrazu (zdjęcie z „+ Plik” też w Zdjęciach)', () => {
+    expect(isPhoto({ id: 'a', rodzaj: 'zdjecie' })).toBe(true);
+    expect(isPhoto({ id: 'b', rodzaj: 'plik', mime: 'image/png' })).toBe(true);
+    expect(isPhoto({ id: 'c', rodzaj: 'plik', mime: 'application/pdf' })).toBe(false);
   });
 });
 

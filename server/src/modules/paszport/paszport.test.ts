@@ -352,6 +352,10 @@ describe('paszport – urządzenia, karta serwisowa, dokumenty', () => {
     const photo = await upload(s, s.worker);
     await call(s, s.worker, 'POST', '/api/service-entries', { siteId: s.site.id, kategoria: 'Klimatyzacja', dzien: '2026-11-03', dlaKlienta: true, uploadIds: [photo] });
     expect(s.deps.db.$client.prepare(`select dla_klienta d from attachments where id = '${photo}'`).get()).toEqual({ d: 1 });
+    // „+ Zdjęcie” w teczce: bez typu dokumentu, liczy się do zdjęć, nie do dokumentów
+    const fp = (await file(s.worker, await upload(s, s.worker), { typDok: undefined })).body;
+    expect(fp).toMatchObject({ rodzaj: 'zdjecie', typDok: null, dlaKlienta: true });
+    expect((await teczki(s, s.admin)).find((x) => x.kategoria === 'Klimatyzacja')).toMatchObject({ photos: 2, docs: 4 });
     // dziennik zlecenia bez zmian: domyślnie wewnętrzne
     const j = job(s, 'Klimatyzacja');
     const dp = await upload(s, s.admin);

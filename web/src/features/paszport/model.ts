@@ -46,12 +46,15 @@ export function teczkiObiektu(siteId: string, d: Dane, order: string[]): Teczka[
     return {
       kategoria, jobIds, devices, entries,
       ...(folder && { folder }),
-      photos: files.filter((f) => f.a.rodzaj === 'zdjecie'),
-      docs: files.filter((f) => f.a.rodzaj !== 'zdjecie'),
+      photos: files.filter((f) => isPhoto(f.a)),
+      docs: files.filter((f) => !isPhoto(f.a)),
       ...(folder?.nastepnySerwis && { nastepnySerwis: folder.nastepnySerwis as string }),
     };
   });
 }
+
+/** Zdjęcia osobno od dokumentów, ściśle po rodzaju pliku (też zdjęcie dodane przez „+ Plik”). */
+export const isPhoto = (a: Rec): boolean => a.rodzaj === 'zdjecie' || String(a.mime ?? '').startsWith('image/');
 
 const dayNum = (d: string) => Math.round(Date.parse(`${d}T12:00:00Z`) / 864e5);
 /** Znacznik terminu serwisu: zaległy, za N dni (do 30), albo data. */
