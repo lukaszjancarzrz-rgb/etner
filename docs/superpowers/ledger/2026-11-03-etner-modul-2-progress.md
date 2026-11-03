@@ -15,3 +15,4 @@ Task 4: review — Needs fixes: folder settings lost if app closes offline (PUT 
 - Ruling R69: clients never see diary entries (owner 2026-10-21) — entry-level „Pokaż klientowi” hidden; only files/photos have „W paszporcie dla klienta”.
 - Deferred: device-own instruction file (use folder file type „Instrukcja”).
 Task 4: fix round 1/5 (f0f8f19..98af9a1; outbox Write.next, parseHash split-then-decode, R69, tones, folder „nowe” local-only); re-review dispatched. Deferred: folder „nowe” seen is device-local (POST /api/seen accepts only job ids) — follow-up if owner wants cross-device.
+Task 4: re-review clean — complete. Part 2a controller verification: shared 15, web 95, server 271, build clean, size 126.5/307.3 kB, e2e 78 passed / 4 skipped. Released 2a to produkcja (migration 0023 additive).
