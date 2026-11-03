@@ -43,7 +43,7 @@ Makiety koncepcji (zaakceptowane 2026-10-29): 1 klient → paszport, 2 teczka, 3
 | P4 | Zdjęcia i pliki z dziennika zleceń pojawiają się w teczce **same** (dla pracowników). Dla klienta – tylko oznaczone „dla klienta” (istniejące pole `dla_klienta`). W dzienniku przy każdym pliku i zdjęciu przełącznik „W paszporcie dla klienta”. Plik nie jest kopiowany – teczka wskazuje ten sam plik. | Jedno źródło; nic się nie dubluje. |
 | P5 | Pliki dodane bezpośrednio w teczce (faktura, projekt, instrukcja) to załączniki z właścicielem `teczka`; urządzenie i wpis serwisowy mają własne załączniki (`device`, `service` – miejsce już przygotowane w module 1). | Wykorzystuje istniejące pliki, R2, podglądy, warianty zdjęć. |
 | P6 | **Faktury i notatka z rozliczeniem widzi tylko admin** (uprawnienie `admin`; po module 3 – `finanse`). Pracownik widzi urządzenia, kartę serwisową, projekty/instrukcje i zdjęcia. Klient – tylko „dla klienta”. | Kwoty nie trafiają do telefonów ekip. |
-| P7 | **Strona klienta** renderowana przez serwer jako prosty HTML (bez logowania, bez dużego kodu aplikacji), pod adresem `/p/<token>`. Token losowy (128 bitów), w bazie tylko skrót; jeden aktywny na paszport; admin może unieważnić i wygenerować nowy (stara naklejka przestaje działać). Pliki przez krótkie podpisane linki. | Szybko na słabym zasięgu; zero dostępu do API pracowników. |
+| P7 | **Strona klienta** renderowana przez serwer jako prosty HTML (bez logowania, bez dużego kodu aplikacji), pod adresem `/p/<token>`. Token losowy (256 bitów), zapisany w bazie (żeby naklejkę dało się wydrukować ponownie – zmiana 2026-11-03); jeden aktywny na paszport; admin może unieważnić i wygenerować nowy (stara naklejka przestaje działać). Pliki przez krótkie podpisane linki. | Szybko na słabym zasięgu; zero dostępu do API pracowników. |
 | P8 | **Naklejka** generowana w telefonie: kod QR (biblioteka ładowana tylko na tym ekranie), obraz PNG 50×30 mm w 300 dpi, „Udostępnij obraz” (Web Share z plikiem) z zapasowym „Pobierz obraz”, „Drukuj” przez druk systemowy, „PDF A4” jako wydruk arkusza (druk przeglądarki → zapis do PDF). Bez bibliotek PDF. | Działa z każdą drukarką mającą aplikację w telefonie; minimum kodu. |
 | P9 | **Dane firmy na naklejce i stronie klienta** w Ustawieniach (admin): nazwa, telefon serwisu, e-mail, strona www; logo ETNER z aplikacji. | Jedno miejsce. |
 | P10 | **Karta serwisowa:** wpis = data, zlecenie (opcjonalnie), odhaczone czynności (lista ze słownika dla kategorii + „inne” tekstem), uwagi, kto, zdjęcia, „dla klienta” (domyślnie tak). Edycja i usuwanie: admin i autor. | Zgodne z „edytowalny arkusz serwisów”. |
@@ -59,7 +59,7 @@ Wspólne pola jak w module 1 (`id`, `created_at`, `created_by`, `updated_at`, `d
 
 | Tabela | Pola |
 |---|---|
-| `passports` | `site_id` (unikalny wśród nieusuniętych), `numer` (PSZ-RRRR-NNN), `token_hash` (null = brak linku), `token_at` |
+| `passports` | `site_id` (unikalny wśród nieusuniętych), `numer` (PSZ-RRRR-NNN), `token` (null = brak linku), `token_at` |
 | `passport_folders` | `site_id`, `kategoria` (wartość słownika), `nastepny_serwis` (data), `cykl_mies`, `przypomnienia` (bool, domyślnie tak), `wyslano_30_dla`, `wyslano_7_dla` (data serwisu, dla której wysłano), `notatka_rozliczenie` (tekst, admin) |
 | `devices` | `folder_id`, `nazwa` (np. „Rekuperator”), `producent`, `model`, `nr_seryjny`, `montaz` (data), `job_id`, `gwarancja_do`, `uwagi`, `dla_klienta` |
 | `service_entries` | `folder_id`, `dzien`, `job_id`, `czynnosci` (lista tekstów), `uwagi`, `author_id`, `dla_klienta` |
