@@ -269,7 +269,7 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240),
   await expect(firma.getByText('Wpisz poprawny adres e-mail')).toBeVisible();
   await firma.getByLabel('E-mail').fill('serwis@etner.example');
   await firma.getByRole('button', { name: 'Zapisz dane firmy' }).click();
-  await expect(page.getByText('Zapisano dane firmy')).toBeVisible();
+  await expect(page.getByText('Zapisano dane firmy', { exact: true })).toBeVisible();
 
   await page.goto('/#paszporty');
   // wiersz obiektu (nagłówek) → karta paszportu obiektu

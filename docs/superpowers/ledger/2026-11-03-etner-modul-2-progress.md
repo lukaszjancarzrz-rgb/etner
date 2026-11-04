@@ -48,3 +48,6 @@ Tasks 5+6: fix round 1/5 (4 addressed, 0 open; commits 9e417b6..a96db40) — com
 - Ruling R74: rate-limit key = rightmost X-Forwarded-For (appended by Render's proxy) — cost if Render appends its own edge address: all visitors share one 60/min bucket → check after deploy by opening /p/ links from two networks.
 Task 7: dispatched (base c2828d2).
 Task 7: impl cb95590, 55f9882, e171ffe, 34781b1 (concerns: /p/ in SW denylist; print/share untested on device; offline-never phone label lacks firma data; „Na naklejce” checkboxes skipped); review dispatched.
+Task 7: review spec ✅ Approved — complete (c2828d2..34781b1, review clean).
+Task 7: minor (deferred): folder label offered for queued-only folder (no anchor); two non-dictionary categories with same slug may order differently phone vs server; iOS share after async blob may be rejected (error shown); QR quiet zone ~2 modules (label margin adds more); e2e „Załóż paszport” conditional + overwrites shared firma; old SW until update; side menu highlights Więcej on site card (moreOnly by design).
+Part 2b controller verification: shared 17, web 104, server 290, build ok; e2e full run 1 fail (toast text matched twice — test locator exact, controller fix), paszport e2e 14 passed. Released 2b to produkcja (no migration).
