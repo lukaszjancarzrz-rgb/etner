@@ -29,7 +29,8 @@ const upload = async (s: S, cookie: string, data: Buffer, name: string) => {
 const jpeg = () => sharp({ create: { width: 40, height: 30, channels: 3, background: '#3a6' } }).jpeg().toBuffer();
 const pdf = Buffer.from('%PDF-1.4 test');
 let ipSeq = 0;
-const page = (s: S, token: string, ip = `10.0.0.${++ipSeq}`) => s.app.request(`/p/${token}`, { headers: { 'x-forwarded-for': `${ip}, 10.1.1.1` } });
+/** `ip` = wpis dopisany przez proxy (ostatni); `forged` = to, co podał sam klient. */
+const page = (s: S, token: string, ip = `10.0.${ipSeq >> 8}.${++ipSeq & 255}`, forged = '1.1.1.1') => s.app.request(`/p/${token}`, { headers: { 'x-forwarded-for': `${forged}, ${ip}` } });
 
 /** Paszport z treścią dla klienta i wewnętrzną (każda wewnętrzna z rozpoznawalnym napisem TAJNE). */
 async function filled(s: S) {
@@ -112,5 +113,36 @@ describe('strona klienta /p/:token', () => {
     for (let i = 0; i < 60; i++) expect((await page(s, 'x', '9.9.9.9')).status).toBe(200);
     expect((await page(s, 'x', '9.9.9.9')).status).toBe(429);
     expect((await page(s, 'x', '8.8.8.8')).status).toBe(200);
+  });
+
+  it('limit liczy ostatni wpis X-Forwarded-For: zmiana podanego przez klienta nic nie daje; 5000+ fałszywych adresów nie blokuje nowych klientów', async () => {
+    const s = await setup();
+    for (let i = 0; i < 60; i++) expect((await page(s, 'x', '7.7.7.7', `6.6.${i}.1`)).status).toBe(200);
+    expect((await page(s, 'x', '7.7.7.7', '6.6.6.6')).status).toBe(429);
+    // napastnik z własnymi adresami w ostatnim wpisie zapełnia mapę – najstarsze okna wypadają, nowy klient przechodzi
+    for (let i = 0; i < 5100; i++) await page(s, 'x', `172.16.${i >> 8}.${i & 255}`);
+    expect((await page(s, 'x', '5.5.5.5')).status).toBe(200);
+  }, 60_000);
+
+  it('usunięte obiekt, klient, teczka, urządzenie, wpis i plik nie trafiają na stronę', async () => {
+    const s = await setup();
+    const { p } = await filled(s);
+    const db = s.deps.db.$client;
+    const html0 = await (await page(s, p.token)).text();
+    expect(html0).toContain('Klimatyzator salon');
+    db.prepare("update devices set deleted_at = 'x' where nazwa = 'Klimatyzator salon'").run();
+    db.prepare("update service_entries set deleted_at = 'x' where uwagi = 'Wszystko sprawne'").run();
+    db.prepare("update attachments set deleted_at = 'x' where nazwa = 'instrukcja-klima.pdf'").run();
+    let html = await (await page(s, p.token)).text();
+    for (const t of ['Klimatyzator salon', 'Wszystko sprawne', 'instrukcja-klima.pdf']) expect(html).not.toContain(t);
+    db.prepare("update passport_folders set deleted_at = 'x' where kategoria = 'Klimatyzacja'").run();
+    expect(await (await page(s, p.token)).text()).not.toContain('id="klimatyzacja"');
+    const inactive = await (await page(s, 'A'.repeat(43))).text();
+    db.prepare("update clients set deleted_at = 'x'").run();
+    expect(await (await page(s, p.token)).text()).toBe(inactive);
+    db.prepare("update clients set deleted_at = null").run();
+    db.prepare('update sites set deleted_at = ? where id = ?').run('x', s.site.id);
+    html = await (await page(s, p.token)).text();
+    expect(html).toBe(inactive);
   });
 });
