@@ -8,7 +8,8 @@ import sharp from 'sharp';
 export interface FileStore {
   readonly kind: 'r2' | 'disk';
   put(key: string, body: Buffer, type: string): Promise<void>;
-  url(key: string, ttlSec?: number): Promise<string>;
+  /** `name`: nazwa pliku przy otwarciu/pobraniu (Content-Disposition), np. nazwa z wgrania zamiast `orig.pdf`. */
+  url(key: string, ttlSec?: number, name?: string): Promise<string>;
   get(key: string): Promise<Buffer>;
   /** Usuwa plik; brak pliku to nie błąd. */
   del(key: string): Promise<void>;
@@ -17,7 +18,7 @@ export interface FileStore {
 export interface DiskStore extends FileStore {
   readonly kind: 'disk';
   /** null = zły/wygasły podpis. */
-  serve(key: string, exp: string | undefined, sig: string | undefined): Promise<{ body: Buffer; type: string } | null>;
+  serve(key: string, exp: string | undefined, sig: string | undefined, name?: string): Promise<{ body: Buffer; type: string } | null>;
 }
 
 const KEY_RE = /^[A-Za-z0-9_.-]+(\/[A-Za-z0-9_.-]+)*$/;
@@ -29,11 +30,13 @@ function checkKey(key: string): string {
 
 const TYPES: Record<string, string> = { webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', pdf: 'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel' };
+/** `inline` – PDF i zdjęcia otwierają się w przeglądarce, ale zapis ma nazwę z wgrania. */
+export const disposition = (name: string) => `inline; filename*=UTF-8''${encodeURIComponent(name)}`;
 const typeOf = (key: string) => TYPES[key.split('.').pop()!.toLowerCase()] ?? 'application/octet-stream';
 
 export function diskStore(dir: string, secret: string): DiskStore {
   if (!secret) throw new Error('Brak APP_SECRET – podpisy linków do plików wymagają sekretu.');
-  const sign = (key: string, exp: number) => createHmac('sha256', secret).update(`${key}\n${exp}`).digest('base64url');
+  const sign = (key: string, exp: number, name?: string) => createHmac('sha256', secret).update(name ? `${key}\n${exp}\n${name}` : `${key}\n${exp}`).digest('base64url');
   const path = (key: string) => join(dir, checkKey(key));
   return {
     kind: 'disk',
@@ -48,13 +51,13 @@ export function diskStore(dir: string, secret: string): DiskStore {
     async del(key) {
       await rm(path(key), { force: true });
     },
-    async url(key, ttlSec = 600) {
+    async url(key, ttlSec = 600, name) {
       const exp = Math.floor(Date.now() / 1000) + ttlSec;
-      return `/api/files/${checkKey(key)}?exp=${exp}&sig=${sign(key, exp)}`;
+      return `/api/files/${checkKey(key)}?exp=${exp}&sig=${sign(key, exp, name)}${name ? `&name=${encodeURIComponent(name)}` : ''}`;
     },
-    async serve(key, exp, sig) {
+    async serve(key, exp, sig, name) {
       if (!exp || !sig || !KEY_RE.test(key) || !/^\d+$/.test(exp) || Number(exp) < Date.now() / 1000) return null;
-      const want = Buffer.from(sign(key, Number(exp)));
+      const want = Buffer.from(sign(key, Number(exp), name));
       const got = Buffer.from(sig);
       if (want.length !== got.length || !timingSafeEqual(want, got)) return null;
       return { body: await readFile(path(key)), type: typeOf(key) };
@@ -74,7 +77,7 @@ export function r2Store(cfg: R2Config): FileStore {
     async put(key, body, type) {
       await s3.send(new PutObjectCommand({ Bucket: cfg.bucket, Key: checkKey(key), Body: body, ContentType: type }));
     },
-    url: (key, ttlSec = 600) => getSignedUrl(s3, new GetObjectCommand({ Bucket: cfg.bucket, Key: checkKey(key) }), { expiresIn: ttlSec }),
+    url: (key, ttlSec = 600, name) => getSignedUrl(s3, new GetObjectCommand({ Bucket: cfg.bucket, Key: checkKey(key), ...(name && { ResponseContentDisposition: disposition(name) }) }), { expiresIn: ttlSec }),
     async del(key) {
       await s3.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: checkKey(key) }));
     },

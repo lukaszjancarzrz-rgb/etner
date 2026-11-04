@@ -8,7 +8,7 @@ import { Segmented } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
-import { drawLabel, LABEL_FONT, LABEL_FONT_CSS, LABEL_SIZES, labelBlob, printLabel, type Firma, type LabelSize } from './naklejka.js';
+import { drawLabel, LABEL_SIZES, labelBlob, printLabel, type Firma, type LabelSize } from './naklejka.js';
 
 const FIRMA_KEY = 'etner-firma', SIZE_KEY = 'etner-naklejka';
 const ls = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* bez pamięci przeglądarki */ } } };
@@ -42,20 +42,14 @@ export default function Naklejka({ passport, klient }: { passport: Rec; klient: 
   const logo = useLogo();
   const ref = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState<LabelSize>(() => { const v = ls.get(SIZE_KEY); return v && v in LABEL_SIZES ? v as LabelSize : '50x30'; });
-  const [fonts, setFonts] = useState(0);
   const [renew, setRenew] = useState(false);
   const token = passport.token as string | null;
   const url = token ? `${location.origin}/p/${token}` : ''; // zawsze cały paszport (właściciel: bez linków do teczek)
   const name = `naklejka-${passport.numer}.png`.replace(/[^\w.-]+/g, '_');
 
   useEffect(() => {
-    // krój naklejki ładowany tylko tutaj; po wczytaniu rysunek od nowa
-    if (!document.querySelector(`link[href="${LABEL_FONT_CSS}"]`)) document.head.append(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: LABEL_FONT_CSS }));
-    void Promise.all([500, 600, 700, 800].map((w) => document.fonts?.load(`${w} 20px "${LABEL_FONT}"`))).catch(() => {}).then(() => setFonts((n) => n + 1));
-  }, []);
-  useEffect(() => {
     if (ref.current && url) drawLabel(ref.current, size, { url, numer: passport.numer, klient, firma }, logo);
-  }, [url, size, passport.numer, klient, firma, logo, fonts]);
+  }, [url, size, passport.numer, klient, firma, logo]);
 
   const pick = (s: LabelSize) => { setSize(s); ls.set(SIZE_KEY, s); };
   const file = async () => new File([await labelBlob(ref.current!)], name, { type: 'image/png' });
@@ -72,7 +66,7 @@ export default function Naklejka({ passport, klient }: { passport: Rec; klient: 
   return (
     <div className="grid gap-4">
       <div className="grid justify-items-center rounded-2xl border-2 border-dashed border-line bg-white p-3">
-        <canvas ref={ref} role="img" aria-label={`Podgląd naklejki ${passport.numer}`} className="h-auto w-full max-w-[400px]" style={{ aspectRatio: `${w} / ${h}` }} />
+        <canvas ref={ref} role="img" aria-label={`Podgląd naklejki ${passport.numer}`} className="h-auto w-full max-w-[200px]" style={{ aspectRatio: `${w} / ${h}` }} />
       </div>
       <Segmented label="Rozmiar naklejki" value={size} onChange={pick} options={(Object.keys(LABEL_SIZES) as LabelSize[]).map((v) => ({ v, label: `${v.replace('x', '×')} mm` }))} />
       <div className="grid gap-2 min-[560px]:grid-cols-2">

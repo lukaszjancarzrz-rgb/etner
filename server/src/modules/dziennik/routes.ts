@@ -112,6 +112,6 @@ export function routes(app: Hono, deps: AppDeps): void {
     if (!a?.ownerType || !svc.canSeeAttachment(db, c.get('user'), a)) throw notFound();
     const v = c.req.query('v');
     const key = (v === 'thumb' ? a.keyThumb : v === 'view' ? a.keyView : null) ?? a.keyOrig;
-    return c.redirect(await files.url(key), 302);
+    return c.redirect(await files.url(key, undefined, key === a.keyOrig ? a.nazwa : undefined), 302);
   });
 }

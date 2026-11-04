@@ -53,6 +53,9 @@ h3{font-size:.8rem;font-weight:700;color:var(--mut);margin:12px 0 4px}
 .phs>summary{list-style:none;cursor:pointer}.phs>summary::-webkit-details-marker{display:none}.phs>.ph{margin-top:6px}.phs[open] .plus{display:none}
 .plus{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border-radius:8px;background:var(--line);font-size:1.3rem;font-weight:800}
 .empty{color:var(--mut);font-size:.9rem}
+.lb{display:none;position:fixed;inset:0;z-index:9;background:rgba(5,15,30,.92);align-items:center;justify-content:center;padding:16px}.lb:target{display:flex}
+.lb .x{position:absolute;inset:0}.lb figure{position:relative;margin:0;max-width:100%;display:grid;gap:10px;justify-items:center}
+.lb img{max-width:100%;max-height:80vh;border-radius:8px;display:block}.lb figcaption{display:flex;gap:10px}.lb figcaption a{color:#fff;padding:8px 14px;border:1px solid rgba(255,255,255,.5);border-radius:10px;text-decoration:none;font-weight:700}
 footer{color:var(--mut);font-size:.85rem;padding:16px 4px 0}
 a:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}`;
@@ -79,7 +82,7 @@ async function passportPage(deps: AppDeps, token: string): Promise<string> {
   if (!p || !site || !client) return inactive(f);
   const folders = svc.forClient(db, site.id);
   const ids = anchors(folders.map((t) => t.kategoria));
-  const url = (key: string) => files.url(key, FILE_TTL).then(esc);
+  const url = (key: string, name?: string) => files.url(key, FILE_TTL, name).then(esc);
   const today = dayOf(deps.now?.() ?? new Date());
 
   // Baner: najbliższy termin serwisu, gdy zaległy albo w ciągu 30 dni.
@@ -90,14 +93,18 @@ async function passportPage(deps: AppDeps, token: string): Promise<string> {
     ? `<div class="next${late ? ' late' : ''}"><span>${late ? 'Serwis zaległy' : 'Następny serwis'}: <b>${pl(next.nastepnySerwis!)}</b></span><span>${esc(next.kategoria)}</span></div>`
     : '';
 
+  const boxes: string[] = [];
+  const thumbs = new Map(await Promise.all(folders.flatMap((t) => t.files.filter(svc.isPhoto)).map(async (a) => [a.id, await url(a.keyThumb ?? a.keyView ?? a.keyOrig)] as const)));
   const sections = await Promise.all(folders.map(async (t, i) => {
     const photos = t.files.filter(svc.isPhoto), docs = t.files.filter((a) => !svc.isPhoto(a));
     const devs = t.devices.map((d) => `<li class="dev"><b>${esc(d.nazwa)}</b>${[d.producent, d.model].some(Boolean) ? ` <span>${esc([d.producent, d.model].filter(Boolean).join(' '))}</span>` : ''}
 ${d.montaz || d.gwarancjaDo ? `<div class="m">${[d.montaz && `montaż ${pl(d.montaz)}`, d.gwarancjaDo && `gwarancja do ${pl(d.gwarancjaDo)}`].filter(Boolean).join(', ')}</div>` : ''}</li>`).join('');
     const entries = t.entries.map((e) => `<li><time datetime="${e.dzien}">${pl(e.dzien)}</time><span>${esc([e.czynnosci.join(', '), e.uwagi].filter(Boolean).join('. '))}</span></li>`).join('');
-    const docList = (await Promise.all(docs.map(async (a) => `<a href="${await url(a.keyOrig)}" rel="noopener">${esc(a.nazwa)}</a>`))).join('');
-    const tiles = await Promise.all(photos.map(async (a) =>
-      `<a href="${await url(a.keyOrig)}" rel="noopener"><img src="${await url(a.keyThumb ?? a.keyView ?? a.keyOrig)}" alt="Zdjęcie" loading="lazy"></a>`));
+    const docList = (await Promise.all(docs.map(async (a) => `<a href="${await url(a.keyOrig, a.nazwa)}" rel="noopener">${esc(a.nazwa)}</a>`))).join('');
+    const tiles = photos.map((a) => `<a href="#zd-${esc(a.id)}"><img src="${thumbs.get(a.id)}" alt="Zdjęcie" loading="lazy"></a>`);
+    // podgląd bez JS: kafelek → #zd-<id> (:target), zamknięcie wraca do teczki
+    boxes.push(...await Promise.all(photos.map(async (a) => `<div class="lb" id="zd-${esc(a.id)}"><a class="x" href="#${ids[i]}" aria-label="Zamknij podgląd"></a>
+<figure><img src="${await url(a.keyView ?? a.keyOrig)}" alt="Zdjęcie" loading="lazy"><figcaption><a href="#${ids[i]}">Zamknij</a> <a href="${await url(a.keyOrig, a.nazwa)}" rel="noopener">Oryginał</a></figcaption></figure></div>`)));
     // jeden rząd 4 kafelków; więcej zdjęć → „+N” rozwija resztę (details, bez JS)
     const photoList = tiles.length <= PHOTO_ROW ? (tiles.length ? `<div class="ph">${tiles.join('')}</div>` : '')
       : `<details class="phs"><summary aria-label="Pokaż wszystkie zdjęcia (${tiles.length})"><div class="ph">${tiles.slice(0, PHOTO_ROW - 1).join('')}<span class="plus">+${tiles.length - PHOTO_ROW + 1}</span></div></summary>`
@@ -116,7 +123,7 @@ ${docList ? `<h3>Dokumenty</h3><div class="docs">${docList}</div>` : ''}</sectio
 <div><h1>${esc(client.nazwa)}</h1><div class="addr">${esc([site.adres, site.miejscowosc].filter(Boolean).join(', '))}</div></div>
 ${nextRow}<div class="btns">${tel(f)}${mail}</div></div>`;
   const foot = `<footer>${esc(f.nazwa)}${f.telefon ? `, tel. ${esc(f.telefon)}` : ''}${f.email ? `, ${esc(f.email)}` : ''}</footer>`;
-  return doc(`Paszport ${p.numer}`, `${head(f)}${plate}${nav}${folders.length ? `<div class="sheet">${sections.join('')}</div>` : ''}${foot}`);
+  return doc(`Paszport ${p.numer}`, `${head(f)}${plate}${nav}${folders.length ? `<div class="sheet">${sections.join('')}</div>` : ''}${foot}${boxes.join('')}`);
 }
 
 export function publicRoutes(app: Hono, deps: AppDeps): void {

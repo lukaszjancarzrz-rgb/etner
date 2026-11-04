@@ -9,7 +9,7 @@ function fakeCanvas() {
   const ctx = {
     set fillStyle(v: string) { fill = v; },
     get fillStyle() { return fill; },
-    font: '', textBaseline: '',
+    font: '', textBaseline: '', textAlign: '',
     fillRect(x: number, y: number, w: number, h: number) {
       if (c.px.length !== c.width * c.height) c.px = new Uint8Array(c.width * c.height);
       for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) c.px[j * c.width + i] = fill === '#000' ? 1 : 0;
@@ -40,11 +40,11 @@ describe('naklejka', () => {
     expect([c.width, c.height]).toEqual(LABEL_SIZES[size]);
     const want = QRCode.create(data.url, { errorCorrectionLevel: 'M' }).modules;
     expect(readQr(c, want.size)).toEqual([...want.data].map(Boolean));
-    expect(c.texts).toEqual(expect.arrayContaining(['ETNER', 'Paszport instalacji', 'PSZ-2026-014', 'serwis: 600 000 000', 'etner.example']));
+    expect(c.texts).toEqual(expect.arrayContaining(['PASZPORT INSTALACJI', 'Jan Kowalski', 'ETNER', 'Nr PSZ-2026-014', 'tel. 600 000 000 · etner.example']));
   });
 
-  it('203 dpi: 8 px na mm', () => {
-    for (const [k, [w, h]] of Object.entries(LABEL_SIZES)) expect(k).toBe(`${w / 8}x${h / 8}`);
+  it('203 dpi: 8 px na mm, obraz pionowy (rolka obrócona o 90°)', () => {
+    for (const [k, [w, h]] of Object.entries(LABEL_SIZES)) expect(k).toBe(`${h / 8}x${w / 8}`);
   });
 
 });

@@ -256,7 +256,7 @@ test('teczka: „Wróć” prowadzi do karty paszportu obiektu, jej „Wróć”
   await expect(page).toHaveURL(/#paszporty$/);
 });
 
-test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240), link z naklejki → strona klienta, nowy link', async ({ page, browser }, info) => {
+test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 240×400, pionowo), link z naklejki → strona klienta, nowy link', async ({ page, browser }, info) => {
   await login(page, 'Tomasz Wrona');
   // dane firmy na naklejkę (Ustawienia, admin)
   await page.goto('/#ust');
@@ -296,12 +296,12 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240),
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
 
-  // „Pobierz obraz”: PNG w pikselach 50×30 mm przy 203 dpi
+  // „Pobierz obraz”: PNG rolki 50×30 mm przy 203 dpi, projekt pionowy (obrót o 90°)
   const [dl] = await Promise.all([page.waitForEvent('download'), qr.getByRole('button', { name: 'Pobierz obraz' }).click()]);
   expect(dl.suggestedFilename()).toBe(`naklejka-${psz}.png`);
   const png = Buffer.concat(await (async () => { const out: Buffer[] = []; for await (const c of (await dl.createReadStream())) out.push(c as Buffer); return out; })());
   expect(png.subarray(1, 4).toString()).toBe('PNG');
-  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([400, 240]);
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([240, 400]);
 
   // link z naklejki = „Podgląd klienta” → strona klienta
   const url = (await qr.getByTitle(/\/p\//).getAttribute('title'))!;
@@ -309,7 +309,7 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240),
   const client = await page.context().newPage();
   await client.goto(url);
   await expect(client.getByRole('heading', { name: 'Józef Bukowski', level: 1 })).toBeVisible();
-  await expect(client.getByText(`Paszport ${psz}`)).toBeVisible();
+  await expect(client.getByText(psz, { exact: true })).toBeVisible();
 
   // pracownik: karta obiektu i naklejka, bez „Unieważnij link”
   const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });

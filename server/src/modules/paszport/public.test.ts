@@ -69,7 +69,9 @@ describe('strona klienta /p/:token', () => {
     expect(html).not.toContain('TAJNE');
     expect(html).not.toMatch(/Bartek|Technikowski|Adamski/);
     expect(html).not.toContain('<script');
-    expect(html.match(/<img /g)?.length).toBe(3); // logo, zdjęcie teczki, zdjęcie z dziennika oznaczone dla klienta
+    expect(html.match(/<img /g)?.length).toBe(5); // logo + 2 zdjęcia dla klienta (teczka, dziennik), każde: miniatura i podgląd
+    expect(html.match(/<div class="lb" id="zd-/g)?.length).toBe(2); // podgląd zdjęcia bez JS (:target)
+    expect(html).toMatch(/orig\.pdf\?exp=\d+&amp;sig=[^"&]+&amp;name=instrukcja-klima\.pdf"/); // plik otwiera się pod nazwą z wgrania
     expect(html).toMatch(/\/api\/files\/[^"]+thumb\.webp\?exp=\d+&amp;sig=/); // podpisane linki
   });
 

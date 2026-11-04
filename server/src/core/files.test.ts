@@ -57,6 +57,16 @@ describe('diskStore', () => {
     expect((await app.request(expired)).status).toBe(403);
   });
 
+  it('nazwa pliku z wgrania: Content-Disposition, podpisana (podmiana nazwy → 403)', async () => {
+    const deps = testDeps();
+    const app = createApp(deps);
+    await deps.files.put('a/orig.pdf', Buffer.from('%PDF'), 'application/pdf');
+    const url = await deps.files.url('a/orig.pdf', 60, 'ET26041R - Klimczak - Wyźrał.pdf');
+    const ok = await app.request(url);
+    expect(ok.headers.get('content-disposition')).toBe(`inline; filename*=UTF-8''${encodeURIComponent('ET26041R - Klimczak - Wyźrał.pdf')}`);
+    expect((await app.request(url.replace(/name=[^&]+/, 'name=inna.pdf'))).status).toBe(403);
+  });
+
   it('odrzuca klucze z path traversal', async () => {
     const s = diskStore(tmp(), 'sekret');
     for (const k of ['../x', 'a/../x', '/etc/passwd', 'a\\b', 'a b', 'db/generations/x']) {
