@@ -1,6 +1,6 @@
-import { ArrowDown, ArrowUp, Bell, BookOpen, Bug, Clock, Copy, Desktop, Database, Key, Moon, Plus, Sun, Trash, UserCircle } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, Bell, BookOpen, Buildings, Bug, Clock, Copy, Desktop, Database, Key, Moon, Plus, Sun, Trash, UserCircle } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { DICT_GRUPY, DICT_RODZAJE, newId } from '@etner/shared';
+import { DICT_GRUPY, DICT_RODZAJE, firmaSchema, newId, type Firma as FirmaT } from '@etner/shared';
 import { disablePush, enablePush, pushState, testPush, type PushState } from '../../core/push.js';
 import { ApiError, api } from '../../core/api.js';
 import { fmtWhen, useIsAdmin, useMe } from '../../core/data.js';
@@ -34,6 +34,7 @@ export function Ustawienia() {
         <ThemeCard />
         <Notifications />
         <ChangePassword />
+        {admin && <Firma />}
         {admin && <Morning />}
         {admin && <LeadyEmail />}
         {admin && <Backups />}
@@ -159,6 +160,32 @@ function Notifications() {
           </>
         )}
     </div>
+  );
+}
+
+const FIRMA_POLA: [keyof FirmaT, string, string][] = [['nazwa', 'Nazwa', 'text'], ['telefon', 'Telefon serwisu', 'tel'], ['email', 'E-mail', 'email'], ['www', 'Strona www', 'text']];
+/** Dane firmy (P9): na naklejce QR i na stronie klienta. */
+function Firma() {
+  const [v, setV] = useState<FirmaT | null>(null);
+  const [err, setErr] = useState<Partial<Record<keyof FirmaT | 'all', string>>>({});
+  useEffect(() => { api<FirmaT>('/api/settings/firma').then(setV, (e) => setErr({ all: msg(e) })); }, []);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const r = firmaSchema.safeParse(v);
+    if (!r.success) return setErr(Object.fromEntries(r.error.issues.map((i) => [i.path[0], i.message])));
+    try { setV(await api<FirmaT>('/api/settings/firma', { method: 'PUT', json: r.data })); setErr({}); toast('Zapisano dane firmy', { tone: 'ok' }); }
+    catch (x) { setErr({ all: msg(x) }); }
+  }
+  return (
+    <Card title="Dane firmy" icon={Buildings} hint="Na naklejce z kodem QR i na stronie paszportu dla klienta.">
+      <form onSubmit={submit} className="grid gap-3" noValidate>
+        {FIRMA_POLA.map(([k, label, type]) => (
+          <Field key={k} label={label} error={err[k]}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err[k]} type={type} value={v?.[k] ?? ''} disabled={!v} onChange={(e) => setV({ ...v!, [k]: e.target.value })} />}</Field>
+        ))}
+        {err.all && <p className="text-sm text-danger">{err.all}</p>}
+        <Button type="submit" variant="secondary" className="justify-self-start" disabled={!v}>Zapisz dane firmy</Button>
+      </form>
+    </Card>
   );
 }
 
