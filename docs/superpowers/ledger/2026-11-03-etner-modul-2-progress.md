@@ -46,3 +46,4 @@ Tasks 5+6: review — spec ✅, Needs fixes: rate limiter keyed on client-contro
 Tasks 5+6: minor (deferred): createPassport timestamps from clock not `at`; no index on passports.token (small table); logo depends on web build; retried /link rotates twice (admin-only, online).
 Tasks 5+6: fix round 1/5 (4 addressed, 0 open; commits 9e417b6..a96db40) — complete (396dd60..a96db40, review clean).
 - Ruling R74: rate-limit key = rightmost X-Forwarded-For (appended by Render's proxy) — cost if Render appends its own edge address: all visitors share one 60/min bucket → check after deploy by opening /p/ links from two networks.
+Task 7: dispatched (base c2828d2).
