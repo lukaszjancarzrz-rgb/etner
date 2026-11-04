@@ -74,13 +74,13 @@ describe('teczkiObiektu', () => {
 describe('serwisStan, plural', () => {
   it('zaległy, dziś, za N dni, data', () => {
     expect(serwisStan('2026-11-02', '2026-11-03')).toEqual({ label: 'serwis zaległy', tone: 'late' });
-    expect(serwisStan('2026-11-03', '2026-11-03')?.label).toBe('serwis dziś');
-    expect(serwisStan('2026-11-04', '2026-11-03')?.label).toBe('serwis za 1 dzień');
-    expect(serwisStan('2026-11-17', '2026-11-03')).toEqual({ label: 'serwis za 14 dni', tone: 'soon' });
-    expect(serwisStan('2027-05-03', '2026-11-03')).toEqual({ label: 'serwis 03.05.2027', tone: 'later' });
+    expect(serwisStan('2026-11-03', '2026-11-03')?.label).toBe('następny serwis dziś');
+    expect(serwisStan('2026-11-04', '2026-11-03')?.label).toBe('następny serwis za 1 dzień');
+    expect(serwisStan('2026-11-17', '2026-11-03')).toEqual({ label: 'następny serwis za 14 dni', tone: 'soon' });
+    expect(serwisStan('2027-05-03', '2026-11-03')).toEqual({ label: 'następny serwis 03.05.2027', tone: 'later' });
     expect(serwisStan(null, '2026-11-03')).toBeNull();
     // zmiana czasu w październiku nie przesuwa licznika
-    expect(serwisStan('2026-10-26', '2026-10-24')?.label).toBe('serwis za 2 dni');
+    expect(serwisStan('2026-10-26', '2026-10-24')?.label).toBe('następny serwis za 2 dni');
   });
   it('odmiana', () => {
     const z: [string, string, string] = ['zlecenie', 'zlecenia', 'zleceń'];

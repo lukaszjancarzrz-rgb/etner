@@ -83,9 +83,9 @@ export function serwisStan(nastepny: string | null | undefined, today: string): 
   if (!nastepny) return null;
   const n = dayNum(nastepny) - dayNum(today);
   if (n < 0) return { label: 'serwis zaległy', tone: 'late' };
-  if (n === 0) return { label: 'serwis dziś', tone: 'soon' };
-  if (n <= 30) return { label: `serwis za ${n} ${n === 1 ? 'dzień' : 'dni'}`, tone: 'soon' };
-  return { label: `serwis ${nastepny.slice(8, 10)}.${nastepny.slice(5, 7)}.${nastepny.slice(0, 4)}`, tone: 'later' };
+  if (n === 0) return { label: 'następny serwis dziś', tone: 'soon' };
+  if (n <= 30) return { label: `następny serwis za ${n} ${n === 1 ? 'dzień' : 'dni'}`, tone: 'soon' };
+  return { label: `następny serwis ${nastepny.slice(8, 10)}.${nastepny.slice(5, 7)}.${nastepny.slice(0, 4)}`, tone: 'later' };
 }
 
 /** „1 zlecenie”, „2 zlecenia”, „5 zleceń”. */
