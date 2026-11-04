@@ -44,3 +44,5 @@ Tasks 5+6: dispatched one implementer (server, base 76238fd).
 Tasks 5+6: impl 396dd60, 9e417b6 (DONE_WITH_CONCERNS: XFF-first IP, in-memory limiter, numer uniqueness via tx, link without opId); review dispatched.
 Tasks 5+6: review — spec ✅, Needs fixes: rate limiter keyed on client-controlled leftmost XFF + full map → 429 for all (lockout DoS). Fix round 1 dispatched (rightmost XFF, evict oldest; folded minors: CSP font-src, empty/duplicate slug anchors; ⚠️ soft-deleted site → inactive).
 Tasks 5+6: minor (deferred): createPassport timestamps from clock not `at`; no index on passports.token (small table); logo depends on web build; retried /link rotates twice (admin-only, online).
+Tasks 5+6: fix round 1/5 (4 addressed, 0 open; commits 9e417b6..a96db40) — complete (396dd60..a96db40, review clean).
+- Ruling R74: rate-limit key = rightmost X-Forwarded-For (appended by Render's proxy) — cost if Render appends its own edge address: all visitors share one 60/min bucket → check after deploy by opening /p/ links from two networks.
