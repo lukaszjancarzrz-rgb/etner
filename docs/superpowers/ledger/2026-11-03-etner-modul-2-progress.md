@@ -22,3 +22,5 @@ Task 4: re-review clean — complete. Part 2a controller verification: shared 15
 Task 4b: impl eb2ab4b..f29b609; review — Needs fixes: startup site merge ran on every boot without guard or per-pair error isolation (spec: one-time). Fix round 1 dispatched (one-time settings guard, try/catch per pair, dedupe in client merge, Paszporty perf, entry photos inherit dlaKlienta, tests, SiteForm hint, one-off faktura dla_klienta=0).
 Deferred: offline-queued writes for a merged duplicate site/folder get 4xx and are dropped (deploy when phones synced); optimistic SiteMergeDialog doesn't move passports/devices (flicker until sync).
 Task 4b: fix round 1/5 (90fa2ed) re-review clean — complete. Verification: shared 15, web 98, server 278, build clean, e2e 82 passed / 4 skipped. Release held: owner asked about timing (phones' offline queues vs. one-time site merge). After deploy: check first boot log for skipped site pairs.
+Owner 2026-11-04: „wydaj” — Task 4b released to produkcja.
+Owner 2026-11-04: Word/Excel uploads (docx/xlsx by ZIP part word/ or xl/, doc/xls by OLE magic + extension) — controller change with test; released.
