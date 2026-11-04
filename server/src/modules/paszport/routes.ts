@@ -1,5 +1,6 @@
 import { firmaSchema, passportCreateSchema, deviceCreateSchema, deviceUpdateSchema, folderCreateSchema, folderFileSchema, folderUpdateSchema, serviceEntryCreateSchema, serviceEntryUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
+import { z } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
 import { requireAdmin, requireUser } from '../../core/auth.js';
@@ -45,6 +46,11 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.post('/api/folders', admin, async (c) => {
     const { opId, siteId, kategoria } = await body(c, folderCreateSchema);
     return c.json(runOp(db, opId, me(c).id, () => svc.ensureFolder(db, me(c).id, siteId, kategoria)).result);
+  });
+  // „Zrób zlecenie serwisowe” z listy „Do serwisu” (P13); nowe zlecenie trafia do tej teczki (obiekt + kategoria)
+  app.post('/api/folders/:id/zlecenie-serwisowe', admin, async (c) => {
+    const { opId } = await body(c, z.object({ opId: z.string().min(1).optional() }));
+    return c.json(runOp(db, opId, me(c).id, () => svc.serviceJob(db, me(c).id, c.req.param('id'))).result);
   });
   app.put('/api/folders/:id', auth, async (c) => {
     const { opId, ...d } = await body(c, folderUpdateSchema);

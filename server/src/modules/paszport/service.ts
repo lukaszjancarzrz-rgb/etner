@@ -1,8 +1,11 @@
 import { randomBytes } from 'node:crypto';
-import { and, eq, isNull, like } from 'drizzle-orm';
+import { and, eq, gt, isNull, like, lte } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
-import { dayOf, newId, type DeviceCreate, type Firma, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
+import { addDays, anchors, dayOf, newId, type DeviceCreate, type Firma, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
+import type { AppDeps } from '../../app.js';
 import { recordChange } from '../../core/changes.js';
+import { logError } from '../../core/errors.js';
+import type { Mail } from '../../core/mail.js';
 import { tx, type Db } from '../../core/db.js';
 import { can } from '../../core/permissions.js';
 import { settings } from '../../core/schema-base.js';
@@ -332,4 +335,86 @@ export function forClient(db: Db, siteId: string): ClientFolder[] {
       files: filesOf(db, t.jobIds, folder).filter((a) => a.dlaKlienta),
     };
   });
+}
+
+/** „Zrób zlecenie serwisowe” (P13): klient i obiekt teczki, kategoria, rodzaj „serwis”, termin = miesiąc serwisu, pierwszy status „aktualne” ze słownika. Wywołuj w runOp. */
+export function serviceJob(db: Db, by: string, folderId: string): zlecenia.JobRow {
+  const f = parentOf(db, folderId);
+  const site = klienci.getSite(db, f.siteId);
+  if (!site) throw notFound();
+  const status = slowniki.list(db, 'status_zlecenia').find((d) => d.grupa === 'aktualne')?.wartosc;
+  if (!status) throw bad('Brak otwartego statusu zlecenia w słowniku');
+  return zlecenia.save(db, by, { clientId: site.clientId, siteId: site.id, kategoria: f.kategoria, rodzaj: 'serwis', status, termin: f.nastepnySerwis?.slice(0, 7) ?? null })!;
+}
+
+const plDay = (d: string) => d.split('-').reverse().join('.');
+
+/** Treść przypomnienia o serwisie (R73: robocza, do przeredagowania przez właściciela – tylko tutaj). Bez nazwisk pracowników i kwot. */
+export function reminderMail(d: { firma: Firma; kategoria: string; adres: string; dzien: string; link?: string }): Omit<Mail, 'to'> {
+  const { firma: f } = d;
+  const opt = (s: string | undefined, line = s) => (s ? [line!] : []);
+  const text = [
+    'Dzień dobry,',
+    '',
+    `przypominamy o zbliżającym się terminie serwisu instalacji: ${d.kategoria}.`,
+    ...opt(d.adres, `Adres: ${d.adres}`),
+    `Planowany termin: ${plDay(d.dzien)}`,
+    '',
+    'Aby umówić dogodny dzień wizyty, prosimy o telefon lub odpowiedź na tę wiadomość.',
+    ...opt(d.link, `\nPaszport instalacji (historia serwisów i dokumenty): ${d.link}`),
+    '',
+    'Pozdrawiamy',
+    f.nazwa,
+    ...opt(f.telefon, `tel. ${f.telefon}`),
+    ...opt(f.email),
+    ...opt(f.www),
+  ].join('\n');
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  const link = d.link && esc(d.link);
+  const html = `<div style="font-family:sans-serif;line-height:1.5">${(link ? esc(text).replace(link, `<a href="${link}">${link}</a>`) : esc(text)).replace(/\n/g, '<br>')}</div>`;
+  return { subject: `Przypomnienie: serwis ${d.kategoria.toLowerCase()} – ${plDay(d.dzien)}`, text, html, ...(f.email && { replyTo: f.email }) };
+}
+
+/**
+ * Przypomnienia e-mail o serwisie (P13, cron 7:00): teczki z przypomnieniami i terminem w (dziś, dziś+7] dostają „7 dni”, w (dziś+7, dziś+30] – „30 dni”
+ * (też przegapione, np. termin ustawiony na za 20 dni); każde raz na termin (`wyslano_7_dla` / `wyslano_30_dla`), nowy termin = nowe przypomnienia.
+ * Teczka bez paszportu też (P15). Brak SMTP albo e-maila klienta: bez wysyłki i bez znacznika (wyśle się następnego dnia, gdy się pojawi), wpis w dzienniku błędów raz na przebieg.
+ */
+export async function sendReminders(deps: AppDeps): Promise<number> {
+  const { db } = deps;
+  const today = dayOf((deps.now ?? (() => new Date()))());
+  const due = db.select().from(passportFolders).where(and(eq(passportFolders.przypomnienia, true), isNull(passportFolders.deletedAt),
+    gt(passportFolders.nastepnySerwis, today), lte(passportFolders.nastepnySerwis, addDays(today, 30)))).all()
+    .flatMap((f) => {
+      const week = f.nastepnySerwis! <= addDays(today, 7);
+      return (week ? f.wyslano7Dla : f.wyslano30Dla) === f.nastepnySerwis ? [] : [{ f, field: week ? 'wyslano7Dla' as const : 'wyslano30Dla' as const }];
+    });
+  if (!due.length) return 0;
+  if (!deps.mailer) {
+    logError(db, 'cron:paszport-przypomnienia', new Error(`Brak konfiguracji SMTP (SMTP_HOST, MAIL_FROM) – przypomnienia o serwisie nie wysłane (${due.length})`));
+    return 0;
+  }
+  const firmaNow = firma(db), base = (deps.baseUrl ?? '').replace(/\/$/, '');
+  const noEmail: string[] = [];
+  let sent = 0;
+  for (const { f, field } of due) {
+    const site = klienci.getSite(db, f.siteId);
+    const to = site && klienci.get(db, site.clientId)?.emaile[0];
+    if (!site || !to) { noEmail.push(f.id); continue; }
+    const p = passportOf(db, site.id);
+    // kotwica jak na stronie klienta (public.ts): cała lista teczek obiektu w tej samej kolejności
+    const kats = teczki(db, site.id, false).map((t) => t.kategoria);
+    const link = p?.token && base ? `${base}/p/${p.token}#${anchors(kats)[kats.indexOf(f.kategoria)]}` : undefined;
+    try {
+      await deps.mailer({ to, ...reminderMail({ firma: firmaNow, kategoria: f.kategoria, adres: [site.adres, site.miejscowosc].filter(Boolean).join(', '), dzien: f.nastepnySerwis!, link }) });
+    } catch (e) { logError(db, 'cron:paszport-przypomnienia', e); continue; }
+    // znacznik po wysyłce (błąd SMTP = ponowna próba jutro); termin mógł się zmienić w trakcie – zapis tylko dla tego terminu
+    const old = getFolder(db, f.id);
+    if (old?.nastepnySerwis !== f.nastepnySerwis) continue;
+    const row = db.update(passportFolders).set({ [field]: f.nastepnySerwis, updatedAt: NOW() }).where(eq(passportFolders.id, f.id)).returning().get();
+    recordChange(db, null, 'passport_folders', f.id, 'update', old, row);
+    sent++;
+  }
+  if (noEmail.length) logError(db, 'cron:paszport-przypomnienia', new Error(`Klient bez e-maila – przypomnienie o serwisie nie wysłane (teczki: ${noEmail.join(', ')})`));
+  return sent;
 }

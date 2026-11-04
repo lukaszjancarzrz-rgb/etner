@@ -1,18 +1,21 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { createApp } from '../../app.js';
+import { createApp, type AppDeps } from '../../app.js';
+import type { Mail } from '../../core/mail.js';
+import { addDays, anchors } from '@etner/shared';
 import * as zlecenia from '../zlecenia/service.js';
 import { runOp } from '../../core/ops.js';
 import { dict } from '../slowniki/schema.js';
 import { addUser, loginCookie, testDeps } from '../../test-utils.js';
 import { modules } from '../index.js';
-import { create as newClient } from '../klienci/service.js';
+import { create as newClient, update as updateClient } from '../klienci/service.js';
 import { seedBase } from '../slowniki/seed.js';
 import { list } from '../slowniki/service.js';
-import { createPassport, defaultCycle, ensureFolder, findFolder } from './service.js';
+import { paszport } from './index.js';
+import { createPassport, defaultCycle, ensureFolder, findFolder, getFolder, setFirma, updateFolder } from './service.js';
 
-async function setup() {
-  const deps = testDeps();
+async function setup(over: Partial<AppDeps> = {}) {
+  const deps = testDeps(over);
   seedBase(deps.db);
   const app = createApp(deps, modules);
   const a = addUser(deps, { role: 'admin', name: 'Admin' });
@@ -608,5 +611,113 @@ describe('paszport – numer, link, dane firmy (2b)', () => {
     expect((await call(s, s.admin, 'PUT', '/api/settings/firma', d)).body).toEqual(d);
     expect((await call(s, s.worker, 'GET', '/api/settings/firma')).body).toEqual(d);
     expect((await s.app.request('/api/settings/firma')).status).toBe(401);
+  });
+});
+
+describe('paszport – przypomnienia i „Do serwisu” (P13, P15)', () => {
+  // 2026-11-04 07:00 w Warszawie
+  const T0 = new Date('2026-11-04T06:00:00Z'), TODAY = '2026-11-04';
+  async function rem(o: { mailer?: boolean } = {}) {
+    let now = T0;
+    const sent: Mail[] = [];
+    const s = await setup({ now: () => now, baseUrl: 'https://app.example.com/', ...(o.mailer !== false && { mailer: async (m: Mail) => { sent.push(m); } }) });
+    setFirma(s.deps.db, { nazwa: 'ETNER Instalacje', telefon: '600 100 200', email: 'serwis@example.com', www: 'example.com' });
+    updateClient(s.deps.db, s.a.user.id, s.site.clientId, { emaile: ['jan@example.com', 'drugi@example.com'] });
+    const f = ensureFolder(s.deps.db, s.a.user.id, s.site.id, 'Rekuperacja');
+    const run = () => paszport.cron!.find((c) => c.name === 'paszport-przypomnienia')!.run(s.deps);
+    const setNext = (d: string | null, id = f.id) => updateFolder(s.deps.db, s.a.user.id, id, { nastepnySerwis: d });
+    const errs = () => s.deps.db.$client.prepare("select message from errors where \"where\" = 'cron:paszport-przypomnienia'").all() as { message: string }[];
+    return { s, f, sent, run, setNext, errs, at: (d: Date) => { now = d; } };
+  }
+
+  it('cron 7:00 Warszawa; 30 dni wysłany raz, 7 dni osobno; nowy termin = nowe przypomnienia; teczka bez paszportu też', async () => {
+    const r = await rem();
+    expect(paszport.cron!.find((c) => c.name === 'paszport-przypomnienia')!.schedule).toBe('0 7 * * *');
+    const next = addDays(TODAY, 30);
+    r.setNext(next);
+    await r.run();
+    expect(r.sent).toHaveLength(1);
+    const m = r.sent[0]!;
+    expect(m).toMatchObject({ to: 'jan@example.com', replyTo: 'serwis@example.com', subject: `Przypomnienie: serwis rekuperacja – 04.12.2026` });
+    expect(m.text).toContain('Rekuperacja');
+    expect(m.text).toContain('Krótka 1, Zawoja');
+    expect(m.text).toContain('04.12.2026');
+    expect(m.text).toContain('tel. 600 100 200');
+    expect(m.text).not.toContain('/p/'); // bez paszportu: bez linku, ale przypomnienie idzie (P15)
+    expect(getFolder(r.s.deps.db, r.f.id)).toMatchObject({ wyslano30Dla: next, wyslano7Dla: null });
+    await r.run();
+    expect(r.sent).toHaveLength(1); // drugi przebieg: nic
+    // 23 dni później termin jest za 7 dni: osobne przypomnienie, raz
+    r.at(new Date(T0.getTime() + 23 * 864e5));
+    await r.run(); await r.run();
+    expect(r.sent).toHaveLength(2);
+    expect(getFolder(r.s.deps.db, r.f.id)).toMatchObject({ wyslano30Dla: next, wyslano7Dla: next });
+    // nowy termin po wysyłce: znowu 30 dni (tu: przegapione 30 – termin za 20 dni) i potem 7
+    const next2 = addDays(addDays(TODAY, 23), 20);
+    r.setNext(next2);
+    await r.run();
+    expect(r.sent).toHaveLength(3);
+    expect(r.sent[2]!.subject).toContain(next2.split('-').reverse().join('.'));
+    // termin dziś albo minął: już nie wysyła
+    r.at(new Date(T0.getTime() + 43 * 864e5));
+    await r.run();
+    expect(r.sent).toHaveLength(3);
+    expect(r.errs()).toEqual([]);
+  });
+
+  it('link do paszportu z kotwicą teczki jak na stronie klienta', async () => {
+    const r = await rem();
+    job(r.s, 'Rekuperacja');
+    const k = ensureFolder(r.s.deps.db, r.s.a.user.id, r.s.site.id, 'Klimatyzacja');
+    const p = createPassport(r.s.deps.db, r.s.a.user.id, r.s.site.id, T0);
+    r.setNext(addDays(TODAY, 5), k.id);
+    await r.run();
+    expect(r.sent).toHaveLength(1);
+    const anchor = anchors(['Rekuperacja', 'Klimatyzacja'])[1];
+    expect(r.sent[0]!.text).toContain(`https://app.example.com/p/${p.token}#${anchor}`);
+    expect(r.sent[0]!.html).toContain(`<a href="https://app.example.com/p/${p.token}#${anchor}">`);
+  });
+
+  it('przypomnienia=0, brak terminu, brak e-maila klienta, brak SMTP: bez wysyłki; brak e-maila i SMTP w dzienniku błędów', async () => {
+    const r = await rem();
+    r.setNext(addDays(TODAY, 30));
+    updateFolder(r.s.deps.db, r.s.a.user.id, r.f.id, { przypomnienia: false });
+    await r.run();
+    expect(r.sent).toEqual([]);
+    updateFolder(r.s.deps.db, r.s.a.user.id, r.f.id, { przypomnienia: true, nastepnySerwis: null });
+    await r.run();
+    expect(r.sent).toEqual([]);
+    expect(r.errs()).toEqual([]);
+    r.setNext(addDays(TODAY, 30));
+    updateClient(r.s.deps.db, r.s.a.user.id, r.s.site.clientId, { emaile: [] });
+    await r.run();
+    expect(r.sent).toEqual([]);
+    expect(r.errs()).toHaveLength(1);
+    expect(r.errs()[0]!.message).toContain('Klient bez e-maila');
+    expect(getFolder(r.s.deps.db, r.f.id)?.wyslano30Dla).toBeNull(); // e-mail dopisany później: przypomnienie wyjdzie następnego dnia
+    updateClient(r.s.deps.db, r.s.a.user.id, r.s.site.clientId, { emaile: ['jan@example.com'] });
+    await r.run();
+    expect(r.sent).toHaveLength(1);
+
+    const n = await rem({ mailer: false });
+    n.setNext(addDays(TODAY, 7));
+    await n.run();
+    expect(n.errs()).toHaveLength(1);
+    expect(n.errs()[0]!.message).toContain('Brak konfiguracji SMTP');
+    expect(getFolder(n.s.deps.db, n.f.id)?.wyslano7Dla).toBeNull();
+  });
+
+  it('POST /api/folders/:id/zlecenie-serwisowe: admin, zlecenie w tej teczce (klient, obiekt, kategoria, serwis, miesiąc), jedno na opId', async () => {
+    const s = await setup();
+    const f = ensureFolder(s.deps.db, s.a.user.id, s.site.id, 'Rekuperacja');
+    updateFolder(s.deps.db, s.a.user.id, f.id, { nastepnySerwis: '2026-12-04' });
+    expect((await call(s, s.worker, 'POST', `/api/folders/${f.id}/zlecenie-serwisowe`, { opId: 'op-z' })).status).toBe(403);
+    const r = await call(s, s.admin, 'POST', `/api/folders/${f.id}/zlecenie-serwisowe`, { opId: 'op-z' });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ clientId: s.site.clientId, siteId: s.site.id, kategoria: 'Rekuperacja', rodzaj: 'serwis', termin: '2026-12', status: 'Nowe', ekipa: null });
+    expect((await call(s, s.admin, 'POST', `/api/folders/${f.id}/zlecenie-serwisowe`, { opId: 'op-z' })).body.id).toBe(r.body.id);
+    expect(count(s, 'select count(*) n from jobs')).toBe(1);
+    expect((await teczki(s, s.admin)).find((t) => t.kategoria === 'Rekuperacja').jobIds).toEqual([r.body.id]);
+    expect((await call(s, s.admin, 'POST', '/api/folders/brak/zlecenie-serwisowe', {})).status).toBe(404);
   });
 });

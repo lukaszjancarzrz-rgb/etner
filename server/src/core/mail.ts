@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-export type Mail = { to: string; subject: string; text: string; html: string };
+export type Mail = { to: string; subject: string; text: string; html: string; replyTo?: string };
 export type Mailer = (m: Mail) => Promise<void>;
 
 /** SMTP z env (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM); brak hosta lub nadawcy = undefined (e-maile wyłączone). */
