@@ -47,7 +47,7 @@ export const screens: Record<string, Screen> = {
   jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true }, // admin rzadko: koniec menu
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
   leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
-  paszporty: { title: 'Paszporty', icon: IdentificationCard, component: Paszporty, nav: 'side' },
+  paszporty: { title: 'Paszporty', icon: IdentificationCard, component: Paszporty, nav: 'side', moreOnly: true },
   zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
   auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side' },
   narz: { title: 'Narzędzia', icon: Wrench, component: Narzedzia, nav: 'side' },
@@ -79,7 +79,7 @@ export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.n
 export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && !screens[k]!.moreOnly && (!screens[k]!.admin || admin);
 
 /** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `psz` (teczka) → Paszporty, `kl` i ekrany tylko z Więcej → Więcej. */
-export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'psz' ? 'paszporty' : screen === 'kl' || screens[screen]?.moreOnly ? 'wiecej' : screen);
+export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'psz' ? 'wiecej' : screen === 'kl' || screens[screen]?.moreOnly ? 'wiecej' : screen);
 
 // poprzedni adres w aplikacji (np. po zapisie wpisu: „wstecz”, gdy przyszliśmy z teczki – bez podwójnego wpisu historii)
 let prevHash = '';

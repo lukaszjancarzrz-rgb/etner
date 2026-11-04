@@ -188,14 +188,12 @@ test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie wi
 
 test('zakładka Paszporty: lista obiektów z teczkami, wyszukiwanie, klik → teczka', async ({ page }, info) => {
   await login(page, 'Tomasz Wrona');
-  if (phone(info)) {
-    await page.getByRole('link', { name: /Więcej/ }).first().click();
-    await page.getByRole('link', { name: /^Paszporty/ }).click();
-  } else await page.getByRole('navigation').getByRole('link', { name: 'Paszporty' }).click();
+  await page.getByRole('link', { name: /Więcej/ }).first().click(); // Paszporty w Więcej (telefon i komputer)
+  await page.getByRole('main').getByRole('link', { name: /^Paszporty/ }).click();
   const lista = page.getByRole('region', { name: 'Paszporty' });
   const row = lista.getByRole('listitem').filter({ has: page.getByText('Józef Bukowski', { exact: true }) });
   await expect(row.getByRole('link', { name: /^Rekuperacja/ })).toBeVisible();
-  if (!phone(info)) await expect(page.getByRole('navigation').getByRole('link', { name: 'Paszporty' })).toHaveAttribute('aria-current', 'page');
+  if (!phone(info)) await expect(page.getByRole('navigation').getByRole('link', { name: /^Więcej/ })).toHaveAttribute('aria-current', 'page');
   await page.screenshot({ path: `${shots}task4b-${phone(info) ? 'phone' : 'desktop'}-paszporty.png` });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('searchbox', { name: 'Szukaj paszportu' }).fill('bukowski rekuperacja');
@@ -205,7 +203,7 @@ test('zakładka Paszporty: lista obiektów z teczkami, wyszukiwanie, klik → te
   await page.getByRole('button', { name: 'Wyczyść wyszukiwanie' }).click();
   await row.getByRole('link', { name: /^Rekuperacja/ }).click();
   await expect(page.getByRole('heading', { name: 'Rekuperacja', level: 2 })).toBeVisible();
-  if (!phone(info)) await expect(page.getByRole('navigation').getByRole('link', { name: 'Paszporty' })).toHaveAttribute('aria-current', 'page');
+  if (!phone(info)) await expect(page.getByRole('navigation').getByRole('link', { name: /^Więcej/ })).toHaveAttribute('aria-current', 'page');
 });
 
 test('dziennik: „W paszporcie dla klienta” na miniaturach zdjęć (admin), bez podglądu, także offline', async ({ page }, info) => {
