@@ -63,3 +63,16 @@ export const attachmentPatchSchema = z.object({
   typDok: z.enum(TYP_DOK).nullable().optional(),
 });
 export type AttachmentPatch = z.infer<typeof attachmentPatchSchema>;
+
+/** „Załóż paszport” (pracownik i admin); drugi raz na ten sam obiekt zwraca istniejący. */
+export const passportCreateSchema = z.object({ opId, siteId: teczka.siteId });
+export type PassportCreate = z.infer<typeof passportCreateSchema>;
+
+/** Dane firmy na naklejce i stronie klienta (P9, admin). */
+export const firmaSchema = z.object({
+  nazwa: txt.min(1, 'Wpisz nazwę firmy').max(200, 'Nazwa jest za długa'),
+  telefon: txt.max(50, 'Telefon jest za długi'),
+  email: txt.max(200, 'Adres jest za długi').refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Wpisz poprawny adres e-mail'),
+  www: txt.max(200, 'Adres jest za długi'),
+});
+export type Firma = z.infer<typeof firmaSchema>;

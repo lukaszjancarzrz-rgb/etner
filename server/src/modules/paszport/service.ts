@@ -1,9 +1,11 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { randomBytes } from 'node:crypto';
+import { and, eq, isNull, like } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
-import { newId, type DeviceCreate, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
+import { dayOf, newId, type DeviceCreate, type Firma, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
 import { tx, type Db } from '../../core/db.js';
 import { can } from '../../core/permissions.js';
+import { settings } from '../../core/schema-base.js';
 import type { DictRefs } from '../../core/dict-refs.js';
 import * as dziennik from '../dziennik/service.js';
 import * as klienci from '../klienci/service.js';
@@ -260,4 +262,56 @@ export function addFolderFile(db: Db, by: string, d: Omit<FolderFile, 'opId'>): 
   const ups = dziennik.checkUploads(db, by, [d.uploadId]);
   const folder = folderFor(db, by, d);
   return dziennik.attach(db, by, ups, 'teczka', folder.id, { typDok: d.typDok, dlaKlienta: d.typDok !== 'faktura' && (d.dlaKlienta ?? true) })[0]!;
+}
+
+/** Token linku publicznego: 256 bitów losowych (P7), jawnie w bazie (R65). */
+const newToken = () => randomBytes(32).toString('base64url');
+
+/**
+ * „Załóż paszport”: numer PSZ-RRRR-NNN kolejny w roku (czas polski; liczą się też usunięte, numer nie wraca) i od razu link (R65).
+ * Paszport obiektu już jest – zwraca go. Wywołuj w runOp.
+ */
+export function createPassport(db: Db, by: string, siteId: string, at: Date): PassportRow {
+  const had = passportOf(db, siteId);
+  if (had) return had;
+  if (!klienci.getSite(db, siteId)) throw bad('Nie znaleziono obiektu');
+  const prefix = `PSZ-${dayOf(at).slice(0, 4)}-`;
+  const last = db.select({ numer: passports.numer }).from(passports).where(like(passports.numer, `${prefix}%`)).all()
+    .reduce((m, r) => Math.max(m, Number(r.numer.slice(prefix.length)) || 0), 0);
+  const now = NOW();
+  const row = db.insert(passports).values({
+    id: newId(), siteId, numer: `${prefix}${String(last + 1).padStart(3, '0')}`, token: newToken(), tokenAt: now, createdAt: now, createdBy: by, updatedAt: now,
+  }).returning().get();
+  recordChange(db, by, 'passports', row.id, 'create', null, row);
+  return row;
+}
+
+/** Nowy link (admin): poprzedni token przestaje działać (stare naklejki). undefined = brak paszportu. */
+export function newLink(db: Db, by: string, id: string): PassportRow | undefined {
+  const old = db.select().from(passports).where(and(eq(passports.id, id), isNull(passports.deletedAt))).get();
+  if (!old) return undefined;
+  const now = NOW();
+  const row = db.update(passports).set({ token: newToken(), tokenAt: now, updatedAt: now }).where(eq(passports.id, id)).returning().get();
+  recordChange(db, by, 'passports', id, 'update', old, row);
+  return row;
+}
+
+/** Aktywny paszport po tokenie linku publicznego. */
+export const byToken = (db: Db, token: string): PassportRow | undefined =>
+  db.select().from(passports).where(and(eq(passports.token, token), isNull(passports.deletedAt))).get();
+
+/** Dane firmy (P9) w `settings`: firma_nazwa, firma_telefon, firma_email, firma_www. */
+const FIRMA_DEFAULT: Firma = { nazwa: 'ETNER', telefon: '', email: '', www: '' };
+export function firma(db: Db): Firma {
+  const get = (k: keyof Firma) => db.select().from(settings).where(eq(settings.key, `firma_${k}`)).get()?.value;
+  return Object.fromEntries(Object.entries(FIRMA_DEFAULT).map(([k, v]) => [k, get(k as keyof Firma) ?? v])) as Firma;
+}
+export function setFirma(db: Db, d: Firma): Firma {
+  const now = NOW();
+  tx(db, () => {
+    for (const [k, value] of Object.entries(d)) {
+      db.insert(settings).values({ key: `firma_${k}`, value, updatedAt: now }).onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: now } }).run();
+    }
+  });
+  return firma(db);
 }

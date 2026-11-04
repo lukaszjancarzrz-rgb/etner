@@ -9,7 +9,7 @@ import { modules } from '../index.js';
 import { create as newClient } from '../klienci/service.js';
 import { seedBase } from '../slowniki/seed.js';
 import { list } from '../slowniki/service.js';
-import { defaultCycle, ensureFolder, findFolder } from './service.js';
+import { createPassport, defaultCycle, ensureFolder, findFolder } from './service.js';
 
 async function setup() {
   const deps = testDeps();
@@ -550,5 +550,63 @@ describe('łączenie obiektów (R70)', () => {
     expect((await call(s, s.admin, 'POST', `/api/clients/${s.site.clientId}/merge`, { from: dupC.client.id })).status).toBe(200);
     expect(listSites(s.deps.db, s.site.clientId).map((x) => x.id)).toEqual([s.site.id]);
     expect(zlecenia.get(s.deps.db, j.id)!.siteId).toBe(s.site.id);
+  });
+});
+
+describe('paszport – numer, link, dane firmy (2b)', () => {
+  const kl = () => import('../klienci/service.js');
+  it('numer PSZ-RRRR-NNN kolejny w roku (czas polski), w nowym roku od 001; usunięty numer nie wraca', async () => {
+    const s = await setup();
+    const { addSite } = await kl();
+    const site2 = addSite(s.deps.db, s.a.user.id, s.site.clientId, { adres: 'Długa 2', miejscowosc: 'Zawoja' })!;
+    const site3 = addSite(s.deps.db, s.a.user.id, s.site.clientId, { adres: 'Długa 3', miejscowosc: 'Zawoja' })!;
+    const site4 = addSite(s.deps.db, s.a.user.id, s.site.clientId, { adres: 'Długa 4', miejscowosc: 'Zawoja' })!;
+    const p1 = createPassport(s.deps.db, s.w.user.id, s.site.id, new Date('2026-05-01T10:00:00Z'));
+    expect(p1.numer).toBe('PSZ-2026-001');
+    s.deps.db.$client.prepare("update passports set deleted_at = 'x' where id = ?").run(p1.id);
+    expect(createPassport(s.deps.db, s.w.user.id, site2.id, new Date('2026-12-31T22:30:00Z')).numer).toBe('PSZ-2026-002'); // 31.12 23:30 w Polsce
+    expect(createPassport(s.deps.db, s.w.user.id, site3.id, new Date('2026-12-31T23:30:00Z')).numer).toBe('PSZ-2027-001'); // już 1.01
+    expect(createPassport(s.deps.db, s.w.user.id, site4.id, new Date('2027-02-01T10:00:00Z')).numer).toBe('PSZ-2027-002');
+  });
+
+  it('POST /api/passports: pracownik zakłada (od razu z linkiem), drugi raz na ten obiekt – ten sam paszport; obiekt nieznany 400', async () => {
+    const s = await setup();
+    const r1 = await call(s, s.worker, 'POST', '/api/passports', { opId: 'p-1', siteId: s.site.id });
+    expect(r1.status).toBe(200);
+    expect(r1.body).toMatchObject({ siteId: s.site.id, numer: expect.stringMatching(/^PSZ-\d{4}-001$/) });
+    expect(r1.body.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(r1.body.tokenAt).toBeTruthy();
+    const r2 = await call(s, s.admin, 'POST', '/api/passports', { opId: 'p-2', siteId: s.site.id });
+    expect(r2.body).toMatchObject({ id: r1.body.id, numer: r1.body.numer, token: r1.body.token });
+    expect(count(s, 'select count(*) n from passports')).toBe(1);
+    expect((await call(s, s.worker, 'POST', '/api/passports', { opId: 'p-1', siteId: s.site.id })).body.id).toBe(r1.body.id); // powtórka z kolejki
+    expect((await call(s, s.admin, 'POST', '/api/passports', { siteId: 'brak' })).status).toBe(400);
+    // pracownik dostaje paszport z tokenem w synchronizacji (R65)
+    const ch = (await call(s, s.worker, 'GET', '/api/changes?since=0')).body.changes as any[];
+    expect(ch.find((c) => c.entity === 'passports')?.data).toMatchObject({ token: r1.body.token });
+  });
+
+  it('POST /api/passports/:id/link: tylko admin; nowy token zastępuje stary', async () => {
+    const s = await setup();
+    const p = (await call(s, s.worker, 'POST', '/api/passports', { siteId: s.site.id })).body;
+    expect((await call(s, s.worker, 'POST', `/api/passports/${p.id}/link`)).status).toBe(403);
+    const r = await call(s, s.admin, 'POST', `/api/passports/${p.id}/link`);
+    expect(r.status).toBe(200);
+    const token = (r.body.url as string).split('/p/')[1];
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(token).not.toBe(p.token);
+    expect(s.deps.db.$client.prepare('select token from passports where id = ?').get(p.id)).toEqual({ token });
+    expect((await call(s, s.admin, 'POST', '/api/passports/brak/link')).status).toBe(404);
+  });
+
+  it('GET/PUT /api/settings/firma: odczyt każdy zalogowany, zapis admin', async () => {
+    const s = await setup();
+    expect((await call(s, s.worker, 'GET', '/api/settings/firma')).body).toEqual({ nazwa: 'ETNER', telefon: '', email: '', www: '' });
+    const d = { nazwa: 'ETNER Instalacje', telefon: '600 100 200', email: 'serwis@example.com', www: 'example.com' };
+    expect((await call(s, s.worker, 'PUT', '/api/settings/firma', d)).status).toBe(403);
+    expect((await call(s, s.admin, 'PUT', '/api/settings/firma', { ...d, email: 'zly' })).status).toBe(400);
+    expect((await call(s, s.admin, 'PUT', '/api/settings/firma', d)).body).toEqual(d);
+    expect((await call(s, s.worker, 'GET', '/api/settings/firma')).body).toEqual(d);
+    expect((await s.app.request('/api/settings/firma')).status).toBe(401);
   });
 });

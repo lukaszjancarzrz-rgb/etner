@@ -3,6 +3,7 @@ export * from './dates.js';
 export * from './holidays.js';
 export * from './ids.js';
 export * from './stale.js';
+export * from './slug.js';
 export * from './schemas/users.js';
 export * from './schemas/slowniki.js';
 export * from './schemas/klienci.js';

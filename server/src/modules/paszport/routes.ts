@@ -1,4 +1,4 @@
-import { deviceCreateSchema, deviceUpdateSchema, folderCreateSchema, folderFileSchema, folderUpdateSchema, serviceEntryCreateSchema, serviceEntryUpdateSchema } from '@etner/shared';
+import { firmaSchema, passportCreateSchema, deviceCreateSchema, deviceUpdateSchema, folderCreateSchema, folderFileSchema, folderUpdateSchema, serviceEntryCreateSchema, serviceEntryUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -20,6 +20,19 @@ export function routes(app: Hono, deps: AppDeps): void {
   const me = (c: Context) => c.get('user');
   const isAdmin = (c: Context) => can(me(c), 'admin');
   const folderOut = (c: Context, f: svc.FolderRow) => (isAdmin(c) ? f : svc.folderForWorker(f));
+
+  // Paszport (P3): zakłada pracownik i admin, od razu z linkiem; nowy link (unieważnia stary) tylko admin.
+  app.post('/api/passports', auth, async (c) => {
+    const { opId, siteId } = await body(c, passportCreateSchema);
+    return c.json(runOp(db, opId, me(c).id, () => svc.createPassport(db, me(c).id, siteId, deps.now?.() ?? new Date())).result);
+  });
+  app.post('/api/passports/:id/link', admin, (c) => {
+    const p = svc.newLink(db, me(c).id, c.req.param('id'));
+    if (!p) throw notFound();
+    return c.json({ url: `${(deps.baseUrl ?? '').replace(/\/$/, '')}/p/${p.token}` });
+  });
+  app.get('/api/settings/firma', auth, (c) => c.json(svc.firma(db)));
+  app.put('/api/settings/firma', admin, async (c) => c.json(svc.setFirma(db, await body(c, firmaSchema))));
 
   app.get('/api/sites/:id/teczki', auth, (c) => {
     if (!klienci.getSite(db, c.req.param('id'))) throw notFound();
