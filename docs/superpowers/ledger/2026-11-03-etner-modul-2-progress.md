@@ -51,3 +51,4 @@ Task 7: impl cb95590, 55f9882, e171ffe, 34781b1 (concerns: /p/ in SW denylist; p
 Task 7: review spec ✅ Approved — complete (c2828d2..34781b1, review clean).
 Task 7: minor (deferred): folder label offered for queued-only folder (no anchor); two non-dictionary categories with same slug may order differently phone vs server; iOS share after async blob may be rejected (error shown); QR quiet zone ~2 modules (label margin adds more); e2e „Załóż paszport” conditional + overwrites shared firma; old SW until update; side menu highlights Więcej on site card (moreOnly by design).
 Part 2b controller verification: shared 17, web 104, server 290, build ok; e2e full run 1 fail (toast text matched twice — test locator exact, controller fix), paszport e2e 14 passed. Released 2b to produkcja (no migration).
+Task 8: dispatched (base 96648ad).
