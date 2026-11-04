@@ -14,9 +14,13 @@ const ENT: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ENT[c]!);
 const pl = (d: string) => d.split('-').reverse().join('.');
 
-/** Adres klienta: ostatni wpis X-Forwarded-For (dopisany przez proxy Render; wcześniejsze podaje sam klient), inaczej gniazdo. */
+/**
+ * Adres klienta: nagłówek Cloudflare przed Render (nadpisywany przez Cloudflare), inaczej ostatni wpis X-Forwarded-For
+ * (dopisany przez proxy; wcześniejsze podaje sam klient), inaczej gniazdo. Bez Cloudflare podrobiony nagłówek
+ * pozwala tylko obejść limit (tokeny i tak nie do zgadnięcia), nie zablokować innych.
+ */
 function clientIp(c: Context): string {
-  const fwd = c.req.header('x-forwarded-for')?.split(',').pop()?.trim();
+  const fwd = c.req.header('cf-connecting-ip')?.trim() || c.req.header('x-forwarded-for')?.split(',').pop()?.trim();
   if (fwd) return fwd;
   try { return getConnInfo(c).remote.address ?? '?'; } catch { return '?'; }
 }

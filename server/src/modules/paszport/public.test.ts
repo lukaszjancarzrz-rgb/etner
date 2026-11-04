@@ -124,6 +124,14 @@ describe('strona klienta /p/:token', () => {
     expect((await page(s, 'x', '5.5.5.5')).status).toBe(200);
   }, 60_000);
 
+  it('za Cloudflare limit liczy CF-Connecting-IP (ten sam ostatni wpis X-Forwarded-For dla wielu klientów)', async () => {
+    const s = await setup();
+    const via = (cf: string) => s.app.request('/p/x', { headers: { 'x-forwarded-for': '1.1.1.1, 104.16.0.1', 'cf-connecting-ip': cf } });
+    for (let i = 0; i < 60; i++) expect((await via('4.4.4.4')).status).toBe(200);
+    expect((await via('4.4.4.4')).status).toBe(429);
+    expect((await via('3.3.3.3')).status).toBe(200);
+  });
+
   it('usunięte obiekt, klient, teczka, urządzenie, wpis i plik nie trafiają na stronę', async () => {
     const s = await setup();
     const { p } = await filled(s);
