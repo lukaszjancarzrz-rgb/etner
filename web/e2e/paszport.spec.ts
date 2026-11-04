@@ -240,3 +240,13 @@ test('dziennik: „W paszporcie dla klienta” na miniaturach zdjęć (admin), b
   await page.locator('li[id^="e-"]', { hasText: tag }).getByRole('button', { name: /Zdjęcie/ }).first().click();
   await expect(page.getByRole('dialog').getByRole('switch', { name: 'W paszporcie dla klienta' })).toHaveAttribute('aria-checked', 'true');
 });
+
+test('teczka: „Wróć” prowadzi do listy Paszporty, nazwisko – do karty klienta', async ({ page }) => {
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#paszporty');
+  const lista = page.getByRole('region', { name: 'Paszporty' });
+  await lista.getByRole('listitem').filter({ has: page.getByText('Józef Bukowski', { exact: true }) }).getByRole('link', { name: /^Rekuperacja/ }).click();
+  await expect(page.getByRole('heading', { name: 'Rekuperacja', level: 2 })).toBeVisible();
+  await page.getByRole('link', { name: 'Wróć' }).click();
+  await expect(page).toHaveURL(/#paszporty$/);
+});

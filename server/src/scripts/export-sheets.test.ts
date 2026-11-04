@@ -83,17 +83,17 @@ describe('odporność eksportu', () => {
 });
 
 describe('zadania kopii', () => {
-  it('brak konfiguracji Sheets: pomija i zapisuje ostrzeżenie', async () => {
+  it('brak konfiguracji Sheets: pomija bez wpisu w logu błędów', async () => {
     const deps = testDeps();
     await kopieCrons({}, modules).find((c) => c.name === 'eksport')!.run(deps);
-    expect(deps.db.select().from(errors).where(eq(errors.where, 'eksport')).all().length).toBe(1);
+    expect(deps.db.select().from(errors).where(eq(errors.where, 'eksport')).all().length).toBe(0); // opcjonalne: brak wpisu w logu błędów, tylko ostrzeżenie w konsoli
     expect(deps.db.select().from(settings).where(eq(settings.key, 'kopia_eksport_at')).all()).toHaveLength(0);
   });
 
   it('kopia-zdjec: brak konfiguracji R2 pomija i nie przesuwa kursora', async () => {
     const deps = testDeps();
     await kopieCrons({}, modules).find((c) => c.name === 'kopia-zdjec')!.run(deps);
-    expect(deps.db.select().from(errors).where(eq(errors.where, 'kopia-zdjec')).all()).toHaveLength(1);
+    expect(deps.db.select().from(errors).where(eq(errors.where, 'kopia-zdjec')).all()).toHaveLength(0);
     expect(deps.db.select().from(settings).where(eq(settings.key, 'kopia_zdjec_at')).all()).toHaveLength(0);
   });
 

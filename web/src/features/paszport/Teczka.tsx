@@ -62,8 +62,9 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
   return (
     <article className="mx-auto grid grid-cols-[minmax(0,1fr)] max-w-3xl gap-5 px-4 py-4 desk:py-6">
       <div className="grid gap-1">
-        <a href={back} className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />{client?.nazwa ?? 'Klient'}</a>
+        <a href="#paszporty" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
         <h2 className="font-wide text-2xl font-extrabold leading-tight">{kategoria}</h2>
+        <a href={back} className="justify-self-start text-sm font-semibold text-action hover:underline">{client?.nazwa ?? 'Klient'}</a>
         <p className="text-sm text-ink-2">{[client?.nazwa, site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ')}</p>
       </div>
       <nav aria-label="Teczki obiektu" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">

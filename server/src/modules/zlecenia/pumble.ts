@@ -139,9 +139,12 @@ export async function addPeople(deps: AppDeps, jobId: string, userIds: string[])
     for (const i of todo) added.add(i);
   } catch (e) {
     if (isGlobalPumbleError(e)) throw e;
+    // „User is already part of the channel” (kod 400400) to sukces – osoba już jest w kanale
+    const already = (x: unknown) => /already part of the channel|400400/.test(x instanceof Error ? x.message : String(x));
     const bad: string[] = [];
     for (const i of todo) {
-      try { if (todo.length > 1) { await p.addUsers(cid, [i]); added.add(i); } else bad.push(i); } catch (e2) { if (isGlobalPumbleError(e2)) throw e2; bad.push(i); }
+      if (todo.length === 1 && already(e)) { added.add(i); continue; }
+      try { if (todo.length > 1) { await p.addUsers(cid, [i]); added.add(i); } else bad.push(i); } catch (e2) { if (isGlobalPumbleError(e2)) throw e2; if (already(e2)) added.add(i); else bad.push(i); }
     }
     if (bad.length && !s.badLogged.has(jobId)) {
       s.badLogged.add(jobId);

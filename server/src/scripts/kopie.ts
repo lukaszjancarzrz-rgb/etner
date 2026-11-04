@@ -49,7 +49,6 @@ export function kopieCrons(env: Env, defs: ModuleDef[], sheets?: SheetsClient): 
       async run(deps: AppDeps) {
         if (!env.GOOGLE_SA_JSON || !env.SHEETS_ID) {
           console.warn('Eksport do arkusza pominięty: brak GOOGLE_SA_JSON / SHEETS_ID.');
-          logError(deps.db, 'eksport', new Error('Eksport do arkusza pominięty: brak GOOGLE_SA_JSON / SHEETS_ID.'));
           return;
         }
         await exportToSheets(deps.db, sheets ?? googleSheets(env.GOOGLE_SA_JSON), env.SHEETS_ID, tablesForExport(defs));
@@ -62,7 +61,6 @@ export function kopieCrons(env: Env, defs: ModuleDef[], sheets?: SheetsClient): 
         const { R2_BUCKET: from, R2_BACKUP_BUCKET: to, R2_ENDPOINT: endpoint, R2_KEY: accessKeyId, R2_SECRET: secretAccessKey } = env;
         if (!from || !to || !endpoint || !accessKeyId || !secretAccessKey) {
           console.warn('Kopia zdjęć pominięta: brak R2_BUCKET / R2_BACKUP_BUCKET / R2_ENDPOINT / R2_KEY / R2_SECRET.');
-          logError(deps.db, 'kopia-zdjec', new Error('Kopia zdjęć pominięta: brak konfiguracji R2 lub R2_BACKUP_BUCKET.'));
           return;
         }
         const s3 = new S3Client({ region: 'auto', endpoint, credentials: { accessKeyId, secretAccessKey } });
