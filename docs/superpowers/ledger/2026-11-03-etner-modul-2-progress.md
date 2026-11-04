@@ -42,3 +42,5 @@ Pre-flight scan (2b/2c):
 - Ruling R73: 2b and 2c released together-or-separately as each passes review (owner: „wdróż … ostatnią część”); reminder e-mail text written per spec (owner had not approved wording yet) — cost: owner rewords later, text in one template.
 Tasks 5+6: dispatched one implementer (server, base 76238fd).
 Tasks 5+6: impl 396dd60, 9e417b6 (DONE_WITH_CONCERNS: XFF-first IP, in-memory limiter, numer uniqueness via tx, link without opId); review dispatched.
+Tasks 5+6: review — spec ✅, Needs fixes: rate limiter keyed on client-controlled leftmost XFF + full map → 429 for all (lockout DoS). Fix round 1 dispatched (rightmost XFF, evict oldest; folded minors: CSP font-src, empty/duplicate slug anchors; ⚠️ soft-deleted site → inactive).
+Tasks 5+6: minor (deferred): createPassport timestamps from clock not `at`; no index on passports.token (small table); logo depends on web build; retried /link rotates twice (admin-only, online).
