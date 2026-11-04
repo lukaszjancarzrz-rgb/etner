@@ -62,8 +62,8 @@ describe('strona klienta /p/:token', () => {
     expect(r.status).toBe(200);
     expect(r.headers.get('content-type')).toMatch(/text\/html/);
     const html = await r.text();
-    for (const t of ['Twoja instalacja', p.numer, 'Zawoja', 'ETNER Instalacje', 'Klimatyzator salon', 'Daikin', 'FTXM35', '10.05.2026', '10.05.2031',
-      'Czyszczenie filtrów', 'Wszystko sprawne', '01.10.2026', 'technik ETNER', 'instrukcja-klima.pdf', '20.11.2026',
+    for (const t of ['Paszport instalacji', p.numer, 'Zawoja', 'ETNER Instalacje', 'Klimatyzator salon', 'Daikin', 'FTXM35', '10.05.2026', '10.05.2031',
+      'Czyszczenie filtrów', 'Wszystko sprawne', '01.10.2026', 'instrukcja-klima.pdf', '20.11.2026',
       'id="klimatyzacja"', 'href="#klimatyzacja"', 'id="alarmy-i-monitoring"', 'href="tel:600100200"']) expect(html).toContain(t);
     expect(html).toContain(`mailto:serwis@example.com?subject=${encodeURIComponent(`Serwis – paszport ${p.numer}`)}`);
     expect(html).not.toContain('TAJNE');
