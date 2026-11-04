@@ -137,6 +137,12 @@
 - Consumes: Task 5 (`POST /api/passports`, `POST /api/passports/:id/link`, dane firmy).
 - Produces: `LABEL_SIZES = { '50x30': [400,240], '60x40': [480,320], '100x50': [800,400] }`; `drawLabel(canvas, size, {url, numer, klient, firma}) → void` (piksele z `LABEL_SIZES`; QR po lewej ~300 px, po prawej logo, „ETNER”, „Paszport instalacji”, numer, nazwisko, telefon, www); `labelBlob(): Promise<Blob>`; przyciski „Udostępnij obraz” (`navigator.share({files})`, gdy `canShare`), „Pobierz obraz”, „Drukuj” (`@page` 50×30 mm), „Arkusz A4” (siatka naklejek do druku), „Unieważnij link i utwórz nowy” (admin, potwierdzenie).
 
+**Uzupełnienie (właściciel 2026-11-04) – karta paszportu obiektu („karta nadrzędna”):**
+- Nowy ekran `#psz/<siteId>` (jeden segment; `#psz/<siteId>/<kategoria>` zostaje teczką): nagłówek „Wróć” → `#paszporty`, tytuł = klient, adres obiektu (miejscowość), link do karty klienta; numer paszportu `PSZ-…` (albo przycisk „Załóż paszport”, gdy brak); karta „Kod QR i naklejka” (podgląd QR + przyciski z tego Taska); „Podgląd klienta” (otwiera `/p/:token` w nowej karcie); informacje globalne: kontakt klienta (telefon `tel:`, e-mail), lista teczek obiektu jako kafelki (kategoria, znacznik następnego serwisu, liczba urządzeń / wpisów / plików) prowadzące do teczki, „+ Teczka” (istniejący `AddFolder`), najbliższy termin serwisu z całego obiektu.
+- Teczka: „Wróć” prowadzi do `#psz/<siteId>` (karta obiektu) zamiast `#paszporty`; lista Paszporty: wiersz obiektu (nagłówek) prowadzi do karty obiektu, chipy teczek – do teczek; sekcja „Paszport” na karcie klienta: link „Karta paszportu” do `#psz/<siteId>`.
+- Naklejka teczki (wcześniejsza decyzja właściciela): z teczki opcja „Naklejka tej teczki” – ten sam paszport i token, URL z kotwicą teczki (`/p/:token#<kategoria-slug>`), na naklejce dopisana nazwa kategorii.
+- Pracownik widzi kartę obiektu i naklejkę (offline z tokenem z synchronizacji); „Unieważnij link” tylko admin.
+
 - [ ] **Step 1: Testy:** `naklejka.test.ts` – wymiary każdego rozmiaru z `LABEL_SIZES`; QR zdekodowany z wygenerowanego obrazu = `url` (dekoder w teście: `jsqr` jako devDependency albo porównanie macierzy `QRCode.create(url)`); e2e: „Załóż paszport” → numer `PSZ-…`; „Kod QR i naklejka” pokazuje podgląd; „Pobierz obraz” zwraca PNG; link z naklejki otwiera stronę klienta.
 - [ ] **Step 2:** FAIL. **Step 3:** Implementacja (biblioteka QR ładowana dynamicznie tylko na tym ekranie). **Step 4:** PASS, size w limicie startu. **Step 5:** Commit. **Wydanie 2b na produkcję.**
 

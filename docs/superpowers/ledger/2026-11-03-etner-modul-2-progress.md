@@ -25,3 +25,18 @@ Task 4b: fix round 1/5 (90fa2ed) re-review clean — complete. Verification: sha
 Owner 2026-11-04: „wydaj” — Task 4b released to produkcja.
 Owner 2026-11-04: Word/Excel uploads (docx/xlsx by ZIP part word/ or xl/, doc/xls by OLE magic + extension) — controller change with test; released.
 Owner 2026-11-04: folder „Wróć” → #paszporty; logs: Pumble 'already part of channel' treated as success; missing optional backups (R2_BACKUP_BUCKET, Sheets) no longer logged as errors daily (console warn only); SMTP missing still logged (leady e-mail is requested by owner).
+Owner 2026-11-04: „następny serwis” label; Samochody repair history collapsible (details) — controller changes, released.
+## Owner 2026-11-04: „karta nadrzędna” of a site passport (QR + global info) + deploy rest of module 2 (2b + 2c)
+Plan Task 7 amended (site passport screen `#psz/<siteId>`, folder „Wróć” → site card, folder label option).
+Pre-flight scan (2b/2c):
+| pair / task | produces → consumes | finding |
+| 5→6 | passports.token, firma settings → public page header/inactive page | consistent |
+| 5→7 | POST /api/passports, /link, GET/PUT settings/firma → web screen, Ustawienia | consistent |
+| 6→7 | /p/:token (+#slug anchors) → QR URL, „Podgląd klienta” | amendment needs section anchors by slug in Task 6 — carried in dispatch |
+| 7→8 | routes.tsx, badges | sequential, no conflict |
+| 5 self | tests vs interfaces | consistent |
+| 6 self | CSP no scripts vs plan | consistent |
+| 7 self | amended: route `#psz/<siteId>` one segment vs Teczka parts | consistent (parseHash parts only when >1) |
+| 8 self | „pierwszy status otwarty”, rodzaj „serwis” | must use existing job status/rodzaj dicts — carried in dispatch |
+- Ruling R72: site passport screen at `#psz/<siteId>`; folder „Wróć” → site card (replaces R-owner 2026-11-04 „Wróć” → #paszporty, owner now asked for the parent card) — cost: one extra tap to the list.
+- Ruling R73: 2b and 2c released together-or-separately as each passes review (owner: „wdróż … ostatnią część”); reminder e-mail text written per spec (owner had not approved wording yet) — cost: owner rewords later, text in one template.
