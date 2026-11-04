@@ -40,3 +40,4 @@ Pre-flight scan (2b/2c):
 | 8 self | „pierwszy status otwarty”, rodzaj „serwis” | must use existing job status/rodzaj dicts — carried in dispatch |
 - Ruling R72: site passport screen at `#psz/<siteId>`; folder „Wróć” → site card (replaces R-owner 2026-11-04 „Wróć” → #paszporty, owner now asked for the parent card) — cost: one extra tap to the list.
 - Ruling R73: 2b and 2c released together-or-separately as each passes review (owner: „wdróż … ostatnią część”); reminder e-mail text written per spec (owner had not approved wording yet) — cost: owner rewords later, text in one template.
+Tasks 5+6: dispatched one implementer (server, base 76238fd).
