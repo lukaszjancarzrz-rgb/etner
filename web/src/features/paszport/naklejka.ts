@@ -28,45 +28,60 @@ export function drawLabel(canvas: HTMLCanvasElement, size: LabelSize, d: LabelDa
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, W, H);
 
-  // QR: kwadrat na całą wysokość, całkowita liczba pikseli na moduł (ostre krawędzie), margines min. 2 moduły
+  // QR: ok. 2/3 wysokości (moduł ≥ 3 px ≈ 0,4 mm – czytelny telefonem), cisza 4 moduły od lewej; reszta na tekst
   const qr = QRCode.create(d.url, { errorCorrectionLevel: 'M' }).modules;
-  const px = Math.floor(H / (qr.size + 4));
-  const off = Math.round((H - px * qr.size) / 2);
+  const px = Math.max(3, Math.floor((H * 0.7) / qr.size));
+  const qx = px * 4, qy = Math.round((H - px * qr.size) / 2);
   ctx.fillStyle = '#000';
-  for (let y = 0; y < qr.size; y++) for (let x = 0; x < qr.size; x++) if (qr.data[y * qr.size + x]) ctx.fillRect(off + x * px, off + y * px, px, px);
+  for (let y = 0; y < qr.size; y++) for (let x = 0; x < qr.size; x++) if (qr.data[y * qr.size + x]) ctx.fillRect(qx + x * px, qy + y * px, px, px);
 
-  // tekst po prawej
-  const x0 = off * 2 + px * qr.size - Math.round(6 * u), maxW = W - x0 - Math.round(10 * u);
-  let y = Math.round(16 * u);
-  const line = (text: string, weight: number, fs: number, gap = 4) => {
-    if (!text) return;
-    let f = fs * u;
-    const font = () => `${weight} ${f}px Archivo, system-ui, sans-serif`;
-    ctx.font = font();
-    while (ctx.measureText(text).width > maxW && f > fs * u * 0.75) { f -= u; ctx.font = font(); }
-    let t = text;
-    while (t.length > 1 && ctx.measureText(t).width > maxW) t = t.slice(0, -2) + '…';
-    ctx.textBaseline = 'top';
-    ctx.fillText(t, x0, y);
-    y += f + gap * u;
+  // tekst po prawej: duże litery; za szeroki wiersz – mniejsza czcionka, potem zawinięcie na 2 wiersze
+  const x0 = qx + px * qr.size + Math.round(14 * u), maxW = W - x0 - Math.round(8 * u);
+  const font = (weight: number, f: number) => `${weight} ${f}px Archivo, system-ui, sans-serif`;
+  type L = { text: string; weight: number; fs: number; logo?: boolean };
+  const wrap = (text: string, w: number): string[] => {
+    const words = text.split(' ');
+    let a = words.shift() ?? '';
+    while (words.length && ctx.measureText(`${a} ${words[0]}`).width <= w) a += ` ${words.shift()}`;
+    return words.length ? [a, words.join(' ')] : [a];
   };
-  const logoH = Math.round(28 * u);
-  if (logo) ctx.drawImage(logo, x0, y, logoH, logoH);
-  ctx.save();
-  const lx = x0 + (logo ? logoH + 6 * u : 0);
-  ctx.font = `900 ${24 * u}px Archivo, system-ui, sans-serif`;
-  ctx.textBaseline = 'middle';
-  let name = d.firma.nazwa || 'ETNER';
-  while (name.length > 1 && ctx.measureText(name).width > W - lx - 10 * u) name = name.slice(0, -2) + '…';
-  ctx.fillText(name, lx, y + logoH / 2);
-  ctx.restore();
-  y += logoH + 10 * u;
-  line('Paszport instalacji', 800, 17);
-  line(d.numer, 600, 16);
-  line(d.klient, 600, 16);
-  if (d.kategoria) line(d.kategoria, 800, 16);
-  if (d.firma.telefon) line(`serwis: ${d.firma.telefon}`, 700, 16);
-  line(d.firma.www, 500, 14);
+  const fit = (l: L, k: number): { rows: string[]; f: number } => {
+    const w = maxW - (l.logo && logo ? l.fs * k * u * 1.25 : 0);
+    const max = l.fs * k * u;
+    for (let f = max; f >= max * 0.5; f -= u) {
+      ctx.font = font(l.weight, f);
+      if (ctx.measureText(l.text).width <= w) return { rows: [l.text], f };
+      // od 80% rozmiaru w dół: dwa wiersze zamiast dalszego zmniejszania
+      const r = f <= max * 0.8 ? wrap(l.text, w) : [];
+      if (r.length === 2 && r.every((t) => ctx.measureText(t).width <= w)) return { rows: r, f };
+    }
+    let t = l.text;
+    while (t.length > 1 && ctx.measureText(t).width > w) t = t.slice(0, -2).trimEnd() + '…';
+    return { rows: [t], f: max * 0.5 };
+  };
+  const lines: L[] = [
+    { text: d.firma.nazwa || 'ETNER', weight: 900, fs: 30, logo: true },
+    { text: 'Paszport instalacji', weight: 800, fs: 20 },
+    { text: d.numer, weight: 700, fs: 22 },
+    { text: d.klient, weight: 700, fs: 21 },
+    ...(d.kategoria ? [{ text: d.kategoria, weight: 800, fs: 21 }] : []),
+    ...(d.firma.telefon ? [{ text: `serwis: ${d.firma.telefon}`, weight: 700, fs: 20 }] : []),
+    ...(d.firma.www ? [{ text: d.firma.www, weight: 600, fs: 18 }] : []),
+  ];
+  const gap = 4 * u, pad = 10 * u;
+  const layout = (k: number) => lines.map((l) => ({ l, ...fit(l, k) }));
+  const height = (rows: ReturnType<typeof layout>) => rows.reduce((h, r) => h + r.rows.length * r.f * 1.1 + gap, -gap);
+  let k = 1, rows = layout(k);
+  while (height(rows) > H - 2 * pad && k > 0.6) { k -= 0.05; rows = layout(k); } // za dużo wierszy: wszystko proporcjonalnie mniejsze
+  let y = Math.max(pad, (H - height(rows)) / 2);
+  ctx.textBaseline = 'top';
+  for (const r of rows) {
+    ctx.font = font(r.l.weight, r.f);
+    let x = x0;
+    if (r.l.logo && logo) { ctx.drawImage(logo, x0, y, r.f * 1.05, r.f * 1.05); x += r.f * 1.25; }
+    for (const t of r.rows) { ctx.fillText(t, x, y); y += r.f * 1.1; }
+    y += gap;
+  }
 }
 
 export const labelBlob = (canvas: HTMLCanvasElement): Promise<Blob> =>
