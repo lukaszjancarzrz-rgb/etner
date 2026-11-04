@@ -1,0 +1,103 @@
+import { BellRinging, Briefcase, CalendarBlank, MapPin, Phone } from '@phosphor-icons/react';
+import { useMemo, useState } from 'react';
+import { fmtDay, telHref, today, useDict, useLoading } from '../../core/data.js';
+import { useEntities, type Rec } from '../../core/store.js';
+import { Empty, SectionTitle } from '../../core/ui/bits.js';
+import { Button } from '../../core/ui/button.js';
+import { catStripe, useCatColor } from '../../core/ui/category.js';
+import { Skeleton } from '../../core/ui/skeleton.js';
+import { toast } from '../../core/ui/toast.js';
+import { createVia } from '../../core/write.js';
+import { go } from '../../routes.js';
+import { doSerwisu } from './model.js';
+import { pszHash, SerwisBadge, siteHash } from './Paszport.js';
+import { FolderForm } from './Teczka.js';
+
+type Wiersz = { f: Rec; site: Rec; client?: Rec };
+
+/** `#serwis` „Do serwisu” (admin, P13): teczki z serwisem w 30 dni i zaległe, od najwcześniejszego; teczki bez paszportu też (P15). */
+export function DoSerwisu() {
+  const loading = useLoading();
+  const folders = useEntities('passport_folders');
+  const sites = useEntities('sites');
+  const clients = useEntities('clients');
+  const day = today();
+  const rows = useMemo((): Wiersz[] => {
+    const site = new Map(sites.map((s) => [s.id, s])), client = new Map(clients.map((c) => [c.id, c]));
+    return doSerwisu(folders, day).flatMap((f) => {
+      const s = site.get(f.siteId);
+      return s ? [{ f, site: s, client: client.get(s.clientId) }] : [];
+    });
+  }, [folders, sites, clients, day]);
+
+  if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-40" />)}</div>;
+  const groups: [string, Wiersz[]][] = [['Zaległe', rows.filter((r) => r.f.nastepnySerwis < day)], ['W ciągu 30 dni', rows.filter((r) => r.f.nastepnySerwis >= day)]];
+  return (
+    <section className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)] gap-6 px-4 py-4 desk:py-6" aria-label="Do serwisu">
+      {!rows.length ? <Empty icon={BellRinging} title="Brak serwisów w najbliższych 30 dniach" hint="Termin następnego serwisu ustawisz w teczce albo przy wpisie serwisowym." /> : (
+        groups.map(([title, list]) => !!list.length && (
+          <div key={title} className="grid grid-cols-[minmax(0,1fr)] gap-3">
+            <SectionTitle count={list.length}>{title}</SectionTitle>
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-3" aria-label={title}>{list.map((r) => <Row key={r.f.id} {...r} />)}</ul>
+          </div>
+        ))
+      )}
+    </section>
+  );
+}
+
+function Row({ f, site, client }: Wiersz) {
+  const cat = useCatColor();
+  const status = useDict('status_zlecenia').find((d) => d.grupa === 'aktualne')?.wartosc;
+  const [move, setMove] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const tel = (client?.telefony as string[] | undefined)?.[0];
+  const where = [site.miejscowosc, [site.nazwa, site.adres].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+  const note = [!f.przypomnienia ? 'przypomnienia e-mail wyłączone' : !(client?.emaile as string[] | undefined)?.length && 'klient bez e-maila – przypomnienie nie pójdzie'].filter(Boolean)[0];
+
+  // serwer: klient i obiekt teczki, kategoria, rodzaj „serwis”, termin = miesiąc serwisu, pierwszy status „aktualne”
+  async function zlecenie() {
+    const p = createVia<Rec>('jobs', { kind: 'zlecenie', url: `/api/folders/${f.id}/zlecenie-serwisowe`, method: 'POST', body: {} },
+      { clientId: site.clientId, siteId: site.id, kategoria: f.kategoria, rodzaj: 'serwis', termin: f.nastepnySerwis.slice(0, 7), status, ekipa: null });
+    if (!navigator.onLine) {
+      toast('Zapisane w telefonie', { body: 'Zlecenie wyśle się, gdy wróci zasięg.' });
+      p.catch((x: Error) => toast('Zlecenie nie zostało zapisane', { body: x.message, tone: 'error' }));
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await p;
+      if (r?.id) go(`#zl/${r.id}`);
+    } catch (x) {
+      toast('Zlecenie nie zostało zapisane', { body: (x as Error).message, tone: 'error' });
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <li className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4 shadow-card">
+      <div className="flex items-start justify-between gap-3">
+        <a href={siteHash(site.id)} className="min-w-0 hover:underline">
+          <span className="block font-wide text-lg font-extrabold leading-tight break-words">{client?.nazwa || 'Klient'}</span>
+          <span className="mt-0.5 flex min-w-0 items-start gap-1.5 text-sm text-ink-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /><span className="min-w-0 break-words">{where || 'Obiekt'}</span></span>
+        </a>
+        <span className="grid shrink-0 justify-items-end gap-1">
+          <span className="font-wide font-extrabold tabular-nums">{fmtDay(f.nastepnySerwis)}</span>
+          <SerwisBadge nastepny={f.nastepnySerwis} />
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <a href={pszHash(site.id, f.kategoria)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-3 text-sm font-semibold hover:border-ink-2">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: catStripe(cat(f.kategoria)) }} aria-hidden />
+          Teczka: {f.kategoria}
+        </a>
+        {note && <span className="text-sm text-ink-2">{note}</span>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" disabled={busy} onClick={() => void zlecenie()}><Briefcase className="h-4 w-4" weight="bold" />Zrób zlecenie serwisowe</Button>
+        <Button size="sm" variant="secondary" onClick={() => setMove(true)}><CalendarBlank className="h-4 w-4" />Przesuń termin</Button>
+        {tel && <a href={telHref(tel)} aria-label={`Zadzwoń: ${tel}`} className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold hover:border-ink-2"><Phone className="h-4 w-4" />Zadzwoń</a>}
+      </div>
+      {move && <FolderForm t={{ folder: f, kategoria: f.kategoria }} siteId={site.id} onClose={() => setMove(false)} />}
+    </li>
+  );
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autaCount, badgeText, changedDays, freshByJob, leadyCount, naJutroCount, staleDayKeys, ViewedDays, unseenDays, zadaniaCount, zakupyCount, badgeLabel } from './badges.js';
+import { autaCount, badgeText, changedDays, freshByJob, leadyCount, naJutroCount, staleDayKeys, ViewedDays, unseenDays, zadaniaCount, zakupyCount, badgeLabel, serwisCount } from './badges.js';
 
 const T0 = '2026-10-21T08:00:00.000Z', T1 = '2026-10-21T09:00:00.000Z', T2 = '2026-10-21T10:00:00.000Z';
 const r = (o: Record<string, unknown>) => ({ id: Math.random().toString(36), createdAt: T0, updatedAt: T0, ...o }) as any;
@@ -99,6 +99,14 @@ describe('liczniki w menu', () => {
     expect([1, 2, 4, 5, 12, 14, 22, 25, 101].map((n) => badgeLabel('leady', n))).toEqual([
       ', 1 zaległy kontakt', ', 2 zaległe kontakty', ', 4 zaległe kontakty', ', 5 zaległych kontaktów', ', 12 zaległych kontaktów',
       ', 14 zaległych kontaktów', ', 22 zaległe kontakty', ', 25 zaległych kontaktów', ', 101 zaległych kontaktów']);
+  });
+
+  it('serwisCount: teczki z terminem w 30 dni i zaległe (też bez paszportu), tylko admin', () => {
+    const f = [r({ nastepnySerwis: '2026-11-04' }), r({ nastepnySerwis: '2026-10-01' }), r({ nastepnySerwis: '2026-12-04' }), r({ nastepnySerwis: '2026-12-05' }),
+      r({ nastepnySerwis: null }), r({ nastepnySerwis: '2026-11-10', _tmp: true })];
+    expect(serwisCount(f, '2026-11-04', true)).toBe(3);
+    expect(serwisCount(f, '2026-11-04', false)).toBe(0);
+    expect([1, 3, 5].map((n) => badgeLabel('serwis', n))).toEqual([', 1 teczka do serwisu', ', 3 teczki do serwisu', ', 5 teczek do serwisu']);
   });
 
   it('autaCount: tylko usterki bez dnia naprawy i bez „Naprawione”', () => {

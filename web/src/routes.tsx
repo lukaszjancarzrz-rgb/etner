@@ -1,4 +1,4 @@
-import { Briefcase, CalendarDots, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, Briefcase, CalendarDots, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
 import { lazy, useSyncExternalStore, type ComponentType } from 'react';
 import { More } from './screens/More.js';
 
@@ -39,6 +39,7 @@ const Narzedzia = lazyScreen(() => import('./features/narzedzia/Narzedzia.js').t
 const Magazyn = lazyScreen(() => import('./features/magazyn/Magazyn.js').then((m) => ({ default: m.Magazyn })));
 const Teczka = lazyScreen(() => import('./features/paszport/Teczka.js').then((m) => ({ default: m.Teczka })));
 const Paszporty = lazyScreen(() => import('./features/paszport/Paszporty.js').then((m) => ({ default: m.Paszporty })));
+const DoSerwisu = lazyScreen(() => import('./features/paszport/DoSerwisu.js').then((m) => ({ default: m.DoSerwisu })));
 const Klienci = lazyScreen(() => import('./features/klienci/Klienci.js').then((m) => ({ default: m.Klienci })));
 
 /** Ekrany w kolejności menu. */
@@ -47,6 +48,7 @@ export const screens: Record<string, Screen> = {
   jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true }, // admin rzadko: koniec menu
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
   leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
+  serwis: { title: 'Do serwisu', icon: BellRinging, component: DoSerwisu, nav: 'side', admin: true },
   paszporty: { title: 'Paszporty', icon: IdentificationCard, component: Paszporty, nav: 'side', moreOnly: true },
   zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
   auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side' },

@@ -1,4 +1,4 @@
-import { CaretRight, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, CaretRight, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
 import { badgeLabel, badgeText } from '../core/badges.js';
 import { useBadges } from '../core/layout/useBadges.js';
 import { logout, useSession } from '../core/session.js';
@@ -27,6 +27,7 @@ const GROUPS: { admin?: true; tiles: T[] }[] = [
   ] },
   { admin: true, tiles: [
     { k: 'leady', icon: Handshake, title: 'Leady', hint: 'Zapytania klientów, kontakty, zlecenie z leada' },
+    { k: 'serwis', icon: BellRinging, title: 'Do serwisu', hint: 'Serwisy w 30 dni i zaległe, zlecenie serwisowe' },
     { k: 'zad', icon: ListChecks, title: 'Zadania', hint: 'Sprawy biura: grupy, terminy, cykliczne' },
     { k: 'kl', icon: UsersThree, title: 'Klienci', hint: 'Kontakty, obiekty, leady i zlecenia klienta' },
     { k: 'uz', icon: UserGear, title: 'Użytkownicy', hint: 'Konta, hasła, kolumny harmonogramu' },
@@ -39,7 +40,7 @@ const GROUPS: { admin?: true; tiles: T[] }[] = [
 export const moreGroups = (admin: boolean, desk: boolean): T[][] =>
   GROUPS.filter((g) => !g.admin || admin).map((g) => g.tiles.filter((t) => !(desk ? inSideNav(t.k, admin) : inBottomBar(t.k, admin)))).filter((g) => g.length);
 
-/** Więcej: Samochody, Narzędzia, Rzeczy nietypowe; Leady, Zadania, Klienci, Użytkownicy (admin); Ustawienia; Na jutro (admin); wylogowanie. */
+/** Więcej: Paszporty, Samochody, Narzędzia, Rzeczy nietypowe; Leady, Do serwisu, Zadania, Klienci, Użytkownicy (admin); Ustawienia; Na jutro (admin); wylogowanie. */
 export function More() {
   const { me } = useSession();
   const badges = useBadges();
@@ -51,7 +52,7 @@ export function More() {
       {groups.map((g) => (
         <div key={g[0]!.k} className="grid gap-3">
           {g.map((t) => <Tile key={t.k} href={`#${t.k}`} icon={t.icon} title={t.title} hint={typeof t.hint === 'string' ? t.hint : t.hint(admin)}
-            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'zad' && { count: badges.zad, sr: badgeLabel('zad', badges.zad ?? 0).replace(',', '') })} {...(t.k === 'leady' && { count: badges.leady, sr: badgeLabel('leady', badges.leady ?? 0).replace(',', '') })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
+            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'zad' && { count: badges.zad, sr: badgeLabel('zad', badges.zad ?? 0).replace(',', '') })} {...(t.k === 'leady' && { count: badges.leady, sr: badgeLabel('leady', badges.leady ?? 0).replace(',', '') })} {...(t.k === 'serwis' && { count: badges.serwis, sr: badgeLabel('serwis', badges.serwis ?? 0).replace(',', '') })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
         </div>
       ))}
       {!desk && (

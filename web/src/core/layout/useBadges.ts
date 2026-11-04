@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { autaCount, changedDays, freshByJob, leadyCount, naJutroCount, unseenDays, zadaniaCount, zakupyCount } from '../badges.js';
+import { autaCount, changedDays, freshByJob, leadyCount, naJutroCount, serwisCount, unseenDays, zadaniaCount, zakupyCount } from '../badges.js';
 import { addDays } from '@etner/shared';
 import { daySeenAt, DAY_SEEN_KEEP, ensureSeenBase, seenFor, today, uploadSeen, useDict, useMe, useSeenVersion, useStatusGroup } from '../data.js';
 import { useEntities } from '../store.js';
@@ -43,6 +43,7 @@ export function useBadges(): Record<string, number> {
   const faults = useEntities('car_faults');
   const tasks = useEntities('tasks');
   const leads = useEntities('leads');
+  const folders = useEntities('passport_folders');
   const leadGroup = useStatusGroup('status_leada');
   const first = useDict('status_zakupu')[0]?.wartosc;
   const off = useDict('dzien_wolny');
@@ -58,6 +59,7 @@ export function useBadges(): Record<string, number> {
       auta,
       zad: zadaniaCount(tasks, admin),
       leady: leadyCount(leads, leadGroup, day, admin),
+      serwis: serwisCount(folders, day, admin),
     };
-  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, faults, tasks, leads, leadGroup, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [me, ver, day, harm, checklists, jobs, entries, scope, pumble, shopping, faults, tasks, leads, folders, leadGroup, first, off]); // eslint-disable-line react-hooks/exhaustive-deps
 }

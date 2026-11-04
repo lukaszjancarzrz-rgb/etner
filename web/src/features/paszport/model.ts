@@ -1,3 +1,4 @@
+import { addDays } from '@etner/shared';
 import type { Rec } from '../../core/store.js';
 
 /** Plik teczki z numerem zlecenia, z którego pochodzi (dziennik, zakres prac). */
@@ -87,6 +88,12 @@ export function serwisStan(nastepny: string | null | undefined, today: string): 
   if (n <= 30) return { label: `następny serwis za ${n} ${n === 1 ? 'dzień' : 'dni'}`, tone: 'soon' };
   return { label: `następny serwis ${nastepny.slice(8, 10)}.${nastepny.slice(5, 7)}.${nastepny.slice(0, 4)}`, tone: 'later' };
 }
+
+/** „Do serwisu” (P13, admin; lista i licznik w menu): teczki z terminem w 30 dni albo zaległym, od najwcześniejszego. Bez teczek tylko z kolejki. */
+export const doSerwisu = (folders: Rec[], today: string): Rec[] => {
+  const end = addDays(today, 30);
+  return folders.filter((f) => !f._tmp && f.nastepnySerwis && f.nastepnySerwis <= end).sort((a, b) => a.nastepnySerwis.localeCompare(b.nastepnySerwis));
+};
 
 /** „1 zlecenie”, „2 zlecenia”, „5 zleceń”. */
 export function plural(n: number, [one, few, many]: [string, string, string]): string {

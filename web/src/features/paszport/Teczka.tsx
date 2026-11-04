@@ -133,7 +133,7 @@ function ServiceBar({ t, siteId }: { t: T; siteId: string }) {
 }
 
 /** Edycja teczki: termin, cykl, przypomnienia. Teczka bez wiersza (admin): POST /api/folders, potem PUT. */
-function FolderForm({ t, siteId, onClose }: { t: T; siteId: string; onClose: () => void }) {
+export function FolderForm({ t, siteId, onClose }: { t: Pick<T, 'folder' | 'kategoria'>; siteId: string; onClose: () => void }) {
   const f = t.folder;
   const kat = useDict('kategoria').find((k) => k.wartosc === t.kategoria);
   const [d, setD] = useState<string>(f?.nastepnySerwis ?? '');

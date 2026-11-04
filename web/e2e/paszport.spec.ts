@@ -1,4 +1,4 @@
-import { addMonths, dayOf } from '@etner/shared';
+import { addDays, addMonths, dayOf } from '@etner/shared';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 
@@ -343,4 +343,54 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240),
   await expect(client.getByRole('heading', { name: 'Ten kod nie jest już aktywny' })).toBeVisible();
   await client.goto((await qr.getByTitle(/\/p\//).getAttribute('title'))!);
   await expect(client.getByRole('heading', { name: 'Józef Bukowski', level: 1 })).toBeVisible();
+});
+
+test('Do serwisu: teczka z terminem w 30 dni na liście i w liczniku menu, „Przesuń termin”, „Zrób zlecenie serwisowe” → karta zlecenia; pracownik bez dostępu', async ({ page, browser }, info) => {
+  await login(page, 'Tomasz Wrona');
+  // teczka Klimatyzacja Wojciecha Kolasy (bez paszportu, P15): termin za 10 dni
+  await page.goto('/#zl');
+  await page.getByRole('link', { name: /Wojciech Kolasa/ }).first().click();
+  await page.getByRole('link', { name: 'Paszport → Klimatyzacja' }).click();
+  await expect(page.getByRole('heading', { name: 'Klimatyzacja', level: 2 })).toBeVisible();
+  const today = dayOf(new Date()), soon = addDays(today, 10), later = addDays(today, 20);
+  await page.getByRole('button', { name: 'Zmień' }).click();
+  await page.getByRole('dialog').getByLabel('Następny serwis').fill(soon);
+  await page.getByRole('dialog').getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page.getByText(`Następny serwis: ${fmt(soon)}`)).toBeVisible();
+
+  // licznik: menu boczne (komputer) albo kafelek w Więcej (telefon)
+  if (phone(info)) await page.goto('/#wiecej');
+  const nav = phone(info) ? page.getByRole('main') : page.getByRole('navigation');
+  await nav.getByRole('link', { name: /^Do serwisu.*\d+ tecz\w+ do serwisu/ }).click();
+  await expect(page.getByRole('heading', { name: 'Do serwisu', level: 1 })).toBeVisible();
+  const row = page.getByRole('list', { name: 'W ciągu 30 dni' }).getByRole('listitem').filter({ hasText: 'Wojciech Kolasa' });
+  await expect(row).toContainText(fmt(soon));
+  await expect(row).toContainText('następny serwis za 10 dni');
+  await expect(row).toContainText('klient bez e-maila');
+  await expect(row.getByRole('link', { name: 'Teczka: Klimatyzacja' })).toHaveAttribute('href', /^#psz\/[^/]+\/Klimatyzacja$/);
+  await expect(row.getByRole('link', { name: /^Zadzwoń/ })).toHaveAttribute('href', /^tel:\d+$/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `${shots}task8-${phone(info) ? 'phone' : 'desktop'}-do-serwisu.png`, scale: 'css' });
+
+  // „Przesuń termin”: ten sam formularz co w teczce
+  await row.getByRole('button', { name: 'Przesuń termin' }).click();
+  await page.getByRole('dialog').getByLabel('Następny serwis').fill(later);
+  await page.getByRole('dialog').getByRole('button', { name: 'Zapisz' }).click();
+  await expect(row).toContainText(fmt(later));
+  await expect(row).toContainText('następny serwis za 20 dni');
+
+  // „Zrób zlecenie serwisowe” → karta nowego zlecenia (serwis, Klimatyzacja, miesiąc terminu)
+  await row.getByRole('button', { name: 'Zrób zlecenie serwisowe' }).click();
+  await expect(page).toHaveURL(/#zl\/[0-9A-Z]{26}$/);
+  await expect(page.getByRole('heading', { name: 'Wojciech Kolasa', level: 2 })).toBeVisible();
+  await expect(page.getByRole('main')).toContainText('serwis');
+  await expect(page.getByRole('link', { name: 'Paszport → Klimatyzacja' })).toBeVisible();
+
+  const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
+  const w = await ctx.newPage();
+  await login(w, 'Bartek Gawlik');
+  await expect(w.getByRole('link', { name: /Do serwisu/ })).toHaveCount(0);
+  await w.goto('/#serwis');
+  await expect(w.getByRole('heading', { name: 'Brak dostępu', level: 1 })).toBeVisible();
+  await ctx.close();
 });
