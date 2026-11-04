@@ -205,10 +205,10 @@ export function usePicker(opts: { pdf?: boolean; img?: boolean } = {}) {
       <input ref={cam} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-hidden data-camera onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
       {/* image/* only: mixing in PDF makes Android open the file manager instead of the gallery */}
       <input ref={gal} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-hidden data-gallery onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
-      {opts.pdf !== false && <input ref={doc} type="file" accept="application/pdf" multiple className="sr-only" tabIndex={-1} aria-hidden data-file onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />}
+      {opts.pdf !== false && <input ref={doc} type="file" accept="application/pdf,.pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple className="sr-only" tabIndex={-1} aria-hidden data-file onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />}
       {opts.img !== false && <Button variant="secondary" size="sm" onClick={() => cam.current?.click()}><Camera className="h-5 w-5" />Aparat</Button>}
       {opts.img !== false && <Button variant="secondary" size="sm" onClick={() => gal.current?.click()}><ImageSquare className="h-5 w-5" />Galeria</Button>}
-      {opts.pdf !== false && <Button variant="secondary" size="sm" onClick={() => doc.current?.click()}><FilePdf className="h-5 w-5" />Plik PDF</Button>}
+      {opts.pdf !== false && <Button variant="secondary" size="sm" onClick={() => doc.current?.click()}><FilePdf className="h-5 w-5" />Plik (PDF, Word, Excel)</Button>}
     </>
   );
   return { files, setFiles, busy, previews, buttons };

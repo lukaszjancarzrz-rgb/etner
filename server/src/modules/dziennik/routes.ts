@@ -17,12 +17,21 @@ const MAX = 25 * 1024 * 1024;
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
 const forbidden = () => new HTTPException(403, { message: 'BRAK_UPRAWNIEN' });
 
-/** Rodzaj pliku po magic bytes (deklarowany typ jest ignorowany). */
-function sniff(b: Buffer): { ext: string; mime: string; img: boolean } | null {
+const OLE = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+/** Rodzaj pliku po magic bytes (deklarowany typ jest ignorowany); Word/Excel: kontener ZIP z częścią word/ lub xl/, stary format OLE wg rozszerzenia nazwy. */
+export function sniff(b: Buffer, name = ''): { ext: string; mime: string; img: boolean } | null {
   if (b.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return { ext: 'jpg', mime: 'image/jpeg', img: true };
   if (b.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))) return { ext: 'png', mime: 'image/png', img: true };
   if (b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP') return { ext: 'webp', mime: 'image/webp', img: true };
   if (b.subarray(0, 5).toString('latin1') === '%PDF-') return { ext: 'pdf', mime: 'application/pdf', img: false };
+  if (b.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))) {
+    if (b.includes('word/')) return { ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', img: false };
+    if (b.includes('xl/')) return { ext: 'xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', img: false };
+  }
+  if (b.subarray(0, 8).equals(OLE)) {
+    if (/\.doc$/i.test(name)) return { ext: 'doc', mime: 'application/msword', img: false };
+    if (/\.xls$/i.test(name)) return { ext: 'xls', mime: 'application/vnd.ms-excel', img: false };
+  }
   return null;
 }
 
@@ -39,8 +48,8 @@ export function routes(app: Hono, deps: AppDeps): void {
     if (!(f instanceof File)) throw new HTTPException(400, { message: 'Brak pliku' });
     if (f.size > MAX) throw new HTTPException(413, { message: 'Plik jest za duży (max 25 MB).' });
     const buf = Buffer.from(await f.arrayBuffer());
-    const kind = sniff(buf);
-    if (!kind) throw new HTTPException(415, { message: 'Dozwolone są zdjęcia (JPEG, PNG, WebP) i PDF.' });
+    const kind = sniff(buf, f.name);
+    if (!kind) throw new HTTPException(415, { message: 'Dozwolone są zdjęcia (JPEG, PNG, WebP), PDF, Word i Excel.' });
     const id = newId();
     const k = `att/${id}`;
     let keyView: string | null = null, keyThumb: string | null = null, w: number | null = null, h: number | null = null;

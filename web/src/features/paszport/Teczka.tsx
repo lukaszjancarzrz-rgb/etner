@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FilePdf, FileText, FolderSimplePlus, Images, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
+import { ArrowLeft, Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FileDoc, FilePdf, FileText, FileXls, FolderSimplePlus, Images, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { addMonths } from '@etner/shared';
 import { fmtDay, markSeen, seenFor, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
@@ -232,7 +232,7 @@ function ServiceCard({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<st
   );
 }
 
-const docIcon = (a: Rec) => (a.typDok === 'faktura' ? Receipt : a.mime === 'application/pdf' || /\.pdf$/i.test(a.nazwa ?? '') ? FilePdf : FileText);
+const docIcon = (a: Rec) => (a.typDok === 'faktura' ? Receipt : a.mime === 'application/pdf' || /\.pdf$/i.test(a.nazwa ?? '') ? FilePdf : /word|\.docx?$/i.test(`${a.mime} ${a.nazwa}`) ? FileDoc : /excel|sheet|\.xlsx?$/i.test(`${a.mime} ${a.nazwa}`) ? FileXls : FileText);
 const SOURCE: Record<string, string> = { teczka: 'w teczce', service: 'wpis serwisowy', device: 'urządzenie' };
 
 /** Dokumenty: pliki teczki i z dzienników zleceń (P4, P5); faktury tylko admin (serwer ich pracownikowi nie wysyła). */
@@ -323,7 +323,7 @@ function UploadForm({ t, siteId, kind, onClose }: { t: T; siteId: string; kind: 
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <Sheet title={photo ? 'Dodaj zdjęcia do teczki' : 'Dodaj plik do teczki'} description={photo ? `${t.kategoria}: z aparatu albo z galerii, kilka naraz.` : `${t.kategoria}: projekt, oferta, instrukcja${admin ? ', faktura' : ''} (PDF).`}>
+      <Sheet title={photo ? 'Dodaj zdjęcia do teczki' : 'Dodaj plik do teczki'} description={photo ? `${t.kategoria}: z aparatu albo z galerii, kilka naraz.` : `${t.kategoria}: projekt, oferta, instrukcja${admin ? ', faktura' : ''} (PDF, Word, Excel).`}>
         <form onSubmit={submit} className="grid gap-4">
           <div className="flex flex-wrap gap-2">{buttons}</div>
           {previews}

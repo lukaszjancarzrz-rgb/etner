@@ -100,6 +100,16 @@ describe('dziennik', () => {
     }
   });
 
+  it('Word i Excel (nowy i stary format) przyjmowane, zip bez word/ i xl/ – 415', async () => {
+    const s = await setup();
+    const zip = (part: string) => Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(26), Buffer.from(part)]);
+    const ole = Buffer.concat([Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]), Buffer.alloc(64)]);
+    for (const [b, n] of [[zip('word/document.xml'), 'oferta.docx'], [zip('xl/workbook.xml'), 'kosztorys.xlsx'], [ole, 'stary.doc'], [ole, 'stary.xls']] as const)
+      expect((await upload(s, s.worker, b, n)).status, n).toBe(200);
+    expect((await upload(s, s.worker, zip('inne/plik.txt'), 'a.zip')).status).toBe(415);
+    expect((await upload(s, s.worker, ole, 'a.ppt')).status).toBe(415);
+  });
+
   it('plik .exe: 415', async () => {
     const s = await setup();
     const exe = Buffer.concat([Buffer.from('MZ'), randomBytes(200)]);
