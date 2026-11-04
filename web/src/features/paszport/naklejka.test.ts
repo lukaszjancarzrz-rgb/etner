@@ -1,7 +1,6 @@
-import { anchors } from '@etner/shared';
 import QRCode from 'qrcode';
 import { describe, expect, it } from 'vitest';
-import { drawLabel, LABEL_SIZES, labelUrl, type LabelSize } from './naklejka.js';
+import { drawLabel, LABEL_SIZES, type LabelSize } from './naklejka.js';
 
 /** Płótno w pamięci: zapisuje białe/czarne prostokąty jako piksele (środowisko testów bez canvas). */
 function fakeCanvas() {
@@ -37,22 +36,15 @@ const data = { url: 'https://etner.example/p/AbCdEfGhIjKlMnOpQrStUvWxYz012345678
 describe('naklejka', () => {
   it.each(Object.keys(LABEL_SIZES) as LabelSize[])('rozmiar %s: piksele z LABEL_SIZES, QR = url, tekst', (size) => {
     const c = fakeCanvas();
-    drawLabel(c, size, { ...data, kategoria: 'Rekuperacja' });
+    drawLabel(c, size, data);
     expect([c.width, c.height]).toEqual(LABEL_SIZES[size]);
     const want = QRCode.create(data.url, { errorCorrectionLevel: 'M' }).modules;
     expect(readQr(c, want.size)).toEqual([...want.data].map(Boolean));
-    expect(c.texts).toEqual(expect.arrayContaining(['ETNER', 'Paszport instalacji', 'PSZ-2026-014', 'Rekuperacja', 'serwis: 600 000 000', 'etner.example']));
+    expect(c.texts).toEqual(expect.arrayContaining(['ETNER', 'Paszport instalacji', 'PSZ-2026-014', 'serwis: 600 000 000', 'etner.example']));
   });
 
   it('203 dpi: 8 px na mm', () => {
     for (const [k, [w, h]] of Object.entries(LABEL_SIZES)) expect(k).toBe(`${w / 8}x${h / 8}`);
   });
 
-  it('adres teczki: kotwica jak na stronie klienta (anchors na wszystkich teczkach obiektu)', () => {
-    const k = ['Rekuperacja', 'Klimatyzacja', 'Fotowoltaika'];
-    expect(labelUrl('https://a.pl', 'TOK')).toBe('https://a.pl/p/TOK');
-    expect(labelUrl('https://a.pl', 'TOK', k, 'Klimatyzacja')).toBe(`https://a.pl/p/TOK#${anchors(k)[1]}`);
-    expect(labelUrl('https://a.pl', 'TOK', ['A/B', 'A B'], 'A B')).toBe('https://a.pl/p/TOK#a-b-2');
-    expect(labelUrl('https://a.pl', 'TOK', k, 'Nie ma')).toBe('https://a.pl/p/TOK');
-  });
 });

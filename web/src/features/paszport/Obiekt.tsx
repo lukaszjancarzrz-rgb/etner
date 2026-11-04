@@ -7,7 +7,6 @@ import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia } from '../../core/write.js';
-import { kategorieSerwera } from './model.js';
 import { PaszportSekcja, pszHash, SerwisBadge, useTeczki } from './Paszport.js';
 
 const Naklejka = lazy(() => import('./Naklejka.js'));
@@ -81,7 +80,7 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
         <SectionTitle>Kod QR i naklejka</SectionTitle>
         {ready ? (
           <Suspense fallback={<Skeleton className="h-48" />}>
-            <Naklejka passport={passport} klient={klient} kategorie={kategorieSerwera(teczki)} />
+            <Naklejka passport={passport} klient={klient} />
           </Suspense>
         ) : <p className="flex items-center gap-2 text-sm text-ink-2"><QrCode className="h-5 w-5 shrink-0" aria-hidden />{passport ? 'Naklejka będzie gotowa, gdy paszport dostanie numer (po połączeniu).' : 'Naklejkę wydrukujesz po założeniu paszportu.'}</p>}
       </section>

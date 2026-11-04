@@ -256,7 +256,7 @@ test('teczka: „Wróć” prowadzi do karty paszportu obiektu, jej „Wróć”
   await expect(page).toHaveURL(/#paszporty$/);
 });
 
-test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240), link z naklejki → strona klienta, naklejka teczki, nowy link', async ({ page, browser }, info) => {
+test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240), link z naklejki → strona klienta, nowy link', async ({ page, browser }, info) => {
   await login(page, 'Tomasz Wrona');
   // dane firmy na naklejkę (Ustawienia, admin)
   await page.goto('/#ust');
@@ -311,18 +311,6 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240),
   await expect(client.getByRole('heading', { name: 'Józef Bukowski', level: 1 })).toBeVisible();
   await expect(client.getByText(`Paszport ${psz}`)).toBeVisible();
 
-  // naklejka teczki: ten sam token, kotwica sekcji teczki
-  await page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: /^Rekuperacja/ }).click();
-  await page.getByRole('button', { name: 'Naklejka tej teczki' }).click();
-  const dlg = page.getByRole('dialog', { name: 'Naklejka teczki: Rekuperacja' });
-  await expect(dlg.getByRole('img', { name: `Podgląd naklejki ${psz}, teczka Rekuperacja` })).toBeVisible();
-  const furl = (await dlg.getByTitle(/\/p\//).getAttribute('title'))!;
-  expect(furl).toBe(`${url}#rekuperacja`);
-  if (!phone(info)) await page.screenshot({ path: `${shots}task7-desktop-folder-label.png` });
-  await client.goto(furl);
-  await expect(client.locator('section#rekuperacja h2')).toHaveText('Rekuperacja');
-  await page.keyboard.press('Escape');
-
   // pracownik: karta obiektu i naklejka, bez „Unieważnij link”
   const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
   const w = await ctx.newPage();
@@ -335,7 +323,7 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240),
   await ctx.close();
 
   // admin: nowy link po potwierdzeniu; stary przestaje działać
-  await page.goto(`/${site}`);
+  await page.reload();
   await qr.getByRole('button', { name: 'Unieważnij link i utwórz nowy' }).click();
   await page.getByRole('dialog', { name: 'Unieważnić link?' }).getByRole('button', { name: 'Unieważnij i utwórz nowy' }).click();
   await expect(qr.getByTitle(/\/p\//)).not.toHaveAttribute('title', url);

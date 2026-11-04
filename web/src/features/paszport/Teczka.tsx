@@ -1,5 +1,5 @@
-import { ArrowLeft, Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FileDoc, FilePdf, FileText, FileXls, FolderSimplePlus, Images, PencilSimple, Plus, QrCode, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FileDoc, FilePdf, FileText, FileXls, FolderSimplePlus, Images, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
+import { useEffect, useMemo, useState } from 'react';
 import { addMonths } from '@etner/shared';
 import { fmtDay, markSeen, seenFor, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
@@ -19,13 +19,12 @@ import type { Route } from '../../routes.js';
 import { KlientToggle, fileUrl, usePicker } from '../dziennik/Diary.js';
 import { Viewer } from '../dziennik/Viewer.js';
 import { fmtTermin } from '../zlecenia/JobCard.js';
-import { TYP_LABEL, freshIn, kategorieSerwera, plural, seenKey, target, typOptions, type Plik, type Teczka as T } from './model.js';
-import { KartaObiektu, usePassport } from './Obiekt.js';
+import { TYP_LABEL, freshIn, plural, seenKey, target, typOptions, type Plik, type Teczka as T } from './model.js';
+import { KartaObiektu } from './Obiekt.js';
 import { AddFolder, SerwisBadge, pszHash, siteHash, useCanEdit, useTeczki } from './Paszport.js';
 import { DeviceForm } from './Urzadzenie.js';
 import { WpisSerwisowy } from './WpisSerwisowy.js';
 
-const Naklejka = lazy(() => import('./Naklejka.js'));
 const fail = (what: string) => (x: Error) => toast(what, { body: x.message, tone: 'error' });
 
 /** `#psz/<siteId>` – karta paszportu obiektu; `#psz/<siteId>/<kategoria>` – teczka; `/wpis` – nowy wpis serwisowy, `/wpis/<id>` – edycja. */
@@ -45,8 +44,6 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
   const t = teczki.find((x) => x.kategoria === kategoria);
   const cat = useCatColor();
   const [adding, setAdding] = useState(false);
-  const [label, setLabel] = useState(false);
-  const passport = usePassport(siteId);
   // „nowe” od ostatniej wizyty teczki (jak w karcie zlecenia): chwila z otwarcia trzymana do wyjścia
   const me = useMe();
   const key = seenKey(siteId, kategoria);
@@ -69,7 +66,6 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
       <div className="grid gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <a href={siteHash(siteId)} className="inline-flex h-11 items-center gap-2 font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
-          {passport && !passport._tmp && passport.token && <Button variant="secondary" size="sm" onClick={() => setLabel(true)}><QrCode className="h-4 w-4" />Naklejka tej teczki</Button>}
         </div>
         <h2 className="font-wide text-2xl font-extrabold leading-tight">{kategoria}</h2>
         <a href={back} className="justify-self-start text-sm font-semibold text-action hover:underline">{client?.nazwa ?? 'Klient'}</a>
@@ -85,13 +81,6 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
         {admin && <Button variant="secondary" size="icon" className="h-11 w-11" aria-label="Dodaj teczkę" onClick={() => setAdding(true)}><FolderSimplePlus className="h-5 w-5" /></Button>}
       </nav>
       {adding && <AddFolder siteId={siteId} have={teczki.map((x) => x.kategoria)} onClose={() => setAdding(false)} />}
-      {label && passport && (
-        <Dialog open onOpenChange={(o) => !o && setLabel(false)}>
-          <Sheet title={`Naklejka teczki: ${kategoria}`} description="Ten sam paszport i link; kod prowadzi od razu do tej teczki na stronie klienta.">
-            <Suspense fallback={<Skeleton className="h-48" />}><Naklejka passport={passport} klient={client?.nazwa ?? 'Klient'} kategorie={kategorieSerwera(teczki)} kategoria={kategoria} /></Suspense>
-          </Sheet>
-        </Dialog>
-      )}
       <ServiceBar t={t} siteId={siteId} />
       <Devices t={t} siteId={siteId} fresh={fresh} />
       <ServiceCard t={t} siteId={siteId} fresh={fresh} />

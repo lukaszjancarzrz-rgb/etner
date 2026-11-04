@@ -1,4 +1,3 @@
-import { anchors } from '@etner/shared';
 import QRCode from 'qrcode';
 
 /** Naklejki pod drukarkę termiczną 203 dpi (8 px/mm): rozmiar → [szerokość, wysokość] w pikselach. */
@@ -7,16 +6,7 @@ export type LabelSize = keyof typeof LABEL_SIZES;
 export const mm = (size: LabelSize) => size.split('x').map(Number) as [number, number];
 
 export type Firma = { nazwa: string; telefon: string; www: string };
-export type LabelData = { url: string; numer: string; klient: string; firma: Firma; kategoria?: string };
-
-/**
- * Adres z naklejki: strona klienta, dla teczki z kotwicą jej sekcji. Kotwice jak na serwerze (public.ts):
- * `anchors()` na liście wszystkich teczek obiektu w tej samej kolejności (słownik).
- */
-export function labelUrl(origin: string, token: string, kategorie?: string[], kategoria?: string): string {
-  const i = kategoria ? kategorie?.indexOf(kategoria) ?? -1 : -1;
-  return `${origin}/p/${token}${i >= 0 ? `#${anchors(kategorie!)[i]}` : ''}`;
-}
+export type LabelData = { url: string; numer: string; klient: string; firma: Firma };
 
 /** Czarny QR na białym; czysty tekst – druk termiczny bez szarości poza logo. */
 export function drawLabel(canvas: HTMLCanvasElement, size: LabelSize, d: LabelData, logo?: CanvasImageSource): void {
@@ -64,7 +54,6 @@ export function drawLabel(canvas: HTMLCanvasElement, size: LabelSize, d: LabelDa
     { text: 'Paszport instalacji', weight: 800, fs: 20 },
     { text: d.numer, weight: 700, fs: 22 },
     { text: d.klient, weight: 700, fs: 21 },
-    ...(d.kategoria ? [{ text: d.kategoria, weight: 800, fs: 21 }] : []),
     ...(d.firma.telefon ? [{ text: `serwis: ${d.firma.telefon}`, weight: 700, fs: 20 }] : []),
     ...(d.firma.www ? [{ text: d.firma.www, weight: 600, fs: 18 }] : []),
   ];
