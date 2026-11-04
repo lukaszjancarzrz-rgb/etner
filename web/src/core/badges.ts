@@ -95,7 +95,7 @@ export const leadyCount = (leads: Rec[], group: (status: string) => string, toda
   admin ? leads.filter((l) => isOverdue(l, group(l.status), today)).length : 0;
 
 /** Do serwisu (admin): teczki z terminem w 30 dni i zaległe, ta sama reguła co lista „Do serwisu”. */
-export const serwisCount = (folders: Rec[], today: string, admin: boolean): number => (admin ? doSerwisu(folders, today).length : 0);
+export const serwisCount = (folders: Rec[], today: string, admin: boolean, sites: Rec[], clients: Rec[]): number => (admin ? doSerwisu(folders, today, sites, clients).length : 0);
 
 const zaleglych = (n: number) => (n === 1 ? 'zaległy kontakt' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zaległe kontakty' : 'zaległych kontaktów');
 

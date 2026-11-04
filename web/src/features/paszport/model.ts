@@ -89,10 +89,20 @@ export function serwisStan(nastepny: string | null | undefined, today: string): 
   return { label: `następny serwis ${nastepny.slice(8, 10)}.${nastepny.slice(5, 7)}.${nastepny.slice(0, 4)}`, tone: 'later' };
 }
 
-/** „Do serwisu” (P13, admin; lista i licznik w menu): teczki z terminem w 30 dni albo zaległym, od najwcześniejszego. Bez teczek tylko z kolejki. */
-export const doSerwisu = (folders: Rec[], today: string): Rec[] => {
+/** Wiersz „Do serwisu”: teczka z obiektem i klientem. */
+export type DoSerwisuRow = { f: Rec; site: Rec; client: Rec };
+/**
+ * „Do serwisu” (P13, admin; lista i licznik w menu): teczki z terminem w 30 dni albo zaległym, od najwcześniejszego.
+ * Bez teczek tylko z kolejki i bez teczek, których obiektu lub klienta nie ma (usunięte) – licznik = lista.
+ */
+export const doSerwisu = (folders: Rec[], today: string, sites: Rec[], clients: Rec[]): DoSerwisuRow[] => {
   const end = addDays(today, 30);
-  return folders.filter((f) => !f._tmp && f.nastepnySerwis && f.nastepnySerwis <= end).sort((a, b) => a.nastepnySerwis.localeCompare(b.nastepnySerwis));
+  const site = new Map(sites.map((s) => [s.id, s])), client = new Map(clients.map((c) => [c.id, c]));
+  return folders.filter((f) => !f._tmp && f.nastepnySerwis && f.nastepnySerwis <= end).sort((a, b) => a.nastepnySerwis.localeCompare(b.nastepnySerwis))
+    .flatMap((f) => {
+      const s = site.get(f.siteId), c = s && client.get(s.clientId);
+      return s && c ? [{ f, site: s, client: c }] : [];
+    });
 };
 
 /** „1 zlecenie”, „2 zlecenia”, „5 zleceń”. */

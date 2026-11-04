@@ -9,11 +9,14 @@ import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia } from '../../core/write.js';
 import { go } from '../../routes.js';
-import { doSerwisu } from './model.js';
+import { doSerwisu, type DoSerwisuRow } from './model.js';
 import { pszHash, SerwisBadge, siteHash } from './Paszport.js';
 import { FolderForm } from './Teczka.js';
 
-type Wiersz = { f: Rec; site: Rec; client?: Rec };
+type Wiersz = DoSerwisuRow;
+
+/** Teczki, dla których w tej sesji zlecenie serwisowe już wysłano lub czeka w kolejce (podwójne dotknięcie offline = dwa zlecenia). */
+const ordered = new Set<string>();
 
 /** `#serwis` „Do serwisu” (admin, P13): teczki z serwisem w 30 dni i zaległe, od najwcześniejszego; teczki bez paszportu też (P15). */
 export function DoSerwisu() {
@@ -22,13 +25,7 @@ export function DoSerwisu() {
   const sites = useEntities('sites');
   const clients = useEntities('clients');
   const day = today();
-  const rows = useMemo((): Wiersz[] => {
-    const site = new Map(sites.map((s) => [s.id, s])), client = new Map(clients.map((c) => [c.id, c]));
-    return doSerwisu(folders, day).flatMap((f) => {
-      const s = site.get(f.siteId);
-      return s ? [{ f, site: s, client: client.get(s.clientId) }] : [];
-    });
-  }, [folders, sites, clients, day]);
+  const rows = useMemo(() => doSerwisu(folders, day, sites, clients), [folders, sites, clients, day]);
 
   if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-40" />)}</div>;
   const groups: [string, Wiersz[]][] = [['Zaległe', rows.filter((r) => r.f.nastepnySerwis < day)], ['W ciągu 30 dni', rows.filter((r) => r.f.nastepnySerwis >= day)]];
@@ -50,27 +47,28 @@ function Row({ f, site, client }: Wiersz) {
   const cat = useCatColor();
   const status = useDict('status_zlecenia').find((d) => d.grupa === 'aktualne')?.wartosc;
   const [move, setMove] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(() => ordered.has(f.id));
   const tel = (client?.telefony as string[] | undefined)?.[0];
   const where = [site.miejscowosc, [site.nazwa, site.adres].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
   const note = [!f.przypomnienia ? 'przypomnienia e-mail wyłączone' : !(client?.emaile as string[] | undefined)?.length && 'klient bez e-maila – przypomnienie nie pójdzie'].filter(Boolean)[0];
 
   // serwer: klient i obiekt teczki, kategoria, rodzaj „serwis”, termin = miesiąc serwisu, pierwszy status „aktualne”
   async function zlecenie() {
+    if (ordered.has(f.id)) return;
+    ordered.add(f.id);
+    setBusy(true);
     const p = createVia<Rec>('jobs', { kind: 'zlecenie', url: `/api/folders/${f.id}/zlecenie-serwisowe`, method: 'POST', body: {} },
       { clientId: site.clientId, siteId: site.id, kategoria: f.kategoria, rodzaj: 'serwis', termin: f.nastepnySerwis.slice(0, 7), status, ekipa: null });
+    const failed = (x: Error) => { ordered.delete(f.id); setBusy(false); toast('Zlecenie nie zostało zapisane', { body: x.message, tone: 'error' }); };
     if (!navigator.onLine) {
       toast('Zapisane w telefonie', { body: 'Zlecenie wyśle się, gdy wróci zasięg.' });
-      p.catch((x: Error) => toast('Zlecenie nie zostało zapisane', { body: x.message, tone: 'error' }));
+      p.catch(failed);
       return;
     }
-    setBusy(true);
     try {
       const r = await p;
       if (r?.id) go(`#zl/${r.id}`);
-    } catch (x) {
-      toast('Zlecenie nie zostało zapisane', { body: (x as Error).message, tone: 'error' });
-    } finally { setBusy(false); }
+    } catch (x) { failed(x as Error); }
   }
 
   return (

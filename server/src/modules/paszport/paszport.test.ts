@@ -2,7 +2,7 @@ import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { createApp, type AppDeps } from '../../app.js';
 import type { Mail } from '../../core/mail.js';
-import { addDays, anchors } from '@etner/shared';
+import { addDays } from '@etner/shared';
 import * as zlecenia from '../zlecenia/service.js';
 import { runOp } from '../../core/ops.js';
 import { dict } from '../slowniki/schema.js';
@@ -12,7 +12,8 @@ import { create as newClient, update as updateClient } from '../klienci/service.
 import { seedBase } from '../slowniki/seed.js';
 import { list } from '../slowniki/service.js';
 import { paszport } from './index.js';
-import { createPassport, defaultCycle, ensureFolder, findFolder, getFolder, setFirma, updateFolder } from './service.js';
+import { createDevice, createPassport, defaultCycle, ensureFolder, findFolder, getDevice, getFolder, removeDevice, setFirma, updateFolder } from './service.js';
+import { clients } from '../klienci/schema.js';
 
 async function setup(over: Partial<AppDeps> = {}) {
   const deps = testDeps(over);
@@ -665,7 +666,7 @@ describe('paszport – przypomnienia i „Do serwisu” (P13, P15)', () => {
     expect(r.errs()).toEqual([]);
   });
 
-  it('link do paszportu z kotwicą teczki jak na stronie klienta', async () => {
+  it('link do całego paszportu (bez kotwicy teczki)', async () => {
     const r = await rem();
     job(r.s, 'Rekuperacja');
     const k = ensureFolder(r.s.deps.db, r.s.a.user.id, r.s.site.id, 'Klimatyzacja');
@@ -673,9 +674,10 @@ describe('paszport – przypomnienia i „Do serwisu” (P13, P15)', () => {
     r.setNext(addDays(TODAY, 5), k.id);
     await r.run();
     expect(r.sent).toHaveLength(1);
-    const anchor = anchors(['Rekuperacja', 'Klimatyzacja'])[1];
-    expect(r.sent[0]!.text).toContain(`https://app.example.com/p/${p.token}#${anchor}`);
-    expect(r.sent[0]!.html).toContain(`<a href="https://app.example.com/p/${p.token}#${anchor}">`);
+    const url = `https://app.example.com/p/${p.token}`;
+    expect(r.sent[0]!.text).toContain(`instalacji (historia serwisów i dokumenty): ${url}\n`);
+    expect(r.sent[0]!.text).not.toContain('#');
+    expect(r.sent[0]!.html).toContain(`<a href="${url}">${url}</a>`);
   });
 
   it('przypomnienia=0, brak terminu, brak e-maila klienta, brak SMTP: bez wysyłki; brak e-maila i SMTP w dzienniku błędów', async () => {
@@ -705,6 +707,25 @@ describe('paszport – przypomnienia i „Do serwisu” (P13, P15)', () => {
     expect(n.errs()).toHaveLength(1);
     expect(n.errs()[0]!.message).toContain('Brak konfiguracji SMTP');
     expect(getFolder(n.s.deps.db, n.f.id)?.wyslano7Dla).toBeNull();
+  });
+
+  it('P15: wszystkie urządzenia teczki usunięte = bez przypomnień (nowe urządzenie przywraca); usunięty klient – bez wysyłki i bez wpisu w dzienniku', async () => {
+    const r = await rem();
+    r.setNext(addDays(TODAY, 30));
+    const d = createDevice(r.s.deps.db, r.s.a.user.id, { folderId: r.f.id, nazwa: 'Rekuperator', dlaKlienta: true } as never);
+    removeDevice(r.s.deps.db, r.s.a.user.id, getDevice(r.s.deps.db, d.id)!);
+    await r.run();
+    expect(r.sent).toEqual([]);
+    createDevice(r.s.deps.db, r.s.a.user.id, { folderId: r.f.id, nazwa: 'Rekuperator 2', dlaKlienta: true } as never);
+    await r.run();
+    expect(r.sent).toHaveLength(1);
+
+    const k = await rem();
+    k.setNext(addDays(TODAY, 7));
+    k.s.deps.db.update(clients).set({ deletedAt: T0.toISOString() }).run();
+    await k.run();
+    expect(k.sent).toEqual([]);
+    expect(k.errs()).toEqual([]);
   });
 
   it('POST /api/folders/:id/zlecenie-serwisowe: admin, zlecenie w tej teczce (klient, obiekt, kategoria, serwis, miesiąc), jedno na opId', async () => {

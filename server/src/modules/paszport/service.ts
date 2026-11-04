@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { and, eq, gt, isNull, like, lte } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
-import { addDays, anchors, dayOf, newId, type DeviceCreate, type Firma, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
+import { addDays, dayOf, newId, type DeviceCreate, type Firma, type DeviceUpdate, type FolderFile, type FolderUpdate, type ServiceEntryCreate, type ServiceEntryUpdate, type User } from '@etner/shared';
 import type { AppDeps } from '../../app.js';
 import { recordChange } from '../../core/changes.js';
 import { logError } from '../../core/errors.js';
@@ -371,20 +371,28 @@ export function reminderMail(d: { firma: Firma; kategoria: string; adres: string
   ].join('\n');
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
   const link = d.link && esc(d.link);
-  const html = `<div style="font-family:sans-serif;line-height:1.5">${(link ? esc(text).replace(link, `<a href="${link}">${link}</a>`) : esc(text)).replace(/\n/g, '<br>')}</div>`;
+  const body = link ? esc(text).split(link).join(`<a href="${link}">${link}</a>`) : esc(text);
+  const html = `<div style="font-family:sans-serif;line-height:1.5">${body.split('\n').join('<br>')}</div>`;
   return { subject: `Przypomnienie: serwis ${d.kategoria.toLowerCase()} – ${plDay(d.dzien)}`, text, html, ...(f.email && { replyTo: f.email }) };
 }
+
+/** P15: urządzenia teczki usunięte (były i żadne nie zostało) = koniec przypomnień; teczka, która nigdy nie miała urządzeń, dostaje je dalej. Nowe urządzenie przywraca. */
+const devicesRemoved = (db: Db, folderId: string): boolean => {
+  const rows = db.select({ deletedAt: devices.deletedAt }).from(devices).where(eq(devices.folderId, folderId)).all();
+  return rows.length > 0 && rows.every((r) => r.deletedAt);
+};
 
 /**
  * Przypomnienia e-mail o serwisie (P13, cron 7:00): teczki z przypomnieniami i terminem w (dziś, dziś+7] dostają „7 dni”, w (dziś+7, dziś+30] – „30 dni”
  * (też przegapione, np. termin ustawiony na za 20 dni); każde raz na termin (`wyslano_7_dla` / `wyslano_30_dla`), nowy termin = nowe przypomnienia.
- * Teczka bez paszportu też (P15). Brak SMTP albo e-maila klienta: bez wysyłki i bez znacznika (wyśle się następnego dnia, gdy się pojawi), wpis w dzienniku błędów raz na przebieg.
+ * Teczka bez paszportu też (P15); bez przypomnień, gdy urządzenia teczki usunięto albo obiekt/klient jest usunięty. Brak SMTP albo e-maila klienta: bez wysyłki i bez znacznika (wyśle się następnego dnia, gdy się pojawi), wpis w dzienniku błędów raz na przebieg.
  */
 export async function sendReminders(deps: AppDeps): Promise<number> {
   const { db } = deps;
   const today = dayOf((deps.now ?? (() => new Date()))());
   const due = db.select().from(passportFolders).where(and(eq(passportFolders.przypomnienia, true), isNull(passportFolders.deletedAt),
     gt(passportFolders.nastepnySerwis, today), lte(passportFolders.nastepnySerwis, addDays(today, 30)))).all()
+    .filter((f) => !devicesRemoved(db, f.id))
     .flatMap((f) => {
       const week = f.nastepnySerwis! <= addDays(today, 7);
       return (week ? f.wyslano7Dla : f.wyslano30Dla) === f.nastepnySerwis ? [] : [{ f, field: week ? 'wyslano7Dla' as const : 'wyslano30Dla' as const }];
@@ -399,12 +407,13 @@ export async function sendReminders(deps: AppDeps): Promise<number> {
   let sent = 0;
   for (const { f, field } of due) {
     const site = klienci.getSite(db, f.siteId);
-    const to = site && klienci.get(db, site.clientId)?.emaile[0];
-    if (!site || !to) { noEmail.push(f.id); continue; }
+    const client = site && klienci.get(db, site.clientId);
+    if (!site || !client) continue; // obiekt albo klient usunięty: bez przypomnień i bez wpisu w dzienniku
+    const to = client.emaile[0];
+    if (!to) { noEmail.push(f.id); continue; }
     const p = passportOf(db, site.id);
-    // kotwica jak na stronie klienta (public.ts): cała lista teczek obiektu w tej samej kolejności
-    const kats = teczki(db, site.id, false).map((t) => t.kategoria);
-    const link = p?.token && base ? `${base}/p/${p.token}#${anchors(kats)[kats.indexOf(f.kategoria)]}` : undefined;
+    // link do całego paszportu, bez kotwicy teczki (decyzja właściciela)
+    const link = p?.token && base ? `${base}/p/${p.token}` : undefined;
     try {
       await deps.mailer({ to, ...reminderMail({ firma: firmaNow, kategoria: f.kategoria, adres: [site.adres, site.miejscowosc].filter(Boolean).join(', '), dzien: f.nastepnySerwis!, link }) });
     } catch (e) { logError(db, 'cron:paszport-przypomnienia', e); continue; }

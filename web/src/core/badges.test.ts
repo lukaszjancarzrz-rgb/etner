@@ -102,10 +102,12 @@ describe('liczniki w menu', () => {
   });
 
   it('serwisCount: teczki z terminem w 30 dni i zaległe (też bez paszportu), tylko admin', () => {
-    const f = [r({ nastepnySerwis: '2026-11-04' }), r({ nastepnySerwis: '2026-10-01' }), r({ nastepnySerwis: '2026-12-04' }), r({ nastepnySerwis: '2026-12-05' }),
-      r({ nastepnySerwis: null }), r({ nastepnySerwis: '2026-11-10', _tmp: true })];
-    expect(serwisCount(f, '2026-11-04', true)).toBe(3);
-    expect(serwisCount(f, '2026-11-04', false)).toBe(0);
+    const sites = [r({ id: 's1', clientId: 'c1' }), r({ id: 's2', clientId: 'gone' })], clients = [r({ id: 'c1' })];
+    const at = (d: string | null, o = {}) => r({ siteId: 's1', nastepnySerwis: d, ...o });
+    const f = [at('2026-11-04'), at('2026-10-01'), at('2026-12-04'), at('2026-12-05'), at(null), at('2026-11-10', { _tmp: true }),
+      at('2026-11-05', { siteId: 'nie-ma' }), at('2026-11-05', { siteId: 's2' })]; // bez obiektu / bez klienta: ani na liście, ani w liczniku
+    expect(serwisCount(f, '2026-11-04', true, sites, clients)).toBe(3);
+    expect(serwisCount(f, '2026-11-04', false, sites, clients)).toBe(0);
     expect([1, 3, 5].map((n) => badgeLabel('serwis', n))).toEqual([', 1 teczka do serwisu', ', 3 teczki do serwisu', ', 5 teczek do serwisu']);
   });
 
