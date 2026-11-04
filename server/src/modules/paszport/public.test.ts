@@ -145,4 +145,16 @@ describe('strona klienta /p/:token', () => {
     html = await (await page(s, p.token)).text();
     expect(html).toBe(inactive);
   });
+
+  it('zdjęcia nad historią serwisu; ponad 4 → trzy kafelki i „+N” rozwijające resztę', async () => {
+    const s = await setup();
+    await filled(s);
+    const t = { siteId: s.site.id, kategoria: 'Klimatyzacja' };
+    for (let n = 0; n < 5; n++) await call(s, s.worker, 'POST', '/api/folder-files', { ...t, uploadId: await upload(s, s.worker, await jpeg(), `f${n}.jpg`) });
+    const { token } = s.deps.db.$client.prepare('select token from passports where site_id = ?').get(s.site.id) as { token: string };
+    const html = await (await page(s, token)).text();
+    expect(html.indexOf('<h3>Zdjęcia</h3>')).toBeLessThan(html.indexOf('<h3>Historia serwisu</h3>'));
+    expect(html).toContain('<span class="plus">+3</span>'); // 6 zdjęć: 3 w rzędzie + „+3”
+    if (process.env.DUMP_HTML) (await import('node:fs')).writeFileSync(process.env.DUMP_HTML, html);
+  });
 });
