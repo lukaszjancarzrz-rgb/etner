@@ -26,6 +26,8 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   const car = page.getByRole('article', { name: 'Mała Toyota' });
   await expect(car.getByText('Zaświecił się check engine')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Naprawa:|^Naprawione:/ })).toHaveCount(0); // pracownik: bez planowania
+  await expect(car.getByRole('list', { name: 'Historia napraw: Mała Toyota' })).toBeHidden(); // historia zwinięta
+  await car.getByText('Historia napraw').click();
   await expect(car.getByRole('list', { name: 'Historia napraw: Mała Toyota' })).toContainText('Przepalona żarówka mijania'); // demo
   await car.getByLabel('Nowa usterka').fill(`${tag}: pisk paska`);
   await car.getByRole('button', { name: 'Zgłoś usterkę: Mała Toyota' }).click();
@@ -38,6 +40,8 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   const admin = await as(browser, 'Tomasz Wrona', info);
   await admin.goto('/#auta');
   // demo: dzień naprawy minął bez „Naprawione” – w historii, admin może przełożyć albo potwierdzić
+  await admin.getByRole('article', { name: 'Stary Ducato' }).getByText('Historia napraw').click();
+  await admin.getByRole('article', { name: 'Mała Toyota' }).getByText('Historia napraw').click();
   const oil = admin.getByRole('list', { name: 'Historia napraw: Stary Ducato' });
   await expect(oil.getByRole('button', { name: 'Naprawa: Wymiana oleju' })).toBeVisible();
   await expect(oil.getByRole('button', { name: 'Naprawione: Wymiana oleju' })).toBeVisible();
@@ -54,6 +58,7 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
   await admin.getByRole('button', { name: `Naprawione: ${tag}: pisk paska` }).click();
   await expect(admin.getByRole('list', { name: 'Historia napraw: Mała Toyota' })).toContainText(`${tag}: pisk paska`);
   await page.goto('/#auta');
+  await car.getByText('Historia napraw').click();
   await expect(car.getByRole('list', { name: 'Historia napraw: Mała Toyota' })).toContainText(`${tag}: pisk paska`);
   await page.goto(`/#harm/${day}`);
   await expect(page.locator(`[data-cell="${day}|Marek Pilch"]`)).toContainText('Mała Toyota w naprawie');

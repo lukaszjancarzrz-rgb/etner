@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, CalendarCheck, CheckCircle, PencilSimple, Plus, Trash, Van, Wrench } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, CalendarCheck, CaretDown, CheckCircle, PencilSimple, Plus, Trash, Van, Wrench } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { dayOf } from '@etner/shared';
 import { dayShort, fmtWhen, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
@@ -78,12 +78,14 @@ function CarCard({ car, faults, flash, onEdit, onRepair }: { car: Rec; faults: R
       ) : <p className="px-4 py-3 text-sm text-ink-2">Brak zgłoszonych usterek.</p>}
       {!car._tmp && <FaultForm car={car} />}
       {!!history.length && (
-        <div className="border-t border-line bg-bg/50">
-          <h3 className="flex items-baseline gap-2 px-4 pt-3 font-wide text-sm font-extrabold text-ink-2">Historia napraw<span className="font-sans font-semibold">{history.length}</span></h3>
+        <details className="group border-t border-line bg-bg/50" open={history.some((f) => f.id === flash) || undefined}>
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 font-wide text-sm font-extrabold text-ink-2 [&::-webkit-details-marker]:hidden">
+            <CaretDown className="h-4 w-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" weight="bold" aria-hidden />Historia napraw<span className="font-sans font-semibold">{history.length}</span>
+          </summary>
           <ul className="divide-y divide-line/70" aria-label={`Historia napraw: ${car.nazwa}`}>
             {history.map((f) => <Fault key={f.id} f={f} flash={f.id === flash} onRepair={onRepair} past />)}
           </ul>
-        </div>
+        </details>
       )}
     </article>
   );
