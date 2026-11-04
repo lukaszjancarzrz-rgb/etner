@@ -34,7 +34,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/p\//], // /p/<token>: strona klienta z serwera, nie aplikacja
         importScripts: ['push-sw.js'],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
@@ -53,6 +53,6 @@ export default defineConfig({
       onwarn(w, warn) { if (w.code === 'INVALID_ANNOTATION' && w.id?.includes('/zod/')) return; warn(w); },
     },
   },
-  server: { proxy: { '/api': 'http://localhost:3000' } },
+  server: { proxy: { '/api': 'http://localhost:3000', '/p/': 'http://localhost:3000' } },
   test: { environment: 'node', include: ['src/**/*.test.ts'] }, // e2e (Playwright) osobno: pnpm test:e2e
 });
