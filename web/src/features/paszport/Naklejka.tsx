@@ -8,7 +8,7 @@ import { Segmented } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
-import { drawLabel, LABEL_SIZES, labelBlob, printLabel, type Firma, type LabelSize } from './naklejka.js';
+import { drawLabel, LABEL_FONT, LABEL_FONT_CSS, LABEL_SIZES, labelBlob, printLabel, type Firma, type LabelSize } from './naklejka.js';
 
 const FIRMA_KEY = 'etner-firma', SIZE_KEY = 'etner-naklejka';
 const ls = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* bez pamięci przeglądarki */ } } };
@@ -48,7 +48,11 @@ export default function Naklejka({ passport, klient }: { passport: Rec; klient: 
   const url = token ? `${location.origin}/p/${token}` : ''; // zawsze cały paszport (właściciel: bez linków do teczek)
   const name = `naklejka-${passport.numer}.png`.replace(/[^\w.-]+/g, '_');
 
-  useEffect(() => { void document.fonts?.ready.then(() => setFonts((n) => n + 1)); }, []);
+  useEffect(() => {
+    // krój naklejki ładowany tylko tutaj; po wczytaniu rysunek od nowa
+    if (!document.querySelector(`link[href="${LABEL_FONT_CSS}"]`)) document.head.append(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: LABEL_FONT_CSS }));
+    void Promise.all([500, 600, 700, 800].map((w) => document.fonts?.load(`${w} 20px "${LABEL_FONT}"`))).catch(() => {}).then(() => setFonts((n) => n + 1));
+  }, []);
   useEffect(() => {
     if (ref.current && url) drawLabel(ref.current, size, { url, numer: passport.numer, klient, firma }, logo);
   }, [url, size, passport.numer, klient, firma, logo, fonts]);
