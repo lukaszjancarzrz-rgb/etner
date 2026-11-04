@@ -24,3 +24,4 @@ Deferred: offline-queued writes for a merged duplicate site/folder get 4xx and a
 Task 4b: fix round 1/5 (90fa2ed) re-review clean — complete. Verification: shared 15, web 98, server 278, build clean, e2e 82 passed / 4 skipped. Release held: owner asked about timing (phones' offline queues vs. one-time site merge). After deploy: check first boot log for skipped site pairs.
 Owner 2026-11-04: „wydaj” — Task 4b released to produkcja.
 Owner 2026-11-04: Word/Excel uploads (docx/xlsx by ZIP part word/ or xl/, doc/xls by OLE magic + extension) — controller change with test; released.
+Owner 2026-11-04: folder „Wróć” → #paszporty; logs: Pumble 'already part of channel' treated as success; missing optional backups (R2_BACKUP_BUCKET, Sheets) no longer logged as errors daily (console warn only); SMTP missing still logged (leady e-mail is requested by owner).
