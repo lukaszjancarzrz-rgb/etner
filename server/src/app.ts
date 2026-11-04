@@ -67,13 +67,21 @@ export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
   // Nagłówki bezpieczeństwa. Zdjęcia z R2 to podpisane adresy https (img-src https:), podglądy przed wysłaniem to blob:,
   // czcionki z Google Fonts (też pobierane przez service worker, stąd connect-src). Style inline: Radix wstawia <style>.
   const fonts = ['https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
-  app.use(secureHeaders({
+  const appHeaders = secureHeaders({
     contentSecurityPolicy: {
       defaultSrc: ["'self'"], scriptSrc: ["'self'", ...inlineScriptHashes(index)], styleSrc: ["'self'", "'unsafe-inline'", fonts[0]!],
       fontSrc: ["'self'", fonts[1]!], imgSrc: ["'self'", 'https:', 'data:', 'blob:'], connectSrc: ["'self'", ...fonts],
       workerSrc: ["'self'"], manifestSrc: ["'self'"], objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"], frameAncestors: ["'none'"],
     },
-  }));
+  });
+  // Strona klienta /p/<token>: bez skryptów; obrazy z podpisanych linków (dysk: 'self', R2: https), style w <style>.
+  const publicHeaders = secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'none'"], imgSrc: ["'self'", 'https:'], styleSrc: ["'unsafe-inline'"],
+      baseUri: ["'none'"], formAction: ["'none'"], frameAncestors: ["'none'"],
+    },
+  });
+  app.use((c, next) => (c.req.path.startsWith('/p/') ? publicHeaders(c, next) : appHeaders(c, next)));
 
   app.onError((err, c) => {
     if (err instanceof HTTPException && err.status < 500) return c.json({ error: err.message }, err.status);

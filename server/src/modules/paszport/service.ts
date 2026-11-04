@@ -144,7 +144,7 @@ export function filesOf(db: Db, jobIds: string[], folder: FolderRow | undefined)
 }
 
 /** Zdjęcia osobno od dokumentów, ściśle po rodzaju pliku (właściciel 2026-11-03). */
-const isPhoto = (a: dziennik.AttachmentRow) => a.rodzaj === 'zdjecie' || a.mime.startsWith('image/');
+export const isPhoto = (a: dziennik.AttachmentRow) => a.rodzaj === 'zdjecie' || a.mime.startsWith('image/');
 
 export type Teczka = { kategoria: string; folder?: FolderRow | Omit<FolderRow, 'notatkaRozliczenie'>; jobIds: string[]; photos: number; docs: number; nastepnySerwis?: string };
 
@@ -314,4 +314,22 @@ export function setFirma(db: Db, d: Firma): Firma {
     }
   });
   return firma(db);
+}
+
+export type ClientFolder = { kategoria: string; nastepnySerwis: string | null; devices: DeviceRow[]; entries: ServiceEntryRow[]; files: dziennik.AttachmentRow[] };
+/** Strona klienta (P7): teczki obiektu tylko z elementami „dla klienta” (urządzenia, wpisy od najnowszego, pliki i zdjęcia); bez tekstu dziennika (R69) i rozliczenia (R71). */
+export function forClient(db: Db, siteId: string): ClientFolder[] {
+  return teczki(db, siteId, false).map((t) => {
+    const folder = t.folder && getFolder(db, t.folder.id);
+    const rows = <T extends typeof devices | typeof serviceEntries>(table: T) => (folder
+      ? db.select().from(table).where(and(eq(table.folderId, folder.id), eq(table.dlaKlienta, true), isNull(table.deletedAt))).all()
+      : []) as T['$inferSelect'][];
+    return {
+      kategoria: t.kategoria,
+      nastepnySerwis: folder?.nastepnySerwis ?? null,
+      devices: rows(devices),
+      entries: rows(serviceEntries).sort((a, b) => b.dzien.localeCompare(a.dzien)),
+      files: filesOf(db, t.jobIds, folder).filter((a) => a.dlaKlienta),
+    };
+  });
 }

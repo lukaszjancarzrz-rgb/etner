@@ -8,6 +8,7 @@ import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
 import * as dziennik from '../dziennik/service.js';
 import * as klienci from '../klienci/service.js';
+import { publicRoutes } from './public.js';
 import * as svc from './service.js';
 
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
@@ -20,6 +21,7 @@ export function routes(app: Hono, deps: AppDeps): void {
   const me = (c: Context) => c.get('user');
   const isAdmin = (c: Context) => can(me(c), 'admin');
   const folderOut = (c: Context, f: svc.FolderRow) => (isAdmin(c) ? f : svc.folderForWorker(f));
+  publicRoutes(app, deps);
 
   // Paszport (P3): zakłada pracownik i admin, od razu z linkiem; nowy link (unieważnia stary) tylko admin.
   app.post('/api/passports', auth, async (c) => {
