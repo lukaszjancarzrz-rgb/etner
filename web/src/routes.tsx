@@ -78,7 +78,7 @@ export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.n
 /** Czy ekran jest w menu bocznym komputera (bez Więcej). */
 export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && !screens[k]!.moreOnly && (!screens[k]!.admin || admin);
 
-/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `psz` (teczka) → Paszporty, `kl` i ekrany tylko z Więcej → Więcej. */
+/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `psz` (karta paszportu obiektu, teczka) → Więcej, `kl` i ekrany tylko z Więcej → Więcej. */
 export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'psz' ? 'wiecej' : screen === 'kl' || screens[screen]?.moreOnly ? 'wiecej' : screen);
 
 // poprzedni adres w aplikacji (np. po zapisie wpisu: „wstecz”, gdy przyszliśmy z teczki – bez podwójnego wpisu historii)

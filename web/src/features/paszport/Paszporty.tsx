@@ -8,11 +8,11 @@ import { Search } from '../../core/ui/search.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { withoutEchoes } from '../../core/write.js';
 import { freshIn, indeks, seenKey, sortPaszporty, teczkiObiektu, type Teczka } from './model.js';
-import { pszHash, SerwisBadge } from './Paszport.js';
+import { pszHash, SerwisBadge, siteHash } from './Paszport.js';
 
 type Wiersz = { site: Rec; klient: string; numer?: string; teczki: (Teczka & { nowe: number })[]; termin?: string };
 
-/** Zakładka „Paszporty”: obiekty z teczkami (jak sekcja na karcie klienta), wyszukiwanie, klik → teczka. Działa offline (dane ze sklepu). */
+/** Zakładka „Paszporty”: obiekty z teczkami (jak sekcja na karcie klienta), wyszukiwanie, klik w obiekt → karta paszportu, w teczkę → teczka. Działa offline (dane ze sklepu). */
 export function Paszporty() {
   const [q, setQ] = useState('');
   const loading = useLoading();
@@ -57,7 +57,7 @@ export function Paszporty() {
             const where = [r.site.nazwa, r.site.adres].filter(Boolean).join(', ');
             return (
               <li key={r.site.id} className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
-                <a href={pszHash(r.site.id, r.teczki.find((t) => t.nastepnySerwis === r.termin)?.kategoria ?? r.teczki[0]!.kategoria)} className="flex min-h-16 items-start justify-between gap-3 px-4 pt-3 pb-2 hover:bg-ink/4">
+                <a href={siteHash(r.site.id)} className="flex min-h-16 items-start justify-between gap-3 px-4 pt-3 pb-2 hover:bg-ink/4">
                   <span className="min-w-0">
                     <span className="block truncate font-wide text-lg font-extrabold leading-tight">{r.klient || 'Klient'}</span>
                     <span className="flex min-w-0 items-center gap-1.5 text-sm text-ink-2"><MapPin className="h-4 w-4 shrink-0" aria-hidden /><span className="truncate">{[r.site.miejscowosc, where].filter(Boolean).join(' · ') || 'Obiekt'}</span></span>

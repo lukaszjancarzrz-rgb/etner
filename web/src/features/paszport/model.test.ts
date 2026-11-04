@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Rec } from '../../core/store.js';
-import { freshIn, indeks, isPhoto, plural, serwisStan, sortPaszporty, teczkiObiektu, type Dane } from './model.js';
+import { freshIn, indeks, isPhoto, kategorieSerwera, plural, serwisStan, sortPaszporty, teczkiObiektu, type Dane } from './model.js';
 
 const ORDER = ['Elektryka', 'Fotowoltaika', 'Rekuperacja', 'Klimatyzacja'];
 const at = (n: number) => `2026-10-${String(n).padStart(2, '0')}T10:00:00.000Z`;
@@ -123,5 +123,13 @@ describe('sortPaszporty', () => {
     const r = (klient: string, termin?: string) => ({ klient, site: { id: klient } as Rec, ...(termin && { termin }) });
     const out = sortPaszporty([r('Żak'), r('Bąk', '2027-05-01'), r('Adam'), r('Łoś', '2026-10-01'), r('Cebula', '2027-05-01')]);
     expect(out.map((x) => x.klient)).toEqual(['Łoś', 'Bąk', 'Cebula', 'Adam', 'Żak']);
+  });
+});
+
+describe('kategorieSerwera', () => {
+  it('bez teczek tylko z kolejki (zlecenie lub teczka tymczasowa), kolejność bez zmian', () => {
+    const d: Dane = { ...empty, jobs: [job('j1', 's', 'Elektryka'), job('tmp-1', 's', 'Fotowoltaika'), job('j2', 's', 'Klimatyzacja')],
+      folders: [{ id: 'tmp-f', siteId: 's', kategoria: 'Rekuperacja', _tmp: true }, { id: 'f2', siteId: 's', kategoria: 'Fotowoltaika' }] };
+    expect(kategorieSerwera(teczkiObiektu('s', d, ORDER))).toEqual(['Elektryka', 'Fotowoltaika', 'Klimatyzacja']);
   });
 });

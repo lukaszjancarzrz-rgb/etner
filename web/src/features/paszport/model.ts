@@ -120,3 +120,7 @@ export function freshIn(t: Teczka | undefined, since: string | undefined, meId: 
 /** Najbliższy termin serwisu obiektu (zaległy jest najwcześniejszy), potem klient i obiekt alfabetycznie. */
 export const sortPaszporty = <T extends { klient: string; site: Rec; termin?: string }>(rows: T[]): T[] =>
   [...rows].sort((a, b) => (a.termin ?? '9999').localeCompare(b.termin ?? '9999') || a.klient.localeCompare(b.klient, 'pl') || String(a.site.miejscowosc ?? '').localeCompare(String(b.site.miejscowosc ?? ''), 'pl'));
+
+/** Kategorie teczek obiektu tak jak na serwerze (strona klienta liczy z nich kotwice): bez teczek tylko z zapisów w kolejce. */
+export const kategorieSerwera = (teczki: Teczka[]): string[] =>
+  teczki.filter((t) => t.jobIds.some((id) => !id.startsWith('tmp-')) || (t.folder && !t.folder._tmp)).map((t) => t.kategoria);

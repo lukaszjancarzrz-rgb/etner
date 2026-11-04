@@ -1,4 +1,4 @@
-import { FolderSimplePlus, IdentificationCard } from '@phosphor-icons/react';
+import { CaretRight, FolderSimplePlus, IdentificationCard } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { seenFor, today, useDict, useIsAdmin, useMe, useSeenVersion } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
@@ -14,6 +14,8 @@ import { go, seg } from '../../routes.js';
 import { freshIn, plural, seenKey, serwisStan, teczkiObiektu, type Teczka } from './model.js';
 
 export const pszHash = (siteId: string, kategoria: string, rest = '') => `#psz/${seg(siteId)}/${seg(kategoria)}${rest}`;
+/** Karta paszportu obiektu („karta nadrzędna”). */
+export const siteHash = (siteId: string) => `#psz/${seg(siteId)}`;
 
 /** Teczki obiektu ze sklepu (offline), jak GET /api/sites/:id/teczki. */
 export function useTeczki(siteId: string | undefined): Teczka[] {
@@ -42,8 +44,8 @@ export function SerwisBadge({ nastepny, soonOnly }: { nastepny?: string | null; 
   return s && !(soonOnly && s.tone === 'later') ? <Badge tone={s.tone === 'late' ? 'danger' : s.tone === 'soon' ? 'warn' : 'line'}>{s.label}</Badge> : null;
 }
 
-/** Sekcja „Paszport instalacji” obiektu na karcie klienta: kafelki teczek (P3: widoczne także bez paszportu). */
-export function PaszportSekcja({ site, label }: { site: Rec; label?: string }) {
+/** Sekcja „Paszport instalacji” obiektu na karcie klienta: kafelki teczek (P3: widoczne także bez paszportu). `onSite` = na karcie paszportu obiektu (tytuł „Teczki”). */
+export function PaszportSekcja({ site, label, onSite }: { site: Rec; label?: string; onSite?: boolean }) {
   const teczki = useTeczki(site.id);
   const admin = useIsAdmin();
   const cat = useCatColor();
@@ -52,8 +54,11 @@ export function PaszportSekcja({ site, label }: { site: Rec; label?: string }) {
   const ver = useSeenVersion();
   const fresh = useMemo(() => (me ? new Map(teczki.map((t) => [t.kategoria, freshIn(t, seenFor(me.id)(seenKey(site.id, t.kategoria)), me.id).size])) : new Map<string, number>()), [teczki, me, site.id, ver]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <section className="grid gap-2" aria-label={`Paszport instalacji${label ? `: ${label}` : ''}`}>
-      <SectionTitle>Paszport instalacji{label && <span className="font-sans text-sm font-semibold text-ink-2">{label}</span>}</SectionTitle>
+    <section className="grid gap-2" aria-label={onSite ? 'Teczki' : `Paszport instalacji${label ? `: ${label}` : ''}`}>
+      <div className="flex flex-wrap items-center justify-between gap-x-3">
+        <SectionTitle>{onSite ? 'Teczki' : 'Paszport instalacji'}{label && <span className="font-sans text-sm font-semibold text-ink-2">{label}</span>}</SectionTitle>
+        {!onSite && <a href={siteHash(site.id)} className="inline-flex min-h-11 items-center gap-1 font-semibold text-action hover:underline">Karta paszportu<CaretRight className="h-4 w-4" aria-hidden /></a>}
+      </div>
       <ul className="grid gap-2 min-[560px]:grid-cols-2">
         {teczki.map((t) => {
           const lines = [plural(t.jobIds.length, ['zlecenie', 'zlecenia', 'zleceń']), plural(t.photos.length, ['zdjęcie', 'zdjęcia', 'zdjęć'])];
@@ -65,7 +70,7 @@ export function PaszportSekcja({ site, label }: { site: Rec; label?: string }) {
                   <span className="flex flex-wrap items-center gap-2"><span className="font-wide text-lg font-extrabold leading-tight">{t.kategoria}</span>
                     {!!fresh.get(t.kategoria) && <Badge tone="new"><span aria-hidden>{fresh.get(t.kategoria)} nowe</span><span className="sr-only">, nowe od ostatniej wizyty: {fresh.get(t.kategoria)}</span></Badge>}</span>
                   <span className="text-sm text-ink-2">{lines.join(' · ')}</span>
-                  <span className="text-sm text-ink-2">{[t.docs.length && plural(t.docs.length, ['dokument', 'dokumenty', 'dokumentów']), t.devices.length && plural(t.devices.length, ['urządzenie', 'urządzenia', 'urządzeń'])].filter(Boolean).join(' · ') || 'bez dokumentów'}</span>
+                  <span className="text-sm text-ink-2">{[t.entries.length && plural(t.entries.length, ['wpis', 'wpisy', 'wpisów']), t.docs.length && plural(t.docs.length, ['dokument', 'dokumenty', 'dokumentów']), t.devices.length && plural(t.devices.length, ['urządzenie', 'urządzenia', 'urządzeń'])].filter(Boolean).join(' · ') || 'bez dokumentów'}</span>
                   {t.nastepnySerwis && <span className="mt-1"><SerwisBadge nastepny={t.nastepnySerwis} /></span>}
                 </span>
               </a>
