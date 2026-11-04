@@ -68,6 +68,9 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByRole('link', { name: 'Józef Bukowski', exact: true }).click();
     await expect(page.getByRole('region', { name: /Paszport instalacji/ })).toBeVisible();
     found.push(...(await audit(page, 'karta klienta')));
+    await page.getByRole('link', { name: /^Karta paszportu/ }).first().click();
+    await expect(page.getByRole('region', { name: 'Kod QR i naklejka' })).toBeVisible();
+    found.push(...(await audit(page, 'karta paszportu obiektu')));
 
     await page.goto('/#leady');
     await page.getByRole('link', { name: /Instalacja elektryczna w garażu/ }).click();

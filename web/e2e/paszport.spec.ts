@@ -241,12 +241,106 @@ test('dziennik: „W paszporcie dla klienta” na miniaturach zdjęć (admin), b
   await expect(page.getByRole('dialog').getByRole('switch', { name: 'W paszporcie dla klienta' })).toHaveAttribute('aria-checked', 'true');
 });
 
-test('teczka: „Wróć” prowadzi do listy Paszporty, nazwisko – do karty klienta', async ({ page }) => {
+test('teczka: „Wróć” prowadzi do karty paszportu obiektu, jej „Wróć” – do listy Paszporty', async ({ page }) => {
   await login(page, 'Tomasz Wrona');
   await page.goto('/#paszporty');
   const lista = page.getByRole('region', { name: 'Paszporty' });
   await lista.getByRole('listitem').filter({ has: page.getByText('Józef Bukowski', { exact: true }) }).getByRole('link', { name: /^Rekuperacja/ }).click();
   await expect(page.getByRole('heading', { name: 'Rekuperacja', level: 2 })).toBeVisible();
+  const siteHash = new URL(page.url()).hash.split('/').slice(0, 2).join('/');
+  await page.getByRole('link', { name: 'Wróć' }).click();
+  expect(new URL(page.url()).hash).toBe(siteHash);
+  await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: /^Rekuperacja/ })).toBeVisible();
   await page.getByRole('link', { name: 'Wróć' }).click();
   await expect(page).toHaveURL(/#paszporty$/);
+});
+
+test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 400×240), link z naklejki → strona klienta, naklejka teczki, nowy link', async ({ page, browser }, info) => {
+  await login(page, 'Tomasz Wrona');
+  // dane firmy na naklejkę (Ustawienia, admin)
+  await page.goto('/#ust');
+  const firma = page.getByRole('region', { name: 'Dane firmy' });
+  await expect(firma.getByLabel('Nazwa')).toHaveValue(/.+/);
+  await firma.getByLabel('Telefon serwisu').fill('600 000 000');
+  await firma.getByLabel('Strona www').fill('etner.example');
+  await firma.getByLabel('E-mail').fill('zle@');
+  await firma.getByRole('button', { name: 'Zapisz dane firmy' }).click();
+  await expect(firma.getByText('Wpisz poprawny adres e-mail')).toBeVisible();
+  await firma.getByLabel('E-mail').fill('serwis@etner.example');
+  await firma.getByRole('button', { name: 'Zapisz dane firmy' }).click();
+  await expect(page.getByText('Zapisano dane firmy')).toBeVisible();
+
+  await page.goto('/#paszporty');
+  // wiersz obiektu (nagłówek) → karta paszportu obiektu
+  await page.getByRole('region', { name: 'Paszporty' }).getByRole('link', { name: /^Józef Bukowski/ }).click();
+  await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
+  const site = new URL(page.url()).hash;
+  // wspólna baza obu projektów: paszport zakłada pierwszy
+  const zaloz = page.getByRole('button', { name: 'Załóż paszport' });
+  if (await zaloz.isVisible()) await zaloz.click();
+  const numer = page.getByText(/^PSZ-\d{4}-\d{3}$/);
+  await expect(numer).toBeVisible();
+  const psz = (await numer.textContent())!;
+  await expect(page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: /^Rekuperacja/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Karta klienta' })).toBeVisible();
+
+  const qr = page.getByRole('region', { name: 'Kod QR i naklejka' });
+  await expect(qr.getByRole('img', { name: `Podgląd naklejki ${psz}` })).toBeVisible();
+  await expect(qr.getByRole('radio', { name: '50×30 mm' })).toHaveAttribute('aria-checked', 'true');
+  if (!phone(info)) {
+    await page.screenshot({ path: `${shots}task7-desktop-site-card.png`, fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: `${shots}task7-phone-site-card.png`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 900 });
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+
+  // „Pobierz obraz”: PNG w pikselach 50×30 mm przy 203 dpi
+  const [dl] = await Promise.all([page.waitForEvent('download'), qr.getByRole('button', { name: 'Pobierz obraz' }).click()]);
+  expect(dl.suggestedFilename()).toBe(`naklejka-${psz}.png`);
+  const png = Buffer.concat(await (async () => { const out: Buffer[] = []; for await (const c of (await dl.createReadStream())) out.push(c as Buffer); return out; })());
+  expect(png.subarray(1, 4).toString()).toBe('PNG');
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([400, 240]);
+
+  // link z naklejki = „Podgląd klienta” → strona klienta
+  const url = (await qr.getByTitle(/\/p\//).getAttribute('title'))!;
+  expect(await page.getByRole('link', { name: /Podgląd klienta/ }).getAttribute('href')).toBe(new URL(url).pathname);
+  const client = await page.context().newPage();
+  await client.goto(url);
+  await expect(client.getByRole('heading', { name: 'Józef Bukowski', level: 1 })).toBeVisible();
+  await expect(client.getByText(`Paszport ${psz}`)).toBeVisible();
+
+  // naklejka teczki: ten sam token, kotwica sekcji teczki
+  await page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: /^Rekuperacja/ }).click();
+  await page.getByRole('button', { name: 'Naklejka tej teczki' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Naklejka teczki: Rekuperacja' });
+  await expect(dlg.getByRole('img', { name: `Podgląd naklejki ${psz}, teczka Rekuperacja` })).toBeVisible();
+  const furl = (await dlg.getByTitle(/\/p\//).getAttribute('title'))!;
+  expect(furl).toBe(`${url}#rekuperacja`);
+  if (!phone(info)) await page.screenshot({ path: `${shots}task7-desktop-folder-label.png` });
+  await client.goto(furl);
+  await expect(client.locator('section#rekuperacja h2')).toHaveText('Rekuperacja');
+  await page.keyboard.press('Escape');
+
+  // pracownik: karta obiektu i naklejka, bez „Unieważnij link”
+  const ctx = await browser.newContext({ ...(info.project.use as object), baseURL: info.project.use.baseURL });
+  const w = await ctx.newPage();
+  await w.goto('/');
+  await w.getByRole('button', { name: /Bartek Gawlik/ }).click();
+  await expect(w.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
+  await w.goto(`/${site}`);
+  await expect(w.getByRole('region', { name: 'Kod QR i naklejka' }).getByRole('img', { name: `Podgląd naklejki ${psz}` })).toBeVisible();
+  await expect(w.getByRole('button', { name: 'Unieważnij link i utwórz nowy' })).toHaveCount(0);
+  await ctx.close();
+
+  // admin: nowy link po potwierdzeniu; stary przestaje działać
+  await page.goto(`/${site}`);
+  await qr.getByRole('button', { name: 'Unieważnij link i utwórz nowy' }).click();
+  await page.getByRole('dialog', { name: 'Unieważnić link?' }).getByRole('button', { name: 'Unieważnij i utwórz nowy' }).click();
+  await expect(qr.getByTitle(/\/p\//)).not.toHaveAttribute('title', url);
+  await client.goto(url);
+  await expect(client.getByRole('heading', { name: 'Ten kod nie jest już aktywny' })).toBeVisible();
+  await client.goto((await qr.getByTitle(/\/p\//).getAttribute('title'))!);
+  await expect(client.getByRole('heading', { name: 'Józef Bukowski', level: 1 })).toBeVisible();
 });
