@@ -10,3 +10,5 @@ R1: review spec ✅ Approved — complete (9fc4ebc..2b06b32, review clean).
 R1: minor (deferred → R3 brief): radius override, logo crop offsets, side stripes in Paszport/Samochody/Harmonogram, dark duplicate --ink-3 + theme-color, input outline contrast.
 R2: dispatched.
 R2: impl ac62b04..324031b; review dispatched. Controller look: Paszporty last column badge overflows table edge (to add to fixes).
+R2: review spec ✅ Needs fixes: I1 opened job outside scope/filter not shown/selected in desktop table. Fix round 1 dispatched (+ Paszporty badge overflow).
+- Ruling R80: Zakupy column labelled „Uwagi” (no quantity field exists) and category tab text navy where white fails contrast (e.g. amber „IN”) — accepted, truthful labels and AA contrast — cost: owner may want white text everywhere.
