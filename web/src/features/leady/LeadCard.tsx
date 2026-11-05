@@ -13,6 +13,7 @@ import { Select } from '../../core/ui/select.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { tmpId, updateVia, withoutEchoes } from '../../core/write.js';
+import { useDesk } from '../../core/layout/status.js';
 import { Diary } from '../dziennik/Diary.js';
 import { siteLabel } from '../klienci/ClientPicker.js';
 import { JobForm } from '../zlecenia/JobForm.js';
@@ -32,7 +33,8 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
   const job = useMemo(() => jobs.find((j) => j.leadId === id), [jobs, id]);
   const jobClient = useEntity('clients', job?.clientId);
   const jobSite = useEntity('sites', job?.siteId ?? undefined);
-  useEffect(() => { if (!highlight) scrollTo(0, 0); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const desk = useDesk();
+  useEffect(() => { if (!highlight && !desk) scrollTo(0, 0); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!lead) {
     return loading ? (
@@ -51,7 +53,7 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
       <a href="#leady" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action desk:hidden"><ArrowLeft className="h-5 w-5" />Leady</a>
-      <div className={cn('overflow-hidden rounded-2xl border bg-card', overdue ? 'border-danger/60' : 'border-line')}>
+      <div className="overflow-hidden rounded-[4px] border border-line bg-card">
         <div className="grid gap-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -69,11 +71,11 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
           </div>
 
           {job?._tmp ? (
-            <p className="flex min-h-12 items-center gap-2 rounded-xl border border-line px-4 py-2 font-semibold text-ink-2">
+            <p className="flex min-h-12 items-center gap-2 rounded-[4px] border border-line px-4 py-2 font-semibold text-ink-2">
               <Briefcase className="h-5 w-5 shrink-0" weight="fill" />Zlecenie zapisuje się…
             </p>
           ) : job ? (
-            <a href={`#zl/${job.id}`} className="flex min-h-12 items-center gap-2 rounded-xl border border-ok/50 bg-ok/10 px-4 py-2 font-semibold hover:border-ok">
+            <a href={`#zl/${job.id}`} className="flex min-h-12 items-center gap-2 rounded-[4px] border border-ok/50 bg-ok/10 px-4 py-2 font-semibold hover:border-ok">
               <Briefcase className="h-5 w-5 shrink-0 text-ok" weight="fill" />
               <span className="min-w-0">Zlecenie: {[jobClient?.nazwa ?? client?.nazwa ?? 'Klient', jobSite?.miejscowosc].filter(Boolean).join(' – ')}</span>
             </a>
@@ -83,8 +85,8 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
 
           {phones.length + emails.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {phones.map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-full border border-line px-5 font-semibold"><Phone className="h-5 w-5" />{t}</a>)}
-              {emails.map((m) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-full border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
+              {phones.map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold"><Phone className="h-5 w-5" />{t}</a>)}
+              {emails.map((m) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
             </div>
           )}
 
@@ -101,7 +103,7 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
             <Info k="Źródło">{lead.zrodlo || 'brak'}</Info>
             <Info k="Dodany">{lead.createdAt ? fmtDay(String(lead.createdAt).slice(0, 10)) : ''}</Info>
           </dl>
-          {lead.opis && <div className="grid gap-1 rounded-xl bg-bg/70 p-3"><p className="text-sm font-semibold text-ink-2">Opis</p><p className="whitespace-pre-wrap">{lead.opis}</p></div>}
+          {lead.opis && <div className="grid gap-1 rounded-[4px] bg-bg/70 p-3"><p className="text-sm font-semibold text-ink-2">Opis</p><p className="whitespace-pre-wrap">{lead.opis}</p></div>}
         </div>
       </div>
 
@@ -164,7 +166,7 @@ function Contacts({ lead }: { lead: Rec }) {
   return (
     <section aria-labelledby="kontakty" className="grid gap-3">
       <SectionTitle><span id="kontakty">Kontakty</span></SectionTitle>
-      <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4">
+      <form onSubmit={submit} noValidate className="grid gap-3 rounded-[4px] border border-line bg-card p-4">
         <Field label="Notatka z kontaktu" error={err}>{(id, d) => <Textarea id={id} aria-describedby={d} aria-invalid={!!err} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Z kim, co ustalono" className="min-h-20" />}</Field>
         <div className="grid gap-3 min-[560px]:grid-cols-[1fr_auto] min-[560px]:items-end">
           <Field label="Następny kontakt" hint={next ? undefined : due ? 'Bez daty zaległy termin zostanie wyczyszczony.' : lead.nastepny ? `Bez daty zostaje ${fmtDay(lead.nastepny)}.` : undefined}>
@@ -178,7 +180,7 @@ function Contacts({ lead }: { lead: Rec }) {
           <h3 className="text-sm font-semibold text-ink-2">{g.status} <span className="tabular-nums">({g.list.length})</span></h3>
           <ol className="grid gap-2" aria-label={`Kontakty: ${g.status}`}>
             {g.list.map((c) => (
-              <li key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-1 rounded-2xl border border-line bg-card px-4 py-3">
+              <li key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-1 rounded-[4px] border border-line bg-card px-4 py-3">
                 <p className="flex flex-wrap items-center gap-x-2 text-sm text-ink-2">
                   <span className="font-semibold text-ink">{fmtDay(c.dzien)}</span>
                   <span>{names(c.by)}{c._tmp ? ', wysyłanie…' : c.createdAt ? `, ${fmtWhen(c.createdAt).replace(/^.* /, '')}` : ''}</span>
