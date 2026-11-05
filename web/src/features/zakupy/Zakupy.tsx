@@ -82,7 +82,7 @@ function AddForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4 shadow-card">
+    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4">
       <Field label="Co kupić" error={err}>
         {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err} value={co} onChange={(e) => setCo(e.target.value)} placeholder="np. Kolanka 160 mm, 10 szt." enterKeyHint="send" />}
       </Field>

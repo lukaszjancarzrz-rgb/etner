@@ -64,10 +64,10 @@ export function PaszportSekcja({ site, label, onSite }: { site: Rec; label?: str
           const lines = [plural(t.jobIds.length, ['zlecenie', 'zlecenia', 'zleceń']), plural(t.photos.length, ['zdjęcie', 'zdjęcia', 'zdjęć'])];
           return (
             <li key={t.kategoria}>
-              <a href={pszHash(site.id, t.kategoria)} className="flex h-full min-h-24 overflow-hidden rounded-2xl border border-line bg-card shadow-card hover:border-ink-2">
+              <a href={pszHash(site.id, t.kategoria)} className="flex h-full min-h-24 overflow-hidden rounded-2xl border border-line bg-card hover:border-ink-2">
                 <span className="w-1.5 shrink-0" style={{ background: catStripe(cat(t.kategoria)) }} aria-hidden />
                 <span className="grid min-w-0 flex-1 content-start gap-1 px-4 py-3">
-                  <span className="flex flex-wrap items-center gap-2"><span className="font-wide text-lg font-extrabold leading-tight">{t.kategoria}</span>
+                  <span className="flex flex-wrap items-center gap-2"><span className="text-lg font-extrabold leading-tight">{t.kategoria}</span>
                     {!!fresh.get(t.kategoria) && <Badge tone="new"><span aria-hidden>{fresh.get(t.kategoria)} nowe</span><span className="sr-only">, nowe od ostatniej wizyty: {fresh.get(t.kategoria)}</span></Badge>}</span>
                   <span className="text-sm text-ink-2">{lines.join(' · ')}</span>
                   <span className="text-sm text-ink-2">{[t.entries.length && plural(t.entries.length, ['wpis', 'wpisy', 'wpisów']), t.docs.length && plural(t.docs.length, ['dokument', 'dokumenty', 'dokumentów']), t.devices.length && plural(t.devices.length, ['urządzenie', 'urządzenia', 'urządzeń'])].filter(Boolean).join(' · ') || 'bez dokumentów'}</span>

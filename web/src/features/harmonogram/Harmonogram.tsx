@@ -210,7 +210,7 @@ function NavRow({ back, here, slot, prev, next, labels, title, sub }: { back: st
       </span>
       <a href={prev} aria-label={labels[0]} className={navBtn}><CaretLeft className="h-5 w-5" /></a>
       <div className="w-48 shrink-0 text-center desk:w-60">
-        <p className="truncate font-wide text-base font-extrabold leading-tight first-letter:uppercase desk:text-lg">{title}</p>
+        <p className="truncate text-base font-extrabold leading-tight first-letter:uppercase desk:text-lg">{title}</p>
         <p className="text-sm text-ink-2 tabular-nums">{sub}</p>
       </div>
       <a href={next} aria-label={labels[1]} className={navBtn}><CaretRight className="h-5 w-5" /></a>
@@ -260,9 +260,9 @@ function WhereNext({ person, entries, ctx }: { person: Rec; entries: Rec[]; ctx:
   const long = next && dayLong(next.dzien);
   const when = next && (next.dzien === t ? 'Dziś' : next.dzien === addDays(t, 1) ? 'Jutro' : long!.charAt(0).toUpperCase() + long!.slice(1));
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+    <div className="overflow-hidden rounded-2xl border border-line bg-card">
       <div className="flex items-center justify-between gap-3 bg-[#0a2240] px-4 py-2.5 text-white">
-        <h2 className="font-wide text-base font-extrabold">Gdzie jedziesz</h2>
+        <h2 className="text-base font-extrabold">Gdzie jedziesz</h2>
         {when && <span className="text-sm font-semibold opacity-90">{when}</span>}
       </div>
       {!next ? (
@@ -289,7 +289,7 @@ function WhereSlot({ slot, ctx }: { slot: Slot; ctx: Ctx }) {
         <span className="flex items-center gap-2 text-sm text-ink-2">
           <span className="font-semibold tabular-nums">{j?.numer}</span>{slot.polDnia && <Badge>pół dnia</Badge>}
         </span>
-        <span className="font-wide text-xl font-extrabold leading-tight group-hover:text-action">{j?.client?.nazwa ?? 'Zlecenie'}</span>
+        <span className="text-xl font-extrabold leading-tight group-hover:text-action">{j?.client?.nazwa ?? 'Zlecenie'}</span>
         {j?.site && <span className="flex items-center gap-1 text-ink-2"><MapPin className="h-4 w-4 shrink-0" />{[j.site.adres, j.site.miejscowosc].filter(Boolean).join(', ')}</span>}
       </a>
       <div className="flex flex-wrap gap-2">
@@ -429,9 +429,9 @@ function DayCard({ d, p }: { d: string; p: ViewProps }) {
     );
   }
   return (
-    <article ref={ref} id={`d-${d}`} data-day={d} className={cn('scroll-mt-20 overflow-hidden rounded-2xl border bg-card shadow-card', isToday ? 'border-action' : 'border-line')}>
+    <article ref={ref} id={`d-${d}`} data-day={d} className={cn('scroll-mt-20 overflow-hidden rounded-2xl border bg-card', isToday ? 'border-action' : 'border-line')}>
       <header onClick={() => p.tap?.(d)} className={cn('flex items-center justify-between gap-2 px-4 py-2.5', isToday ? 'bg-action/10' : 'border-b border-line')}>
-        <h3 className="font-wide font-extrabold first-letter:uppercase">{dayLong(d)}</h3>
+        <h3 className="font-extrabold first-letter:uppercase">{dayLong(d)}</h3>
         <span className="flex items-center gap-1.5">{fresh && <NewPill />}{isToday && <Badge tone="ink">dziś</Badge>}{info && <Badge tone="warn">{info}</Badge>}</span>
       </header>
       {note && <p className="flex gap-2 border-b border-line bg-bg/60 px-4 py-2 text-sm"><NotePencil className="mt-0.5 h-4 w-4 shrink-0 text-ink-2" />{note}</p>}
@@ -459,7 +459,7 @@ function DayHead({ d, p, className, row }: { d: string; p: ViewProps; className?
   return (
     <th ref={ref} data-day={d} onClick={() => p.tap?.(d)} data-today={isToday || undefined} scope={row ? 'row' : 'col'} className={cn('px-2 py-2 align-top', isToday && 'bg-action/10', wd !== 1 && 'bg-bg/60', className)}>
       <span className="flex items-center justify-between gap-1">
-        <span className={cn('block font-wide text-sm font-extrabold first-letter:uppercase', isToday && 'text-action')}>{dayShort(d)}</span>
+        <span className={cn('block text-sm font-extrabold first-letter:uppercase', isToday && 'text-action')}>{dayShort(d)}</span>
         {p.fresh.has(d) && <NewPill />}
       </span>
       {info && <span className="block truncate text-xs font-semibold text-danger" title={info}>{info}</span>}
@@ -471,7 +471,7 @@ function DayHead({ d, p, className, row }: { d: string; p: ViewProps; className?
 /** Komputer: tabela osoba × dzień. */
 function WeekTable(p: ViewProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-card shadow-card">
+    <div className="overflow-x-auto rounded-2xl border border-line bg-card">
       <table className="w-full table-fixed border-collapse text-left">
         <colgroup>
           <col className="w-52" />
@@ -523,7 +523,7 @@ function MonthTable(p: ViewProps) {
         <button type="button" aria-label="Przewiń tydzień wstecz" onClick={() => by(-1)} className={navBtn}><CaretLeft className="h-5 w-5" /></button>
         <button type="button" aria-label="Przewiń tydzień naprzód" onClick={() => by(1)} className={navBtn}><CaretRight className="h-5 w-5" /></button>
       </div>
-      <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-x-contain rounded-2xl border border-line bg-card shadow-card">
+      <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-x-contain rounded-2xl border border-line bg-card">
         <table className="table-fixed border-separate border-spacing-0 text-left" style={{ width: NAME + COL * p.days.length }}>
           <colgroup>
             <col style={{ width: NAME }} />
@@ -571,7 +571,7 @@ function DaysTable(p: ViewProps) {
     if (el) el.scrollTop = th && head ? Math.max(0, el.scrollTop + th.getBoundingClientRect().top - el.getBoundingClientRect().top - head.getBoundingClientRect().height) : 0;
   }, [first]);
   return (
-    <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-contain rounded-2xl border border-line bg-card shadow-card">
+    <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-contain rounded-2xl border border-line bg-card">
       <table className="w-full table-fixed border-separate border-spacing-0 text-left" style={{ minWidth: DAY + PERSON * p.people.length }}>
         <colgroup>
           <col style={{ width: DAY }} />

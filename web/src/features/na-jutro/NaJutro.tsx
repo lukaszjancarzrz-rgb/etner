@@ -63,10 +63,10 @@ export function NaJutro({ route }: { route: Route }) {
 
   return (
     <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
-      <div className="grid gap-3 rounded-2xl border border-line bg-card p-4 shadow-card">
+      <div className="grid gap-3 rounded-2xl border border-line bg-card p-4">
         {admin ? (
           <Segmented label="Ekipa" value={ekipa} onChange={setCrew} options={crews.map((c) => ({ v: c.wartosc as string, label: c.wartosc as string }))} />
-        ) : <p className="font-wide text-lg font-extrabold">{ekipa}</p>}
+        ) : <p className="text-lg font-extrabold">{ekipa}</p>}
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="icon" aria-label="Poprzedni dzień" onClick={() => setDay(addDays(day, -1))}><CaretLeft className="h-5 w-5" /></Button>
           <p className="min-w-0 flex-1 text-center font-semibold first-letter:uppercase" aria-live="polite">{dayName(day)}</p>

@@ -51,7 +51,7 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
       <a href="#leady" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action desk:hidden"><ArrowLeft className="h-5 w-5" />Leady</a>
-      <div className={cn('overflow-hidden rounded-2xl border border-line bg-card shadow-card', overdue && 'border-l-4 border-l-danger')}>
+      <div className={cn('overflow-hidden rounded-2xl border bg-card', overdue ? 'border-danger/60' : 'border-line')}>
         <div className="grid gap-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -59,7 +59,7 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
                 {lead._tmp && <span className="font-semibold">zapisywanie</span>}
                 {lead.kategoria && <CategoryPill name={lead.kategoria} color={cat(lead.kategoria)} />}
               </p>
-              <h2 className="mt-1 font-wide text-2xl font-extrabold leading-tight">
+              <h2 className="mt-1 text-2xl font-extrabold leading-tight">
                 {client ? <a href={`#kl/${client.id}`} className="hover:text-action">{client.nazwa}</a> : 'Bez klienta'}
               </h2>
               <p className="mt-1 font-semibold">{lead.temat}</p>
@@ -164,7 +164,7 @@ function Contacts({ lead }: { lead: Rec }) {
   return (
     <section aria-labelledby="kontakty" className="grid gap-3">
       <SectionTitle><span id="kontakty">Kontakty</span></SectionTitle>
-      <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4 shadow-card">
+      <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4">
         <Field label="Notatka z kontaktu" error={err}>{(id, d) => <Textarea id={id} aria-describedby={d} aria-invalid={!!err} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Z kim, co ustalono" className="min-h-20" />}</Field>
         <div className="grid gap-3 min-[560px]:grid-cols-[1fr_auto] min-[560px]:items-end">
           <Field label="Następny kontakt" hint={next ? undefined : due ? 'Bez daty zaległy termin zostanie wyczyszczony.' : lead.nastepny ? `Bez daty zostaje ${fmtDay(lead.nastepny)}.` : undefined}>

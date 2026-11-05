@@ -126,7 +126,7 @@ function JobRow({ j, on, nowe, missing, color, desk }: { j: JobView; on: boolean
   if (desk) return (
     <li>
       <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined}
-        className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-l-4 px-3 py-2 transition-colors duration-200', on ? 'border-l-action bg-action/8' : 'border-l-transparent hover:bg-bg')}>
+        className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-3 py-2 transition-colors duration-200', on ? 'bg-action/10' : 'hover:bg-bg')}>
         <span className="flex min-w-0 items-center gap-2">
           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color ?? 'var(--line)' }} title={j.ekipa ?? undefined} aria-hidden />
           <span className="truncate font-semibold">{nazwa}</span>
@@ -155,7 +155,7 @@ function JobRow({ j, on, nowe, missing, color, desk }: { j: JobView; on: boolean
             {missing && <Badge tone="warn">brak w harmonogramie</Badge>}
           </span>
         </span>
-        <span className="truncate font-wide text-lg font-extrabold leading-tight">{nazwa}</span>
+        <span className="truncate text-lg font-extrabold leading-tight">{nazwa}</span>
         <span className="flex items-end gap-2 text-sm text-ink-2">
           {j.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
           <span className="ml-auto flex shrink-0 flex-col items-end gap-1">

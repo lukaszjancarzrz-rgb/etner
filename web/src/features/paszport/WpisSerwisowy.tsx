@@ -120,7 +120,7 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
     <article className="mx-auto grid grid-cols-[minmax(0,1fr)] max-w-2xl gap-5 px-4 py-4 desk:py-6">
       <div className="grid gap-1">
         <a href={back} onClick={(e) => { if (history.length > 1) { e.preventDefault(); history.back(); } }} className="inline-flex min-h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5 shrink-0" />{title}</a>
-        <h2 className="font-wide text-2xl font-extrabold leading-tight">{entry ? 'Edycja wpisu serwisowego' : 'Wpis serwisowy'}</h2>
+        <h2 className="text-2xl font-extrabold leading-tight">{entry ? 'Edycja wpisu serwisowego' : 'Wpis serwisowy'}</h2>
       </div>
       <form onSubmit={submit} className="grid gap-5" noValidate>
         <div className="grid gap-4 rounded-2xl border border-line bg-card p-4 min-[560px]:grid-cols-2">

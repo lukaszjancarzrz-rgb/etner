@@ -76,7 +76,7 @@ function AddForm() {
     setT(''); setErr('');
   }
   return (
-    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4 shadow-card">
+    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4">
       <Field label="Nowe zadanie" error={err}>
         {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err} value={t} onChange={(e) => setT(e.target.value)} placeholder="Co trzeba załatwić? Enter dodaje" enterKeyHint="send" />}
       </Field>

@@ -62,11 +62,11 @@ function CarCard({ car, faults, flash, onEdit, onRepair }: { car: Rec; faults: R
   const list = useMemo(() => faults.filter((f) => !inHistory(f, t)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [faults, t]);
   const history = useMemo(() => faults.filter((f) => inHistory(f, t)).sort((a, b) => fixedOn(b).localeCompare(fixedOn(a))), [faults, t]);
   return (
-    <article aria-label={car.nazwa} className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+    <article aria-label={car.nazwa} className="overflow-hidden rounded-2xl border border-line bg-card">
       <header className="flex items-center gap-3 border-b border-line px-4 py-3" style={{ boxShadow: `inset 4px 0 0 ${crew(car.ekipa) ?? 'var(--line)'}` }}>
         <Van className="h-6 w-6 shrink-0 text-action" weight="duotone" aria-hidden />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate font-wide text-lg font-extrabold leading-tight">{car.nazwa}</h2>
+          <h2 className="truncate text-lg font-extrabold leading-tight">{car.nazwa}</h2>
           <p className="text-sm text-ink-2">{car.ekipa ?? 'Bez ekipy'}</p>
         </div>
         {onEdit && !car._tmp && <Button variant="ghost" size="sm" aria-label={`Edytuj samochód ${car.nazwa}`} onClick={onEdit} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>}
@@ -79,7 +79,7 @@ function CarCard({ car, faults, flash, onEdit, onRepair }: { car: Rec; faults: R
       {!car._tmp && <FaultForm car={car} />}
       {!!history.length && (
         <details className="group border-t border-line bg-bg/50" open={history.some((f) => f.id === flash) || undefined}>
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 font-wide text-sm font-extrabold text-ink-2 [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-extrabold text-ink-2 [&::-webkit-details-marker]:hidden">
             <CaretDown className="h-4 w-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" weight="bold" aria-hidden />Historia napraw<span className="font-sans font-semibold">{history.length}</span>
           </summary>
           <ul className="divide-y divide-line/70" aria-label={`Historia napraw: ${car.nazwa}`}>

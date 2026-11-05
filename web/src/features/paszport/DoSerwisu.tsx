@@ -72,14 +72,14 @@ function Row({ f, site, client }: Wiersz) {
   }
 
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4 shadow-card">
+    <li className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <a href={siteHash(site.id)} className="min-w-0 hover:underline">
-          <span className="block font-wide text-lg font-extrabold leading-tight break-words">{client?.nazwa || 'Klient'}</span>
+          <span className="block text-lg font-extrabold leading-tight break-words">{client?.nazwa || 'Klient'}</span>
           <span className="mt-0.5 flex min-w-0 items-start gap-1.5 text-sm text-ink-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /><span className="min-w-0 break-words">{where || 'Obiekt'}</span></span>
         </a>
         <span className="grid shrink-0 justify-items-end gap-1">
-          <span className="font-wide font-extrabold tabular-nums">{fmtDay(f.nastepnySerwis)}</span>
+          <span className="font-extrabold tabular-nums">{fmtDay(f.nastepnySerwis)}</span>
           <SerwisBadge nastepny={f.nastepnySerwis} />
         </span>
       </div>

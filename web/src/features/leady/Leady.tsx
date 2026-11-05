@@ -108,7 +108,7 @@ function LeadRow({ l, on, overdue, desk }: { l: Rec; on: boolean; overdue?: stri
   if (desk) return (
     <li>
       <a href={`#ld/${l.id}`} aria-current={on ? 'page' : undefined}
-        className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-l-4 px-3 py-2 transition-colors duration-200', on ? 'border-l-action bg-action/8' : overdue ? 'border-l-danger hover:bg-bg' : 'border-l-transparent hover:bg-bg')}>
+        className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-3 py-2 transition-colors duration-200', on ? 'bg-action/10' : 'hover:bg-bg')}>
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate font-semibold">{nazwa}</span>
           {overdue && <Badge tone="warn" className="h-5 px-2">zaległe</Badge>}
@@ -125,14 +125,14 @@ function LeadRow({ l, on, overdue, desk }: { l: Rec; on: boolean; overdue?: stri
   return (
     <li>
       <a href={`#ld/${l.id}`} aria-current={on ? 'page' : undefined}
-        className={cn('grid grid-cols-[minmax(0,1fr)] gap-1 rounded-2xl border bg-card px-4 py-3 transition-colors duration-200 hover:border-ink-2', on ? 'border-action ring-2 ring-action/25' : overdue ? 'border-danger/60' : 'border-line', overdue && 'border-l-4 border-l-danger')}>
+        className={cn('grid grid-cols-[minmax(0,1fr)] gap-1 rounded-2xl border bg-card px-4 py-3 transition-colors duration-200 hover:border-ink-2', on ? 'border-action ring-2 ring-action/25' : overdue ? 'border-danger/60' : 'border-line')}>
         <span className="flex items-center gap-2 text-sm">
           {l._tmp && <span className="font-semibold text-ink-2">zapisywanie</span>}
           <span className="truncate text-ink-2">{l.status}</span>
           {overdue && <Badge tone="warn">zaległe</Badge>}
           {next && <span className="ml-auto inline-flex">{next}</span>}
         </span>
-        <span className="truncate font-wide text-lg font-extrabold leading-tight">{nazwa}</span>
+        <span className="truncate text-lg font-extrabold leading-tight">{nazwa}</span>
         <span className="flex items-end gap-2 text-sm text-ink-2">
           <span className="min-w-0 truncate">{[l.temat, l.site?.miejscowosc].filter(Boolean).join(', ')}</span>
           {l.kategoria && <CategoryPill name={l.kategoria} color={cat(l.kategoria)} className="ml-auto shrink-0" />}

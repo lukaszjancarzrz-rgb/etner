@@ -107,11 +107,11 @@ function ClientCard({ id }: { id: string }) {
   return (
     <article className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
       <a href={admin ? '#kl' : '#zl'} onClick={(e) => { if (history.length > 1) { e.preventDefault(); history.back(); } }} className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
-      <div className="grid gap-4 rounded-2xl border border-line bg-card p-5 shadow-card">
+      <div className="grid gap-4 rounded-2xl border border-line bg-card p-5">
         <div>
           {c.typ && <p className="text-sm text-ink-2">{c.typ === 'firma' ? 'Firma' : 'Osoba prywatna'}{c.nip ? `, NIP ${c.nip}` : ''}</p>}
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-wide text-2xl font-extrabold leading-tight">{c.nazwa}</h2>
+            <h2 className="text-2xl font-extrabold leading-tight">{c.nazwa}</h2>
             {admin && <Button variant="secondary" size="sm" aria-label="Edytuj klienta" onClick={() => setForm({ kind: 'client' })}><PencilSimple className="h-4 w-4" />Edytuj</Button>}
           </div>
         </div>

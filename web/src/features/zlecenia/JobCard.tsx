@@ -81,7 +81,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
       <a href="#zl" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action desk:hidden"><ArrowLeft className="h-5 w-5" />Zlecenia</a>
-      <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+      <div className="overflow-hidden rounded-2xl border border-line bg-card">
         <div className="h-1.5" style={{ background: color ?? 'var(--line)' }} aria-hidden />
         <div className="grid gap-4 p-5">
           <div className="flex items-start justify-between gap-3">
@@ -90,7 +90,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
                 <span className="font-semibold tabular-nums">{job._tmp ? 'zapisywanie' : job.numer}</span><Badge tone="action">{job.status}</Badge>{fj.has('status') && <NewMark sr="nowy status" />}
                 {job.kategoria && <CategoryPill name={job.kategoria} color={cat(job.kategoria)} />}
               </p>
-              <h2 className="mt-1 font-wide text-2xl font-extrabold leading-tight">
+              <h2 className="mt-1 text-2xl font-extrabold leading-tight">
                 {client ? <a href={`#kl/${client.id}`} className="hover:text-action">{client.nazwa}</a> : 'Klient'}{fc.has('nazwa') && <> <NewMark sr="nowa nazwa klienta" /></>}
               </h2>
               {site && <p className="mt-1 flex items-start gap-1.5 text-ink-2"><MapPin className="mt-0.5 h-5 w-5 shrink-0" /><span>{[site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ')}{fs.size > 0 && <> <NewMark sr="zmieniony obiekt" /></>}</span></p>}

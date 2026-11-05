@@ -67,7 +67,7 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <a href={siteHash(siteId)} className="inline-flex h-11 items-center gap-2 font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
         </div>
-        <h2 className="font-wide text-2xl font-extrabold leading-tight">{kategoria}</h2>
+        <h2 className="text-2xl font-extrabold leading-tight">{kategoria}</h2>
         <a href={back} className="justify-self-start text-sm font-semibold text-action hover:underline">{client?.nazwa ?? 'Klient'}</a>
         <p className="text-sm text-ink-2">{[client?.nazwa, site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ')}</p>
       </div>
@@ -92,7 +92,7 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
 }
 
 const Card = ({ title, count, action, children, label }: { title: string; count?: number; action?: React.ReactNode; children: React.ReactNode; label?: string }) => (
-  <section className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4 shadow-card min-[560px]:p-5" aria-label={label ?? title}>
+  <section className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4 min-[560px]:p-5" aria-label={label ?? title}>
     <div className="flex items-center justify-between gap-3"><SectionTitle count={count}>{title}</SectionTitle>{action}</div>
     {children}
   </section>

@@ -26,7 +26,7 @@ export function DraftBar({ drafts, people, entries, ctx }: { drafts: Rec[]; peop
   const n = drafts.length;
   return (
     <>
-      <div role="status" className="sticky top-[calc(3.75rem+env(safe-area-inset-top))] z-20 flex items-center gap-3 rounded-2xl border border-action/40 bg-card px-4 py-2.5 shadow-card desk:top-20">
+      <div role="status" className="sticky top-[calc(3.75rem+env(safe-area-inset-top))] z-20 flex items-center gap-3 rounded-2xl border border-action/40 bg-card px-4 py-2.5 shadow-overlay desk:top-20">
         <NotePencil className="h-6 w-6 shrink-0 text-action" weight="duotone" />
         <p className="min-w-0 flex-1 text-sm leading-tight">
           <span className="font-bold">{n} {n === 1 ? 'zmiana' : n < 5 ? 'zmiany' : 'zmian'} w szkicu</span>

@@ -39,16 +39,16 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
       <div className="grid gap-1">
         <a href="#paszporty" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
         <p className="text-sm font-semibold text-ink-2">Paszport instalacji</p>
-        <h2 className="font-wide text-2xl font-extrabold leading-tight">{klient}</h2>
+        <h2 className="text-2xl font-extrabold leading-tight">{klient}</h2>
         <p className="flex items-center gap-1.5 text-ink-2"><MapPin className="h-4 w-4 shrink-0" aria-hidden />{[site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ') || 'Obiekt'}</p>
         {client && <a href={`#kl/${client.id}`} className="inline-flex min-h-11 items-center justify-self-start font-semibold text-action hover:underline">Karta klienta</a>}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 shadow-card">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3">
         <IdentificationCard className="h-7 w-7 shrink-0 text-ok" weight="duotone" aria-hidden />
         {passport ? (
           <p className="min-w-0 flex-1 basis-44"><span className="block text-sm text-ink-2">Numer paszportu</span>
-            <span className="font-wide text-xl font-extrabold whitespace-nowrap tabular-nums">{ready ? passport.numer : 'nadamy po połączeniu'}</span></p>
+            <span className="text-xl font-extrabold whitespace-nowrap tabular-nums">{ready ? passport.numer : 'nadamy po połączeniu'}</span></p>
         ) : <p className="min-w-0 flex-1 text-sm text-ink-2">Obiekt nie ma jeszcze paszportu. Paszport daje numer, link dla klienta i naklejkę z kodem QR.</p>}
         {!passport && <Button onClick={() => zalozPaszport(siteId)}>Załóż paszport</Button>}
         {ready && passport.token && (
@@ -76,7 +76,7 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
 
       <PaszportSekcja site={site} onSite />
 
-      <section aria-label="Kod QR i naklejka" className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4 shadow-card min-[560px]:p-5">
+      <section aria-label="Kod QR i naklejka" className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4 min-[560px]:p-5">
         <SectionTitle>Kod QR i naklejka</SectionTitle>
         {ready ? (
           <Suspense fallback={<Skeleton className="h-48" />}>

@@ -109,7 +109,7 @@ function ChangePassword() {
   }
   return (
     <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-line bg-card p-5">
-      <h2 className="flex items-center gap-2 font-wide text-lg font-extrabold"><Key className="h-5 w-5 text-action" weight="duotone" />Zmień hasło</h2>
+      <h2 className="flex items-center gap-2 text-lg font-extrabold"><Key className="h-5 w-5 text-action" weight="duotone" />Zmień hasło</h2>
       <Field label="Obecne hasło">{(id) => <Input id={id} type="password" autoComplete="current-password" value={stare} onChange={(e) => setStare(e.target.value)} required />}</Field>
       <Field label="Nowe hasło" hint="Co najmniej 8 znaków.">{(id, d) => <Input id={id} aria-describedby={d} type="password" autoComplete="new-password" minLength={8} value={nowe} onChange={(e) => setNowe(e.target.value)} required />}</Field>
       <Field label="Powtórz nowe hasło">{(id) => <Input id={id} type="password" autoComplete="new-password" value={powt} onChange={(e) => setPowt(e.target.value)} required />}</Field>
@@ -141,7 +141,7 @@ function Notifications() {
   }, 'Wysłano próbne powiadomienie');
   return (
     <div className="grid gap-3 rounded-2xl border border-line bg-card p-5" aria-busy={st === null}>
-      <h2 className="flex items-center gap-2 font-wide text-lg font-extrabold"><Bell className="h-5 w-5 text-action" weight="duotone" />Powiadomienia</h2>
+      <h2 className="flex items-center gap-2 text-lg font-extrabold"><Bell className="h-5 w-5 text-action" weight="duotone" />Powiadomienia</h2>
       {st === null ? <p className="text-sm text-ink-2">Sprawdzanie…</p>
         : st === 'ios' ? <p className="text-sm">Na iPhonie: Udostępnij → Do ekranu początkowego, potem otwórz aplikację z ikony.</p>
         : st === 'brak' ? <p className="text-sm text-ink-2">Ta przeglądarka nie obsługuje powiadomień. Otwórz aplikację w Chrome lub Safari na telefonie.</p>

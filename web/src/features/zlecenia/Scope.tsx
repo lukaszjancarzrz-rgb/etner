@@ -159,7 +159,7 @@ function ScopeForm({ jobId, item, next, photos, onClose }: { jobId: string; item
                 <li key={a.id} className="relative">
                   <img src={fileUrl(a, 'thumb')} alt={`Zdjęcie ${i + 1}`} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" />
                   <button type="button" aria-label={`Usuń zdjęcie ${i + 1}`} onClick={() => setGone((g) => [...g, a.id])}
-                    className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-card"><X className="h-4 w-4" weight="bold" /></button>
+                    className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-sm"><X className="h-4 w-4" weight="bold" /></button>
                 </li>
               ))}
             </ul>

@@ -131,7 +131,7 @@ function PhotoToggle({ a }: { a: Rec }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={`W paszporcie dla klienta: ${a.nazwa ?? 'zdjęcie'}`} title={on ? 'W paszporcie dla klienta' : 'Tylko wewnętrzne – dodaj do paszportu'}
       onClick={() => patchAttachment(a, { dlaKlienta: !on })} className="group absolute bottom-0 left-0 grid h-11 w-11 place-items-center">
-      <span className={cn('grid h-7 w-7 place-items-center rounded-full shadow-card transition-colors duration-200', on ? 'bg-ok text-ok-ink' : 'bg-card/90 text-ink-2 group-hover:text-ink')}>
+      <span className={cn('grid h-7 w-7 place-items-center rounded-full shadow-sm transition-colors duration-200', on ? 'bg-ok text-ok-ink' : 'bg-card/90 text-ink-2 group-hover:text-ink')}>
         {on ? <Eye className="h-4 w-4" weight="bold" aria-hidden /> : <EyeSlash className="h-4 w-4" aria-hidden />}
       </span>
     </button>
@@ -195,7 +195,7 @@ export function usePicker(opts: { pdf?: boolean; img?: boolean } = {}) {
           {f.img ? <img src={f.url} alt={f.name} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" />
             : <span className="grid h-18 w-18 place-items-center rounded-xl border border-line text-xs"><FilePdf className="h-6 w-6" /></span>}
           <button type="button" aria-label={`Usuń ${f.name}`} onClick={() => { URL.revokeObjectURL(f.url); setFiles((x) => x.filter((_, k) => k !== i)); }}
-            className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-card"><X className="h-4 w-4" weight="bold" /></button>
+            className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-sm"><X className="h-4 w-4" weight="bold" /></button>
         </li>
       ))}
     </ul>

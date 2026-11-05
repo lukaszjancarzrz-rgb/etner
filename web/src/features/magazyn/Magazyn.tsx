@@ -72,7 +72,7 @@ function AddForm() {
     setNazwa(''); setIlosc(''); setErr('');
   }
   return (
-    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4 shadow-card min-[560px]:grid-cols-[minmax(0,1fr)_11rem_auto] min-[560px]:items-start">
+    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4 min-[560px]:grid-cols-[minmax(0,1fr)_11rem_auto] min-[560px]:items-start">
       <Field label="Co leży" error={err}>
         {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err} value={nazwa} onChange={(e) => setNazwa(e.target.value)} placeholder="np. Kołki rozporowe 8 mm" />}
       </Field>
