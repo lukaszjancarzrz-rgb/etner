@@ -9,3 +9,4 @@ R1: review spec ✅ Approved — complete (9fc4ebc..2b06b32, review clean).
 - Ruling R79: brief's logo numbers were contradictory (full PNG at 176–190 px cannot give a legible tagline); crop lockup (mark + wordmark) accepted — cost: owner may want original proportions (asked).
 R1: minor (deferred → R3 brief): radius override, logo crop offsets, side stripes in Paszport/Samochody/Harmonogram, dark duplicate --ink-3 + theme-color, input outline contrast.
 R2: dispatched.
+R2: impl ac62b04..324031b; review dispatched. Controller look: Paszporty last column badge overflows table edge (to add to fixes).
