@@ -1,5 +1,5 @@
 import { Briefcase, MagnifyingGlass, Plus } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { matches, seenFor, useCrewColor, useDict, useIsAdmin, useLoading, useMe, useSeenVersion, useStatusGroup } from '../../core/data.js';
 import { freshByJob } from '../../core/badges.js';
 import { useEntities } from '../../core/store.js';
@@ -148,7 +148,7 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
 }
 
 const MON3 = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
-const terminKrotko = (t?: string | null) => (t ? `${MON3[Number(t.slice(5, 7)) - 1]} ${t.slice(0, 4)}` : '');
+const terminKrotko = (t?: string | null) => (t && MON3[Number(t.slice(5, 7)) - 1] ? `${MON3[Number(t.slice(5, 7)) - 1]} ${t.slice(0, 4)}` : '');
 type Zakres = (typeof GROUPS)[number]['g'];
 
 /** Komputer: pasek (szukaj, zakres, branża, Nowe), tabela z sortowaniem, karta zaznaczonego zlecenia w panelu obok. */
@@ -163,13 +163,23 @@ function JobTable({ list, q, setQ, selected, highlight, fresh, planned }: {
   const [zakres, setZakres] = useState<Zakres>('aktualne');
   const [kat, setKat] = useState<string>();
   const [creating, setCreating] = useState(false);
+  // otwarte zlecenie (klik, link z powiadomienia, wstecz) zawsze ma swój wiersz: zakres i branża idą za nim, raz na zmianę zlecenia
+  const [shownFor, setShownFor] = useState<string>();
+  const sel = selected ? list.find((j) => j.id === selected) : undefined;
+  if (sel && shownFor !== selected) {
+    setShownFor(selected);
+    setZakres(group(sel.status) as Zakres);
+    if (kat && sel.kategoria !== kat) setKat(undefined);
+  }
+  useEffect(() => { document.querySelector(`a[aria-current="page"][href="#zl/${selected}"]`)?.closest('tr')?.scrollIntoView({ block: 'nearest' }); }, [selected, shownFor]);
   const nazwa = (j: JobView) => j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient';
   const inKat = list.filter((j) => !kat || j.kategoria === kat);
   const rows = inKat.filter((j) => group(j.status) === zakres);
   const { rows: sorted, by } = useSort(rows, {
     kat: (j) => (j.kategoria ? abbr(j.kategoria) : ''), nr: (j) => j.numer, klient: nazwa, miejsc: (j) => j.site?.miejscowosc,
-    status: (j) => j.status, ekipa: (j) => j.ekipa, termin: (j) => j.termin, uwagi: (j) => fresh.get(j.id) ?? 0,
-  });
+    status: (j) => j.status, ekipa: (j) => j.ekipa, termin: (j) => j.termin,
+    uwagi: (j) => (fresh.get(j.id) ?? 0) * 2 + Number(group(j.status) === 'aktualne' && !planned.has(j.id)),
+  }, selected ? ['miejsc', 'ekipa'] : []); // przy otwartej karcie te kolumny są ukryte, więc nie sortują
   const open = !!selected;
   return (
     <section className="mx-auto grid max-w-[1600px] gap-4 px-8 py-5">
@@ -204,7 +214,7 @@ function JobTable({ list, q, setQ, selected, highlight, fresh, planned }: {
           <Table aria-label="Zlecenia">
             <thead>
               <tr>
-                <Th sort={by('kat')} className="w-14 pl-2"><span className="sr-only">Branża</span><span aria-hidden>Br.</span></Th>
+                <Th sort={by('kat')} pad="pl-2 pr-2.5" className="w-14"><span className="sr-only">Branża</span><span aria-hidden>Br.</span></Th>
                 <Th sort={by('nr')} className="w-[5.5rem]">Nr</Th>
                 <Th sort={by('klient')}>Klient</Th>
                 {!open && <Th sort={by('miejsc')} className="w-[18%]">Miejscowość</Th>}
@@ -219,7 +229,7 @@ function JobTable({ list, q, setQ, selected, highlight, fresh, planned }: {
                 const nowe = fresh.get(j.id) ?? 0;
                 const on = j.id === selected;
                 return (
-                  <Tr key={j.id} href={`#zl/${j.id}`} selected={on}>
+                  <Tr key={j.id} href={`#zl/${j.id}`} selected={on} className="scroll-mt-28">
                     <Td pad="py-1.5 pr-2.5">{j.kategoria && <><CatTab name={j.kategoria} flush /><span className="sr-only">{j.kategoria}</span></>}</Td>
                     <Td className="font-extrabold">{j._tmp ? 'zapisywanie' : j.numer}</Td>
                     <Td>

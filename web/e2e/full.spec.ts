@@ -402,3 +402,31 @@ test('komputer: gęstszy układ (czcionka 14 px), telefon 16 px', async ({ page 
   if (info.project.name === 'Desktop 1440') await page.screenshot({ path: test.info().outputPath('gestosc-1440.png') });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('zlecenia (komputer): otwarte zlecenie spoza zakresu lub branży ma swój zaznaczony wiersz (link, wstecz)', async ({ page }, info) => {
+  test.skip(info.project.name.startsWith('iPhone'), 'telefon: lista z sekcjami bez zmian');
+  await login(page, 'Tomasz Wrona');
+  await page.goto('/#zl');
+  const zakres = page.getByRole('radiogroup', { name: 'Zakres' });
+  const current = page.getByRole('table', { name: 'Zlecenia' }).locator('a[aria-current="page"]');
+  // zlecenie „Na później”, potem inne z „Aktualne”; wstecz wraca do zakresu „Na później”
+  await zakres.getByRole('radio', { name: /^Na później/ }).click();
+  await page.getByRole('table', { name: 'Zlecenia' }).locator('tbody a').first().click();
+  const later = new URL(page.url()).hash;
+  await expect(current).toBeVisible();
+  await zakres.getByRole('radio', { name: /^Aktualne/ }).click();
+  const bukowski = (await page.getByRole('link', { name: /Józef Bukowski/ }).first().getAttribute('href'))!;
+  await page.getByRole('link', { name: /Józef Bukowski/ }).first().click();
+  await expect(current).toContainText('Józef Bukowski');
+  await page.goBack();
+  expect(new URL(page.url()).hash).toBe(later);
+  await expect(zakres.getByRole('radio', { name: /^Na później/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(current).toBeInViewport();
+  // filtr branży bez tego zlecenia: link prosto do zlecenia zdejmuje filtr
+  await page.getByRole('radiogroup', { name: 'Branża' }).getByRole('radio', { name: 'Elektryka' }).click();
+  await expect(page.getByRole('link', { name: /Józef Bukowski/ })).toHaveCount(0);
+  await page.goto(`/${bukowski}`);
+  await expect(page.getByRole('radiogroup', { name: 'Branża' }).getByRole('radio', { name: 'Wszystkie' })).toHaveAttribute('aria-checked', 'true');
+  await expect(current).toContainText('Józef Bukowski');
+  await expect(current).toBeInViewport();
+});

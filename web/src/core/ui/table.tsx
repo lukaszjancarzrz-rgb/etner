@@ -20,8 +20,10 @@ export function sortRows<T>(rows: readonly T[], get: (r: T) => SortVal, dir: Sor
 }
 
 /** Sortowanie tabeli w stanie ekranu; bez kliknięcia zostaje kolejność, w jakiej ekran podał wiersze. */
-export function useSort<T, K extends string>(rows: readonly T[], cols: Record<K, (r: T) => SortVal>) {
-  const [s, setS] = useState<{ key: K; dir: SortDir } | null>(null);
+/** `off` = kolumny chwilowo ukryte: ich sortowanie nie działa i nie jest ogłaszane, dopóki nie wrócą. */
+export function useSort<T, K extends string>(rows: readonly T[], cols: Record<K, (r: T) => SortVal>, off: readonly NoInfer<K>[] = []) {
+  const [st, setS] = useState<{ key: K; dir: SortDir } | null>(null);
+  const s = st && !off.includes(st.key) ? st : null;
   return {
     rows: s ? sortRows(rows, cols[s.key], s.dir) : rows,
     by: (key: K): SortProp => ({ dir: s?.key === key ? s.dir : undefined, onSort: () => setS((p) => ({ key, dir: p?.key === key && p.dir === 'asc' ? 'desc' : 'asc' })) }),
@@ -34,11 +36,11 @@ export const Table = ({ className, children, ...p }: HTMLAttributes<HTMLTableEle
 );
 
 /** Nagłówek kolumny; `sort` = przycisk sortowania z `aria-sort`, `num` = liczby do prawej. */
-export function Th({ children, sort, num, className, ...p }: HTMLAttributes<HTMLTableCellElement> & { sort?: SortProp; num?: boolean }) {
+export function Th({ children, sort, num, pad = 'px-2.5', className, ...p }: HTMLAttributes<HTMLTableCellElement> & { sort?: SortProp; num?: boolean; pad?: string }) {
   const I = sort?.dir === 'asc' ? ArrowUp : sort?.dir === 'desc' ? ArrowDown : CaretUpDown;
   return (
     <th scope="col" aria-sort={sort?.dir ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
-      className={cn('sticky top-[var(--th-top,4rem)] z-10 h-10 border-b-2 border-ink bg-[color-mix(in_srgb,var(--card)_55%,var(--bg))] px-2.5 align-middle font-cond text-sm font-semibold whitespace-nowrap text-ink-2', num && 'text-right', className)} {...p}>
+      className={cn('sticky top-[var(--th-top,4rem)] z-10 h-10 border-b-2 border-ink bg-[color-mix(in_srgb,var(--card)_55%,var(--bg))] align-middle font-cond text-sm font-semibold whitespace-nowrap text-ink-2', pad, num && 'text-right', className)} {...p}>
       {sort ? (
         <button type="button" onClick={sort.onSort} className={cn('group inline-flex h-8 max-w-full items-center gap-1 rounded-[3px] hover:text-ink focus-visible:outline-offset-1', num && 'flex-row-reverse', sort.dir && 'text-ink')}>
           <span className="truncate">{children}</span>

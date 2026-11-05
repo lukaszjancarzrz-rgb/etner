@@ -1,6 +1,6 @@
 import { CaretRight, IdentificationCard, MapPin } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
-import { fmtDay, matches, seenFor, useDict, useLoading, useMe, useSeenVersion } from '../../core/data.js';
+import { fmtDay, matches, seenFor, today, useDict, useLoading, useMe, useSeenVersion } from '../../core/data.js';
 import { useDesk } from '../../core/layout/status.js';
 import { cn } from '../../core/ui/cn.js';
 import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
@@ -10,7 +10,7 @@ import { catStripe, CatTab, useCatColor } from '../../core/ui/category.js';
 import { Search } from '../../core/ui/search.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { withoutEchoes } from '../../core/write.js';
-import { freshIn, indeks, seenKey, sortPaszporty, teczkiObiektu, type Teczka } from './model.js';
+import { freshIn, indeks, seenKey, serwisStan, sortPaszporty, teczkiObiektu, type Teczka } from './model.js';
 import { pszHash, SerwisBadge, siteHash } from './Paszport.js';
 
 type Wiersz = { site: Rec; klient: string; numer?: string; teczki: (Teczka & { nowe: number })[]; termin?: string };
@@ -127,10 +127,17 @@ function PaszportyTable({ list }: { list: Wiersz[] }) {
               </ul>
             </Td>
             <Td className={cn('font-semibold', !r.numer && 'font-normal text-ink-2')}>{r.numer ?? '—'}</Td>
-            <Td><span className="flex items-center gap-2">{r.termin ? <>{fmtDay(r.termin)}<SerwisBadge nastepny={r.termin} soonOnly /></> : <span className="text-ink-2">—</span>}</span></Td>
+            <Td>{r.termin ? <span className="flex items-center gap-2">{fmtDay(r.termin)}<StanSerwisu nastepny={r.termin} /></span> : <span className="text-ink-2">—</span>}</Td>
           </Tr>
         ))}
       </tbody>
     </Table>
   );
+}
+
+/** Komórka „Następny serwis”: data obok, więc w znaczniku tylko stan („za 10 dni”, „dziś”, „zaległy”); dalsze terminy bez znacznika. */
+function StanSerwisu({ nastepny }: { nastepny: string }) {
+  const s = serwisStan(nastepny, today());
+  if (!s || s.tone === 'later') return null;
+  return <Badge tone={s.tone === 'late' ? 'danger' : 'warn'}><span className="sr-only">{s.label}</span><span aria-hidden>{s.label.replace(/^(następny )?serwis /, '')}</span></Badge>;
 }
