@@ -24,9 +24,9 @@ export function Logo({ className, imgClass = 'w-52', rail }: { className?: strin
     <span className={cn('bg-white', rail ? 'flex items-center gap-[10px]' : 'block', className)} role="img" aria-label="ETNER, inteligentny wybór" data-logo>
       {rail ? (
         <>
-          {/* PNG 601×255: znak x 0–249, napis x 274–601 / y 90–181 */}
-          <span aria-hidden className="block h-[58px] w-[57px] shrink-0 bg-[url(/logo.png)] bg-[length:auto_58px] bg-no-repeat" />
-          <span aria-hidden className="block h-[40px] w-[144px] bg-[url(/logo.png)] bg-[length:264px_auto] bg-[position:-121px_-40px] bg-no-repeat" />
+          {/* wycinki public/logo.png (znak 250×255, napis 324×88) jako osobne pliki: rozmiar wynika z obrazka, bez przesunięć tła */}
+          <img src="/logo-mark.png" alt="" width={250} height={255} className="block h-[58px] w-auto shrink-0" />
+          <img src="/logo-word.png" alt="" width={324} height={88} className="block h-auto w-[142px]" />
         </>
       ) : <img src="/logo.png" alt="" width={601} height={255} className={cn('block h-auto', imgClass)} />}
     </span>

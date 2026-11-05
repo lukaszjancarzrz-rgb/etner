@@ -7,7 +7,8 @@
   --ink: #0a2240;
   --ink-2: #4a5d70;
   --ink-3: #5d6f80; /* podpowiedzi w polach: jaśniej niż wartość, kontrast ≥4.5:1 */
-  --line: #c9d4de; /* obrys pól i paneli */
+  --line: #c9d4de; /* obrys paneli */
+  --field: #74879a; /* obrys pól formularza: kontrast ≥3:1 do tła */
   --rule: #e3e9ee; /* linie między wierszami */
   --action: #0070ab;
   --action-ink: #ffffff;
@@ -31,8 +32,9 @@
     --ink: #eef3f8;
     --ink-2: #b4c4d4;
     --ink-3: #93a7bb;
-  --ink-3: #93a7bb;
     --line: #2f5384;
+  --field: #6688b3;
+    --field: #6688b3;
     --rule: #1f4270;
     --action: #5cbcf0;
     --action-ink: #0a2240;
@@ -81,6 +83,7 @@
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
   --color-line: var(--line);
+  --color-field: var(--field);
   --color-rule: var(--rule);
   --color-action: var(--action);
   --color-action-ink: var(--action-ink);
@@ -96,13 +99,6 @@
   --font-sans: "Sofia Sans", ui-sans-serif, system-ui, sans-serif;
   --font-cond: "Sofia Sans Condensed", "Sofia Sans", ui-sans-serif, system-ui, sans-serif;
   --breakpoint-desk: 1100px;
-}
-/* małe promienie w całej aplikacji: dawne zaokrąglone karty (rounded-xl…3xl) dostają 4–6 px bez zmian w ekranach */
-@theme {
-  --radius-lg: 4px;
-  --radius-xl: 4px;
-  --radius-2xl: 4px;
-  --radius-3xl: 6px;
 }
 
 @layer base {

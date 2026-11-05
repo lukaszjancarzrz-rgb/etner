@@ -9,7 +9,7 @@ export function Select({ value, onValueChange, options, placeholder, id, classNa
 }) {
   return (
     <S.Root value={value} onValueChange={onValueChange}>
-      <S.Trigger id={id} aria-label={label} aria-describedby={describedBy} aria-invalid={invalid || undefined} className={cn('flex h-12 w-full items-center justify-between gap-2 rounded-[4px] border border-line bg-card px-3 text-left text-base hover:border-ink-2/60 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25 data-[placeholder]:text-ink-3 aria-invalid:border-danger', className)}>
+      <S.Trigger id={id} aria-label={label} aria-describedby={describedBy} aria-invalid={invalid || undefined} className={cn('flex h-12 w-full items-center justify-between gap-2 rounded-[4px] border border-field bg-card px-3 text-left text-base hover:border-ink-2 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25 data-[placeholder]:text-ink-3 aria-invalid:border-danger', className)}>
         <S.Value placeholder={placeholder} />
         <S.Icon><CaretDown className="h-4 w-4 text-ink-2" /></S.Icon>
       </S.Trigger>

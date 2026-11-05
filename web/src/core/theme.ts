@@ -15,6 +15,9 @@ export function getTheme(): Theme {
 export function applyTheme(t: Theme = getTheme()): void {
   if (t === 'system') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = t;
+  // pasek stanu telefonu w kolorze górnego paska (szyna): ciemny wariant według motywu
+  const m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"][data-dark]');
+  if (m) m.media = t === 'system' ? '(prefers-color-scheme: dark)' : t === 'dark' ? 'all' : 'not all';
 }
 
 export function setTheme(t: Theme): void {

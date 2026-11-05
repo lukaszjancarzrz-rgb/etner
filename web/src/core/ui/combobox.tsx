@@ -13,7 +13,7 @@ export function Combobox({ value, onValueChange, options, placeholder = 'Wybierz
   const cur = options.find((o) => o.value === value);
   return (
     <P.Root open={open} onOpenChange={setOpen}>
-      <P.Trigger id={id} className={cn('flex h-12 w-full items-center justify-between gap-2 rounded-[4px] border border-line bg-card px-3 text-left text-base hover:border-ink-2/60 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25', !cur && 'text-ink-3')}>
+      <P.Trigger id={id} className={cn('flex h-12 w-full items-center justify-between gap-2 rounded-[4px] border border-field bg-card px-3 text-left text-base hover:border-ink-2 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25', !cur && 'text-ink-3')}>
         <span className="truncate">{cur?.label ?? placeholder}</span>
         <CaretUpDown className="h-4 w-4 shrink-0 text-ink-2" />
       </P.Trigger>
