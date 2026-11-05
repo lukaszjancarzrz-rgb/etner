@@ -16,3 +16,4 @@ R2: fix round 1/5 (2 addressed, 0 open; 324031b..35cab39) — complete (52875bf.
 R2: minor (deferred): open job whose status changes while open may leave visible scope; M3 (Segmented), M6, M8, M9 from R2 review left.
 R3: dispatched (incl. Leady desktop table left by R2; Harmonogram toolbar restyle; job card pills).
 Owner 2026-11-05: „Więcej” last in side menu (under „Na jutro”) — controller change on working branch; ships with redesign. R3 implementer hit usage limit before any commit (resets 13:50 UTC); to resume.
+Owner 2026-11-05: pause after current change (usage limit); R3 implementer told to finish bits.tsx, commit, write status, stop. Resume later: R3 remaining items + review, then R4 (screenshots, detector, finish review, DESIGN.md, release).
