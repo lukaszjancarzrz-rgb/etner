@@ -62,12 +62,12 @@ function CarCard({ car, faults, flash, onEdit, onRepair }: { car: Rec; faults: R
   const list = useMemo(() => faults.filter((f) => !inHistory(f, t)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [faults, t]);
   const history = useMemo(() => faults.filter((f) => inHistory(f, t)).sort((a, b) => fixedOn(b).localeCompare(fixedOn(a))), [faults, t]);
   return (
-    <article aria-label={car.nazwa} className="overflow-hidden rounded-2xl border border-line bg-card">
-      <header className="flex items-center gap-3 border-b border-line px-4 py-3" style={{ boxShadow: `inset 4px 0 0 ${crew(car.ekipa) ?? 'var(--line)'}` }}>
+    <article aria-label={car.nazwa} className="overflow-hidden rounded-[4px] border border-line bg-card">
+      <header className="flex items-center gap-3 border-b border-line px-4 py-3">
         <Van className="h-6 w-6 shrink-0 text-action" weight="duotone" aria-hidden />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-lg font-extrabold leading-tight">{car.nazwa}</h2>
-          <p className="text-sm text-ink-2">{car.ekipa ?? 'Bez ekipy'}</p>
+          <p className="flex items-center gap-1.5 text-sm text-ink-2"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: crew(car.ekipa) ?? 'var(--line)' }} aria-hidden />{car.ekipa ?? 'Bez ekipy'}</p>
         </div>
         {onEdit && !car._tmp && <Button variant="ghost" size="sm" aria-label={`Edytuj samochód ${car.nazwa}`} onClick={onEdit} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>}
       </header>
@@ -106,7 +106,7 @@ function Fault({ f, flash, onRepair, past }: { f: Rec; flash: boolean; onRepair?
   };
   const remove = () => void outbox.enqueue({ ...W, url: `/api/car-faults/${f.id}`, method: 'DELETE', optimistic: (s) => s.remove('car_faults', f.id) }).catch(fail('Nie usunięto usterki'));
   return (
-    <li id={`u-${f.id}`} className={cn('grid scroll-m-24 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none', flash && 'bg-ok/10 ring-4 ring-inset ring-ok/30')}>
+    <li id={`u-${f.id}`} className={cn('grid scroll-m-24 gap-2 px-4 py-3 transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none', flash && 'bg-ok/10 ring-4 ring-inset ring-ok/30')}>
       <div className="min-w-0">
         <p className={cn('font-semibold leading-snug', past && 'text-ink-2')}>{f.opis}</p>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
@@ -117,16 +117,18 @@ function Fault({ f, flash, onRepair, past }: { f: Rec; flash: boolean; onRepair?
         </p>
       </div>
       {onRepair && !f._tmp && (
-        <span className="flex gap-1">
-          {/* dzień naprawy minął bez „Naprawione”: admin może przełożyć albo potwierdzić */}
+        // akcje podpisane; „Usuń” na drugim końcu wiersza, z dala od „Naprawione”
+        <div className="-ml-3 flex flex-wrap items-center gap-1">
           {f.naprawioneAt
-            ? <Button variant="ghost" size="sm" onClick={() => fixed(false)} aria-label={`Cofnij naprawione: ${f.opis}`} className="w-10 px-0 text-ink-2"><ArrowCounterClockwise className="h-5 w-5 shrink-0" /></Button>
+            ? <Button variant="ghost" size="sm" onClick={() => fixed(false)} aria-label={`Cofnij naprawione: ${f.opis}`} className="text-ink-2"><ArrowCounterClockwise className="h-5 w-5 shrink-0" />Cofnij</Button>
             : <>
-              <Button variant="ghost" size="sm" onClick={() => onRepair(f)} aria-label={`Naprawa: ${f.opis}`} className="text-action"><CalendarCheck className="h-5 w-5 shrink-0" /><span className="hidden min-[560px]:inline">Naprawa</span></Button>
-              <Button variant="ghost" size="sm" onClick={() => fixed(true)} aria-label={`Naprawione: ${f.opis}`} className="text-ok"><CheckCircle className="h-5 w-5 shrink-0" /><span className="hidden min-[560px]:inline">Naprawione</span></Button>
+              {/* dzień naprawy minął bez „Naprawione”: admin może przełożyć albo potwierdzić */}
+              <Button variant="ghost" size="sm" onClick={() => onRepair(f)} aria-label={`Naprawa: ${f.opis}`} className="text-action"><CalendarCheck className="h-5 w-5 shrink-0" />Naprawa</Button>
+              <Button variant="ghost" size="sm" onClick={() => fixed(true)} aria-label={`Naprawione: ${f.opis}`} className="text-ok"><CheckCircle className="h-5 w-5 shrink-0" />Naprawione</Button>
             </>}
-          <Button variant="ghost" size="sm" aria-label={`Usuń usterkę: ${f.opis}`} onClick={remove} className="w-10 px-0 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>
-        </span>
+          <span aria-hidden className="min-w-4 flex-1" />
+          <Button variant="ghost" size="sm" aria-label={`Usuń usterkę: ${f.opis}`} onClick={remove} className="-mr-3 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" />Usuń</Button>
+        </div>
       )}
     </li>
   );

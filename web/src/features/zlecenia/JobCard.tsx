@@ -83,8 +83,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
       <a href="#zl" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action desk:hidden"><ArrowLeft className="h-5 w-5" />Zlecenia</a>
-      <div className="overflow-hidden rounded-2xl border border-line bg-card">
-        <div className="h-1.5" style={{ background: color ?? 'var(--line)' }} aria-hidden />
+      <div className="overflow-hidden rounded-[4px] border border-line bg-card">
         <div className="grid gap-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -101,13 +100,14 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
           </div>
           {(phones.length > 0 || nav || psz) && (
             <div className="flex flex-wrap gap-2">
-              {psz && <a href={psz} className="inline-flex h-12 items-center gap-2 rounded-full border border-action px-5 font-semibold text-action hover:bg-action/8"><IdentificationCard className="h-5 w-5" weight="duotone" />Paszport → {job.kategoria}</a>}
-              {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-full bg-action px-5 font-semibold text-action-ink"><NavigationArrow className="h-5 w-5" weight="fill" />Nawiguj</a>}
-              {phones.map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-full border border-line px-5 font-semibold"><Phone className="h-5 w-5" />{t}</a>)}
+              {/* Nawiguj = akcja główna; telefon i paszport drugorzędne */}
+              {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-action px-5 font-bold text-action-ink hover:brightness-110"><NavigationArrow className="h-5 w-5" weight="fill" />Nawiguj</a>}
+              {phones.map((t) => <a key={t} href={telHref(t)} className={secondary}><Phone className="h-5 w-5" />{t}</a>)}
+              {psz && <a href={psz} className={secondary}><IdentificationCard className="h-5 w-5" />Paszport → {job.kategoria}</a>}
               {fc.has('telefony') && <span className="self-center"><NewMark sr="zmienione telefony klienta" /></span>}
             </div>
           )}
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4 text-sm min-[560px]:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4 text-sm min-[560px]:grid-cols-4 desk:grid-cols-2">
             <Info k="Ekipa" fresh={fj.has('ekipa')}><span className="inline-flex items-center gap-1.5">{job.ekipa && <span className="h-2.5 w-2.5 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />}{job.ekipa ?? 'nie przypisano'}</span></Info>
             <Info k="Termin" fresh={fj.has('termin')}><span className="capitalize">{fmtTermin(job.termin)}</span></Info>
             <Info k="Rodzaj" fresh={fj.has('rodzaj') || fj.has('kategoria')}>{[job.rodzaj, job.kategoria].filter(Boolean).join(', ') || 'brak'}</Info>
@@ -117,17 +117,17 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
             </Info>
           </dl>
           {admin && job.uwagiAdmin && (
-            <div className="grid gap-1 rounded-xl bg-bg/70 p-3"><p className="flex items-center gap-1.5 text-sm font-semibold text-ink-2"><User className="h-4 w-4" />Uwagi admina (pracownicy nie widzą){fj.has('uwagiAdmin') && <NewMark sr="zmienione uwagi admina" />}</p><p className="whitespace-pre-wrap">{job.uwagiAdmin}</p></div>
+            <div className="grid gap-1 rounded-[4px] bg-bg/70 p-3"><p className="flex items-center gap-1.5 text-sm font-semibold text-ink-2"><User className="h-4 w-4" />Uwagi admina (pracownicy nie widzą){fj.has('uwagiAdmin') && <NewMark sr="zmienione uwagi admina" />}</p><p className="whitespace-pre-wrap">{job.uwagiAdmin}</p></div>
           )}
         </div>
       </div>
       {serwis && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-action/40 bg-action/8 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[4px] border border-action/40 bg-action/8 px-4 py-3">
           <ClipboardText className="h-6 w-6 shrink-0 text-action" weight="duotone" aria-hidden />
           <p className="min-w-0 flex-1">{wpis
             ? <>Wpis w karcie serwisowej z <span className="font-semibold tabular-nums">{fmtDay(wpis.dzien)}</span>, teczka <span className="font-semibold">{job.kategoria}</span>.</>
             : <>To zlecenie jest w teczce <span className="font-semibold">{job.kategoria}</span>. Po serwisie dodaj wpis do karty serwisowej.</>}</p>
-          {!wpis && <a href={`${psz}/wpis~${id}`} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-sm font-semibold text-action-ink hover:brightness-110"><Plus className="h-4 w-4" weight="bold" />Dodaj wpis do karty serwisowej</a>}
+          {!wpis && <a href={`${psz}/wpis~${id}`} className="inline-flex h-10 items-center gap-2 rounded-[4px] bg-action px-4 text-sm font-semibold text-action-ink hover:brightness-110"><Plus className="h-4 w-4" weight="bold" />Dodaj wpis do karty serwisowej</a>}
         </div>
       )}
       <Scope jobId={id} disabled={!!job._tmp} since={since} />
@@ -137,6 +137,8 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
     </article>
   );
 }
+
+const secondary = 'inline-flex h-12 items-center gap-2 rounded-[4px] border border-line bg-card px-4 font-semibold hover:border-ink-2';
 
 const Info = ({ k, fresh, children }: { k: string; fresh?: boolean; children: React.ReactNode }) => (
   <div className="min-w-0"><dt className="flex items-center gap-1.5 text-ink-2">{k}{fresh && <NewMark sr={`zmienione pole ${k.toLowerCase()}`} />}</dt><dd className="mt-0.5 font-semibold">{children}</dd></div>

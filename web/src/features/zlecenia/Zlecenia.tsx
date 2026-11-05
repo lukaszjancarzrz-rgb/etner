@@ -96,7 +96,7 @@ function JobList({ selected, highlight }: { selected?: string; highlight?: strin
             {!collapsed && byMonth(items).map(([t, month]) => (
               <div key={t} className="grid gap-2">
                 <h3 className="mt-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-ink-2 first-letter:uppercase after:h-px after:flex-1 after:bg-line">{fmtTermin(t || null)}</h3>
-                <ul className="grid gap-2">
+                <ul className="divide-y divide-rule rounded-[4px] border border-line bg-card">
                   {month.map((j) => <JobRow key={j.id} j={j} on={j.id === selected} nowe={fresh.get(j.id) ?? 0} missing={g === 'aktualne' && !planned.has(j.id)} color={crew(j.ekipa)} />)}
                 </ul>
               </div>
@@ -125,11 +125,12 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
   return (
     <li>
       <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined}
-        className={cn('grid gap-1 rounded-2xl border bg-card px-4 py-3 transition-colors duration-200 hover:border-ink-2', on ? 'border-action ring-2 ring-action/25' : 'border-line')}>
-        <span className="flex items-center gap-2 text-sm">
+        className={cn('grid grid-cols-[minmax(0,1fr)] gap-1 px-4 py-3 transition-colors duration-200', on ? 'bg-action/10' : 'hover:bg-ink/4')}>
+        {/* plakietki zawijają się pod numer na wąskim telefonie (bez przewijania w poziomie) */}
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span className="font-semibold tabular-nums text-ink-2">{j._tmp ? 'zapisywanie' : j.numer}</span>
-          <span className="truncate text-ink-2">{j.status}</span>
-          <span className="ml-auto flex shrink-0 gap-1.5">
+          <span className="min-w-0 truncate text-ink-2">{j.status}</span>
+          <span className="ml-auto flex flex-wrap justify-end gap-1.5">
             {nowe > 0 && <Badge tone="new">{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</Badge>}
             {missing && <Badge tone="warn">brak w harmonogramie</Badge>}
           </span>

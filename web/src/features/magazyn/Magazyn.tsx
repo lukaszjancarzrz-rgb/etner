@@ -39,14 +39,14 @@ export function Magazyn() {
             <>
               <div className="grid gap-2">
                 <SectionTitle count={lying.length}>Na magazynie</SectionTitle>
-                {lying.length ? <ul aria-label="Na magazynie" className="grid gap-2">{lying.map((i) => <Item key={i.id} i={i} />)}</ul>
+                {lying.length ? <ul aria-label="Na magazynie" className="divide-y divide-rule rounded-[4px] border border-line bg-card">{lying.map((i) => <Item key={i.id} i={i} />)}</ul>
                   : <p className="px-1 text-sm text-ink-2">{q.trim() ? 'Na magazynie nic nie pasuje.' : 'Wszystko zabrane.'}</p>}
               </div>
               {!!taken.length && (
                 <div className="grid gap-2">
                   <SectionTitle count={taken.length} className="border-ink-2">Zabrane</SectionTitle>
                   <p className="-mt-1 px-1 text-sm text-ink-2">Po 7 dniach znikają z listy.</p>
-                  <ul aria-label="Zabrane" className="grid gap-2">{taken.map((i) => <Item key={i.id} i={i} onReturn={() => setRet(i)} />)}</ul>
+                  <ul aria-label="Zabrane" className="divide-y divide-rule rounded-[4px] border border-line bg-card">{taken.map((i) => <Item key={i.id} i={i} onReturn={() => setRet(i)} />)}</ul>
                 </div>
               )}
             </>
@@ -72,7 +72,7 @@ function AddForm() {
     setNazwa(''); setIlosc(''); setErr('');
   }
   return (
-    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4 min-[560px]:grid-cols-[minmax(0,1fr)_11rem_auto] min-[560px]:items-start">
+    <form onSubmit={submit} noValidate className="grid gap-3 rounded-[4px] border border-line bg-card p-4 min-[560px]:grid-cols-[minmax(0,1fr)_11rem_auto] min-[560px]:items-start">
       <Field label="Co leży" error={err}>
         {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err} value={nazwa} onChange={(e) => setNazwa(e.target.value)} placeholder="np. Kołki rozporowe 8 mm" />}
       </Field>
@@ -93,7 +93,7 @@ function Item({ i, onReturn }: { i: Rec; onReturn?: () => void }) {
   const remove = () => void outbox.enqueue({ ...W, url: `/api/warehouse/${i.id}`, method: 'DELETE', optimistic: (s) => s.remove('warehouse_items', i.id) }).catch(fail('Nie usunięto rzeczy'));
   const gone = !!i.zabraneAt;
   return (
-    <li className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-2xl border py-2.5 pr-2 pl-4', gone ? 'border-transparent bg-ink-2/12 text-ink-2' : 'border-line bg-card')}>
+    <li className={cn('grid gap-2 py-3 pr-2 pl-4 min-[560px]:grid-cols-[minmax(0,1fr)_auto] min-[560px]:items-center', gone && 'bg-bg/60 text-ink-2')}>
       <div className="min-w-0">
         <p className={cn('font-semibold leading-snug', gone ? 'text-ink-2' : 'text-ink')}>{i.nazwa}{i.ilosc && <span className="font-normal text-ink-2"> · {i.ilosc}</span>}</p>
         <p className="mt-0.5 text-sm text-ink-2">
@@ -101,12 +101,13 @@ function Item({ i, onReturn }: { i: Rec; onReturn?: () => void }) {
         </p>
       </div>
       {!i._tmp && (
+        // akcja główna podpisana; „Usuń” na drugim końcu, z odstępem ≥16 px
         <span className="flex items-center gap-1">
           {gone
             ? <Button variant="secondary" size="sm" onClick={onReturn} aria-label={`Zwracam: ${i.nazwa}`}><ArrowUUpLeft className="h-5 w-5" />Zwracam</Button>
             : <Button variant="secondary" size="sm" onClick={take} aria-label={`Zabieram: ${i.nazwa}`}><HandGrabbing className="h-5 w-5" />Zabieram</Button>}
-          {(i.by === me?.id || admin) ? <Button variant="ghost" size="sm" aria-label={`Usuń: ${i.nazwa}`} onClick={remove} className="w-10 px-0 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>
-            : <span className="w-10" aria-hidden />}
+          <span aria-hidden className="min-w-4 flex-1 min-[560px]:w-8 min-[560px]:flex-none" />
+          {(i.by === me?.id || admin) && <Button variant="ghost" size="sm" aria-label={`Usuń: ${i.nazwa}`} onClick={remove} className="text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" />Usuń</Button>}
         </span>
       )}
     </li>

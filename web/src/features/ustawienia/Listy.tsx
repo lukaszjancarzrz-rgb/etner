@@ -117,7 +117,7 @@ function Editor({ t, onDeleted }: { t: Rec; onDeleted: () => void }) {
               <Input aria-label={`Pozycja ${i + 1}`} value={x} onChange={(e) => edit({ pozycje: d.pozycje.map((y, k) => (k === i ? e.target.value : y)) })} className="h-11" maxLength={300} />
               <Button variant="ghost" size="iconTight" aria-label={`W górę: ${x}`} disabled={i === 0} onClick={() => edit({ pozycje: move(d.pozycje, i, -1) })}><ArrowUp className="h-5 w-5" /></Button>
               <Button variant="ghost" size="iconTight" aria-label={`W dół: ${x}`} disabled={i === d.pozycje.length - 1} onClick={() => edit({ pozycje: move(d.pozycje, i, 1) })}><ArrowDown className="h-5 w-5" /></Button>
-              <Button variant="ghost" size="iconTight" aria-label={`Usuń: ${x}`} onClick={() => edit({ pozycje: d.pozycje.filter((_, k) => k !== i) })} className="text-danger"><Trash className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="iconTight" aria-label={`Usuń: ${x}`} onClick={() => edit({ pozycje: d.pozycje.filter((_, k) => k !== i) })} className="ml-3 text-danger"><Trash className="h-5 w-5" /></Button>
             </li>
           ))}
           {!d.pozycje.length && <li className="text-sm text-ink-2">Lista nie ma jeszcze pozycji.</li>}

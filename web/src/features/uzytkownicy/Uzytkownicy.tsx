@@ -50,10 +50,10 @@ export function Uzytkownicy() {
           <Button onClick={() => setForm('new')}><UserPlus className="h-5 w-5" />Nowy użytkownik</Button>
         </div>
         {!users.length && <Empty icon={UsersThree} title="Nie ma użytkowników" />}
-        <ul className="grid gap-2">
+        <ul className="divide-y divide-rule rounded-[4px] border border-line bg-card">
           {sorted.map((u) => (
             <li key={u.id}>
-              <button type="button" onClick={() => setForm(u)} className={cn('grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 text-left hover:border-ink-2', !u.active && 'opacity-70')}>
+              <button type="button" onClick={() => setForm(u)} className={cn('grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left hover:bg-ink/4', !u.active && 'opacity-70')}>
                 <Avatar userId={u.id} name={u.name} size="lg" />
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-2">
@@ -218,7 +218,7 @@ function ResetPassword({ user, onClose, onShow }: { user: Rec; onClose: () => vo
               </div>
             )}
           </Field>
-          <p className="rounded-xl border border-danger/40 bg-danger/5 px-4 py-3 text-sm">Wszystkie jego sesje zostaną zakończone: na każdym urządzeniu zobaczy „Zaloguj się ponownie” i zaloguje się nowym hasłem.</p>
+          <p className="rounded-[4px] border border-danger/40 bg-danger/5 px-4 py-3 text-sm">Wszystkie jego sesje zostaną zakończone: na każdym urządzeniu zobaczy „Zaloguj się ponownie” i zaloguje się nowym hasłem.</p>
           <div className="flex justify-end gap-3 border-t border-line pt-4">
             <Button variant="secondary" onClick={onClose}>Anuluj</Button>
             <Button type="submit" disabled={busy}>{busy ? 'Zapisywanie…' : 'Ustaw hasło i wyloguj'}</Button>
@@ -238,7 +238,7 @@ function Credentials({ s, onClose }: { s: Shown; onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <Sheet title={s.title} description={s.name}>
         <div className="grid gap-4">
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-xl border border-line bg-bg px-4 py-3">
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-[4px] border border-line bg-bg px-4 py-3">
             <dt className="text-ink-2">Login</dt><dd className="font-mono font-semibold break-all" data-testid="login">{s.login}</dd>
             <dt className="text-ink-2">Hasło</dt><dd className="font-mono text-lg font-bold tracking-wide break-all" data-testid="haslo">{s.haslo}</dd>
           </dl>
@@ -286,9 +286,9 @@ function ScheduleColumns() {
     <div className="grid gap-3" aria-label="Kolumny harmonogramu" role="region">
       <SectionTitle count={people.length}>Kolumny harmonogramu</SectionTitle>
       <p className="text-sm text-ink-2">Kolejność jak w harmonogramie. Powiązane konto dostaje powiadomienia o zmianach w swoim wierszu.</p>
-      <ol className="grid gap-2">
+      <ol className="divide-y divide-rule rounded-[4px] border border-line bg-card">
         {people.map((p, i) => (
-          <li key={p.id} className="grid gap-2 rounded-2xl border border-line bg-card p-3">
+          <li key={p.id} className="grid gap-2 p-3">
             <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1">
               <NameInput p={p} onSave={(nazwa) => void update(p, { nazwa })} />
               <Button variant="ghost" size="icon" aria-label={`W górę: ${p.nazwa}`} disabled={i === 0} onClick={() => reorder(i, -1)}><ArrowUp className="h-5 w-5" /></Button>

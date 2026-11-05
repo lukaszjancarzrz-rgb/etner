@@ -58,7 +58,7 @@ export function Zakupy({ route }: { route: Route }) {
           <div key={status} className="grid gap-2">
             <SectionTitle count={list.length} toggle={collapsible ? { open: !shut, onToggle: () => setDoneOpen((o) => !o) } : undefined}>{status}</SectionTitle>
             {!shut && (desk ? <ShopTable label={status} list={list} statusy={statusy} flash={flash} />
-              : <ul className="grid gap-2">{list.map((i) => <Item key={i.id} i={i} statusy={statusy} flash={i.id === flash} />)}</ul>)}
+              : <ul className="divide-y divide-rule rounded-[4px] border border-line bg-card">{list.map((i) => <Item key={i.id} i={i} statusy={statusy} flash={i.id === flash} />)}</ul>)}
           </div>
         );
       })}
@@ -86,7 +86,7 @@ function AddForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4">
+    <form onSubmit={submit} noValidate className="grid gap-3 rounded-[4px] border border-line bg-card p-4">
       <Field label="Co kupić" error={err}>
         {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err} value={co} onChange={(e) => setCo(e.target.value)} placeholder="np. Kolanka 160 mm, 10 szt." enterKeyHint="send" />}
       </Field>
@@ -132,12 +132,12 @@ function Item({ i, statusy, flash, desk }: { i: Rec; statusy: Rec[]; flash: bool
   const canTick = admin && !i._tmp && first && last;
   const tick = (big: boolean) => canTick ? (
     // ptaszek admina: zaznaczone = ostatni status (Kupione), odznaczone = pierwszy (Do kupienia)
-    <label className={cn('grid cursor-pointer place-items-center hover:bg-ok/10', big ? 'h-11 w-11 rounded-xl' : 'mx-auto h-9 w-9 rounded-[4px]')}>
+    <label className={cn('grid cursor-pointer place-items-center hover:bg-ok/10', big ? 'h-11 w-11 rounded-[4px]' : 'mx-auto h-9 w-9 rounded-[4px]')}>
       <Checkbox checked={done} aria-label={`Kupione: ${i.co}`} onCheckedChange={(v) => void put({ status: v === true ? last : first })} className={big ? 'h-8 w-8' : 'h-6 w-6'} />
     </label>
   ) : (
     <span className={cn('grid place-items-center', big ? 'h-11 w-11' : 'mx-auto h-9 w-9')} role="img" aria-label={done ? 'Kupione' : 'Do kupienia'}>
-      <span className={cn('grid place-items-center rounded-lg border-2', big ? 'h-7 w-7' : 'h-6 w-6', done ? 'border-ok bg-ok text-bg' : 'border-line')}>{done && <Check weight="bold" className="h-4 w-4" />}</span>
+      <span className={cn('grid place-items-center rounded-[4px] border-2', big ? 'h-7 w-7' : 'h-6 w-6', done ? 'border-ok bg-ok text-bg' : 'border-line')}>{done && <Check weight="bold" className="h-4 w-4" />}</span>
     </span>
   );
   const del = (i.by === me?.id || admin) && !i._tmp;
@@ -152,7 +152,7 @@ function Item({ i, statusy, flash, desk }: { i: Rec; statusy: Rec[]; flash: bool
     </Tr>
   );
   return (
-    <li id={`z-${i.id}`} className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card py-3 pr-3 pl-2 transition-[box-shadow,border-color] duration-300', flash ? 'border-ok ring-4 ring-ok/25' : 'border-line')}>
+    <li id={`z-${i.id}`} className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3 pr-2 pl-2 transition-[box-shadow,background-color] duration-300', flash && 'bg-ok/10 ring-4 ring-inset ring-ok/25')}>
       {tick(true)}
       <div className="min-w-0">
         <p className={cn('font-semibold leading-snug', done && 'text-ink-2')}>{i.co}</p>

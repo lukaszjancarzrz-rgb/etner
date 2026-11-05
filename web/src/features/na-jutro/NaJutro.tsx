@@ -63,7 +63,7 @@ export function NaJutro({ route }: { route: Route }) {
 
   return (
     <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
-      <div className="grid gap-3 rounded-2xl border border-line bg-card p-4">
+      <div className="grid gap-3 rounded-[4px] border border-line bg-card p-4">
         {admin ? (
           <Segmented label="Ekipa" value={ekipa} onChange={setCrew} options={crews.map((c) => ({ v: c.wartosc as string, label: c.wartosc as string }))} />
         ) : <p className="text-lg font-extrabold">{ekipa}</p>}
@@ -73,7 +73,7 @@ export function NaJutro({ route }: { route: Route }) {
           <Button variant="secondary" size="icon" aria-label="Następny dzień" onClick={() => setDay(addDays(day, 1))}><CaretRight className="h-5 w-5" /></Button>
         </div>
         {repairs.map((r) => (
-          <a key={r.id} href={`#auta~${r.id}`} className="flex items-start gap-2 rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger">
+          <a key={r.id} href={`#auta~${r.id}`} className="flex items-start gap-2 rounded-[4px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger">
             <Wrench className="mt-0.5 h-4 w-4 shrink-0" weight="bold" aria-hidden />
             <span className="min-w-0 [overflow-wrap:anywhere]">{r.auto} w naprawie – {r.opis}</span>
           </a>
@@ -85,12 +85,12 @@ export function NaJutro({ route }: { route: Route }) {
         <SectionTitle count={open.length || undefined}>Do zabrania</SectionTitle>
         <AddForm ekipa={ekipa} day={day} />
         {!list.length && <Empty icon={SunHorizon} title="Nic do zabrania" hint="Dopisz, co ekipa ma zabrać. Pozostali z ekipy dostaną powiadomienie." />}
-        {open.length > 0 && <ul className="grid gap-2">{open.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>}
+        {open.length > 0 && <ul className="divide-y divide-rule rounded-[4px] border border-line bg-card">{open.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>}
       </div>
       {taken.length > 0 && (
         <div className="grid gap-2">
           <SectionTitle count={taken.length}>Zabrane</SectionTitle>
-          <ul className="grid gap-2">{taken.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>
+          <ul className="divide-y divide-rule rounded-[4px] border border-line bg-card">{taken.map((i) => <Item key={i.id} i={i} flash={i.id === flash} />)}</ul>
         </div>
       )}
 
@@ -144,8 +144,8 @@ function Item({ i, flash }: { i: Rec; flash: boolean }) {
   const canDelete = (i.createdBy === me?.id || admin) && !i._tmp;
 
   return (
-    <li id={`j-${i.id}`} data-flash={flash || undefined} className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card py-3 pr-3 pl-2 transition-[box-shadow,border-color] duration-300', flash ? 'border-ok ring-4 ring-ok/25' : 'border-line')}>
-      <label className={cn('grid h-14 w-14 place-items-center rounded-xl', !i._tmp && 'cursor-pointer hover:bg-ok/10')}>
+    <li id={`j-${i.id}`} data-flash={flash || undefined} className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3 pr-2 pl-2 transition-[box-shadow,background-color] duration-300', flash && 'bg-ok/10 ring-4 ring-inset ring-ok/25')}>
+      <label className={cn('grid h-14 w-14 place-items-center rounded-[4px]', !i._tmp && 'cursor-pointer hover:bg-ok/10')}>
         <Checkbox checked={!!i.zabrane} disabled={!!i._tmp} aria-label={`Zabrane: ${i.tekst}`} onCheckedChange={(v) => toggle(v === true)} className="h-9 w-9" />
       </label>
       {edit !== null ? (
@@ -165,9 +165,10 @@ function Item({ i, flash }: { i: Rec; flash: boolean }) {
           )}
         </div>
       )}
-      <div className="flex">
-        {admin && edit === null && !i._tmp && <Button variant="ghost" size="sm" aria-label={`Zmień: ${i.tekst}`} onClick={() => setEdit(i.tekst)} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>}
-        {canDelete && edit === null && <Button variant="ghost" size="sm" aria-label={`Usuń: ${i.tekst}`} onClick={remove} className="w-10 px-0 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>}
+      {/* „Usuń” oddzielone od „Zmień” (≥16 px) */}
+      <div className="flex gap-4">
+        {admin && edit === null && !i._tmp && <Button variant="ghost" size="icon" aria-label={`Zmień: ${i.tekst}`} onClick={() => setEdit(i.tekst)} className="text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>}
+        {canDelete && edit === null && <Button variant="ghost" size="icon" aria-label={`Usuń: ${i.tekst}`} onClick={remove} className="text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>}
       </div>
     </li>
   );
@@ -202,7 +203,7 @@ function Lists({ ekipa, day }: { ekipa: string; day: string }) {
         {ranked.map(({ t, jobs: js }) => (
           <li key={t.id}>
             <button type="button" onClick={() => setOpen(t.id)} data-fits={js.length > 0 || undefined}
-              className={cn('flex h-full w-full items-start gap-3 rounded-2xl border p-3 text-left transition-colors hover:border-ink-2', js.length ? 'border-action bg-action/8' : 'border-line bg-card')}>
+              className={cn('flex h-full w-full items-start gap-3 rounded-[4px] border p-3 text-left transition-colors hover:border-ink-2', js.length ? 'border-action bg-action/8' : 'border-line bg-card')}>
               <ListChecks className={cn('mt-0.5 h-6 w-6 shrink-0', js.length ? 'text-action' : 'text-ink-2')} weight={js.length ? 'fill' : 'regular'} />
               <span className="grid min-w-0 gap-0.5">
                 <span className="font-semibold leading-snug">{t.nazwa}</span>
@@ -229,7 +230,7 @@ function TemplateSheet({ t }: { t: Rec }) {
       <ul className="grid gap-1">
         {items.map((x, i) => (
           <li key={i}>
-            <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-ink/5">
+            <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-[4px] px-2 py-1.5 hover:bg-ink/5">
               <Checkbox checked={done.has(i)} onCheckedChange={() => flip(i)} className="h-7 w-7" />
               <span className={cn('min-w-0 [overflow-wrap:anywhere]', done.has(i) && 'text-ink-2 line-through')}>{x}</span>
             </label>

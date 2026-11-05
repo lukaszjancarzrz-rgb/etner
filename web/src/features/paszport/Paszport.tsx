@@ -4,7 +4,7 @@ import { seenFor, today, useDict, useIsAdmin, useMe, useSeenVersion } from '../.
 import { useEntities, type Rec } from '../../core/store.js';
 import { Badge, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
-import { catStripe, useCatColor } from '../../core/ui/category.js';
+import { CatTab } from '../../core/ui/category.js';
 import { Field } from '../../core/ui/input.js';
 import { Select } from '../../core/ui/select.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
@@ -48,7 +48,6 @@ export function SerwisBadge({ nastepny, soonOnly }: { nastepny?: string | null; 
 export function PaszportSekcja({ site, label, onSite }: { site: Rec; label?: string; onSite?: boolean }) {
   const teczki = useTeczki(site.id);
   const admin = useIsAdmin();
-  const cat = useCatColor();
   const [adding, setAdding] = useState(false);
   const me = useMe();
   const ver = useSeenVersion();
@@ -64,10 +63,9 @@ export function PaszportSekcja({ site, label, onSite }: { site: Rec; label?: str
           const lines = [plural(t.jobIds.length, ['zlecenie', 'zlecenia', 'zleceń']), plural(t.photos.length, ['zdjęcie', 'zdjęcia', 'zdjęć'])];
           return (
             <li key={t.kategoria}>
-              <a href={pszHash(site.id, t.kategoria)} className="flex h-full min-h-24 overflow-hidden rounded-2xl border border-line bg-card hover:border-ink-2">
-                <span className="w-1.5 shrink-0" style={{ background: catStripe(cat(t.kategoria)) }} aria-hidden />
+              <a href={pszHash(site.id, t.kategoria)} className="flex h-full min-h-24 overflow-hidden rounded-[4px] border border-line bg-card hover:border-ink-2">
                 <span className="grid min-w-0 flex-1 content-start gap-1 px-4 py-3">
-                  <span className="flex flex-wrap items-center gap-2"><span className="text-lg font-extrabold leading-tight">{t.kategoria}</span>
+                  <span className="flex flex-wrap items-center gap-2"><CatTab name={t.kategoria} /><span className="text-lg font-extrabold leading-tight">{t.kategoria}</span>
                     {!!fresh.get(t.kategoria) && <Badge tone="new"><span aria-hidden>{fresh.get(t.kategoria)} nowe</span><span className="sr-only">, nowe od ostatniej wizyty: {fresh.get(t.kategoria)}</span></Badge>}</span>
                   <span className="text-sm text-ink-2">{lines.join(' · ')}</span>
                   <span className="text-sm text-ink-2">{[t.entries.length && plural(t.entries.length, ['wpis', 'wpisy', 'wpisów']), t.docs.length && plural(t.docs.length, ['dokument', 'dokumenty', 'dokumentów']), t.devices.length && plural(t.devices.length, ['urządzenie', 'urządzenia', 'urządzeń'])].filter(Boolean).join(' · ') || 'bez dokumentów'}</span>
@@ -79,7 +77,7 @@ export function PaszportSekcja({ site, label, onSite }: { site: Rec; label?: str
         })}
         {admin && (
           <li>
-            <button type="button" onClick={() => setAdding(true)} className="grid h-full min-h-24 w-full content-center justify-items-start gap-1 rounded-2xl border-2 border-dashed border-line px-4 py-3 text-left text-ink-2 hover:border-ink-2 hover:text-ink">
+            <button type="button" onClick={() => setAdding(true)} className="grid h-full min-h-24 w-full content-center justify-items-start gap-1 rounded-[4px] border-2 border-dashed border-line px-4 py-3 text-left text-ink-2 hover:border-ink-2 hover:text-ink">
               <span className="flex items-center gap-2 font-semibold"><FolderSimplePlus className="h-5 w-5" />Dodaj teczkę</span>
               <span className="text-sm">np. kategoria bez zlecenia</span>
             </button>

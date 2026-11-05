@@ -73,11 +73,11 @@ function ThemeCard() {
   const theme = useTheme();
   return (
     <Card title="Motyw" icon={Sun} hint="Wygląd aplikacji na tym urządzeniu. Auto = jak w telefonie.">
-      <div role="radiogroup" aria-label="Motyw" className="grid grid-cols-3 gap-1 rounded-full border border-line p-1">
+      <div role="radiogroup" aria-label="Motyw" className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-[4px] border border-line bg-card">
         {themes.map(({ v, label, icon: I }) => (
           <button key={v} role="radio" aria-checked={theme === v} onClick={() => setTheme(v)}
-            className={cn('flex h-11 items-center justify-center gap-2 rounded-full px-2 text-sm font-semibold transition-colors duration-200',
-              theme === v ? 'bg-ink text-bg' : 'text-ink-2 hover:text-ink')}>
+            className={cn('flex h-11 items-center justify-center gap-2 px-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-offset-[-2px]',
+              theme === v ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/6 hover:text-ink')}>
             <I className="h-5 w-5 shrink-0" /><span className="truncate">{label}</span>
           </button>
         ))}
@@ -108,7 +108,7 @@ function ChangePassword() {
     setBusy(false);
   }
   return (
-    <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-line bg-card p-5">
+    <form onSubmit={submit} className="grid gap-4 rounded-[4px] border border-line bg-card p-5">
       <h2 className="flex items-center gap-2 text-lg font-extrabold"><Key className="h-5 w-5 text-action" weight="duotone" />Zmień hasło</h2>
       <Field label="Obecne hasło">{(id) => <Input id={id} type="password" autoComplete="current-password" value={stare} onChange={(e) => setStare(e.target.value)} required />}</Field>
       <Field label="Nowe hasło" hint="Co najmniej 8 znaków.">{(id, d) => <Input id={id} aria-describedby={d} type="password" autoComplete="new-password" minLength={8} value={nowe} onChange={(e) => setNowe(e.target.value)} required />}</Field>
@@ -140,7 +140,7 @@ function Notifications() {
     if (!sent) throw new ApiError(0, 'Serwer nie wysłał powiadomienia. Wyłącz i włącz powiadomienia ponownie.');
   }, 'Wysłano próbne powiadomienie');
   return (
-    <div className="grid gap-3 rounded-2xl border border-line bg-card p-5" aria-busy={st === null}>
+    <div className="grid gap-3 rounded-[4px] border border-line bg-card p-5" aria-busy={st === null}>
       <h2 className="flex items-center gap-2 text-lg font-extrabold"><Bell className="h-5 w-5 text-action" weight="duotone" />Powiadomienia</h2>
       {st === null ? <p className="text-sm text-ink-2">Sprawdzanie…</p>
         : st === 'ios' ? <p className="text-sm">Na iPhonie: Udostępnij → Do ekranu początkowego, potem otwórz aplikację z ikony.</p>
@@ -256,16 +256,16 @@ function ErrorLog() {
       </div>
       {err && <p className="text-sm text-danger">{err}</p>}
       {list === null && !err ? <Skeleton className="h-24" /> : list?.length === 0 ? <p className="text-sm text-ink-2">Brak błędów.</p> : (
-        <ol className="grid gap-2">
+        <ol className="divide-y divide-rule rounded-[4px] border border-line">
           {shown!.map((e) => {
             const [first, ...rest] = String(e.message).split('\n');
             return (
-              <li key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-xl border border-line px-3 py-2">
+              <li key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-2">
                 <div className="min-w-0">
-                  <p className="text-xs text-ink-2"><time dateTime={e.at}>{fmtWhen(e.at)}</time> · <span className="font-mono">{e.where}</span></p>
+                  <p className="text-xs text-ink-2"><time dateTime={e.at}>{fmtWhen(e.at)}</time> · <span className="font-semibold">{e.where}</span></p>
                   <p className="text-sm font-semibold break-words">{first}</p>
                   {rest.length > 0 && (
-                    <details className="text-xs text-ink-2"><summary className="cursor-pointer py-1">Szczegóły</summary><pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono">{rest.join('\n')}</pre></details>
+                    <details className="text-xs text-ink-2"><summary className="cursor-pointer py-1">Szczegóły</summary><pre className="overflow-x-auto whitespace-pre-wrap break-all">{rest.join('\n')}</pre></details>
                   )}
                 </div>
                 <Button variant="ghost" size="sm" aria-label="Kopiuj błąd" onClick={() => void copy(text(e))} className="w-10 px-0 text-ink-2"><Copy className="h-5 w-5 shrink-0" /></Button>
@@ -361,20 +361,20 @@ function Dictionaries() {
   return (
     <Card title="Słowniki" icon={BookOpen} hint="Listy wyboru w formularzach. Zmiana nazwy zmienia ją też we wszystkich zapisanych rekordach. Usuwając wartość w użyciu, wybierasz, na co ją zamienić.">
       <Field label="Słownik">{(id) => <Select id={id} value={rodzaj} onValueChange={switchTo} options={DICT_RODZAJE.map((r) => ({ value: r, label: DICT_LABEL[r] ?? r }))} />}</Field>
-      {DICT_HINT[rodzaj] && <p className="rounded-xl bg-action/8 px-3 py-2 text-sm">{DICT_HINT[rodzaj]}</p>}
+      {DICT_HINT[rodzaj] && <p className="rounded-[4px] bg-action/8 px-3 py-2 text-sm">{DICT_HINT[rodzaj]}</p>}
       {czyn && <Field label="Kategoria" hint="Lista do odhaczenia we wpisie serwisowym tej kategorii.">{(id, d) => <Select id={id} aria-describedby={d} value={katNow || undefined} onValueChange={(k) => { setKat(k); setErr(''); }} options={kats.map((k) => ({ value: k, label: k }))} />}</Field>}
-      <ol className="grid gap-2" aria-label={`Wartości: ${DICT_LABEL[rodzaj]}${czyn ? `, ${katNow}` : ''}`}>
+      <ol className="divide-y divide-rule rounded-[4px] border border-line" aria-label={`Wartości: ${DICT_LABEL[rodzaj]}${czyn ? `, ${katNow}` : ''}`}>
         {shown.map(({ x, i }, k) => (
-          <li key={x.key} className="grid gap-2 rounded-xl border border-line p-2">
+          <li key={x.key} className="grid gap-2 p-2">
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] items-center gap-0.5 min-[560px]:gap-1">
               {WITH_KOLOR.has(rodzaj) && (
                 <input type="color" aria-label={`Kolor: ${x.wartosc}`} value={x.kolor ?? '#8896a5'} onChange={(e) => patch(i, { kolor: e.target.value })}
-                  className="h-10 w-9 min-[560px]:w-10 cursor-pointer rounded-lg border border-line bg-card p-1" />
+                  className="h-10 w-9 min-[560px]:w-10 cursor-pointer rounded-[4px] border border-line bg-card p-1" />
               )}
               <Input aria-label={`Wartość ${i + 1}`} value={x.wartosc} onChange={(e) => patch(i, { wartosc: e.target.value })} className={cn('h-11', !WITH_KOLOR.has(rodzaj) && 'col-span-2')} />
               <Button variant="ghost" size="iconTight" aria-label={`W górę: ${x.wartosc}`} disabled={k === 0} onClick={() => moveShown(k, -1)}><ArrowUp className="h-5 w-5" /></Button>
               <Button variant="ghost" size="iconTight" aria-label={`W dół: ${x.wartosc}`} disabled={k === shown.length - 1} onClick={() => moveShown(k, 1)}><ArrowDown className="h-5 w-5" /></Button>
-              <Button variant="ghost" size="iconTight" aria-label={`Usuń: ${x.wartosc}`} onClick={() => edit(list.filter((_, k) => k !== i))} className="text-danger"><Trash className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="iconTight" aria-label={`Usuń: ${x.wartosc}`} onClick={() => edit(list.filter((_, k) => k !== i))} className="ml-3 text-danger"><Trash className="h-5 w-5" /></Button>
             </div>
             {rodzaj === 'kategoria' && (
               <label className="flex min-h-10 items-center gap-2 pl-1 text-sm font-semibold">
