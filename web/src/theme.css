@@ -6,6 +6,7 @@
   --card: #ffffff;
   --ink: #0a2240;
   --ink-2: #4a5d70;
+  --ink-3: #5d6f80; /* podpowiedzi w polach: jaśniej niż wartość, kontrast ≥4.5:1 */
   --line: #c9d4de; /* obrys pól i paneli */
   --rule: #e3e9ee; /* linie między wierszami */
   --action: #0070ab;
@@ -29,6 +30,8 @@
     --card: #102e52;
     --ink: #eef3f8;
     --ink-2: #b4c4d4;
+    --ink-3: #93a7bb;
+  --ink-3: #93a7bb;
     --line: #2f5384;
     --rule: #1f4270;
     --action: #5cbcf0;
@@ -52,6 +55,7 @@
   --card: #102e52;
   --ink: #eef3f8;
   --ink-2: #b4c4d4;
+  --ink-3: #93a7bb;
   --line: #2f5384;
   --rule: #1f4270;
   --action: #5cbcf0;
@@ -75,6 +79,7 @@
   --color-card: var(--card);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
   --color-line: var(--line);
   --color-rule: var(--rule);
   --color-action: var(--action);

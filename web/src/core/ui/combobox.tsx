@@ -13,14 +13,14 @@ export function Combobox({ value, onValueChange, options, placeholder = 'Wybierz
   const cur = options.find((o) => o.value === value);
   return (
     <P.Root open={open} onOpenChange={setOpen}>
-      <P.Trigger id={id} className={cn('flex h-12 w-full items-center justify-between gap-2 rounded-[4px] border border-line bg-card px-3 text-left text-base hover:border-ink-2/60 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25', !cur && 'text-ink-2/70')}>
+      <P.Trigger id={id} className={cn('flex h-12 w-full items-center justify-between gap-2 rounded-[4px] border border-line bg-card px-3 text-left text-base hover:border-ink-2/60 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25', !cur && 'text-ink-3')}>
         <span className="truncate">{cur?.label ?? placeholder}</span>
         <CaretUpDown className="h-4 w-4 shrink-0 text-ink-2" />
       </P.Trigger>
       <P.Portal>
         <P.Content sideOffset={6} align="start" className="z-50 w-[var(--radix-popover-trigger-width)] min-w-64 rounded-[4px] border border-line bg-card shadow-overlay">
           <Command>
-            <Command.Input placeholder={search} className="h-12 w-full border-b border-line bg-transparent px-3 text-base outline-none placeholder:text-ink-2/70" />
+            <Command.Input placeholder={search} className="h-12 w-full border-b border-line bg-transparent px-3 text-base outline-none placeholder:text-ink-3" />
             <Command.List className="max-h-[min(18rem,calc(var(--radix-popover-content-available-height)-3.5rem))] overflow-y-auto p-1">
               <Command.Empty className="px-3 py-4 text-sm text-ink-2">{empty}</Command.Empty>
               {options.map((o) => (

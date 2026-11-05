@@ -61,7 +61,7 @@ export function Segmented<T extends string>({ value, onChange, options, label, c
 
 export const Textarea = ({ className, ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
-    className={cn('min-h-24 w-full rounded-[4px] border border-line bg-card px-3 py-2.5 text-base text-ink placeholder:text-ink-2/70 hover:border-ink-2/60 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25 aria-invalid:border-danger', className)}
+    className={cn('min-h-24 w-full rounded-[4px] border border-line bg-card px-3 py-2.5 text-base text-ink placeholder:text-ink-3 hover:border-ink-2/60 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25 aria-invalid:border-danger', className)}
     {...p}
   />
 );
