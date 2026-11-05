@@ -18,7 +18,7 @@ export function Shell() {
   const { me } = useSession();
   const denied = s.admin && me?.role !== 'admin'; // serwer i tak nie wyśle danych; tu tylko czytelny ekran
   return (
-    <div className="min-h-[100dvh] desk:pl-64">
+    <div className="min-h-[100dvh] desk:pl-[224px]">
       <SideNav route={route} badges={badges} />
       <TopBar title={denied ? 'Brak dostępu' : s.title} />
       <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] desk:pb-8">

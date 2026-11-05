@@ -8,8 +8,8 @@ import { Toaster, toast } from './core/ui/toast.js';
 
 function Loading() {
   return (
-    <div className="min-h-[100dvh] desk:pl-64" aria-busy="true" aria-label="Wczytywanie">
-      <div className="h-14 border-b border-line bg-card desk:h-16" />
+    <div className="min-h-[100dvh] desk:pl-[224px]" aria-busy="true" aria-label="Wczytywanie">
+      <div className="h-14 bg-rail desk:h-16 desk:border-b desk:border-line desk:bg-bg" />
       <div className="mx-auto grid max-w-2xl gap-3 p-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-20" />
