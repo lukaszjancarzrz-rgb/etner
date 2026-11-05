@@ -15,3 +15,4 @@ R2: review spec ✅ Needs fixes: I1 opened job outside scope/filter not shown/se
 R2: fix round 1/5 (2 addressed, 0 open; 324031b..35cab39) — complete (52875bf..35cab39).
 R2: minor (deferred): open job whose status changes while open may leave visible scope; M3 (Segmented), M6, M8, M9 from R2 review left.
 R3: dispatched (incl. Leady desktop table left by R2; Harmonogram toolbar restyle; job card pills).
+Owner 2026-11-05: „Więcej” last in side menu (under „Na jutro”) — controller change on working branch; ships with redesign. R3 implementer hit usage limit before any commit (resets 13:50 UTC); to resume.
