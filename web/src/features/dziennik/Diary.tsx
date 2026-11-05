@@ -47,15 +47,16 @@ export function Diary({ ownerType, ownerId, highlight, disabled, since }: { owne
     setFlash(highlight);
     // Długa karta (zakres, zdjęcia) potrafi przerwać płynne przewijanie; wtedy dociągamy wpis od razu.
     const again = setTimeout(() => {
-      const r = el()?.getBoundingClientRect();
-      if (r && (r.bottom < 0 || r.top > innerHeight)) el()?.scrollIntoView({ block: 'center' });
+      // widoczny = środek wpisu nie jest przycięty (też przez panel karty obok tabeli na komputerze, który przewija się sam)
+      const e = el(), r = e?.getBoundingClientRect();
+      if (e && r && !e.contains(document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 24)))) e.scrollIntoView({ block: 'center' });
     }, 700);
     const t = setTimeout(() => setFlash(undefined), 2500);
     return () => { clearTimeout(t); clearTimeout(again); };
   }, [found, highlight]);
 
   return (
-    <section className="grid gap-3" aria-label="Dziennik">
+    <section className="@container grid gap-3" aria-label="Dziennik">
       <SectionTitle count={entries.length}>Dziennik</SectionTitle>
       {!disabled && <EntryForm ownerType={ownerType} ownerId={ownerId} />}
       {!entries.length && <Empty icon={NotePencil} title="Brak wpisów" hint="Zapisz, co zrobiono na miejscu, i dodaj zdjęcia. Biuro dostanie powiadomienie." />}
@@ -72,7 +73,7 @@ export function Diary({ ownerType, ownerId, highlight, disabled, since }: { owne
               </div>
               {e.tekst && <p className={cn('mt-1.5 max-w-[70ch] whitespace-pre-wrap', !e.authorId && 'text-ink-2')}>{e.tekst}</p>}
               {imgs.length > 0 && (
-                <ul className="mt-3 grid grid-cols-3 gap-2 min-[560px]:grid-cols-4 desk:grid-cols-5">
+                <ul className="mt-3 grid grid-cols-3 gap-2 @min-[30rem]:grid-cols-4 @min-[40rem]:grid-cols-5">
                   {imgs.map((a) => (
                     <li key={a.id} className="relative">
                       <button type="button" onClick={() => setView(photos.indexOf(a))} className="block w-full overflow-hidden rounded-xl bg-line/50" aria-label={`Zdjęcie ${a.nazwa ?? ''}, powiększ`}>
