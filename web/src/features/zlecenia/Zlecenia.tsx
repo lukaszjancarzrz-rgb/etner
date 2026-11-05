@@ -1,11 +1,12 @@
 import { Briefcase, MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
-import { matches, seenFor, useCrewColor, useIsAdmin, useLoading, useMe, useSeenVersion, useStatusGroup } from '../../core/data.js';
+import { matches, seenFor, useCrewColor, useDict, useIsAdmin, useLoading, useMe, useSeenVersion, useStatusGroup } from '../../core/data.js';
 import { freshByJob } from '../../core/badges.js';
 import { useEntities } from '../../core/store.js';
-import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
+import { Badge, Empty, SectionTitle, Segmented } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
-import { CategoryPill, useCatColor } from '../../core/ui/category.js';
+import { CategoryPill, CatTab, useCatAbbr, useCatColor } from '../../core/ui/category.js';
+import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { cn } from '../../core/ui/cn.js';
 import { Input } from '../../core/ui/input.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
@@ -21,22 +22,20 @@ const GROUPS = [
   { g: 'zamkniete', title: 'Zamknięte' },
 ] as const;
 
-/** Zlecenia: lista wg grup; na komputerze lista obok karty. */
+/** Zlecenia: telefon – lista wg grup albo karta; komputer – tabela z kartą zaznaczonego zlecenia obok. */
 export function Zlecenia({ route }: { route: Route }) {
   const id = route.param;
+  const desk = useDesk();
+  if (desk) return <JobList selected={id} highlight={route.highlight} />;
   return (
-    <div className="mx-auto max-w-[1400px] desk:grid desk:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)] desk:gap-6 desk:px-8 desk:py-6">
-      <div className={cn('desk:sticky desk:top-22 desk:max-h-[calc(100dvh-7rem)] desk:self-start desk:overflow-y-auto desk:pr-1', id && 'hidden desk:block')}><JobList selected={id} /></div>
-      <div className={cn(!id && 'hidden desk:block')}>
-        {id ? <JobCard key={id} id={id} highlight={route.highlight} /> : (
-          <div className="sticky top-24 hidden desk:block"><Empty icon={Briefcase} title="Wybierz zlecenie z listy" hint="Karta pokaże klienta, dni z harmonogramu i dziennik." /></div>
-        )}
-      </div>
+    <div className="mx-auto max-w-[1400px]">
+      <div className={cn(id && 'hidden')}><JobList selected={id} /></div>
+      {id && <JobCard key={id} id={id} highlight={route.highlight} />}
     </div>
   );
 }
 
-function JobList({ selected }: { selected?: string }) {
+function JobList({ selected, highlight }: { selected?: string; highlight?: string }) {
   const [q, setQ] = useState('');
   const [closedOpen, setClosedOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -70,17 +69,18 @@ function JobList({ selected }: { selected?: string }) {
     .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.status, j.ekipa, ...(scopeText.get(j.id) ?? [])))
     .sort(byTermin(firstDay)), [jobs, q, scopeText, firstDay]);
 
+  if (desk && !loading) return <JobTable list={list} q={q} setQ={setQ} selected={selected} highlight={highlight} fresh={fresh} planned={planned} />;
   if (loading) return <div className="grid gap-3 p-4" aria-busy="true" aria-label="Wczytywanie zleceń">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div>;
 
   return (
-    <section className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
+    <section className="grid gap-4 px-4 py-4">
       <div className="flex gap-2">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Szukaj zlecenia</span>
           <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-ink-2" />
           <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Klient, miejscowość, numer" className="pl-11" />
         </label>
-        {admin && <Button onClick={() => setCreating(true)} aria-label="Nowe zlecenie" className="desk:px-4"><Plus className="h-5 w-5" weight="bold" /><span className="hidden min-[420px]:inline">Nowe</span></Button>}
+        {admin && <Button onClick={() => setCreating(true)} aria-label="Nowe zlecenie" ><Plus className="h-5 w-5" weight="bold" /><span className="hidden min-[420px]:inline">Nowe</span></Button>}
       </div>
       {!list.length && (
         q ? <Empty icon={MagnifyingGlass} title="Nic nie znaleziono" hint="Sprawdź pisownię albo wpisz samą miejscowość lub nazwisko." />
@@ -96,8 +96,8 @@ function JobList({ selected }: { selected?: string }) {
             {!collapsed && byMonth(items).map(([t, month]) => (
               <div key={t} className="grid gap-2">
                 <h3 className="mt-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-ink-2 first-letter:uppercase after:h-px after:flex-1 after:bg-line">{fmtTermin(t || null)}</h3>
-                <ul className={desk ? 'divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card' : 'grid gap-2'}>
-                  {month.map((j) => <JobRow key={j.id} desk={desk} j={j} on={j.id === selected} nowe={fresh.get(j.id) ?? 0} missing={g === 'aktualne' && !planned.has(j.id)} color={crew(j.ekipa)} />)}
+                <ul className="grid gap-2">
+                  {month.map((j) => <JobRow key={j.id} j={j} on={j.id === selected} nowe={fresh.get(j.id) ?? 0} missing={g === 'aktualne' && !planned.has(j.id)} color={crew(j.ekipa)} />)}
                 </ul>
               </div>
             ))}
@@ -119,30 +119,9 @@ const byMonth = (items: JobView[]): [string, JobView[]][] => {
   return out;
 };
 
-function JobRow({ j, on, nowe, missing, color, desk }: { j: JobView; on: boolean; nowe: number; missing: boolean; color?: string; desk: boolean }) {
+function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe: number; missing: boolean; color?: string }) {
   const cat = useCatColor();
   const nazwa = j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient';
-  // komputer: zwarty wiersz (klient, miejscowość, kategoria, status, termin), więcej zleceń na ekranie obok karty
-  if (desk) return (
-    <li>
-      <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined}
-        className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-3 py-2 transition-colors duration-200', on ? 'bg-action/10' : 'hover:bg-bg')}>
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color ?? 'var(--line)' }} title={j.ekipa ?? undefined} aria-hidden />
-          <span className="truncate font-semibold">{nazwa}</span>
-          {nowe > 0 && <Badge tone="new" className="h-5 px-2">{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</Badge>}
-          {missing && <Badge tone="warn" className="h-5 px-2">brak w harmonogramie</Badge>}
-        </span>
-        <span className="truncate text-right text-sm text-ink-2">{j.status}</span>
-        <span className="flex min-w-0 items-center gap-1.5 text-sm text-ink-2">
-          <span className="shrink-0 tabular-nums">{j._tmp ? 'zapisywanie' : j.numer}</span>
-          {j.site?.miejscowosc && <><span aria-hidden>·</span><span className="truncate">{j.site.miejscowosc}</span></>}
-          <span aria-hidden>·</span><span className="shrink-0">{fmtTermin(j.termin)}</span>
-        </span>
-        <span className="flex justify-end">{j.kategoria && <CategoryPill name={j.kategoria} color={cat(j.kategoria)} className="max-w-[9rem]" />}</span>
-      </a>
-    </li>
-  );
   return (
     <li>
       <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined}
@@ -165,5 +144,110 @@ function JobRow({ j, on, nowe, missing, color, desk }: { j: JobView; on: boolean
         </span>
       </a>
     </li>
+  );
+}
+
+const MON3 = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+const terminKrotko = (t?: string | null) => (t ? `${MON3[Number(t.slice(5, 7)) - 1]} ${t.slice(0, 4)}` : '');
+type Zakres = (typeof GROUPS)[number]['g'];
+
+/** Komputer: pasek (szukaj, zakres, branża, Nowe), tabela z sortowaniem, karta zaznaczonego zlecenia w panelu obok. */
+function JobTable({ list, q, setQ, selected, highlight, fresh, planned }: {
+  list: JobView[]; q: string; setQ: (q: string) => void; selected?: string; highlight?: string; fresh: Map<string, number>; planned: Set<string>;
+}) {
+  const admin = useIsAdmin();
+  const group = useStatusGroup();
+  const crew = useCrewColor();
+  const abbr = useCatAbbr();
+  const kats = useDict('kategoria');
+  const [zakres, setZakres] = useState<Zakres>('aktualne');
+  const [kat, setKat] = useState<string>();
+  const [creating, setCreating] = useState(false);
+  const nazwa = (j: JobView) => j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient';
+  const inKat = list.filter((j) => !kat || j.kategoria === kat);
+  const rows = inKat.filter((j) => group(j.status) === zakres);
+  const { rows: sorted, by } = useSort(rows, {
+    kat: (j) => (j.kategoria ? abbr(j.kategoria) : ''), nr: (j) => j.numer, klient: nazwa, miejsc: (j) => j.site?.miejscowosc,
+    status: (j) => j.status, ekipa: (j) => j.ekipa, termin: (j) => j.termin, uwagi: (j) => fresh.get(j.id) ?? 0,
+  });
+  const open = !!selected;
+  return (
+    <section className="mx-auto grid max-w-[1600px] gap-4 px-8 py-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative w-[22rem]">
+          <span className="sr-only">Szukaj zlecenia</span>
+          <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-3.5 h-5 w-5 -translate-y-1/2 text-ink-2" />
+          <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Klient, miejscowość, numer" className="pl-10" />
+        </label>
+        <Segmented label="Zakres" value={zakres} onChange={setZakres}
+          options={GROUPS.map(({ g, title }) => ({ v: g, label: `${title} ${inKat.filter((j) => group(j.status) === g).length}` }))} />
+        <div role="radiogroup" aria-label="Branża" className="flex h-11 items-center gap-0.5 rounded-[4px] border border-line bg-card px-1">
+          <button type="button" role="radio" aria-checked={!kat} onClick={() => setKat(undefined)}
+            className={cn('h-8 rounded-[3px] px-2.5 text-sm font-semibold', !kat ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/6 hover:text-ink')}>Wszystkie</button>
+          {kats.map((k) => {
+            const on = kat === k.wartosc;
+            return (
+              <button key={k.id} type="button" role="radio" aria-checked={on} aria-label={k.wartosc} title={k.wartosc} onClick={() => setKat(on ? undefined : k.wartosc)}
+                className={cn('grid h-8 place-items-center rounded-[3px] px-1 transition-opacity', on ? 'bg-ink/10 outline-2 -outline-offset-2 outline-ink' : kat ? 'opacity-45 hover:opacity-100' : 'hover:bg-ink/6')}>
+                <CatTab name={k.wartosc} />
+              </button>
+            );
+          })}
+        </div>
+        {admin && <Button onClick={() => setCreating(true)} aria-label="Nowe zlecenie" className="ml-auto px-4"><Plus className="h-5 w-5" weight="bold" />Nowe zlecenie</Button>}
+      </div>
+      <div className={cn('grid items-start gap-4', open && 'grid-cols-[minmax(0,1fr)_27rem]')}>
+        {!sorted.length ? (
+          <Empty icon={q || kat ? MagnifyingGlass : Briefcase} title={q || kat ? 'Nic nie znaleziono w tym zakresie' : 'Brak zleceń w tym zakresie'}
+            hint={q || kat ? 'Liczby przy zakresach pokazują, gdzie są pasujące zlecenia.' : admin ? 'Dodaj zlecenie przyciskiem Nowe zlecenie.' : 'Zlecenia pojawią się, gdy biuro je doda.'} />
+        ) : (
+          <Table aria-label="Zlecenia">
+            <thead>
+              <tr>
+                <Th sort={by('kat')} className="w-14 pl-2"><span className="sr-only">Branża</span><span aria-hidden>Br.</span></Th>
+                <Th sort={by('nr')} className="w-[5.5rem]">Nr</Th>
+                <Th sort={by('klient')}>Klient</Th>
+                {!open && <Th sort={by('miejsc')} className="w-[18%]">Miejscowość</Th>}
+                <Th sort={by('status')} className="w-[8.5rem]">Status</Th>
+                {!open && <Th sort={by('ekipa')} className="w-[9rem]">Ekipa</Th>}
+                <Th sort={by('termin')} className="w-[6.5rem]">Termin</Th>
+                <Th sort={by('uwagi')} className="w-[14.5rem]">Uwagi</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((j) => {
+                const nowe = fresh.get(j.id) ?? 0;
+                const on = j.id === selected;
+                return (
+                  <Tr key={j.id} href={`#zl/${j.id}`} selected={on}>
+                    <Td pad="py-1.5 pr-2.5">{j.kategoria && <><CatTab name={j.kategoria} flush /><span className="sr-only">{j.kategoria}</span></>}</Td>
+                    <Td className="font-extrabold">{j._tmp ? 'zapisywanie' : j.numer}</Td>
+                    <Td>
+                      {/* tekst dla czytnika na końcu linku: pierwszy fragment linku musi być widoczny (cel kliknięcia) */}
+                      <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined} className="font-bold hover:text-action">
+                        {nazwa(j)}<span className="sr-only">, {j.numer}{nowe > 0 && `, ${nowe} ${nowe === 1 ? 'nowy' : 'nowe'}`}</span>
+                      </a>
+                      {open && j.site?.miejscowosc && <span className="text-ink-2">, {j.site.miejscowosc}</span>}
+                    </Td>
+                    {!open && <Td className="text-ink-2">{j.site?.miejscowosc}</Td>}
+                    <Td>{j.status}</Td>
+                    {!open && <Td className="text-ink-2">{j.ekipa ? <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: crew(j.ekipa) ?? 'var(--line)' }} aria-hidden />{j.ekipa}</span> : '—'}</Td>}
+                    <Td>{terminKrotko(j.termin) || <span className="text-ink-2">bez terminu</span>}</Td>
+                    <Td>
+                      <span className="flex items-center gap-2">
+                        {nowe > 0 && <Badge tone="new" className="h-5 px-1.5"><span aria-hidden>{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</span></Badge>}
+                        {group(j.status) === 'aktualne' && !planned.has(j.id) && <span className="truncate text-sm font-bold text-danger">brak w harmonogramie</span>}
+                      </span>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        )}
+        {open && <div key={selected} className="sticky top-[4.75rem] max-h-[calc(100dvh-5.75rem)] overflow-y-auto overscroll-contain"><JobCard id={selected} highlight={highlight} /></div>}
+      </div>
+      {creating && <JobForm onClose={() => setCreating(false)} />}
+    </section>
   );
 }

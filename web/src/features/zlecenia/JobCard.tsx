@@ -1,7 +1,7 @@
 import { ArrowLeft, CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, User } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api.js';
-import { useSynced } from '../../core/layout/status.js';
+import { useDesk, useSynced } from '../../core/layout/status.js';
 import { fmtDay, mapsUrl, markSeen, seenFor, seenSettled, telHref, useCrewColor, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { useEntities, useEntity } from '../../core/store.js';
 import { Badge, Empty, NewMark } from '../../core/ui/bits.js';
@@ -63,7 +63,9 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const fj = useMemo(() => merge(changedFields(job, since ?? '\uffff', me?.id, JOB_FIELDS), srv?.jobs), [job, since, me?.id, srv]);
   const fc = useMemo(() => merge(changedFields(client, since ?? '\uffff', me?.id, CLIENT_FIELDS), srv?.clients), [client, since, me?.id, srv]);
   const fs = useMemo(() => merge(changedFields(site, since ?? '\uffff', me?.id, SITE_FIELDS), srv?.sites?.filter((f) => (SITE_FIELDS as readonly string[]).includes(f))), [site, since, me?.id, srv]);
-  useEffect(() => { if (!highlight) scrollTo(0, 0); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // komputer: karta w panelu obok tabeli (panel przewija się sam), strona zostaje przy wierszu
+  const desk = useDesk();
+  useEffect(() => { if (!highlight && !desk) scrollTo(0, 0); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!job) {
     return loading ? (
