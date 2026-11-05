@@ -6,6 +6,9 @@ import { badgeLabel, badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
 import { Logo } from './Logo.js';
 
+/** Kolejność menu: ekrany jak w `screens`, u admina „Na jutro” na końcu, „Więcej” zawsze ostatnie. */
+const rank = (k: string, adminEnd: boolean | undefined, admin: boolean) => (k === 'wiecej' ? 2 : admin && adminEnd ? 1 : 0);
+
 /** Komputer: granatowa szyna menu (224 px) z białym blokiem logo; tylko na komputerze, więc wymiary w px (bez skalowania gęstości). */
 export function SideNav({ route, badges }: { route: Route; badges: Record<string, number> }) {
   const { me } = useSession();
@@ -17,7 +20,7 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
       <Logo rail className="px-[6px] py-[12px]" />
       <ul className="grid min-h-0 content-start gap-px overflow-y-auto px-[8px] py-[12px]">
         {Object.entries(screens).filter(([k, s]) => (k === 'wiecej' ? more : inSideNav(k, admin)))
-          .sort(([, a], [, b]) => (admin ? Number(!!a.adminEnd) - Number(!!b.adminEnd) : 0)).map(([k, s]) => {
+          .sort(([ka, a], [kb, b]) => rank(ka, a.adminEnd, admin) - rank(kb, b.adminEnd, admin)).map(([k, s]) => {
           const on = navKey(route.screen) === k;
           const I = s.icon;
           const n = badges[k] ?? 0;
