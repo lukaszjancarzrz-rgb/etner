@@ -1,0 +1,10 @@
+.superpowers/
+node_modules
+dist
+data/
+*.db
+.env*
+!.env.example
+test-results/
+playwright-report/
+web/.impeccable/live/server.json
