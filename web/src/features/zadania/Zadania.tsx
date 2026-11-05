@@ -93,7 +93,7 @@ function AddForm() {
     setT(''); setErr('');
   }
   return (
-    <form onSubmit={submit} noValidate className="grid gap-3 rounded-2xl border border-line bg-card p-4">
+    <form onSubmit={submit} noValidate className="grid gap-3 rounded-[4px] border border-line bg-card p-4">
       <Field label="Nowe zadanie" error={err}>
         {(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err} value={t} onChange={(e) => setT(e.target.value)} placeholder="Co trzeba załatwić? Enter dodaje" enterKeyHint="send" />}
       </Field>
@@ -168,8 +168,8 @@ function Task({ t, onEdit, desk }: { t: Rec; onEdit: () => void; desk?: boolean 
     </Tr>
   );
   return (
-    <li className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card py-3 pr-3 pl-2', late ? 'border-danger/60' : 'border-line')}>
-      <label className={cn('grid h-12 w-12 place-items-center rounded-xl', !t._tmp && 'cursor-pointer hover:bg-ok/10')}>
+    <li className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[4px] border bg-card py-3 pr-3 pl-2', late ? 'border-danger/60' : 'border-line')}>
+      <label className={cn('grid h-12 w-12 place-items-center rounded-[4px]', !t._tmp && 'cursor-pointer hover:bg-ok/10')}>
         {check}
       </label>
       <div className="min-w-0">

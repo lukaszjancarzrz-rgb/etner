@@ -37,13 +37,13 @@ export function Przeniesienie() {
           {items.length > 0 && (
             <ol className="grid gap-2" aria-label="Pozycje do przejrzenia">
               {items.slice(0, limit).map((r) => (
-                <li key={r.id} className={cn('grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-xl border border-line px-3 py-2', r.przejrzane && 'opacity-70')}>
+                <li key={r.id} className={cn('grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-[4px] border border-line px-3 py-2', r.przejrzane && 'opacity-70')}>
                   <Checkbox className="mt-0.5" checked={!!r.przejrzane} onCheckedChange={(v) => tick(r.id, v === true)} aria-label={`Przejrzane: ${r.opis}`} />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold break-words">{r.opis}</p>
                     <p className="text-xs text-ink-2">
                       {reviewWhere(r)}
-                      {r.pominiete && <span className="ml-2 rounded-full bg-danger/10 px-2 py-0.5 font-semibold text-danger">nie przeniesiono</span>}
+                      {r.pominiete && <span className="ml-2 rounded-[4px] bg-danger/10 px-2 py-0.5 font-semibold text-danger">nie przeniesiono</span>}
                     </p>
                     {r.tekst && <p className="mt-0.5 text-sm break-words">„{r.tekst}”</p>}
                   </div>

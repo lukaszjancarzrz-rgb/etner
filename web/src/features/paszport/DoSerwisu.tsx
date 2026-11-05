@@ -118,7 +118,7 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
     </Tr>
   );
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4">
+    <li className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-[4px] border border-line bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <a href={siteHash(site.id)} className="min-w-0 hover:underline">
           <span className="block text-lg font-extrabold leading-tight break-words">{client?.nazwa || 'Klient'}</span>
@@ -130,8 +130,8 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <a href={pszHash(site.id, f.kategoria)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-3 text-sm font-semibold hover:border-ink-2">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: catStripe(cat(f.kategoria)) }} aria-hidden />
+        <a href={pszHash(site.id, f.kategoria)} className="inline-flex min-h-11 items-center gap-2 rounded-[4px] border border-line px-3 text-sm font-semibold hover:border-ink-2">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ background: catStripe(cat(f.kategoria)) }} aria-hidden />
           Teczka: {f.kategoria}
         </a>
         {note && <span className="text-sm text-ink-2">{note}</span>}
@@ -139,7 +139,7 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
       <div className="flex flex-wrap gap-2">
         <Button size="sm" disabled={busy} onClick={() => void zlecenie()}><Briefcase className="h-4 w-4" weight="bold" />Zrób zlecenie serwisowe</Button>
         <Button size="sm" variant="secondary" onClick={() => setMove(true)}><CalendarBlank className="h-4 w-4" />Przesuń termin</Button>
-        {tel && <a href={telHref(tel)} aria-label={`Zadzwoń: ${tel}`} className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold hover:border-ink-2"><Phone className="h-4 w-4" />Zadzwoń</a>}
+        {tel && <a href={telHref(tel)} aria-label={`Zadzwoń: ${tel}`} className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold hover:border-ink-2"><Phone className="h-4 w-4" />Zadzwoń</a>}
       </div>
       {form}
     </li>

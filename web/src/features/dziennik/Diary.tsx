@@ -66,7 +66,7 @@ export function Diary({ ownerType, ownerId, highlight, disabled, since }: { owne
           const imgs = files.filter((a) => a.rodzaj === 'zdjecie');
           const docs = files.filter((a) => a.rodzaj !== 'zdjecie');
           return (
-            <li key={e.id} id={`e-${e.id}`} className={cn('scroll-mt-24 rounded-2xl border bg-card p-4 transition-[box-shadow,border-color] duration-300', flash === e.id ? 'border-ok ring-4 ring-ok/25' : 'border-line')}>
+            <li key={e.id} id={`e-${e.id}`} className={cn('scroll-mt-24 rounded-[4px] border bg-card p-4 transition-[box-shadow,border-color] duration-300', flash === e.id ? 'border-ok ring-4 ring-ok/25' : 'border-line')}>
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <p className="flex items-center gap-2 font-semibold">{e.authorId && <Avatar userId={e.authorId} size="sm" />}{e.authorId ? names(e.authorId) : 'Wpis systemowy'}{since && freshEntry(e, me?.id, since) && <NewMark sr="nowy wpis od ostatniej wizyty" />}</p>
                 <p className="text-sm text-ink-2">{e._tmp ? 'wysyłanie…' : fmtWhen(e.createdAt)}</p>
@@ -76,7 +76,7 @@ export function Diary({ ownerType, ownerId, highlight, disabled, since }: { owne
                 <ul className="mt-3 grid grid-cols-3 gap-2 @min-[30rem]:grid-cols-4 @min-[40rem]:grid-cols-5">
                   {imgs.map((a) => (
                     <li key={a.id} className="relative">
-                      <button type="button" onClick={() => setView(photos.indexOf(a))} className="block w-full overflow-hidden rounded-xl bg-line/50" aria-label={`Zdjęcie ${a.nazwa ?? ''}, powiększ`}>
+                      <button type="button" onClick={() => setView(photos.indexOf(a))} className="block w-full overflow-hidden rounded-[4px] bg-line/50" aria-label={`Zdjęcie ${a.nazwa ?? ''}, powiększ`}>
                         <img src={fileUrl(a, 'thumb')} alt="" loading="lazy" decoding="async" width={160} height={160} className="aspect-square h-auto w-full object-cover" />
                       </button>
                       {admin && (ownerType === 'job' && !a._tmp ? <PhotoToggle a={a} />
@@ -87,7 +87,7 @@ export function Diary({ ownerType, ownerId, highlight, disabled, since }: { owne
               )}
               {docs.map((a) => (
                 <div key={a.id} className="mt-2 flex flex-wrap items-center gap-2">
-                  <a href={fileUrl(a, 'orig')} target="_blank" rel="noreferrer" className="inline-flex h-11 min-w-0 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><FilePdf className="h-5 w-5 shrink-0" /><span className="truncate">{a.nazwa}</span></a>
+                  <a href={fileUrl(a, 'orig')} target="_blank" rel="noreferrer" className="inline-flex h-11 min-w-0 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold"><FilePdf className="h-5 w-5 shrink-0" /><span className="truncate">{a.nazwa}</span></a>
                   {ownerType === 'job' && !a._tmp && <DocControls a={a} admin={admin} mine={a.authorId === me?.id} />}
                 </div>
               ))}
@@ -132,7 +132,7 @@ function PhotoToggle({ a }: { a: Rec }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={`W paszporcie dla klienta: ${a.nazwa ?? 'zdjęcie'}`} title={on ? 'W paszporcie dla klienta' : 'Tylko wewnętrzne – dodaj do paszportu'}
       onClick={() => patchAttachment(a, { dlaKlienta: !on })} className="group absolute bottom-0 left-0 grid h-11 w-11 place-items-center">
-      <span className={cn('grid h-7 w-7 place-items-center rounded-full shadow-sm transition-colors duration-200', on ? 'bg-ok text-ok-ink' : 'bg-card/90 text-ink-2 group-hover:text-ink')}>
+      <span className={cn('grid h-7 w-7 place-items-center rounded-[4px] shadow-sm transition-colors duration-200', on ? 'bg-ok text-ok-ink' : 'bg-card/90 text-ink-2 group-hover:text-ink')}>
         {on ? <Eye className="h-4 w-4" weight="bold" aria-hidden /> : <EyeSlash className="h-4 w-4" aria-hidden />}
       </span>
     </button>
@@ -155,7 +155,7 @@ function DocControls({ a, admin, mine }: { a: Rec; admin: boolean; mine: boolean
 export function KlientToggle({ on, onChange, dark, label = 'W paszporcie dla klienta' }: { on: boolean; onChange: (v: boolean) => void; dark?: boolean; label?: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)}
-      className={cn('inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors duration-200', on ? (dark ? 'bg-ok text-ok-ink' : 'bg-ok/12 text-ok') : dark ? 'text-white/85 hover:bg-white/10' : 'text-ink-2 hover:bg-ink/5')}>
+      className={cn('inline-flex h-10 items-center gap-2 rounded-[4px] px-3 text-sm font-semibold transition-colors duration-200', on ? (dark ? 'bg-ok text-ok-ink' : 'bg-ok/12 text-ok') : dark ? 'text-white/85 hover:bg-white/10' : 'text-ink-2 hover:bg-ink/5')}>
       {on ? <Eye className="h-5 w-5" weight="bold" aria-hidden /> : <EyeSlash className="h-5 w-5" aria-hidden />}
       {label}
     </button>
@@ -193,10 +193,10 @@ export function usePicker(opts: { pdf?: boolean; img?: boolean } = {}) {
     <ul className="flex flex-wrap gap-2" aria-label="Wybrane pliki">
       {files.map((f, i) => (
         <li key={f.url} className="relative">
-          {f.img ? <img src={f.url} alt={f.name} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" />
-            : <span className="grid h-18 w-18 place-items-center rounded-xl border border-line text-xs"><FilePdf className="h-6 w-6" /></span>}
+          {f.img ? <img src={f.url} alt={f.name} width={72} height={72} className="h-18 w-18 rounded-[4px] object-cover" />
+            : <span className="grid h-18 w-18 place-items-center rounded-[4px] border border-line text-xs"><FilePdf className="h-6 w-6" /></span>}
           <button type="button" aria-label={`Usuń ${f.name}`} onClick={() => { URL.revokeObjectURL(f.url); setFiles((x) => x.filter((_, k) => k !== i)); }}
-            className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-sm"><X className="h-4 w-4" weight="bold" /></button>
+            className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-[4px] border border-line bg-card shadow-sm"><X className="h-4 w-4" weight="bold" /></button>
         </li>
       ))}
     </ul>
@@ -246,7 +246,7 @@ function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId:
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-3 rounded-2xl border border-line bg-card p-4" noValidate>
+    <form onSubmit={submit} className="grid gap-3 rounded-[4px] border border-line bg-card p-4" noValidate>
       <label htmlFor={`dz-${ownerId}`} className="sr-only">Nowy wpis</label>
       <Textarea id={`dz-${ownerId}`} value={tekst} onChange={(e) => setTekst(e.target.value)} placeholder="Co zrobiono, czego brakuje, uwagi z budowy" aria-invalid={!!err} aria-describedby={err ? `dz-${ownerId}-e` : undefined} className="min-h-20" />
       {previews}

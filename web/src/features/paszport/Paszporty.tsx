@@ -60,7 +60,7 @@ export function Paszporty() {
           {list.map((r) => {
             const where = [r.site.nazwa, r.site.adres].filter(Boolean).join(', ');
             return (
-              <li key={r.site.id} className="overflow-hidden rounded-2xl border border-line bg-card">
+              <li key={r.site.id} className="overflow-hidden rounded-[4px] border border-line bg-card">
                 <a href={siteHash(r.site.id)} className="flex min-h-16 items-start justify-between gap-3 px-4 pt-3 pb-2 hover:bg-ink/4">
                   <span className="min-w-0">
                     <span className="block truncate text-lg font-extrabold leading-tight">{r.klient || 'Klient'}</span>
@@ -74,8 +74,8 @@ export function Paszporty() {
                 <ul className="flex flex-wrap gap-2 px-4 pb-3" aria-label="Teczki">
                   {r.teczki.map((t) => (
                     <li key={t.kategoria}>
-                      <a href={pszHash(r.site.id, t.kategoria)} className="flex min-h-11 items-center gap-2 rounded-full border border-line px-3 text-sm font-semibold hover:border-ink-2">
-                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: catStripe(cat(t.kategoria)) }} aria-hidden />
+                      <a href={pszHash(r.site.id, t.kategoria)} className="flex min-h-11 items-center gap-2 rounded-[4px] border border-line px-3 text-sm font-semibold hover:border-ink-2">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ background: catStripe(cat(t.kategoria)) }} aria-hidden />
                         {t.kategoria}
                         <SerwisBadge nastepny={t.nastepnySerwis} />
                         {!!t.nowe && <Badge tone="new"><span aria-hidden>{t.nowe} nowe</span><span className="sr-only">, nowe od ostatniej wizyty: {t.nowe}</span></Badge>}

@@ -44,7 +44,7 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
         {client && <a href={`#kl/${client.id}`} className="inline-flex min-h-11 items-center justify-self-start font-semibold text-action hover:underline">Karta klienta</a>}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-[4px] border border-line bg-card px-4 py-3">
         <IdentificationCard className="h-7 w-7 shrink-0 text-ok" weight="duotone" aria-hidden />
         {passport ? (
           <p className="min-w-0 flex-1 basis-44"><span className="block text-sm text-ink-2">Numer paszportu</span>
@@ -52,14 +52,14 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
         ) : <p className="min-w-0 flex-1 text-sm text-ink-2">Obiekt nie ma jeszcze paszportu. Paszport daje numer, link dla klienta i naklejkę z kodem QR.</p>}
         {!passport && <Button onClick={() => zalozPaszport(siteId)}>Załóż paszport</Button>}
         {ready && passport.token && (
-          <a href={`/p/${passport.token}`} target="_blank" rel="noopener" className="inline-flex h-12 items-center gap-2 rounded-full border border-line px-5 font-semibold hover:border-ink-2">
+          <a href={`/p/${passport.token}`} target="_blank" rel="noopener" className="inline-flex h-12 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold hover:border-ink-2">
             <ArrowSquareOut className="h-5 w-5" />Podgląd klienta<span className="sr-only"> (nowa karta)</span>
           </a>
         )}
       </div>
 
       {next && (
-        <a href={pszHash(siteId, next.kategoria)} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-action/40 bg-action/8 px-4 py-3 hover:border-action">
+        <a href={pszHash(siteId, next.kategoria)} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[4px] border border-action/40 bg-action/8 px-4 py-3 hover:border-action">
           <Bell className="h-6 w-6 shrink-0 text-action" weight="duotone" aria-hidden />
           <span className="min-w-0 flex-1"><span className="font-semibold">Najbliższy serwis: <span className="tabular-nums">{fmtDay(next.nastepnySerwis!)}</span></span>
             <span className="block text-sm text-ink-2">{next.kategoria}</span></span>
@@ -69,14 +69,14 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
 
       {client && (client.telefony?.length || client.emaile?.length) ? (
         <section aria-label="Kontakt z klientem" className="flex flex-wrap gap-2">
-          {(client.telefony as string[]).map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-full bg-action px-5 font-semibold text-action-ink"><Phone className="h-5 w-5" weight="fill" />{t}</a>)}
-          {((client.emaile ?? []) as string[]).map((m) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-full border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
+          {(client.telefony as string[]).map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-action px-5 font-semibold text-action-ink"><Phone className="h-5 w-5" weight="fill" />{t}</a>)}
+          {((client.emaile ?? []) as string[]).map((m) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
         </section>
       ) : null}
 
       <PaszportSekcja site={site} onSite />
 
-      <section aria-label="Kod QR i naklejka" className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4 min-[560px]:p-5">
+      <section aria-label="Kod QR i naklejka" className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-[4px] border border-line bg-card p-4 min-[560px]:p-5">
         <SectionTitle>Kod QR i naklejka</SectionTitle>
         {ready ? (
           <Suspense fallback={<Skeleton className="h-48" />}>

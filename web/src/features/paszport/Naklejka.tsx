@@ -72,7 +72,7 @@ export default function Naklejka({ passport, klient }: { passport: Rec; klient: 
   // podgląd w stałym polu (zmiana rozmiaru nie przesuwa przycisków); na szerszym ekranie przyciski obok
   return (
     <div className="grid gap-4 min-[560px]:grid-cols-[176px_minmax(0,1fr)] min-[560px]:items-start">
-      <div className="flex h-60 items-center justify-center rounded-2xl border-2 border-dashed border-line bg-white p-2 min-[560px]:h-[284px]">
+      <div className="flex h-60 items-center justify-center rounded-[4px] border-2 border-dashed border-line bg-white p-2 min-[560px]:h-[284px]">
         <canvas ref={ref} role="img" aria-label={`Podgląd naklejki ${passport.numer}`} className="h-full w-auto max-w-full" style={{ aspectRatio: `${w} / ${h}` }} />
       </div>
       <div className="grid min-w-0 gap-2">
@@ -83,7 +83,7 @@ export default function Naklejka({ passport, klient }: { passport: Rec; klient: 
           <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), size, false)}><Printer className="h-5 w-5" />Drukuj</Button>
           <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), size, true)}><GridFour className="h-5 w-5" />Arkusz A4</Button>
         </div>
-        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-line px-3 py-1">
+        <div className="flex min-w-0 items-center gap-2 rounded-[4px] border border-line px-3 py-1">
           <span className="min-w-0 flex-1 truncate text-sm text-ink-2" title={url}>{url}</span>
           <Button variant="ghost" size="sm" onClick={() => void navigator.clipboard.writeText(url).then(() => toast('Skopiowano link', { tone: 'ok' }), fail('Nie skopiowano linku'))}><Copy className="h-4 w-4" />Kopiuj link</Button>
         </div>

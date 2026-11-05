@@ -127,7 +127,7 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
                   <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Kod nieobecności">
                     {codes.map((c) => (
                       <button key={c.id} type="button" role="radio" aria-checked={s.kod === c.wartosc} onClick={() => set(i, { kod: c.wartosc })}
-                        className={cn('inline-flex h-11 items-center gap-2 rounded-full border px-4 font-semibold transition-colors duration-200', s.kod === c.wartosc ? 'border-ink bg-ink text-bg' : 'border-line')}>
+                        className={cn('inline-flex h-11 items-center gap-2 rounded-[4px] border px-4 font-semibold transition-colors duration-200', s.kod === c.wartosc ? 'border-ink bg-ink text-bg' : 'border-line')}>
                         <span className="h-3 w-3 rounded-full" style={{ background: c.kolor ?? '#8896a5' }} aria-hidden />{c.wartosc}
                       </button>
                     ))}
@@ -155,7 +155,7 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
             <div className="flex flex-wrap gap-2" role="group" aria-label="Osoby">
               {people.map((p) => (
                 <button key={p.id} type="button" role="checkbox" aria-checked={who.includes(p.id)} onClick={() => toggle(p.id)}
-                  className={cn('inline-flex h-11 items-center rounded-full border px-4 font-semibold transition-colors duration-200', who.includes(p.id) ? 'border-ink bg-ink text-bg' : 'border-line')}>
+                  className={cn('inline-flex h-11 items-center rounded-[4px] border px-4 font-semibold transition-colors duration-200', who.includes(p.id) ? 'border-ink bg-ink text-bg' : 'border-line')}>
                   {p.nazwa}
                 </button>
               ))}
@@ -170,7 +170,7 @@ export function CellEditor({ dzien, person, people, current, draft, ekipa, ctx, 
             {rangeErr && <p className="text-sm text-danger">{rangeErr}</p>}
           </fieldset>
           {armed && (
-            <p role="alert" className="rounded-xl border border-danger/50 px-4 py-3 text-sm font-semibold text-danger">
+            <p role="alert" className="rounded-[4px] border border-danger/50 px-4 py-3 text-sm font-semibold text-danger">
               Nadpisze {komorek(armed.n)} z innymi wpisami. Naciśnij ponownie, żeby zapisać.
             </p>
           )}

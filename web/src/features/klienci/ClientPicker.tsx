@@ -29,7 +29,7 @@ export function ClientPicker({ clientId, siteId, onChange, nowy, onNowy, err }: 
 
   if (nowy) {
     return (
-      <fieldset className="grid gap-3 rounded-2xl border border-line p-4">
+      <fieldset className="grid gap-3 rounded-[4px] border border-line p-4">
         <div className="flex items-center justify-between">
           <legend className="font-semibold">Nowy klient</legend>
           <Button variant="ghost" size="sm" onClick={() => onNowy(null)}><X className="h-4 w-4" />Wybierz z listy</Button>

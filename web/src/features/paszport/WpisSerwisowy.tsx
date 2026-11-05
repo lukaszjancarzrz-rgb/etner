@@ -123,14 +123,14 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
         <h2 className="text-2xl font-extrabold leading-tight">{entry ? 'Edycja wpisu serwisowego' : 'Wpis serwisowy'}</h2>
       </div>
       <form onSubmit={submit} className="grid gap-5" noValidate>
-        <div className="grid gap-4 rounded-2xl border border-line bg-card p-4 min-[560px]:grid-cols-2">
+        <div className="grid gap-4 rounded-[4px] border border-line bg-card p-4 min-[560px]:grid-cols-2">
           <Field label="Zlecenie" hint={job !== NO_JOB && job === todays ? 'Dziś w harmonogramie' : undefined}>
             {(id, d) => <Select id={id} aria-describedby={d} value={job} onValueChange={setJob} options={[{ value: NO_JOB, label: 'bez zlecenia' }, ...jobs.map((j) => ({ value: j.id, label: `${j.numer} ${kategoria} – ${j.rodzaj ?? ''}`.trim() }))]} />}
           </Field>
           <Field label="Data">{(id) => <Input id={id} type="date" required value={dzien} onChange={(e) => setDzien(e.target.value)} />}</Field>
         </div>
 
-        <div role="group" aria-labelledby="wpis-czynnosci" className="grid gap-1 rounded-2xl border border-line bg-card p-4">
+        <div role="group" aria-labelledby="wpis-czynnosci" className="grid gap-1 rounded-[4px] border border-line bg-card p-4">
           <p id="wpis-czynnosci" className="mb-1 text-sm font-semibold">Wykonane czynności</p>
           {!items.length && <p className="text-sm text-ink-2">Brak listy czynności dla kategorii {kategoria}. Wpisz je poniżej albo dodaj w Ustawieniach (słownik „Czynności serwisowe”).</p>}
           {items.map((c) => (
@@ -147,7 +147,7 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
           <p className="text-sm font-semibold">Zdjęcia</p>
           {photos.length > 0 && (
             <ul className="flex flex-wrap gap-2" aria-label="Zdjęcia we wpisie">
-              {photos.map((a) => <li key={a.id}><img src={fileUrl(a, 'thumb')} alt={a.nazwa ?? 'Zdjęcie'} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" /></li>)}
+              {photos.map((a) => <li key={a.id}><img src={fileUrl(a, 'thumb')} alt={a.nazwa ?? 'Zdjęcie'} width={72} height={72} className="h-18 w-18 rounded-[4px] object-cover" /></li>)}
             </ul>
           )}
           {previews}
@@ -161,7 +161,7 @@ function Form({ t, siteId, kategoria, entry, jobId, back, title }: { t: NonNulla
               {QUICK.map(([m, l]) => {
                 const on = !!next && 'm' in next && next.m === m;
                 return <button key={m} type="button" aria-pressed={on} onClick={() => setNext({ m })}
-                  className={cn('h-12 rounded-full border px-4 font-semibold transition-colors duration-200', on ? 'border-action bg-action text-action-ink' : 'border-line bg-card hover:border-ink-2')}>{l}</button>;
+                  className={cn('h-12 rounded-[4px] border px-4 font-semibold transition-colors duration-200', on ? 'border-action bg-action text-action-ink' : 'border-line bg-card hover:border-ink-2')}>{l}</button>;
               })}
               <Input type="date" aria-label="Data następnego serwisu" value={nextDay ?? ''} onChange={(e) => setNext(e.target.value ? { d: e.target.value } : null)} className="col-span-3 min-[560px]:col-span-1" />
             </div>

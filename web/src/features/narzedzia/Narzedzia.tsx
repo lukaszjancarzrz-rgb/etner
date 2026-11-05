@@ -44,7 +44,7 @@ export function Narzedzia() {
     <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
       <Search value={q} onChange={setQ} label="Szukaj narzędzia" placeholder="Szukaj, np. wkrętarka" />
       {open && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-action/40 bg-action/5 px-4 py-2">
+        <div className="flex flex-wrap items-center gap-2 rounded-[4px] border border-action/40 bg-action/5 px-4 py-2">
           <p className="mr-auto text-sm font-semibold">Edycja list: dodaj, popraw, przenieś albo usuń narzędzie.</p>
           <Button size="sm" onClick={() => setEdit('new')}><Plus className="h-4 w-4" weight="bold" />Dodaj narzędzie</Button>
           <Button size="sm" variant="secondary" onClick={() => setEditing(false)}><Check className="h-4 w-4" weight="bold" />Gotowe</Button>
@@ -67,7 +67,7 @@ export function Narzedzia() {
               <div key={c.id} className="grid gap-2">
                 <SectionTitle count={list.length}>{c.nazwa}</SectionTitle>
                 {!list.length ? <p className="px-1 text-sm text-ink-2">Brak narzędzi w tym samochodzie.</p> : (
-                  <div className="overflow-hidden rounded-2xl border border-line bg-card">
+                  <div className="overflow-hidden rounded-[4px] border border-line bg-card">
                     {PODMIEJSCA.map((pm) => {
                       const sub = list.filter((t) => t.podmiejsce === pm).sort(byName);
                       if (!sub.length) return null;
@@ -88,7 +88,7 @@ export function Narzedzia() {
             return (
               <div className="grid gap-2">
                 <SectionTitle count={list.length}>Magazyn</SectionTitle>
-                {list.length ? <ul aria-label="Magazyn" className="divide-y divide-line/70 overflow-hidden rounded-2xl border border-line bg-card">{list.map((t) => <ToolRow key={t.id} t={t} flat onEdit={open} />)}</ul>
+                {list.length ? <ul aria-label="Magazyn" className="divide-y divide-line/70 overflow-hidden rounded-[4px] border border-line bg-card">{list.map((t) => <ToolRow key={t.id} t={t} flat onEdit={open} />)}</ul>
                   : <p className="px-1 text-sm text-ink-2">Brak narzędzi w Magazynie.</p>}
               </div>
             );
@@ -103,7 +103,7 @@ export function Narzedzia() {
 
 function ToolRow({ t, place, flat, onEdit }: { t: Rec; place?: string; flat?: boolean; onEdit?: (t: Rec) => void }) {
   return (
-    <li className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 pr-2 pl-4', !flat && 'rounded-2xl border border-line bg-card')}>
+    <li className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 pr-2 pl-4', !flat && 'rounded-[4px] border border-line bg-card')}>
       <div className="min-w-0">
         <p className="font-semibold leading-snug">{t.nazwa}</p>
         {place && <p className="text-sm text-ink-2">{place}</p>}

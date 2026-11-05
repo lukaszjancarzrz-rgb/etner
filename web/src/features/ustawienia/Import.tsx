@@ -89,7 +89,7 @@ export function Import() {
             </div>
           )}
           {hasla.length > 0 && (
-            <div className="grid gap-2 rounded-xl border border-action/40 bg-action/5 p-3">
+            <div className="grid gap-2 rounded-[4px] border border-action/40 bg-action/5 p-3">
               <p className="text-sm font-semibold">Hasła startowe pracowników są widoczne tylko teraz. Skopiuj je albo przepisz i przekaż każdemu osobiście; po wyjściu z tego ekranu nie da się ich odczytać (można tylko ustawić nowe w Użytkownikach).</p>
               <ul className="grid gap-1 text-sm" aria-label="Hasła startowe">
                 {hasla.map((k) => <li key={k.login}>{k.nazwa}: login <span className="font-mono font-semibold">{k.login}</span>, hasło <span className="font-mono font-semibold">{k.haslo}</span></li>)}

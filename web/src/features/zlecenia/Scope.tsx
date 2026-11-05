@@ -60,8 +60,8 @@ export function Scope({ jobId, disabled, since }: { jobId: string; disabled?: bo
           {items.map((p, i) => {
             const imgs = byItem.get(p.id) ?? [];
             return (
-              <li key={p.id} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 rounded-2xl border border-line bg-card p-4">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-action/12 font-bold tabular-nums text-action" aria-hidden>{i + 1}</span>
+              <li key={p.id} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 rounded-[4px] border border-line bg-card p-4">
+                <span className="grid h-8 w-8 place-items-center rounded-[4px] bg-action/12 font-bold tabular-nums text-action" aria-hidden>{i + 1}</span>
                 <div className="min-w-0">
                   {since && freshScope(p, me?.id, since) && <p className="pt-1"><NewMark sr={`punkt ${i + 1} nowy lub zmieniony od ostatniej wizyty`} /></p>}
                   <p className="max-w-[70ch] pt-1 whitespace-pre-wrap">{p.tekst}</p>
@@ -70,7 +70,7 @@ export function Scope({ jobId, disabled, since }: { jobId: string; disabled?: bo
                     <ul className="mt-3 grid grid-cols-3 gap-2 min-[560px]:grid-cols-4 desk:grid-cols-6">
                       {imgs.map((a) => (
                         <li key={a.id} className="relative">
-                          <button type="button" onClick={() => setView(photos.indexOf(a))} className="block w-full overflow-hidden rounded-xl bg-line/50" aria-label={`Zdjęcie do punktu ${i + 1}, powiększ`}>
+                          <button type="button" onClick={() => setView(photos.indexOf(a))} className="block w-full overflow-hidden rounded-[4px] bg-line/50" aria-label={`Zdjęcie do punktu ${i + 1}, powiększ`}>
                             <img src={fileUrl(a, 'thumb')} alt="" loading="lazy" decoding="async" width={160} height={160} className="aspect-square h-auto w-full object-cover" />
                           </button>
                           {admin && a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-ok-ink" title="Widoczne dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>}
@@ -157,9 +157,9 @@ function ScopeForm({ jobId, item, next, photos, onClose }: { jobId: string; item
             <ul className="flex flex-wrap gap-2" aria-label="Zdjęcia w punkcie">
               {kept.map((a, i) => (
                 <li key={a.id} className="relative">
-                  <img src={fileUrl(a, 'thumb')} alt={`Zdjęcie ${i + 1}`} width={72} height={72} className="h-18 w-18 rounded-xl object-cover" />
+                  <img src={fileUrl(a, 'thumb')} alt={`Zdjęcie ${i + 1}`} width={72} height={72} className="h-18 w-18 rounded-[4px] object-cover" />
                   <button type="button" aria-label={`Usuń zdjęcie ${i + 1}`} onClick={() => setGone((g) => [...g, a.id])}
-                    className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-full border border-line bg-card shadow-sm"><X className="h-4 w-4" weight="bold" /></button>
+                    className="absolute -top-2 -right-2 grid h-8 w-8 place-items-center rounded-[4px] border border-line bg-card shadow-sm"><X className="h-4 w-4" weight="bold" /></button>
                 </li>
               ))}
             </ul>

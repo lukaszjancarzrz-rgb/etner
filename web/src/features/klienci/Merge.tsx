@@ -56,7 +56,7 @@ export function MergeDialog({ a, b: initialB, onClose }: { a: Rec; b?: Rec; onCl
   // karta klienta jako opcja „zostaje” (dwie takie same nazwy rozróżnia telefon, miejscowość i liczby)
   const side = (c: Rec) => (
     <button type="button" role="radio" aria-checked={c.id === mainId} onClick={() => setMainId(c.id)}
-      className={cn('grid gap-0.5 rounded-xl border-2 p-3 text-left transition-colors duration-200', c.id === mainId ? 'border-ok bg-ok/6' : 'border-line hover:border-ink-2')}>
+      className={cn('grid gap-0.5 rounded-[4px] border-2 p-3 text-left transition-colors duration-200', c.id === mainId ? 'border-ok bg-ok/6' : 'border-line hover:border-ink-2')}>
       <span className={cn('text-xs font-semibold uppercase tracking-wide', c.id === mainId ? 'text-ok' : 'text-ink-2')}>{c.id === mainId ? 'Zostaje' : 'Znika, dane przechodzą'}</span>
       <span className="font-semibold">{c.nazwa}</span>
       <span className="text-sm text-ink-2 tabular-nums">{summary(c)}</span>
@@ -125,7 +125,7 @@ export function SiteMergeDialog({ a, sites, onClose }: { a: Rec; sites: Rec[]; o
 
   const side = (s: Rec) => (
     <button type="button" role="radio" aria-checked={s.id === mainId} onClick={() => setMainId(s.id)}
-      className={cn('grid gap-0.5 rounded-xl border-2 p-3 text-left transition-colors duration-200', s.id === mainId ? 'border-ok bg-ok/6' : 'border-line hover:border-ink-2')}>
+      className={cn('grid gap-0.5 rounded-[4px] border-2 p-3 text-left transition-colors duration-200', s.id === mainId ? 'border-ok bg-ok/6' : 'border-line hover:border-ink-2')}>
       <span className={cn('text-xs font-semibold uppercase tracking-wide', s.id === mainId ? 'text-ok' : 'text-ink-2')}>{s.id === mainId ? 'Zostaje' : 'Znika, dane przechodzą'}</span>
       <span className="font-semibold">{siteLabel(s)}</span>
       <span className="text-sm text-ink-2 tabular-nums">{[[s.adres, s.miejscowosc].filter(Boolean).join(', '), `zleceń ${jobs.filter((j) => j.siteId === s.id).length}`].filter(Boolean).join(' · ')}</span>

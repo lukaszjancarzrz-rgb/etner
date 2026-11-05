@@ -96,9 +96,9 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <Sheet title={job ? `Zlecenie ${job.numer ?? ''}` : lead ? 'Zlecenie z leada' : 'Nowe zlecenie'} className="desk:w-[min(640px,92vw)]">
         <form onSubmit={(e) => void submit(e)} className="grid gap-4" noValidate>
-          {err.form && <p role="alert" className="rounded-xl border border-danger/40 p-3 text-sm text-danger">{err.form}</p>}
+          {err.form && <p role="alert" className="rounded-[4px] border border-danger/40 p-3 text-sm text-danger">{err.form}</p>}
           {lead?.clientId ? (
-            <div className="rounded-2xl border border-line p-4">
+            <div className="rounded-[4px] border border-line p-4">
               <p className="text-sm text-ink-2">Klient z leada</p>
               <p className="font-semibold">{leadClient?.nazwa ?? 'Klient'}</p>
               {leadSite && <p className="text-sm text-ink-2">{siteLabel(leadSite)}</p>}

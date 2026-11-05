@@ -55,7 +55,7 @@ function ListRows({ label, addLabel, items, onChange, type, errors, errKey }: {
   );
 }
 
-const FormError = ({ msg }: { msg?: string }) => (msg ? <p role="alert" className="rounded-xl border border-danger/40 p-3 text-sm text-danger">{msg}</p> : null);
+const FormError = ({ msg }: { msg?: string }) => (msg ? <p role="alert" className="rounded-[4px] border border-danger/40 p-3 text-sm text-danger">{msg}</p> : null);
 const Actions = ({ busy, onClose }: { busy: boolean; onClose: () => void }) => (
   <div className="flex justify-end gap-3 border-t border-line pt-4">
     <Button variant="secondary" onClick={onClose}>Anuluj</Button>
@@ -88,7 +88,7 @@ export function ClientForm({ client, onClose }: { client: Rec; onClose: () => vo
       <Sheet title="Edycja klienta" description={client.nazwa} className="desk:w-[min(640px,92vw)]">
         {dups ? (
           <div className="grid gap-4">
-            <div role="status" className="flex gap-3 rounded-xl border border-danger/40 bg-danger/5 p-3">
+            <div role="status" className="flex gap-3 rounded-[4px] border border-danger/40 bg-danger/5 p-3">
               <WarningCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" weight="fill" />
               <div className="grid gap-1 text-sm">
                 <p className="font-semibold">Zapisano. Ten sam telefon lub e-mail ma też:</p>

@@ -74,7 +74,7 @@ export function LeadForm({ lead, onClose }: { lead?: Rec; onClose: () => void })
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <Sheet title={lead ? 'Edycja leada' : 'Nowy lead'} className="desk:w-[min(640px,92vw)]">
         <form onSubmit={(e) => void submit(e)} className="grid gap-4" noValidate>
-          {err.form && <p role="alert" className="rounded-xl border border-danger/40 p-3 text-sm text-danger">{err.form}</p>}
+          {err.form && <p role="alert" className="rounded-[4px] border border-danger/40 p-3 text-sm text-danger">{err.form}</p>}
           <ClientPicker clientId={f.clientId} siteId={f.siteId} onChange={set} nowy={nowy} onNowy={setNowy} err={err} />
           <Field label="Temat" error={err.temat}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.temat} value={f.temat} onChange={(e) => set({ temat: e.target.value })} placeholder="np. Klimatyzacja do biura" />}</Field>
           <div className="grid gap-4 min-[560px]:grid-cols-2">

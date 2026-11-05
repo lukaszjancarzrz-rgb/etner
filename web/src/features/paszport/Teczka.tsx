@@ -74,8 +74,8 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
       <nav aria-label="Teczki obiektu" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {teczki.map((x) => (
           <a key={x.kategoria} href={pszHash(siteId, x.kategoria)} aria-current={x.kategoria === kategoria ? 'page' : undefined}
-            className={cn('inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 font-semibold', x.kategoria === kategoria ? 'border-ink bg-ink text-bg' : 'border-line bg-card hover:border-ink-2')}>
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: catStripe(cat(x.kategoria)) }} aria-hidden />{x.kategoria}
+            className={cn('inline-flex h-11 shrink-0 items-center gap-2 rounded-[4px] border px-4 font-semibold', x.kategoria === kategoria ? 'border-ink bg-ink text-bg' : 'border-line bg-card hover:border-ink-2')}>
+            <span className="h-2.5 w-2.5 rounded-[2px]" style={{ background: catStripe(cat(x.kategoria)) }} aria-hidden />{x.kategoria}
           </a>
         ))}
         {admin && <Button variant="secondary" size="icon" className="h-11 w-11" aria-label="Dodaj teczkę" onClick={() => setAdding(true)}><FolderSimplePlus className="h-5 w-5" /></Button>}
@@ -92,7 +92,7 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
 }
 
 const Card = ({ title, count, action, children, label }: { title: string; count?: number; action?: React.ReactNode; children: React.ReactNode; label?: string }) => (
-  <section className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-2xl border border-line bg-card p-4 min-[560px]:p-5" aria-label={label ?? title}>
+  <section className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-[4px] border border-line bg-card p-4 min-[560px]:p-5" aria-label={label ?? title}>
     <div className="flex items-center justify-between gap-3"><SectionTitle count={count}>{title}</SectionTitle>{action}</div>
     {children}
   </section>
@@ -105,7 +105,7 @@ function ServiceBar({ t, siteId }: { t: T; siteId: string }) {
   const f = t.folder;
   const can = f ? !f._tmp : admin; // pracownik ustawia termin wpisem serwisowym, gdy teczki jeszcze nie ma
   return (
-    <div className={cn('flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border px-4 py-3', t.nastepnySerwis ? 'border-action/40 bg-action/8' : 'border-line bg-card')}>
+    <div className={cn('flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[4px] border px-4 py-3', t.nastepnySerwis ? 'border-action/40 bg-action/8' : 'border-line bg-card')}>
       <Bell className="h-6 w-6 shrink-0 text-action" weight="duotone" aria-hidden />
       <p className="min-w-0 flex-1">
         {t.nastepnySerwis ? <><span className="font-semibold">Następny serwis: <span className="tabular-nums">{fmtDay(t.nastepnySerwis)}</span></span> <SerwisBadge nastepny={t.nastepnySerwis} soonOnly /></>
@@ -205,7 +205,7 @@ function ServiceCard({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<st
   const photos = useMemo(() => { const m = new Map<string, number>(); for (const p of t.photos) if (p.a.ownerType === 'service') m.set(p.a.ownerId, (m.get(p.a.ownerId) ?? 0) + 1); return m; }, [t.photos]);
   const list = withoutEchoes(t.entries, ['dzien', 'uwagi', 'authorId', 'czynnosci']);
   return (
-    <Card title="Karta serwisowa" count={list.length} action={<a href={pszHash(siteId, t.kategoria, '/wpis')} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-action px-4 text-sm font-semibold text-action-ink hover:brightness-110"><Plus className="h-4 w-4" weight="bold" />Wpis</a>}>
+    <Card title="Karta serwisowa" count={list.length} action={<a href={pszHash(siteId, t.kategoria, '/wpis')} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[4px] bg-action px-4 text-sm font-semibold text-action-ink hover:brightness-110"><Plus className="h-4 w-4" weight="bold" />Wpis</a>}>
       {!list.length ? <p className="text-sm text-ink-2">Brak wpisów. Po serwisie dodaj wpis: co zrobiono, zdjęcia i termin następnego.</p> : (
         <div className="-mx-1 overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm">
@@ -257,7 +257,7 @@ function Documents({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<stri
           const I = docIcon(a);
           return (
             <li key={a.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-              <span className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-xl', a.typDok === 'faktura' ? 'bg-action/12 text-action' : 'bg-danger/10 text-danger')}><I className="h-6 w-6" aria-hidden /></span>
+              <span className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-[4px]', a.typDok === 'faktura' ? 'bg-action/12 text-action' : 'bg-danger/10 text-danger')}><I className="h-6 w-6" aria-hidden /></span>
               <a href={fileUrl(a, 'orig')} target="_blank" rel="noreferrer" className="min-w-0 flex-1">
                 <span className="block truncate font-semibold hover:underline">{a.nazwa}</span>
                 <span className="block truncate text-sm text-ink-2">{[a.typDok ? TYP_LABEL[a.typDok] : 'Plik', jobId ? numer(jobId) ?? 'zlecenie' : SOURCE[a.ownerType], a._tmp && 'wysyłanie…'].filter(Boolean).join(' · ')}</span>
@@ -359,10 +359,10 @@ function Photos({ t, siteId, fresh }: { t: T; siteId: string; fresh: Set<string>
         <ul className="grid grid-cols-3 gap-2 min-[560px]:grid-cols-4">
           {t.photos.map((p, i) => (
             <li key={p.a.id} className="relative">
-              <button type="button" onClick={() => setView(i)} className="block w-full overflow-hidden rounded-xl bg-line/50" aria-label={`Zdjęcie ${i + 1}${numer(p) ? `, ${numer(p)}` : ''}, powiększ`}>
+              <button type="button" onClick={() => setView(i)} className="block w-full overflow-hidden rounded-[4px] bg-line/50" aria-label={`Zdjęcie ${i + 1}${numer(p) ? `, ${numer(p)}` : ''}, powiększ`}>
                 <img src={fileUrl(p.a, 'thumb')} alt="" loading="lazy" decoding="async" width={160} height={160} className="aspect-square h-auto w-full object-cover" />
               </button>
-              {numer(p) && <span className="pointer-events-none absolute right-1 bottom-1 rounded-full bg-[#050f1d]/75 px-2 py-0.5 text-xs font-semibold text-white">{numer(p)}</span>}
+              {numer(p) && <span className="pointer-events-none absolute right-1 bottom-1 rounded-[4px] bg-[#050f1d]/75 px-2 py-0.5 text-xs font-semibold text-white">{numer(p)}</span>}
               {fresh.has(p.a.id) && <span className="pointer-events-none absolute top-1 left-1"><NewMark sr="nowe zdjęcie od ostatniej wizyty" /></span>}
               {admin && p.a.dlaKlienta && <span className="pointer-events-none absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-ok text-ok-ink" title="W paszporcie dla klienta"><Eye className="h-3.5 w-3.5" weight="bold" /></span>}
             </li>
@@ -384,7 +384,7 @@ function Jobs({ t }: { t: T }) {
         <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
           {jobs.map((j) => (
             <li key={j.id}>
-              <a href={`#zl/${j.id}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-line px-3 py-2.5 hover:border-ink-2">
+              <a href={`#zl/${j.id}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[4px] border border-line px-3 py-2.5 hover:border-ink-2">
                 <Briefcase className="h-5 w-5 text-ink-2" aria-hidden /><span className="font-semibold tabular-nums">{j.numer}</span>
                 <span>{j.rodzaj}</span><Badge tone="action">{j.status}</Badge><span className="ml-auto text-sm text-ink-2 capitalize">{fmtTermin(j.termin)}</span>
               </a>

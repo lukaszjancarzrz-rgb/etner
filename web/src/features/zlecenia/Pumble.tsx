@@ -78,10 +78,10 @@ export function Pumble({ job, since }: { job: Rec; since?: string }) {
     <section className="grid gap-3" aria-label="Pumble">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SectionTitle count={msgs.length || undefined} className="flex-1">Pumble</SectionTitle>
-        {ch && <a href={url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-card px-4 text-sm font-semibold hover:border-ink-2"><ArrowSquareOut className="h-5 w-5" />Przejdź do Pumble</a>}
+        {ch && <a href={url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-line bg-card px-4 text-sm font-semibold hover:border-ink-2"><ArrowSquareOut className="h-5 w-5" />Przejdź do Pumble</a>}
       </div>
       {!ch ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-line p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] border border-dashed border-line p-4">
           <div className="grid gap-0.5">
             <p className="flex items-center gap-2 text-ink-2"><ChatsCircle className="h-6 w-6" weight="duotone" />Kanał jeszcze nie utworzony</p>
             {admin && <p className="text-sm text-ink-2">Kanały zakładają się same tylko dla nowych zleceń.</p>}
@@ -89,7 +89,7 @@ export function Pumble({ job, since }: { job: Rec; since?: string }) {
           {admin && <Button size="sm" variant="secondary" disabled={creating || !online} onClick={() => void create()}><Plus className="h-5 w-5" weight="bold" />Utwórz kanał w Pumble</Button>}
         </div>
       ) : (
-        <div className="grid gap-3 rounded-2xl border border-line bg-card p-4">
+        <div className="grid gap-3 rounded-[4px] border border-line bg-card p-4">
           {msgs.length > 5 && !more && <button type="button" onClick={() => setMore(true)} className="h-10 justify-self-start font-semibold text-action">Pokaż więcej ({msgs.length - 5})</button>}
           {shown.length ? (
             <ol className="grid gap-3" aria-live="polite">

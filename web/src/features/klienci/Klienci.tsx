@@ -55,7 +55,7 @@ function ClientList() {
       </label>
       {admin && !q && dups.length > 0 && <Duplicates pairs={dups} />}
       {desk && list.length ? <ClientTable list={list} active={active} /> : !list.length ? <Empty icon={UsersThree} title={q ? 'Nic nie znaleziono' : 'Brak klientów'} hint={q ? 'Spróbuj samego nazwiska albo numeru telefonu.' : 'Klient powstaje razem z nowym zleceniem.'} /> : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
+        <ul className="divide-y divide-line overflow-hidden rounded-[4px] border border-line bg-card">
           {list.map(({ c, place }) => (
             <li key={c.id}>
               <a href={`#kl/${c.id}`} className="flex min-h-16 items-center justify-between gap-3 px-4 py-3 hover:bg-ink/4">
@@ -115,7 +115,7 @@ function Duplicates({ pairs }: { pairs: DupPair<Rec & { id: string; nazwa: strin
       {open && (
         <ul className="grid gap-2">
           {pairs.map((p) => (
-            <li key={`${p.a.id}|${p.b.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-line bg-card px-4 py-3">
+            <li key={`${p.a.id}|${p.b.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[4px] border border-line bg-card px-4 py-3">
               <span className="grid min-w-0 flex-1 gap-0.5">
                 <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 font-semibold">
                   <a href={`#kl/${p.a.id}`} className="truncate hover:underline">{p.a.nazwa}</a><span aria-hidden className="text-ink-2">+</span><span className="sr-only">i</span><a href={`#kl/${p.b.id}`} className="truncate hover:underline">{p.b.nazwa}</a>
@@ -151,7 +151,7 @@ function ClientCard({ id }: { id: string }) {
   return (
     <article className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
       <a href={admin ? '#kl' : '#zl'} onClick={(e) => { if (history.length > 1) { e.preventDefault(); history.back(); } }} className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
-      <div className="grid gap-4 rounded-2xl border border-line bg-card p-5">
+      <div className="grid gap-4 rounded-[4px] border border-line bg-card p-5">
         <div>
           {c.typ && <p className="text-sm text-ink-2">{c.typ === 'firma' ? 'Firma' : 'Osoba prywatna'}{c.nip ? `, NIP ${c.nip}` : ''}</p>}
           <div className="flex items-start justify-between gap-3">
@@ -160,11 +160,11 @@ function ClientCard({ id }: { id: string }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {(c.telefony ?? []).map((t: string) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-full bg-action px-5 font-semibold text-action-ink"><Phone className="h-5 w-5" weight="fill" />{t}</a>)}
-          {(c.emaile ?? []).map((m: string) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-full border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
+          {(c.telefony ?? []).map((t: string) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-action px-5 font-semibold text-action-ink"><Phone className="h-5 w-5" weight="fill" />{t}</a>)}
+          {(c.emaile ?? []).map((m: string) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
           {!c.telefony?.length && !c.emaile?.length && <p className="text-sm text-ink-2">Brak telefonu i e-maila.</p>}
         </div>
-        {admin && c.notatki && <div className="rounded-xl bg-bg/70 p-3"><p className="text-sm font-semibold text-ink-2">Notatki</p><p className="mt-1 whitespace-pre-wrap">{c.notatki}</p></div>}
+        {admin && c.notatki && <div className="rounded-[4px] bg-bg/70 p-3"><p className="text-sm font-semibold text-ink-2">Notatki</p><p className="mt-1 whitespace-pre-wrap">{c.notatki}</p></div>}
         {admin && <Button variant="ghost" size="sm" className="-ml-2 justify-self-start text-ink-2" onClick={() => setForm({ kind: 'merge' })}><ArrowsMerge className="h-4 w-4" />Połącz z…</Button>}
       </div>
 
@@ -175,14 +175,14 @@ function ClientCard({ id }: { id: string }) {
             {sites.map((s) => {
               const nav = mapsUrl(s);
               return (
-                <li key={s.id} className="grid gap-3 rounded-2xl border border-line bg-card px-4 py-3 min-[560px]:flex min-[560px]:items-center min-[560px]:justify-between">
+                <li key={s.id} className="grid gap-3 rounded-[4px] border border-line bg-card px-4 py-3 min-[560px]:flex min-[560px]:items-center min-[560px]:justify-between">
                   <span className="flex min-w-0 items-start gap-2"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-ink-2" />
                     <span className="min-w-0"><span className="block font-semibold">{s.nazwa || s.miejscowosc || 'Obiekt'}</span><span className="block text-sm text-ink-2">{[s.adres, s.miejscowosc].filter(Boolean).join(', ')}</span>{s.opis && <span className="block text-sm">{s.opis}</span>}</span>
                   </span>
                   <span className="flex shrink-0 flex-wrap gap-2 pl-7 min-[560px]:pl-0">
                     {admin && <Button variant="ghost" size="sm" className="h-11" aria-label={`Edytuj obiekt ${s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ')}`} onClick={() => setForm({ kind: 'site', site: s })}><PencilSimple className="h-4 w-4" />Edytuj</Button>}
                     {admin && sites.length > 1 && !s._tmp && <Button variant="ghost" size="sm" className="h-11 text-ink-2" aria-label={`Połącz obiekt ${s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ')} z innym`} onClick={() => setForm({ kind: 'site-merge', site: s })}><ArrowsMerge className="h-4 w-4" />Połącz z…</Button>}
-                    {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><NavigationArrow className="h-4 w-4" />Nawiguj</a>}
+                    {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold"><NavigationArrow className="h-4 w-4" />Nawiguj</a>}
                   </span>
                 </li>
               );
@@ -205,7 +205,7 @@ function ClientCard({ id }: { id: string }) {
           {!leads.length ? <p className="text-sm text-ink-2">Brak leadów tego klienta.</p> : (
             <ul className="grid gap-2">
               {leads.map((l) => (
-                <li key={l.id}><a href={`#ld/${l.id}`} className="grid gap-0.5 rounded-2xl border border-line bg-card px-4 py-3 hover:border-ink-2">
+                <li key={l.id}><a href={`#ld/${l.id}`} className="grid gap-0.5 rounded-[4px] border border-line bg-card px-4 py-3 hover:border-ink-2">
                   <span className="flex items-center gap-2 text-sm text-ink-2"><Badge>{l.status}</Badge>{l.wartoscGr != null && <span className="ml-auto">{fmtZl(l.wartoscGr)}</span>}</span>
                   <span className="font-semibold">{l.temat}</span>
                   {l.nastepny && <span className="text-sm text-ink-2">Następny kontakt: {fmtDay(l.nastepny)}</span>}
@@ -222,7 +222,7 @@ function ClientCard({ id }: { id: string }) {
           <ul className="grid gap-2">
             {jobs.map((j) => (
               <li key={j.id}>
-                <a href={`#zl/${j.id}`} className="grid gap-0.5 rounded-2xl border border-line bg-card px-4 py-3 hover:border-ink-2">
+                <a href={`#zl/${j.id}`} className="grid gap-0.5 rounded-[4px] border border-line bg-card px-4 py-3 hover:border-ink-2">
                   <span className="flex items-center gap-2 text-sm text-ink-2"><span className="font-semibold tabular-nums">{j.numer}</span><Badge tone="action">{j.status}</Badge><span className="ml-auto capitalize">{fmtTermin(j.termin)}</span></span>
                   <span className="line-clamp-2">{[j.rodzaj, j.kategoria].filter(Boolean).join(', ')}</span>
                 </a>
