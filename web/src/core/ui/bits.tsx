@@ -49,8 +49,18 @@ export function Segmented<T extends string>({ value, onChange, options, label, c
 }) {
   return (
     <div role="radiogroup" aria-label={label} className={cn('grid auto-cols-fr grid-flow-col divide-x divide-line overflow-hidden rounded-[4px] border border-line bg-card', className)}>
-      {options.map((o) => (
+      {options.map((o, i) => (
         <button key={o.v} type="button" role="radio" aria-checked={value === o.v} onClick={() => onChange(o.v)}
+          // radio: jeden przystanek Tab, strzałki przełączają (wzorzec ARIA radiogroup)
+          tabIndex={value === o.v || (!options.some((x) => x.v === value) && i === 0) ? 0 : -1}
+          onKeyDown={(e) => {
+            const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+            if (!d) return;
+            e.preventDefault();
+            const n = options[(i + d + options.length) % options.length]!;
+            onChange(n.v);
+            (e.currentTarget.parentElement?.children[options.indexOf(n)] as HTMLElement | undefined)?.focus();
+          }}
           className={cn('h-11 truncate px-3 text-sm font-semibold transition-colors duration-150 focus-visible:outline-offset-[-2px]', value === o.v ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/6 hover:text-ink')}>
           {o.label}
         </button>
