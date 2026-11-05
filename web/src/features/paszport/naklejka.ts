@@ -41,11 +41,11 @@ export function drawLabel(canvas: HTMLCanvasElement, size: LabelSize, d: LabelDa
   const top: T[] = [{ text: 'PASZPORT INSTALACJI', weight: 700, fs: 17 }, { text: d.klient, weight: 700, fs: 15 }];
   const bottom: T[] = [
     { text: 'Zeskanuj: historia serwisowa i dokumentacja', weight: 400, fs: 10.5 },
-    ...(d.firma.nazwa && d.firma.nazwa.toUpperCase() !== 'ETNER' ? [{ text: d.firma.nazwa, weight: 700, fs: 13 }] : []),
-    { text: `Nr ${d.numer}`, weight: 700, fs: 16 },
-    { text: [d.firma.telefon && `tel. ${d.firma.telefon}`, d.firma.www].filter(Boolean).join(' · '), weight: 400, fs: 10.5 },
+    ...(d.firma.nazwa ? [{ text: d.firma.nazwa, weight: 700, fs: 17 }] : []),
+    { text: `Nr ${d.numer}`, weight: 700, fs: 18 },
+    { text: [d.firma.telefon && `tel. ${d.firma.telefon}`, d.firma.www].filter(Boolean).join(' · '), weight: 600, fs: 12 },
   ].filter((t) => t.text);
-  const gap = 3 * u, logoH = 40 * u;
+  const gap = 3 * u, logoH = 50 * u;
   const lines = (ts: T[]) => ts.map((t) => ({ ...t, f: fit(t.text, t.weight, t.fs) }));
   const tl = lines(top), bl = lines(bottom);
   const textH = [...tl, ...bl].reduce((h, t) => h + t.f * 1.15 + gap, 0) + logoH + 2 * gap;
@@ -63,15 +63,23 @@ export function drawLabel(canvas: HTMLCanvasElement, size: LabelSize, d: LabelDa
   for (let j = 0; j < qr.size; j++) for (let i = 0; i < qr.size; i++) if (qr.data[j * qr.size + i]) ctx.fillRect(qx + i * px, y + j * px, px, px);
   y += qs + gap;
   draw(bl[0]!);
-  // logo firmy (public/logo.png, w telefonie przerobione na czarne); bez obrazka – sam napis
+  // logo: znak z public/logo.png (kwadrat po lewej stronie obrazka) + duży napis „ETNER” i hasło – czytelne na małej rolce
+  ctx.textAlign = 'left';
+  const word = 32 * u, tag = 8.6 * u;
+  ctx.font = `700 ${word}px ${FONT}`;
+  const wordW = ctx.measureText('ETNER').width;
+  ctx.font = `600 ${tag}px ${FONT}`;
+  const textW = Math.max(wordW, ctx.measureText('INTELIGENTNY WYBÓR').width);
+  const markW = logo ? logoH : 0, rowW = markW + (logo ? 6 * u : 0) + textW, lx = (W - rowW) / 2, tx = lx + markW + (logo ? 6 * u : 0);
   if (logo) {
-    const { width: iw, height: ih } = logo as HTMLImageElement | HTMLCanvasElement;
-    const lw = Math.min(maxW, logoH * (Number(iw) / Number(ih) || 2.36));
-    ctx.drawImage(logo, (W - lw) / 2, y, lw, logoH);
-  } else {
-    ctx.font = `700 ${26 * u}px ${FONT}`;
-    ctx.fillText('ETNER', W / 2, y + 4 * u);
+    const ih = Number((logo as HTMLImageElement | HTMLCanvasElement).height);
+    ctx.drawImage(logo, 0, 0, ih, ih, lx, y, logoH, logoH);
   }
+  ctx.font = `700 ${word}px ${FONT}`;
+  ctx.fillText('ETNER', tx, y + logoH / 2 - word * 0.72);
+  ctx.font = `600 ${tag}px ${FONT}`;
+  ctx.fillText('INTELIGENTNY WYBÓR', tx + u, y + logoH / 2 + 4 * u);
+  ctx.textAlign = 'center';
   y += logoH + 2 * gap;
   bl.slice(1).forEach(draw);
 }
