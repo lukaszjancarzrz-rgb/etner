@@ -6,7 +6,7 @@ import { cn } from './cn.js';
 export const Checkbox = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<typeof C.Root>>(({ className, ...p }, ref) => (
   <C.Root
     ref={ref}
-    className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-lg border-2 border-line bg-card data-[state=checked]:border-ok data-[state=checked]:bg-ok', className)}
+    className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-[4px] border-2 border-ink-2/75 bg-card data-[state=checked]:border-ok data-[state=checked]:bg-ok', className)}
     {...p}
   >
     <C.Indicator><Check weight="bold" className="h-[60%] w-[60%] text-bg" /></C.Indicator>

@@ -5,8 +5,8 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   <input
     ref={ref}
     className={cn(
-      'h-12 w-full rounded-xl border border-line bg-card px-4 text-base text-ink placeholder:text-ink-2',
-      'focus:border-action focus:outline-none focus:ring-2 focus:ring-action/30 aria-invalid:border-danger',
+      'h-12 w-full rounded-[4px] border border-line bg-card px-3 text-base text-ink placeholder:text-ink-2/70',
+      'hover:border-ink-2/60 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/25 aria-invalid:border-danger',
       className,
     )}
     {...p}
@@ -19,7 +19,7 @@ export function Field({ label, hint, error, children }: { label: string; hint?: 
   const id = useId();
   const desc = error || hint ? `${id}-d` : undefined;
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-1.5">
       <label htmlFor={id} className="text-sm font-semibold">{label}</label>
       {children(id, desc)}
       {(error || hint) && <p id={desc} className={cn('text-sm', error ? 'text-danger' : 'text-ink-2')}>{error || hint}</p>}

@@ -1,8 +1,11 @@
 import * as T from '@radix-ui/react-toast';
+import { CheckCircle, Info, WarningCircle } from '@phosphor-icons/react';
 import { useSyncExternalStore } from 'react';
 import { cn } from './cn.js';
 
 type Item = { id: number; title: string; body?: string; tone: 'info' | 'ok' | 'error' };
+const ICON = { info: Info, ok: CheckCircle, error: WarningCircle };
+const TONE = { info: 'text-action', ok: 'text-ok', error: 'text-danger' };
 let items: Item[] = [];
 let n = 0;
 const subs = new Set<() => void>();
@@ -18,9 +21,12 @@ export function Toaster() {
     <T.Provider swipeDirection="down" duration={6000} label="Powiadomienie">
       {list.map((t) => (
         <T.Root key={t.id} onOpenChange={(o) => !o && set(items.filter((i) => i.id !== t.id))}
-          className={cn('rounded-2xl border border-line bg-card p-4 shadow-card border-l-4', t.tone === 'error' ? 'border-l-danger' : t.tone === 'ok' ? 'border-l-ok' : 'border-l-action')}>
-          <T.Title className="font-semibold">{t.title}</T.Title>
-          {t.body && <T.Description className="mt-1 text-sm text-ink-2">{t.body}</T.Description>}
+          className={cn('flex gap-3 rounded-[6px] border bg-card p-4 shadow-overlay', t.tone === 'error' ? 'border-danger/60' : 'border-line')}>
+          {(() => { const I = ICON[t.tone]; return <I className={cn('mt-0.5 h-5 w-5 shrink-0', TONE[t.tone])} weight="fill" aria-hidden />; })()}
+          <div className="min-w-0">
+            <T.Title className="font-semibold">{t.title}</T.Title>
+            {t.body && <T.Description className="mt-1 text-sm text-ink-2">{t.body}</T.Description>}
+          </div>
         </T.Root>
       ))}
       <T.Viewport className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 grid gap-2 desk:inset-x-auto desk:right-6 desk:bottom-6 desk:w-96" />

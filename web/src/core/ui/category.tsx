@@ -17,9 +17,9 @@ export const catTint = (c: string | undefined) => (c ? `color-mix(in srgb, ${c} 
 
 export function CategoryPill({ name, color, className }: { name: string; color?: string; className?: string }) {
   return (
-    <span className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold text-ink', className)}
+    <span className={cn('inline-flex max-w-full items-center gap-1.5 rounded-[3px] px-1.5 py-0.5 text-xs font-semibold text-ink', className)}
       style={{ background: catTint(color), boxShadow: `inset 0 0 0 1px ${catStripe(color)}` }}>
-      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(color) }} aria-hidden />
+      <span className="h-2 w-2 shrink-0 rounded-[2px]" style={{ background: catStripe(color) }} aria-hidden />
       <span className="truncate">{name}</span>
     </span>
   );
@@ -34,7 +34,7 @@ export function CategoryLegend({ className }: { className?: string }) {
       <span className="font-semibold">Kategoria:</span>
       {d.map((x) => (
         <span key={x.id} className="inline-flex items-center gap-1.5 text-ink">
-          <span className="h-3 w-1 rounded-full" style={{ background: catStripe(x.kolor) }} aria-hidden />{x.wartosc}
+          <span className="h-2.5 w-2.5 rounded-[2px]" style={{ background: catStripe(x.kolor) }} aria-hidden />{x.wartosc}
         </span>
       ))}
     </div>
