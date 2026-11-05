@@ -21,7 +21,7 @@ export function Combobox({ value, onValueChange, options, placeholder = 'Wybierz
         <P.Content sideOffset={6} align="start" className="z-50 w-[var(--radix-popover-trigger-width)] min-w-64 rounded-[4px] border border-line bg-card shadow-overlay">
           <Command>
             <Command.Input placeholder={search} className="h-12 w-full border-b border-line bg-transparent px-3 text-base outline-none placeholder:text-ink-2/70" />
-            <Command.List className="max-h-72 overflow-y-auto p-1">
+            <Command.List className="max-h-[min(18rem,calc(var(--radix-popover-content-available-height)-3.5rem))] overflow-y-auto p-1">
               <Command.Empty className="px-3 py-4 text-sm text-ink-2">{empty}</Command.Empty>
               {options.map((o) => (
                 <Command.Item key={o.value} value={`${o.label} ${o.value}`} onSelect={() => { onValueChange(o.value); setOpen(false); }}

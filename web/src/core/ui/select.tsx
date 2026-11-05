@@ -14,7 +14,7 @@ export function Select({ value, onValueChange, options, placeholder, id, classNa
         <S.Icon><CaretDown className="h-4 w-4 text-ink-2" /></S.Icon>
       </S.Trigger>
       <S.Portal>
-        <S.Content position="popper" sideOffset={6} className="z-50 max-h-[60dvh] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[4px] border border-line bg-card shadow-overlay">
+        <S.Content position="popper" sideOffset={6} className="z-50 max-h-[min(60dvh,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[4px] border border-line bg-card shadow-overlay">
           <S.Viewport className="p-1">
             {options.map((o) => (
               <S.Item key={o.value} value={o.value} className="flex h-11 cursor-pointer items-center justify-between gap-3 rounded-[3px] px-3 outline-none data-[highlighted]:bg-action/10 data-[state=checked]:font-semibold">
