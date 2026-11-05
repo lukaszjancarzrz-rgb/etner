@@ -26,11 +26,11 @@ export function DraftBar({ drafts, people, entries, ctx }: { drafts: Rec[]; peop
   const n = drafts.length;
   return (
     <>
-      <div role="status" className="sticky top-[calc(3.75rem+env(safe-area-inset-top))] z-20 flex items-center gap-3 rounded-2xl border border-action/40 bg-card px-4 py-2.5 shadow-overlay desk:top-20">
-        <NotePencil className="h-6 w-6 shrink-0 text-action" weight="duotone" />
+      <div role="status" className="sticky top-[calc(3.75rem+env(safe-area-inset-top))] z-20 flex min-h-11 items-center gap-3 rounded-[4px] border border-action bg-card py-1 pr-1 pl-3 desk:top-20">
+        <NotePencil className="h-5 w-5 shrink-0 text-action" weight="bold" />
         <p className="min-w-0 flex-1 text-sm leading-tight">
           <span className="font-bold">{n} {n === 1 ? 'zmiana' : n < 5 ? 'zmiany' : 'zmian'} w szkicu</span>
-          <span className="block text-ink-2">Pracownicy jeszcze ich nie widzą.</span>
+          <span className="block text-ink-2 desk:ml-2 desk:inline">Pracownicy jeszcze ich nie widzą.</span>
         </p>
         <Button size="sm" onClick={() => setOpen(true)}>Przejrzyj</Button>
       </div>
@@ -94,12 +94,12 @@ function Review({ drafts, people, entries, ctx, onClose }: { drafts: Rec[]; peop
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <Sheet title="Szkice harmonogramu" description="Przed i po zmianie. Zatwierdzenie wysyła powiadomienia do osób, których dotyczy." className="desk:w-[min(720px,92vw)]">
         {res?.skipped.length ? (
-          <p role="alert" className="mb-4 flex gap-2 rounded-xl border border-danger/40 p-3 text-sm">
+          <p role="alert" className="mb-4 flex gap-2 rounded-[4px] border border-danger/40 p-3 text-sm">
             <WarningCircle className="h-5 w-5 shrink-0 text-danger" />
             <span>Zatwierdzono {res.applied.length}. Pominięto {res.skipped.length}: inny administrator zmienił te komórki w międzyczasie. Sprawdź je poniżej.</span>
           </p>
         ) : null}
-        {err && <p role="alert" className="mb-4 rounded-xl border border-danger/40 p-3 text-sm text-danger">{err}</p>}
+        {err && <p role="alert" className="mb-4 rounded-[4px] border border-danger/40 p-3 text-sm text-danger">{err}</p>}
         {list === null && !err ? (
           <div className="grid gap-2" aria-busy="true">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>
         ) : list && !list.length ? (
@@ -109,7 +109,7 @@ function Review({ drafts, people, entries, ctx, onClose }: { drafts: Rec[]; peop
             {list.map((d) => {
               const note = !Array.isArray(d.proposal);
               return (
-                <li key={d.key} className="grid gap-2 rounded-xl border border-line p-3">
+                <li key={d.key} className="grid gap-2 rounded-[4px] border border-line p-3">
                   <p className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                     <span className="font-bold">{d.personId ? personName.get(d.personId) ?? 'Osoba' : 'Uwagi dnia'}, {dayShort(d.dzien)}</span>
                     <span className="text-ink-2">szkic: {names(d.by)}</span>

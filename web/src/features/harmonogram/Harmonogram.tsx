@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { dayLong, dayShort, mapsUrl, markDaySeen, telHref, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { ViewedDays } from '../../core/badges.js';
 import { useUnseenDays } from '../../core/layout/useBadges.js';
-import { CategoryLegend, catStripe, catTint, useCatColor } from '../../core/ui/category.js';
+import { CategoryLegend, CatTab, catTint, useCatColor } from '../../core/ui/category.js';
 import { useDesk } from '../../core/layout/status.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Badge, Empty, Segmented } from '../../core/ui/bits.js';
@@ -129,10 +129,10 @@ export function Harmonogram({ route }: { route: Route }) {
   return (
     <section className="mx-auto grid max-w-[1400px] gap-4 px-4 py-4 desk:px-8 desk:py-6">
       {mine && <WhereNext person={mine} entries={entries} ctx={ctx} />}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">{month ? <MonthNav day={anchor} today={t} /> : <WeekNav monday={monday} today={t} />}</div>
-        {desk && <Segmented label="Układ" value={layout} onChange={setLayout} className="w-[21rem]" options={[{ v: 'wiersze', label: 'Osoby w wierszach' }, { v: 'kolumny', label: 'Osoby w kolumnach' }]} />}
-        {desk && <Segmented label="Widok" value={view} onChange={setView} className="w-64" options={[{ v: 'tydzien', label: 'Tydzień' }, { v: 'miesiac', label: 'Miesiąc' }]} />}
+        {desk && <Segmented label="Układ" value={layout} onChange={setLayout} options={[{ v: 'wiersze', label: 'Osoby w wierszach' }, { v: 'kolumny', label: 'Osoby w kolumnach' }]} />}
+        {desk && <Segmented label="Widok" value={view} onChange={setView} options={[{ v: 'tydzien', label: 'Tydzień' }, { v: 'miesiac', label: 'Miesiąc' }]} />}
       </div>
       {admin && <DraftBar drafts={drafts} people={sorted} entries={entries} ctx={ctx} />}
       {!sorted.length ? (
@@ -186,7 +186,7 @@ function useSeenRef(dzien: string, p: ViewProps) {
   return setEl;
 }
 
-const NewPill = () => <span className="shrink-0 rounded-full bg-new px-2 text-xs font-bold leading-5 text-white">nowe</span>;
+const NewPill = () => <span className="shrink-0 rounded-[4px] bg-new px-2 text-xs font-bold leading-5 text-white">nowe</span>;
 
 function HarmSkeleton() {
   return (
@@ -198,22 +198,25 @@ function HarmSkeleton() {
   );
 }
 
-const navBtn = 'grid h-11 w-11 desk:h-12 desk:w-12 shrink-0 place-items-center rounded-full border border-line bg-card hover:border-ink-2';
+/** Przyciski paska jak filtry tabel: jedna ramka 1 px, segmenty rozdzielone linią, wysokość 44 px. */
+const navGroup = 'flex h-11 shrink-0 divide-x divide-line overflow-hidden rounded-[4px] border border-line bg-card';
+const navBtn = 'grid w-11 place-items-center text-ink-2 transition-colors duration-150 hover:bg-ink/6 hover:text-ink focus-visible:outline-offset-[-2px]';
 
-/** Stały układ: [miejsce na „Dziś”] ‹ etykieta › (strzałki nie skaczą). */
+/** Stały układ: [Dziś | ‹ | ›] etykieta (strzałki nie skaczą w obrębie widoku). */
 function NavRow({ back, here, slot, prev, next, labels, title, sub }: { back: string; here: boolean; slot: string; prev: string; next: string; labels: [string, string]; title: string; sub: string }) {
   return (
-    <div className="flex items-center gap-1.5 desk:gap-2">
-      <span className={cn('flex shrink-0 justify-end', slot)}>
+    <div className="flex items-center gap-3">
+      <div className={navGroup}>
         {/* widok już z dzisiejszym dniem: bez nawigacji, sam przewijamy */}
-        <a href="#harm" onClick={(e) => { if (here) { e.preventDefault(); goToday(); } else scrollToday = true; }} className="inline-flex h-11 items-center rounded-full px-2.5 font-semibold text-action hover:bg-action/10 desk:h-12 desk:px-3">{back}</a>
-      </span>
-      <a href={prev} aria-label={labels[0]} className={navBtn}><CaretLeft className="h-5 w-5" /></a>
-      <div className="w-48 shrink-0 text-center desk:w-60">
-        <p className="truncate text-base font-extrabold leading-tight first-letter:uppercase desk:text-lg">{title}</p>
+        <a href="#harm" onClick={(e) => { if (here) { e.preventDefault(); goToday(); } else scrollToday = true; }}
+          className={cn('grid place-items-center px-3 text-sm font-semibold text-action transition-colors duration-150 hover:bg-action/8 focus-visible:outline-offset-[-2px]', slot)}>{back}</a>
+        <a href={prev} aria-label={labels[0]} className={navBtn}><CaretLeft className="h-5 w-5" /></a>
+        <a href={next} aria-label={labels[1]} className={navBtn}><CaretRight className="h-5 w-5" /></a>
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-base font-extrabold leading-tight first-letter:uppercase">{title}</p>
         <p className="text-sm text-ink-2 tabular-nums">{sub}</p>
       </div>
-      <a href={next} aria-label={labels[1]} className={navBtn}><CaretRight className="h-5 w-5" /></a>
     </div>
   );
 }
@@ -223,7 +226,7 @@ function WeekNav({ monday, today: t }: { monday: string; today: string }) {
   const isNow = mondayOf(t) === monday;
   const range = `${Number(monday.slice(8))}.${monday.slice(5, 7)}-${Number(sun.slice(8))}.${sun.slice(5, 7)}.${sun.slice(0, 4)}`;
   const title = isNow ? 'Ten tydzień' : mondayOf(addDays(t, 7)) === monday ? 'Następny tydzień' : mondayOf(addDays(t, -7)) === monday ? 'Poprzedni tydzień' : 'Tydzień';
-  return <NavRow slot="w-[3.75rem] desk:w-16" back="Dziś" here={isNow} prev={`#harm/${addDays(monday, -7)}`} next={`#harm/${addDays(monday, 7)}`} labels={['Poprzedni tydzień', 'Następny tydzień']} title={title} sub={range} />;
+  return <NavRow slot="w-16" back="Dziś" here={isNow} prev={`#harm/${addDays(monday, -7)}`} next={`#harm/${addDays(monday, 7)}`} labels={['Poprzedni tydzień', 'Następny tydzień']} title={title} sub={range} />;
 }
 
 const MONTH = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -234,7 +237,7 @@ function MonthNav({ day, today: t }: { day: string; today: string }) {
   const prev = `${addDays(first, -1).slice(0, 7)}-01`;
   const next = addDays(monthDays(day).at(-1)!, 1);
   const isNow = t.slice(0, 7) === day.slice(0, 7);
-  return <NavRow slot="w-32" back={isNow ? 'Dziś' : 'Ten miesiąc'} here={isNow} prev={`#harm/${prev}`} next={`#harm/${next}`} labels={['Poprzedni miesiąc', 'Następny miesiąc']} title={monthName(day)} sub={isNow ? 'Ten miesiąc' : 'Miesiąc'} />;
+  return <NavRow slot="w-28" back={isNow ? 'Dziś' : 'Ten miesiąc'} here={isNow} prev={`#harm/${prev}`} next={`#harm/${next}`} labels={['Poprzedni miesiąc', 'Następny miesiąc']} title={monthName(day)} sub={isNow ? 'Ten miesiąc' : 'Miesiąc'} />;
 }
 
 /** Dziś i dzień, od którego szuka „Gdzie jedziesz”; przeliczane co minutę i po powrocie aplikacji z tła (16:00, północ). */
@@ -260,7 +263,7 @@ function WhereNext({ person, entries, ctx }: { person: Rec; entries: Rec[]; ctx:
   const long = next && dayLong(next.dzien);
   const when = next && (next.dzien === t ? 'Dziś' : next.dzien === addDays(t, 1) ? 'Jutro' : long!.charAt(0).toUpperCase() + long!.slice(1));
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-card">
+    <div className="overflow-hidden rounded-[4px] border border-line bg-card">
       <div className="flex items-center justify-between gap-3 bg-[#0a2240] px-4 py-2.5 text-white">
         <h2 className="text-base font-extrabold">Gdzie jedziesz</h2>
         {when && <span className="text-sm font-semibold opacity-90">{when}</span>}
@@ -293,44 +296,43 @@ function WhereSlot({ slot, ctx }: { slot: Slot; ctx: Ctx }) {
         {j?.site && <span className="flex items-center gap-1 text-ink-2"><MapPin className="h-4 w-4 shrink-0" />{[j.site.adres, j.site.miejscowosc].filter(Boolean).join(', ')}</span>}
       </a>
       <div className="flex flex-wrap gap-2">
-        {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-full bg-action px-5 font-semibold text-action-ink"><NavigationArrow className="h-5 w-5" weight="fill" />Nawiguj</a>}
-        {tel && <a href={telHref(tel)} className="inline-flex h-12 items-center gap-2 rounded-full border border-line px-5 font-semibold"><Phone className="h-5 w-5" />Zadzwoń</a>}
-        <a href={`#zl/${slot.jobId}`} className="inline-flex h-12 items-center gap-2 rounded-full px-4 font-semibold text-action hover:bg-action/10"><Briefcase className="h-5 w-5" />Karta zlecenia</a>
+        {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-action px-5 font-semibold text-action-ink"><NavigationArrow className="h-5 w-5" weight="fill" />Nawiguj</a>}
+        {tel && <a href={telHref(tel)} className="inline-flex h-12 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold"><Phone className="h-5 w-5" />Zadzwoń</a>}
+        <a href={`#zl/${slot.jobId}`} className="inline-flex h-12 items-center gap-2 rounded-[4px] px-4 font-semibold text-action hover:bg-action/10"><Briefcase className="h-5 w-5" />Karta zlecenia</a>
       </div>
     </li>
   );
 }
 
 /** Wartość komórki: zlecenia w kolorze kategorii (z `link`: odnośnik do karty zlecenia), kody w kolorze słownika, tekst. */
-export function CellView({ slots, ctx, compact, link, reserve }: { slots: Slot[]; ctx: Ctx; compact?: boolean; link?: boolean; reserve?: boolean }) {
-  if (!slots.length) return <span className="text-sm text-ink-2/60"><span aria-hidden>·</span><span className="sr-only">pusto</span></span>;
+export function CellView({ slots, ctx, compact, link }: { slots: Slot[]; ctx: Ctx; compact?: boolean; link?: boolean }) {
+  if (!slots.length) return <span className="sr-only">pusto</span>;
   return (
     <span className="grid min-w-0 gap-1">
-      {slots.map((s, i) => s.rodzaj === 'zlecenie' ? <JobChip key={i} slot={s} ctx={ctx} compact={compact} link={link} reserve={reserve && i === 0} /> : <CodeChip key={i} slot={s} ctx={ctx} />)}
+      {slots.map((s, i) => s.rodzaj === 'zlecenie' ? <JobChip key={i} slot={s} ctx={ctx} compact={compact} link={link} /> : <CodeChip key={i} slot={s} ctx={ctx} />)}
     </span>
   );
 }
 
-/** `reserve`: miejsce na ✎ w rogu (tabela admina, tylko pierwsza karta komórki). */
-function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx; compact?: boolean; link?: boolean; reserve?: boolean }) {
+/** Zlecenie w komórce: zakładka branży (skrót) z lewej, klient pogrubiony, pod nim miejscowość (zawijana, bez ucinania); tło w odcieniu kategorii. */
+function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx; compact?: boolean; link?: boolean }) {
   const j = ctx.jobs.get(slot.jobId);
   const c = ctx.cat(j?.kategoria);
-  // linia 1: cała kategoria (bez ucinania) i ½; linia 2: klient pogrubiony · miejscowość wyszarzona (ucinana pierwsza)
   const body = (
-    <span className="min-w-0 pl-2.5">
-      <span className={cn('flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-ink-2', reserve && 'pr-6')}>
-        <span className="sr-only">{j ? `Zlecenie ${j.numer}` : 'zlecenie'}</span>
-        {j?.kategoria && <span className="flex min-w-0 items-center gap-1 text-[11px] font-bold uppercase leading-4 tracking-wide text-ink"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: catStripe(c) }} aria-hidden /><span className="min-w-0 [overflow-wrap:anywhere]">{j.kategoria}</span></span>}
-        {slot.polDnia && <span className="shrink-0 font-bold"><span aria-hidden>½</span><span className="sr-only">pół dnia</span></span>}
+    <>
+      {j?.kategoria ? <CatTab name={j.kategoria} className="self-start" /> : <span className="w-10 shrink-0" aria-hidden />}
+      <span className={cn('grid min-w-0 leading-tight', compact ? 'text-sm' : 'text-[15px]')}>
+        <span className="sr-only">{j ? `Zlecenie ${j.numer} ` : 'zlecenie '}{j?.kategoria ? `${j.kategoria}, ` : ''}</span>
+        <span className="line-clamp-2 font-semibold [overflow-wrap:anywhere]">
+          {j?.client?.nazwa ?? ''}{slot.polDnia && <span className="ml-1 font-bold text-ink-2"><span aria-hidden>½</span><span className="sr-only">, pół dnia</span></span>}
+        </span>
+        {j?.site?.miejscowosc && <span className="text-ink-2 [overflow-wrap:anywhere]"><span className="sr-only">, </span>{j.site.miejscowosc}</span>}
       </span>
-      <span className={cn('flex min-w-0 items-baseline gap-1 leading-tight', compact ? 'text-sm' : 'text-[15px]')}>
-        <span className="max-w-full shrink-0 truncate font-semibold">{j?.client?.nazwa ?? ''}</span>
-        {j?.site?.miejscowosc && <span className="min-w-0 truncate text-ink-2"><span aria-hidden>· </span>{j.site.miejscowosc}</span>}
-      </span>
-    </span>
+    </>
   );
-  const cls = 'flex min-w-0 items-stretch gap-2 rounded-lg py-1 pr-2 pl-0 text-left text-ink';
-  const style = { background: catTint(c), boxShadow: `inset 4px 0 0 ${catStripe(c)}` };
+  // tabela (komputer): zakładka obok nazwy; telefon: zakładka nad nazwą, żeby klient i miejscowość miały całą szerokość
+  const cls = cn('flex min-w-0 gap-1.5 rounded-[3px] py-1 pr-1.5 pl-1 text-left text-ink', compact ? 'items-start' : 'flex-col items-start gap-1 px-2 py-1.5');
+  const style = { background: catTint(c) };
   if (!link) return <span className={cls} style={style}>{body}</span>;
   return (
     <a href={`#zl/${slot.jobId}`} style={style}
@@ -341,7 +343,7 @@ function JobChip({ slot, ctx, compact, link, reserve }: { slot: Extract<Slot, { 
 function CodeChip({ slot, ctx }: { slot: Exclude<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx }) {
   const color = slot.rodzaj === 'kod' ? ctx.codes.get(slot.kod) ?? '#8896a5' : undefined;
   return (
-    <span className={cn('inline-flex min-w-0 items-center gap-1.5 justify-self-start rounded-lg px-2.5 py-1 text-sm font-semibold', !color && 'bg-bg/70 text-ink-2')}
+    <span className={cn('inline-flex min-w-0 items-center gap-1.5 justify-self-start rounded-[4px] px-2.5 py-1 text-sm font-semibold', !color && 'bg-bg/70 text-ink-2')}
       style={color ? { background: `${color}26`, color: 'var(--ink)', boxShadow: `inset 0 0 0 1px ${color}80` } : undefined}>
       {color && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />}
       <span className="truncate">{slot.rodzaj === 'kod' ? slot.kod : slot.tekst}</span>
@@ -362,10 +364,10 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   const rep = p.repairs.get(key);
   const label = `${person.nazwa}, ${dayShort(dzien)}: ${rep ? `${rep.tekst}, ` : ''}${cellText(shown, p.ctx.jobs)}${draft ? ', szkic' : ''}`;
   const hasJob = shown.some((s) => s.rodzaj === 'zlecenie');
-  const szkic = draft && <span className={cn('pointer-events-none absolute top-1 rounded-full', p.open && hasJob ? (compact ? 'right-8' : 'right-11') : 'right-1', ' bg-action px-1.5 text-xs font-bold leading-4 text-action-ink')}>szkic</span>;
-  const cls = cn('relative block h-full w-full min-w-0 scroll-m-24 rounded-xl p-1.5 text-left transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none',
+  const szkic = draft && <span className={cn('pointer-events-none absolute top-1 rounded-[4px]', p.open && hasJob && !compact ? 'right-11' : 'right-1', ' bg-action px-1.5 text-xs font-bold leading-4 text-action-ink')}>szkic</span>;
+  const cls = cn('group relative block h-full w-full min-w-0 scroll-m-24 rounded-[4px] p-1.5 text-left transition-[box-shadow,background-color] duration-300 motion-reduce:transition-none',
     draft && 'outline-2 outline-dashed outline-action/70 -outline-offset-2 bg-action/5', rep && 'bg-danger/12 ring-2 ring-inset ring-danger/50', p.flash === key && 'bg-ok/10 ring-4 ring-ok/40');
-  const view = (v: ReactNode) => (rep ? <span className="grid min-w-0 gap-1"><RepairChip tekst={rep.tekst} reserve={!!p.open && compact} />{shown.length ? v : null}</span> : v);
+  const view = (v: ReactNode) => (rep ? <span className="grid min-w-0 gap-1"><RepairChip tekst={rep.tekst} />{shown.length ? v : null}</span> : v);
   if (p.open && !hasJob) {
     return (
       <button type="button" data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
@@ -376,15 +378,14 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
   }
   return (
     <div data-cell={`${dzien}|${person.nazwa}`} data-key={key} data-flash={p.flash === key || undefined} role="group" aria-label={label} title={draft ? `Teraz: ${cellText(cur, p.ctx.jobs)}` : undefined}
-      // kliknięcie obok odnośnika (myszą) też otwiera edytor; z klawiatury i czytnika: przycisk ✎
+      // kliknięcie obok odnośnika (myszą) też otwiera edytor; z klawiatury i czytnika: przycisk ✎ (na komputerze widoczny po najechaniu lub fokusie)
       onClick={p.open || p.fresh.has(dzien) ? (e) => { p.tap?.(dzien); if (p.open && !(e.target as Element).closest('a,button')) p.open(dzien, person); } : undefined}
       className={cn(cls, p.open && 'min-h-12 cursor-pointer transition-colors duration-200 hover:bg-action/8', p.open && !compact && 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1')}>
-      {view(<CellView slots={shown} ctx={p.ctx} compact={compact} link reserve={!!p.open && compact} />)}
+      {view(<CellView slots={shown} ctx={p.ctx} compact={compact} link />)}
       {p.open && (
         <button type="button" aria-label={`Edytuj komórkę ${person.nazwa} ${dayShort(dzien)}`} onClick={() => { p.tap?.(dzien); p.open!(dzien, person); }}
-          // tabela (komputer): w rogu nad paskiem numeru, żeby karta zlecenia miała całą szerokość
-          className={cn('grid place-items-center rounded-lg text-ink-2 hover:bg-action/10 hover:text-action focus-visible:outline-2 focus-visible:outline-action',
-            compact ? 'absolute top-1.5 right-1.5 h-6 w-6 rounded-md bg-card/90' : 'h-8 w-8')}>
+          className={cn('grid place-items-center rounded-[3px] text-ink-2 hover:bg-action/10 hover:text-action focus-visible:outline-2 focus-visible:outline-action',
+            compact ? 'absolute right-1.5 bottom-1.5 h-6 w-6 border border-line bg-card opacity-0 group-hover:opacity-100 focus-visible:opacity-100' : 'h-8 w-8')}>
           <PencilSimple className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
         </button>
       )}
@@ -394,17 +395,17 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
 }
 
 /** Cały dzień osoby: auto jej ekipy w naprawie (czerwone, nie zmienia wpisów). */
-const RepairChip = ({ tekst, reserve }: { tekst: string; reserve?: boolean }) => (
-  <span title={tekst} className={cn('flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold text-danger', reserve && 'pr-6')}><Wrench className="h-4 w-4 shrink-0" weight="bold" aria-hidden /><span className="truncate">{tekst}</span></span>
+const RepairChip = ({ tekst }: { tekst: string }) => (
+  <span title={tekst} className="flex min-w-0 items-center gap-1.5 rounded-[3px] px-2 py-1 text-sm font-semibold text-danger"><Wrench className="h-4 w-4 shrink-0" weight="bold" aria-hidden /><span className="truncate">{tekst}</span></span>
 );
 
 function NameCell({ person, mine, color }: { person: Rec; mine: boolean; color?: string }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="h-6 w-1 shrink-0 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />
+      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />
       {person.userId && <Avatar userId={person.userId} name={person.nazwa} size="xs" />}
       <span className={cn('min-w-0 leading-tight [overflow-wrap:anywhere]', mine ? 'font-bold' : 'font-semibold')}>{person.nazwa}</span>
-      {mine && <span className="shrink-0 rounded-full bg-ink px-1.5 text-[11px] font-bold leading-5 text-bg">Ty</span>}
+      {mine && <span className="shrink-0 rounded-[4px] bg-ink px-1.5 text-[11px] font-bold leading-5 text-bg">Ty</span>}
     </span>
   );
 }
@@ -423,13 +424,13 @@ function DayCard({ d, p }: { d: string; p: ViewProps }) {
   const fresh = p.fresh.has(d);
   if (wd !== 1 && !any && !note) {
     return (
-      <p ref={ref} data-day={d} onClick={() => p.tap?.(d)} className="flex scroll-mt-20 items-center justify-between gap-2 rounded-2xl border border-line/70 px-4 py-3 text-sm text-ink-2">
+      <p ref={ref} data-day={d} onClick={() => p.tap?.(d)} className="flex scroll-mt-20 items-center justify-between gap-2 rounded-[4px] border border-line/70 px-4 py-3 text-sm text-ink-2">
         <span className="flex items-center gap-2 font-semibold">{dayLong(d)}{fresh && <NewPill />}</span><span>{info ?? 'Weekend'}</span>
       </p>
     );
   }
   return (
-    <article ref={ref} id={`d-${d}`} data-day={d} className={cn('scroll-mt-20 overflow-hidden rounded-2xl border bg-card', isToday ? 'border-action' : 'border-line')}>
+    <article ref={ref} id={`d-${d}`} data-day={d} className={cn('scroll-mt-20 overflow-hidden rounded-[4px] border bg-card', isToday ? 'border-action' : 'border-line')}>
       <header onClick={() => p.tap?.(d)} className={cn('flex items-center justify-between gap-2 px-4 py-2.5', isToday ? 'bg-action/10' : 'border-b border-line')}>
         <h3 className="font-extrabold first-letter:uppercase">{dayLong(d)}</h3>
         <span className="flex items-center gap-1.5">{fresh && <NewPill />}{isToday && <Badge tone="ink">dziś</Badge>}{info && <Badge tone="warn">{info}</Badge>}</span>
@@ -471,7 +472,7 @@ function DayHead({ d, p, className, row }: { d: string; p: ViewProps; className?
 /** Komputer: tabela osoba × dzień. */
 function WeekTable(p: ViewProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-card">
+    <div className="overflow-x-auto rounded-[4px] border border-line bg-card">
       <table className="w-full table-fixed border-collapse text-left">
         <colgroup>
           <col className="w-52" />
@@ -520,10 +521,12 @@ function MonthTable(p: ViewProps) {
     <div className="grid gap-2">
       <div className="flex items-center justify-end gap-2">
         <span className="text-sm text-ink-2">Przewiń o tydzień</span>
-        <button type="button" aria-label="Przewiń tydzień wstecz" onClick={() => by(-1)} className={navBtn}><CaretLeft className="h-5 w-5" /></button>
-        <button type="button" aria-label="Przewiń tydzień naprzód" onClick={() => by(1)} className={navBtn}><CaretRight className="h-5 w-5" /></button>
+        <div className={navGroup}>
+          <button type="button" aria-label="Przewiń tydzień wstecz" onClick={() => by(-1)} className={navBtn}><CaretLeft className="h-5 w-5" /></button>
+          <button type="button" aria-label="Przewiń tydzień naprzód" onClick={() => by(1)} className={navBtn}><CaretRight className="h-5 w-5" /></button>
+        </div>
       </div>
-      <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-x-contain rounded-2xl border border-line bg-card">
+      <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-x-contain rounded-[4px] border border-line bg-card">
         <table className="table-fixed border-separate border-spacing-0 text-left" style={{ width: NAME + COL * p.days.length }}>
           <colgroup>
             <col style={{ width: NAME }} />
@@ -571,7 +574,7 @@ function DaysTable(p: ViewProps) {
     if (el) el.scrollTop = th && head ? Math.max(0, el.scrollTop + th.getBoundingClientRect().top - el.getBoundingClientRect().top - head.getBoundingClientRect().height) : 0;
   }, [first]);
   return (
-    <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-contain rounded-2xl border border-line bg-card">
+    <div ref={box} className="max-h-[calc(100dvh-17rem)] overflow-auto overscroll-contain rounded-[4px] border border-line bg-card">
       <table className="w-full table-fixed border-separate border-spacing-0 text-left" style={{ minWidth: DAY + PERSON * p.people.length }}>
         <colgroup>
           <col style={{ width: DAY }} />
