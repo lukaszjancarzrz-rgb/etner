@@ -419,7 +419,9 @@ test('admin: Na jutro poza głównym menu (koniec menu bocznego / kafelek w Wię
     await nav.getByRole('link', { name: /^Więcej/ }).click();
     await page.getByRole('link', { name: /^Na jutro/ }).click();
   } else {
-    await expect(nav.getByRole('listitem').last().getByRole('link')).toHaveText(/^Na jutro/);
+    // właściciel: „Więcej” zawsze na końcu, „Na jutro” tuż nad nim
+    await expect(nav.getByRole('listitem').last().getByRole('link')).toHaveText(/^Więcej/);
+    await expect(nav.getByRole('listitem').nth(-2).getByRole('link')).toHaveText(/^Na jutro/);
     await nav.getByRole('link', { name: /^Na jutro/ }).click();
   }
   await expect(page.getByRole('heading', { name: 'Na jutro', level: 1 })).toBeVisible();
