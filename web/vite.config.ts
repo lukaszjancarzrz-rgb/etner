@@ -13,7 +13,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'badge-96.png', 'push-sw.js'],
+      includeAssets: ['icon.svg', 'logo.png', 'apple-touch-icon.png', 'badge-96.png', 'push-sw.js'],
       manifest: {
         name: 'ETNER',
         short_name: 'ETNER',

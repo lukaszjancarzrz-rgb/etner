@@ -19,6 +19,8 @@
   --crew-mix: 0%;
   --logo-pulse: #262b6b;
   --logo-word: #1e2a4a;
+  --logo-img: block; /* logo firmy (PNG, ciemny napis) tylko w jasnym motywie */
+  --logo-svg: none;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -40,6 +42,8 @@
     --crew-mix: 50%;
     --logo-pulse: #ffffff;
     --logo-word: #ffffff;
+    --logo-img: none;
+    --logo-svg: inline-flex;
     color-scheme: dark;
   }
 }
@@ -61,6 +65,8 @@
   --crew-mix: 50%;
   --logo-pulse: #ffffff;
   --logo-word: #ffffff;
+    --logo-img: none;
+    --logo-svg: inline-flex;
   color-scheme: dark;
 }
 

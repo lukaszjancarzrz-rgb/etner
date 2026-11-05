@@ -26,11 +26,10 @@ function clientIp(c: Context): string {
 }
 
 const CSS = `:root{--bg:#eef2f4;--card:#fff;--ink:#0a2240;--mut:#4a5d70;--line:#d3dce5;--acc:#13808f;--warn:#a85d00;--plate:#0a2240;--plate-ink:#fff;--plate-mut:#b9c8d6}
-@media (prefers-color-scheme:dark){:root{--bg:#071829;--card:#0d2340;--ink:#eef2f4;--mut:#a9bacb;--line:#24405f;--acc:#5fc6d2;--warn:#ffb85c;--plate:#13325a;--plate-mut:#a9bacb}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums}
 main{max-width:680px;margin:0 auto;padding:12px 16px 32px}a{color:var(--acc)}h1,h2,h3,p{margin:0}
-header{display:flex;align-items:center;gap:12px;padding:4px 0 12px}header img{width:56px;height:56px;flex:none}
-header strong{display:block;font-size:1.4rem;font-weight:800;line-height:1.1}header a{font-size:.9rem}
+header{display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px;padding:4px 0 14px}header img{height:64px;width:auto;flex:none}
+header strong{display:block;font-size:1.6rem;font-weight:800;line-height:1.15}header a{font-size:.95rem}
 .plate{background:var(--plate);color:var(--plate-ink);border-radius:14px;padding:16px;display:grid;gap:12px}
 .plate .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .plate .lbl{color:var(--plate-mut);font-size:.85rem}.plate .no{font-size:1.5rem;font-weight:800}
@@ -50,12 +49,12 @@ h3{font-size:.8rem;font-weight:700;color:var(--mut);margin:12px 0 4px}
 .entries>li{display:grid;grid-template-columns:5.6em 1fr;gap:8px;font-size:.9rem}.entries time{font-weight:700}
 .docs{display:flex;flex-wrap:wrap;gap:6px}.docs a{padding:4px 10px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;text-decoration:none}
 .ph{display:grid;grid-template-columns:repeat(4,minmax(0,112px));gap:6px}.ph img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block}
-.phs>summary{list-style:none;cursor:pointer}.phs>summary::-webkit-details-marker{display:none}.phs>.ph{margin-top:6px}.phs[open] .plus{display:none}
+.sw{position:fixed;top:0;left:0;opacity:0;width:1px;height:1px;pointer-events:none}.tile,.plus{cursor:pointer}.rest{display:none;margin-top:6px}.more:checked+.ph .plus{display:none}.more:checked+.ph+.rest{display:grid}
 .plus{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border-radius:8px;background:var(--line);font-size:1.3rem;font-weight:800}
 .empty{color:var(--mut);font-size:.9rem}
-.lb{display:none;position:fixed;inset:0;z-index:9;background:rgba(5,15,30,.92);align-items:center;justify-content:center;padding:16px}.lb:target{display:flex}
+.lb{display:none;position:fixed;inset:0;z-index:9;background:rgba(5,15,30,.92);align-items:center;justify-content:center;padding:16px}.sw:checked+.lb{display:flex}.sw:focus-visible+.lb .x,.more:focus-visible+.ph .plus{outline:3px solid var(--acc)}
 .lb .x{position:absolute;inset:0}.lb figure{position:relative;margin:0;max-width:100%;display:grid;gap:10px;justify-items:center}
-.lb img{max-width:100%;max-height:80vh;border-radius:8px;display:block}.lb figcaption{display:flex;gap:10px}.lb figcaption a{color:#fff;padding:8px 14px;border:1px solid rgba(255,255,255,.5);border-radius:10px;text-decoration:none;font-weight:700}
+.lb img{max-width:100%;max-height:80vh;border-radius:8px;display:block}.lb figcaption{display:flex;gap:10px}.lb figcaption a,.lb figcaption label{cursor:pointer;color:#fff;padding:8px 14px;border:1px solid rgba(255,255,255,.5);border-radius:10px;text-decoration:none;font-weight:700}
 footer{color:var(--mut);font-size:.85rem;padding:16px 4px 0}
 a:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}`;
@@ -64,7 +63,7 @@ const doc = (title: string, body: string) => `<!doctype html><html lang="pl"><he
 <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>${esc(title)}</title><style>${CSS}</style></head><body><main>${body}</main></body></html>`;
 
 const www = (f: Firma) => (f.www ? `<a href="https://${esc(f.www.replace(/^https?:\/\//, ''))}" rel="noopener">${esc(f.www)}</a>` : '');
-const head = (f: Firma) => `<header><img src="/icon.svg" alt=""><div><strong>${esc(f.nazwa)}</strong>${www(f)}</div></header>`;
+const head = (f: Firma) => `<header><img src="/logo.png" alt="ETNER, inteligentny wybór"><div><strong>${esc(f.nazwa)}</strong>${www(f)}</div></header>`;
 const tel = (f: Firma, cls = 'btn') => (f.telefon ? `<a class="${cls}" href="tel:${esc(f.telefon.replace(/[^\d+]/g, ''))}">Zadzwoń: ${esc(f.telefon)}</a>` : '');
 
 /** Ta sama strona dla unieważnionego i nieznanego tokenu (nie zdradza, który był kiedyś ważny). */
@@ -101,14 +100,15 @@ async function passportPage(deps: AppDeps, token: string): Promise<string> {
 ${d.montaz || d.gwarancjaDo ? `<div class="m">${[d.montaz && `montaż ${pl(d.montaz)}`, d.gwarancjaDo && `gwarancja do ${pl(d.gwarancjaDo)}`].filter(Boolean).join(', ')}</div>` : ''}</li>`).join('');
     const entries = t.entries.map((e) => `<li><time datetime="${e.dzien}">${pl(e.dzien)}</time><span>${esc([e.czynnosci.join(', '), e.uwagi].filter(Boolean).join('. '))}</span></li>`).join('');
     const docList = (await Promise.all(docs.map(async (a) => `<a href="${await url(a.keyOrig, a.nazwa)}" rel="noopener">${esc(a.nazwa)}</a>`))).join('');
-    const tiles = photos.map((a) => `<a href="#zd-${esc(a.id)}"><img src="${thumbs.get(a.id)}" alt="Zdjęcie" loading="lazy"></a>`);
-    // podgląd bez JS: kafelek → #zd-<id> (:target), zamknięcie wraca do teczki
-    boxes.push(...await Promise.all(photos.map(async (a) => `<div class="lb" id="zd-${esc(a.id)}"><a class="x" href="#${ids[i]}" aria-label="Zamknij podgląd"></a>
-<figure><img src="${await url(a.keyView ?? a.keyOrig)}" alt="Zdjęcie" loading="lazy"><figcaption><a href="#${ids[i]}">Zamknij</a> <a href="${await url(a.keyOrig, a.nazwa)}" rel="noopener">Oryginał</a></figcaption></figure></div>`)));
-    // jeden rząd 4 kafelków; więcej zdjęć → „+N” rozwija resztę (details, bez JS)
+    // podgląd bez JS i bez zmiany adresu (pozycja strony zostaje): ukryty przełącznik + <label> otwiera/zamyka
+    const tiles = photos.map((a) => `<label for="zd-${esc(a.id)}" class="tile"><img src="${thumbs.get(a.id)}" alt="Zdjęcie" loading="lazy"></label>`);
+    boxes.push(...await Promise.all(photos.map(async (a) => `<input type="checkbox" class="sw" id="zd-${esc(a.id)}" aria-label="Podgląd zdjęcia"><div class="lb"><label class="x" for="zd-${esc(a.id)}"></label>
+<figure><img src="${await url(a.keyView ?? a.keyOrig)}" alt="Zdjęcie" loading="lazy"><figcaption><label for="zd-${esc(a.id)}">Zamknij</label> <a href="${await url(a.keyOrig, a.nazwa)}" rel="noopener">Oryginał</a></figcaption></figure></div>`)));
+    // jeden rząd 4 kafelków; więcej zdjęć → „+N” pokazuje resztę
+    const more = `zr-${ids[i]}`;
     const photoList = tiles.length <= PHOTO_ROW ? (tiles.length ? `<div class="ph">${tiles.join('')}</div>` : '')
-      : `<details class="phs"><summary aria-label="Pokaż wszystkie zdjęcia (${tiles.length})"><div class="ph">${tiles.slice(0, PHOTO_ROW - 1).join('')}<span class="plus">+${tiles.length - PHOTO_ROW + 1}</span></div></summary>`
-        + `<div class="ph">${tiles.slice(PHOTO_ROW - 1).join('')}</div></details>`;
+      : `<input type="checkbox" class="sw more" id="${more}" aria-label="Pokaż wszystkie zdjęcia (${tiles.length})"><div class="ph">${tiles.slice(0, PHOTO_ROW - 1).join('')}<label for="${more}" class="plus">+${tiles.length - PHOTO_ROW + 1}</label></div>`
+        + `<div class="ph rest">${tiles.slice(PHOTO_ROW - 1).join('')}</div>`;
     const empty = !devs && !entries && !docList && !photoList;
     const due = t.nastepnySerwis ? `<span${t.nastepnySerwis < today ? ' class="late"' : ''}>serwis <b>${pl(t.nastepnySerwis)}</b></span>` : '';
     return `<section id="${ids[i]}"><div class="fh"><h2>${esc(t.kategoria)}</h2>${empty && !due ? '<span class="empty">brak wpisów</span>' : due}</div>

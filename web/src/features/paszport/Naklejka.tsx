@@ -20,17 +20,23 @@ function useFirma(): Firma {
   return f;
 }
 
-/** Logo z aplikacji bez wariantu ciemnego (na naklejce zawsze białe tło). */
-function useLogo(): HTMLImageElement | undefined {
-  const [img, setImg] = useState<HTMLImageElement>();
+/** Logo firmy na czarno (druk termiczny: jasny błękit zniknąłby przy progowaniu). */
+function useLogo(): HTMLCanvasElement | undefined {
+  const [logo, setLogo] = useState<HTMLCanvasElement>();
   useEffect(() => {
-    void fetch('/icon.svg').then((r) => r.text()).then((t) => {
-      const i = new Image();
-      i.onload = () => setImg(i);
-      i.src = `data:image/svg+xml,${encodeURIComponent(t.replace(/@media[^{]*\{[^}]*\}\}/, ''))}`;
-    }).catch(() => {});
+    const i = new Image();
+    i.onload = () => {
+      const c = Object.assign(document.createElement('canvas'), { width: i.naturalWidth, height: i.naturalHeight });
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(i, 0, 0);
+      ctx.globalCompositeOperation = 'source-in'; // zachowuje kształt (alfa), kolor → czarny
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, c.width, c.height);
+      setLogo(c);
+    };
+    i.src = '/logo.png';
   }, []);
-  return img;
+  return logo;
 }
 
 const canShareFiles = () => { try { return !!navigator.canShare?.({ files: [new File([''], 'n.png', { type: 'image/png' })] }); } catch { return false; } };
@@ -63,23 +69,26 @@ export default function Naklejka({ passport, klient }: { passport: Rec; klient: 
 
   if (!url) return <p className="text-sm text-ink-2">Paszport nie ma aktywnego linku.{admin ? ' Utwórz nowy link poniżej.' : ' Poproś admina o nowy link.'}</p>;
   const [w, h] = LABEL_SIZES[size];
+  // podgląd w stałym polu (zmiana rozmiaru nie przesuwa przycisków); na szerszym ekranie przyciski obok
   return (
-    <div className="grid gap-4">
-      <div className="grid justify-items-center rounded-2xl border-2 border-dashed border-line bg-white p-3">
-        <canvas ref={ref} role="img" aria-label={`Podgląd naklejki ${passport.numer}`} className="h-auto w-full max-w-[200px]" style={{ aspectRatio: `${w} / ${h}` }} />
+    <div className="grid gap-4 min-[560px]:grid-cols-[176px_minmax(0,1fr)] min-[560px]:items-start">
+      <div className="flex h-60 items-center justify-center rounded-2xl border-2 border-dashed border-line bg-white p-2 min-[560px]:h-[284px]">
+        <canvas ref={ref} role="img" aria-label={`Podgląd naklejki ${passport.numer}`} className="h-full w-auto max-w-full" style={{ aspectRatio: `${w} / ${h}` }} />
       </div>
-      <Segmented label="Rozmiar naklejki" value={size} onChange={pick} options={(Object.keys(LABEL_SIZES) as LabelSize[]).map((v) => ({ v, label: `${v.replace('x', '×')} mm` }))} />
-      <div className="grid gap-2 min-[560px]:grid-cols-2">
-        {canShareFiles() && <Button onClick={() => void file().then((f) => navigator.share({ files: [f], title: name })).catch(fail('Nie udostępniono obrazu'))}><ShareNetwork className="h-5 w-5" />Udostępnij obraz</Button>}
-        <Button variant="secondary" onClick={() => void download().catch(fail('Nie pobrano obrazu'))}><DownloadSimple className="h-5 w-5" />Pobierz obraz</Button>
-        <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), size, false)}><Printer className="h-5 w-5" />Drukuj</Button>
-        <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), size, true)}><GridFour className="h-5 w-5" />Arkusz A4</Button>
+      <div className="grid min-w-0 gap-2">
+        <Segmented label="Rozmiar naklejki" value={size} onChange={pick} options={(Object.keys(LABEL_SIZES) as LabelSize[]).map((v) => ({ v, label: `${v.replace('x', '×')} mm` }))} />
+        <div className="grid grid-cols-2 gap-2">
+          {canShareFiles() && <Button className="col-span-2" onClick={() => void file().then((f) => navigator.share({ files: [f], title: name })).catch(fail('Nie udostępniono obrazu'))}><ShareNetwork className="h-5 w-5" />Udostępnij obraz</Button>}
+          <Button variant="secondary" className="col-span-2" onClick={() => void download().catch(fail('Nie pobrano obrazu'))}><DownloadSimple className="h-5 w-5" />Pobierz obraz</Button>
+          <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), size, false)}><Printer className="h-5 w-5" />Drukuj</Button>
+          <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), size, true)}><GridFour className="h-5 w-5" />Arkusz A4</Button>
+        </div>
+        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-line px-3 py-1">
+          <span className="min-w-0 flex-1 truncate text-sm text-ink-2" title={url}>{url}</span>
+          <Button variant="ghost" size="sm" onClick={() => void navigator.clipboard.writeText(url).then(() => toast('Skopiowano link', { tone: 'ok' }), fail('Nie skopiowano linku'))}><Copy className="h-4 w-4" />Kopiuj link</Button>
+        </div>
+        {admin && <Button variant="ghost" size="sm" className="justify-self-start text-danger" onClick={() => setRenew(true)}><ArrowsClockwise className="h-4 w-4" />Unieważnij link i utwórz nowy</Button>}
       </div>
-      <div className="flex min-w-0 items-center gap-2 rounded-xl border border-line px-3 py-1">
-        <span className="min-w-0 flex-1 truncate text-sm text-ink-2" title={url}>{url}</span>
-        <Button variant="ghost" size="sm" onClick={() => void navigator.clipboard.writeText(url).then(() => toast('Skopiowano link', { tone: 'ok' }), fail('Nie skopiowano linku'))}><Copy className="h-4 w-4" />Kopiuj link</Button>
-      </div>
-      {admin && <Button variant="ghost" size="sm" className="justify-self-start text-danger" onClick={() => setRenew(true)}><ArrowsClockwise className="h-4 w-4" />Unieważnij link i utwórz nowy</Button>}
       {renew && <Renew passport={passport} onClose={() => setRenew(false)} />}
     </div>
   );

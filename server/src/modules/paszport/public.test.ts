@@ -70,7 +70,7 @@ describe('strona klienta /p/:token', () => {
     expect(html).not.toMatch(/Bartek|Technikowski|Adamski/);
     expect(html).not.toContain('<script');
     expect(html.match(/<img /g)?.length).toBe(5); // logo + 2 zdjęcia dla klienta (teczka, dziennik), każde: miniatura i podgląd
-    expect(html.match(/<div class="lb" id="zd-/g)?.length).toBe(2); // podgląd zdjęcia bez JS (:target)
+    expect(html.match(/<input type="checkbox" class="sw" id="zd-[^"]+" aria-label="Podgląd zdjęcia"><div class="lb">/g)?.length).toBe(2); // podgląd bez JS i bez zmiany adresu
     expect(html).toMatch(/orig\.pdf\?exp=\d+&amp;sig=[^"&]+&amp;name=instrukcja-klima\.pdf"/); // plik otwiera się pod nazwą z wgrania
     expect(html).toMatch(/\/api\/files\/[^"]+thumb\.webp\?exp=\d+&amp;sig=/); // podpisane linki
   });
@@ -164,7 +164,7 @@ describe('strona klienta /p/:token', () => {
     const { token } = s.deps.db.$client.prepare('select token from passports where site_id = ?').get(s.site.id) as { token: string };
     const html = await (await page(s, token)).text();
     expect(html.indexOf('<h3>Zdjęcia</h3>')).toBeLessThan(html.indexOf('<h3>Historia serwisu</h3>'));
-    expect(html).toContain('<span class="plus">+3</span>'); // 6 zdjęć: 3 w rzędzie + „+3”
+    expect(html).toMatch(/<label for="zr-klimatyzacja" class="plus">\+3<\/label>/); // 6 zdjęć: 3 w rzędzie + „+3”
     if (process.env.DUMP_HTML) (await import('node:fs')).writeFileSync(process.env.DUMP_HTML, html);
   });
 });
