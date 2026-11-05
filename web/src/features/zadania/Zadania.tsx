@@ -15,6 +15,8 @@ import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
+import { useDesk } from '../../core/layout/status.js';
+import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { DEFAULT_CYKL, DONE, isCyclicGroup, isDone, isLate, needsCycle, taskGroups } from './model.js';
 
 /** Optymistycznie jak serwer: cykliczne „Zrobione” wraca do pierwszego statusu, z cyklem termin = dziś + cykl. */
@@ -33,11 +35,26 @@ export function Zadania() {
   const [doneOpen, setDoneOpen] = useState(false);
   const [editing, setEditing] = useState<Rec | null>(null);
   const { groups, done } = useMemo(() => taskGroups(tasks, grupy.map((g) => g.wartosc as string)), [tasks, grupy]);
+  const desk = useDesk();
 
   if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true" aria-label="Wczytywanie zadań"><Skeleton className="h-28" />{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>;
 
+  if (desk) return (
+    <section className="mx-auto grid max-w-[1400px] gap-5 px-8 py-5">
+      <div className="max-w-3xl"><AddForm /></div>
+      {!tasks.length && <Empty icon={ListChecks} title="Nie ma zadań" hint="Dopisz sprawę do załatwienia. Cykliczne wracają po oznaczeniu jako zrobione." />}
+      {groups.some((g) => g.list.length) && <TaskTable label="Zadania" list={groups.flatMap((g) => g.list)} onEdit={setEditing} />}
+      {done.length > 0 && (
+        <div className="grid gap-2">
+          <SectionTitle count={done.length} toggle={{ open: doneOpen, onToggle: () => setDoneOpen((o) => !o) }}>Zrobione</SectionTitle>
+          {doneOpen && <TaskTable label="Zrobione" list={done} onEdit={setEditing} />}
+        </div>
+      )}
+      {editing && <TaskForm task={editing} onClose={() => setEditing(null)} />}
+    </section>
+  );
   return (
-    <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
+    <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4">
       <AddForm />
       {!tasks.length && <Empty icon={ListChecks} title="Nie ma zadań" hint="Dopisz sprawę do załatwienia. Cykliczne wracają po oznaczeniu jako zrobione." />}
       {groups.map(({ grupa, list }) => (
@@ -88,7 +105,35 @@ function AddForm() {
   );
 }
 
-function Task({ t, onEdit }: { t: Rec; onEdit: () => void }) {
+/** Komputer: zadania w tabeli; klik w wiersz otwiera edycję. */
+function TaskTable({ label, list, onEdit }: { label: string; list: Rec[]; onEdit: (t: Rec) => void }) {
+  const clients = useEntities('clients');
+  const nazwa = useMemo(() => new Map(clients.map((c) => [c.id, c.nazwa as string])), [clients]);
+  const { rows, by } = useSort(list, {
+    tekst: (t) => t.tekst, grupa: (t) => t.grupa, prio: (t) => t.priorytet, termin: (t) => t.termin, cykl: (t) => (t.cykliczne ? (t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne') : ''),
+    klient: (t) => nazwa.get(t.clientId), status: (t) => t.status,
+  });
+  return (
+    <Table aria-label={label}>
+      <thead>
+        <tr>
+          <Th className="w-12"><span className="sr-only">Zrobione</span></Th>
+          <Th sort={by('tekst')}>Tytuł</Th>
+          <Th sort={by('grupa')} className="w-[9rem]">Lista</Th>
+          <Th sort={by('prio')} num className="w-[5.5rem]">Priorytet</Th>
+          <Th sort={by('termin')} className="w-[10rem]">Termin</Th>
+          <Th sort={by('cykl')} className="w-[12rem]">Cykl</Th>
+          <Th sort={by('klient')} className="w-[11rem]">Klient</Th>
+          <Th sort={by('status')} className="w-[8rem]">Status</Th>
+          <Th className="w-12"><span className="sr-only">Edycja</span></Th>
+        </tr>
+      </thead>
+      <tbody>{rows.map((t) => <Task key={t.id} t={t} onEdit={() => onEdit(t)} desk />)}</tbody>
+    </Table>
+  );
+}
+
+function Task({ t, onEdit, desk }: { t: Rec; onEdit: () => void; desk?: boolean }) {
   const statusy = useDict('status_zadania');
   const first = statusy[0]?.wartosc;
   const day = today();
@@ -98,10 +143,34 @@ function Task({ t, onEdit }: { t: Rec; onEdit: () => void }) {
   // cykliczne „Zrobione”: serwer wraca do pierwszego statusu i zapisuje `ostatnio`
   const toggle = (v: boolean) => void put(t, v ? (t.cykliczne ? doneCyclic(first, t.cykl, day) : { status: DONE }) : { status: first }, { status: v ? DONE : first })
     .then(() => v && t.cykliczne && toast('Zrobione, zadanie wraca na listę', { body: 'To zadanie cykliczne.', tone: 'ok' }), fail('Zmiana nie została zapisana'));
+  const termin = t.termin && <span className={cn(late && 'font-bold text-danger')}>{late ? 'po terminie ' : t.cykliczne && t.cykl ? 'następny ' : desk ? '' : 'termin '}{t.termin === day ? 'dziś' : fmtDay(t.termin)}</span>;
+  const cykl = t.cykliczne && <span className="inline-flex items-center gap-1"><ArrowsClockwise className="h-4 w-4 shrink-0" aria-hidden />{t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne'}{t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}</span>;
+  const check = <Checkbox checked={done} disabled={!!t._tmp} aria-label={`Zrobione: ${t.tekst}`} onCheckedChange={(v) => toggle(v === true)} className={desk ? 'h-6 w-6' : 'h-8 w-8'} />;
+  const fix = needsCycle(t) && !t._tmp && (
+    <button type="button" onClick={onEdit} aria-label={`Ustaw cykliczność: ${t.tekst}`} className={cn('inline-flex min-h-8 items-center gap-1 text-sm font-semibold text-danger underline-offset-2 hover:underline', desk ? 'align-middle' : 'mt-1')}>
+      <Warning className="h-4 w-4" weight="fill" aria-hidden />ustaw cykliczność
+    </button>
+  );
+  if (desk) return (
+    <Tr onOpen={t._tmp ? undefined : onEdit}>
+      <Td pad="p-0"><label className={cn('mx-auto grid h-9 w-9 place-items-center rounded-[4px]', !t._tmp && 'cursor-pointer hover:bg-ok/10')}>{check}</label></Td>
+      <Td title={t.tekst}>
+        <button type="button" onClick={onEdit} disabled={!!t._tmp} className={cn('font-semibold hover:text-action', done && 'text-ink-2 line-through decoration-2')}>{t.tekst}</button>
+        {t._tmp && <span className="text-sm text-ink-2"> wysyłanie…</span>}
+      </Td>
+      <Td className="text-ink-2">{t.grupa || 'Bez grupy'}</Td>
+      <Td num>{t.priorytet != null ? <Badge tone={t.priorytet === 1 ? 'ink' : 'line'} className="h-5">P{t.priorytet}</Badge> : <span className="text-ink-2">—</span>}</Td>
+      <Td>{termin || <span className="text-ink-2">—</span>}</Td>
+      <Td className="text-sm text-ink-2" title={t.cykliczne ? `${t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne'}${t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}` : undefined}>{fix ? <>{fix} </> : cykl || '—'}{fix && <span className="sr-only">{cykl}</span>}</Td>
+      <Td>{client ? <a href={`#kl/${client.id}`} className="font-semibold text-action hover:underline">{client.nazwa}</a> : <span className="text-ink-2">—</span>}</Td>
+      <Td className={cn(t.status === first || done ? 'text-ink-2' : 'font-semibold')}>{t.status}</Td>
+      <Td pad="p-0" className="text-center"><Button variant="ghost" size="sm" aria-label={`Edytuj: ${t.tekst}`} onClick={onEdit} disabled={!!t._tmp} className="w-9 px-0 align-middle text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button></Td>
+    </Tr>
+  );
   return (
     <li className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card py-3 pr-3 pl-2', late ? 'border-danger/60' : 'border-line')}>
       <label className={cn('grid h-12 w-12 place-items-center rounded-xl', !t._tmp && 'cursor-pointer hover:bg-ok/10')}>
-        <Checkbox checked={done} disabled={!!t._tmp} aria-label={`Zrobione: ${t.tekst}`} onCheckedChange={(v) => toggle(v === true)} className="h-8 w-8" />
+        {check}
       </label>
       <div className="min-w-0">
         <button type="button" onClick={onEdit} disabled={!!t._tmp} className="block w-full min-w-0 text-left">
@@ -109,16 +178,12 @@ function Task({ t, onEdit }: { t: Rec; onEdit: () => void }) {
           <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
             {t.priorytet != null && <Badge tone={t.priorytet === 1 ? 'ink' : 'line'}>P{t.priorytet}</Badge>}
             {t.status !== first && !done && <Badge tone="action">{t.status}</Badge>}
-            {t.termin && <span className={cn(late && 'font-bold text-danger')}>{late ? 'po terminie ' : t.cykliczne && t.cykl ? 'następny ' : 'termin '}{t.termin === day ? 'dziś' : fmtDay(t.termin)}</span>}
-            {t.cykliczne && <span className="inline-flex items-center gap-1"><ArrowsClockwise className="h-4 w-4" aria-hidden />{t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne'}{t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}</span>}
+            {termin}
+            {cykl}
             {t._tmp && <span>wysyłanie…</span>}
           </span>
         </button>
-        {needsCycle(t) && !t._tmp && (
-          <button type="button" onClick={onEdit} aria-label={`Ustaw cykliczność: ${t.tekst}`} className="mt-1 inline-flex min-h-8 items-center gap-1 text-sm font-semibold text-danger underline-offset-2 hover:underline">
-            <Warning className="h-4 w-4" weight="fill" aria-hidden />ustaw cykliczność
-          </button>
-        )}
+        {fix}
         {client && <a href={`#kl/${client.id}`} className="mt-1 inline-flex min-h-8 items-center gap-1 text-sm font-semibold text-action"><User className="h-4 w-4" aria-hidden />{client.nazwa}</a>}
       </div>
       <Button variant="ghost" size="sm" aria-label={`Edytuj: ${t.tekst}`} onClick={onEdit} disabled={!!t._tmp} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>

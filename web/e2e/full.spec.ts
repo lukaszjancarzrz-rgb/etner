@@ -151,7 +151,7 @@ test('zadania: admin dodaje zadanie, odhacza je; cykliczne wraca z datą „osta
   await page.goto('/#zad');
   await page.getByLabel('Nowe zadanie').fill(tag);
   await page.getByLabel('Nowe zadanie').press('Enter');
-  const task = page.locator('li', { hasText: tag });
+  const task = page.locator('li, tr', { hasText: tag });
   await expect(task).toBeVisible();
   await expect(task).not.toContainText('wysyłanie');
   await page.reload();
@@ -161,7 +161,7 @@ test('zadania: admin dodaje zadanie, odhacza je; cykliczne wraca z datą „osta
   await page.getByRole('button', { name: /Zrobione/ }).click();
   await expect(task.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
 
-  const cyc = page.locator('li', { hasText: 'Kalibracja manometrów' });
+  const cyc = page.locator('li, tr', { hasText: 'Kalibracja manometrów' });
   // demo: cykliczne bez cyklu (jak z arkusza) → ostrzeżenie otwiera edycję
   await cyc.getByRole('button', { name: 'Ustaw cykliczność: Kalibracja manometrów' }).click();
   const edit = page.getByRole('dialog', { name: 'Zadanie' });
@@ -179,7 +179,7 @@ test('zadania: cykl „co miesiąc” i klient; po Zrobione termin = dziś + mie
   await page.goto('/#zad');
   await page.getByLabel('Nowe zadanie').fill(tag);
   await page.getByLabel('Nowe zadanie').press('Enter');
-  const task = page.locator('li', { hasText: tag });
+  const task = page.locator('li, tr', { hasText: tag });
   await expect(task).not.toContainText('wysyłanie');
   await task.getByRole('button', { name: `Edytuj: ${tag}` }).click();
   const form = page.getByRole('dialog', { name: 'Zadanie' });
@@ -279,7 +279,7 @@ test('słowniki: usunięcie grupy zadań w użyciu → „Zamień na”, zadanie
   await page.goto('/#zad');
   await page.getByLabel('Nowe zadanie').fill(tag);
   await page.getByLabel('Nowe zadanie').press('Enter');
-  const task = page.locator('li', { hasText: tag });
+  const task = page.locator('li, tr', { hasText: tag });
   await expect(task).not.toContainText('wysyłanie');
   await task.getByRole('button', { name: `Edytuj: ${tag}` }).click();
   const form = page.getByRole('dialog', { name: 'Zadanie' });

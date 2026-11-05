@@ -191,13 +191,13 @@ test('zakładka Paszporty: lista obiektów z teczkami, wyszukiwanie, klik → te
   await page.getByRole('link', { name: /Więcej/ }).first().click(); // Paszporty w Więcej (telefon i komputer)
   await page.getByRole('main').getByRole('link', { name: /^Paszporty/ }).click();
   const lista = page.getByRole('region', { name: 'Paszporty' });
-  const row = lista.getByRole('listitem').filter({ has: page.getByText('Józef Bukowski', { exact: true }) });
+  const row = lista.locator('li, tr').filter({ has: page.getByText('Józef Bukowski', { exact: true }) });
   await expect(row.getByRole('link', { name: /^Rekuperacja/ })).toBeVisible();
   if (!phone(info)) await expect(page.getByRole('navigation').getByRole('link', { name: /^Więcej/ })).toHaveAttribute('aria-current', 'page');
   await page.screenshot({ path: `${shots}task4b-${phone(info) ? 'phone' : 'desktop'}-paszporty.png` });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('searchbox', { name: 'Szukaj paszportu' }).fill('bukowski rekuperacja');
-  await expect(lista.locator(':scope > ul > li')).toHaveCount(1);
+  await expect(lista.locator(':scope > ul > li, :scope > table > tbody > tr')).toHaveCount(1);
   await page.getByRole('searchbox', { name: 'Szukaj paszportu' }).fill('nie ma takiego obiektu');
   await expect(lista.getByText('Nic nie znaleziono')).toBeVisible();
   await page.getByRole('button', { name: 'Wyczyść wyszukiwanie' }).click();
@@ -245,7 +245,7 @@ test('teczka: „Wróć” prowadzi do karty paszportu obiektu, jej „Wróć”
   await login(page, 'Tomasz Wrona');
   await page.goto('/#paszporty');
   const lista = page.getByRole('region', { name: 'Paszporty' });
-  await lista.getByRole('listitem').filter({ has: page.getByText('Józef Bukowski', { exact: true }) }).getByRole('link', { name: /^Rekuperacja/ }).click();
+  await lista.locator('li, tr').filter({ has: page.getByText('Józef Bukowski', { exact: true }) }).getByRole('link', { name: /^Rekuperacja/ }).click();
   await expect(page.getByRole('heading', { name: 'Rekuperacja', level: 2 })).toBeVisible();
   const siteHash = new URL(page.url()).hash.split('/').slice(0, 2).join('/');
   await page.getByRole('link', { name: 'Wróć' }).click();
@@ -351,7 +351,7 @@ test('Do serwisu: teczka z terminem w 30 dni na liście i w liczniku menu, „Pr
   const nav = phone(info) ? page.getByRole('main') : page.getByRole('navigation');
   await nav.getByRole('link', { name: /^Do serwisu.*\d+ tecz\w+ do serwisu/ }).click();
   await expect(page.getByRole('heading', { name: 'Do serwisu', level: 1 })).toBeVisible();
-  const row = page.getByRole('list', { name: 'W ciągu 30 dni' }).getByRole('listitem').filter({ hasText: 'Wojciech Kolasa' });
+  const row = page.locator('[aria-label="W ciągu 30 dni"]').locator('li, tr').filter({ hasText: 'Wojciech Kolasa' });
   await expect(row).toContainText(fmt(soon));
   await expect(row).toContainText('następny serwis za 10 dni');
   await expect(row).toContainText('klient bez e-maila');

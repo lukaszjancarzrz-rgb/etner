@@ -1,9 +1,12 @@
 import { CaretRight, IdentificationCard, MapPin } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
-import { matches, seenFor, useDict, useLoading, useMe, useSeenVersion } from '../../core/data.js';
+import { fmtDay, matches, seenFor, useDict, useLoading, useMe, useSeenVersion } from '../../core/data.js';
+import { useDesk } from '../../core/layout/status.js';
+import { cn } from '../../core/ui/cn.js';
+import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Badge, Empty } from '../../core/ui/bits.js';
-import { catStripe, useCatColor } from '../../core/ui/category.js';
+import { catStripe, CatTab, useCatColor } from '../../core/ui/category.js';
 import { Search } from '../../core/ui/search.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { withoutEchoes } from '../../core/write.js';
@@ -30,6 +33,7 @@ export function Paszporty() {
   const cat = useCatColor();
   const me = useMe();
   const ver = useSeenVersion();
+  const desk = useDesk();
 
   const rows = useMemo((): Wiersz[] => {
     const d = { jobs, folders, diary, scope, attachments: withoutEchoes(attachments, ['nazwa', 'rodzaj']), devices, service };
@@ -49,9 +53,9 @@ export function Paszporty() {
 
   if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}</div>;
   return (
-    <section className="mx-auto grid max-w-3xl gap-4 px-4 py-4 desk:py-6" aria-label="Paszporty">
-      <Search value={q} onChange={setQ} label="Szukaj paszportu" placeholder="Klient, miejscowość, adres, PSZ, kategoria" />
-      {!list.length ? <Empty icon={IdentificationCard} title={q ? 'Nic nie znaleziono' : 'Brak teczek'} hint={q ? 'Spróbuj samego nazwiska albo miejscowości.' : 'Teczka obiektu powstaje z pierwszym zleceniem z kategorią.'} /> : (
+    <section className={cn('mx-auto grid gap-4', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')} aria-label="Paszporty">
+      <div className={cn(desk && 'w-[24rem]')}><Search value={q} onChange={setQ} label="Szukaj paszportu" placeholder="Klient, miejscowość, adres, PSZ, kategoria" /></div>
+      {desk && list.length ? <PaszportyTable list={list} /> : !list.length ? <Empty icon={IdentificationCard} title={q ? 'Nic nie znaleziono' : 'Brak teczek'} hint={q ? 'Spróbuj samego nazwiska albo miejscowości.' : 'Teczka obiektu powstaje z pierwszym zleceniem z kategorią.'} /> : (
         <ul className="grid gap-3">
           {list.map((r) => {
             const where = [r.site.nazwa, r.site.adres].filter(Boolean).join(', ');
@@ -85,5 +89,48 @@ export function Paszporty() {
         </ul>
       )}
     </section>
+  );
+}
+
+/** Komputer: tabela obiektów; klik w wiersz → karta paszportu obiektu, zakładka branży → teczka. */
+function PaszportyTable({ list }: { list: Wiersz[] }) {
+  const { rows, by } = useSort(list, {
+    klient: (r) => r.klient, adres: (r) => [r.site.miejscowosc, r.site.nazwa, r.site.adres].filter(Boolean).join(' '),
+    teczki: (r) => r.teczki.map((t) => t.kategoria).join(' '), numer: (r) => r.numer, termin: (r) => r.termin,
+  });
+  return (
+    <Table aria-label="Obiekty z teczkami">
+      <thead>
+        <tr>
+          <Th sort={by('klient')} className="w-[24%]">Klient</Th>
+          <Th sort={by('adres')}>Adres</Th>
+          <Th sort={by('teczki')} className="w-[15rem]">Teczki</Th>
+          <Th sort={by('numer')} className="w-[9.5rem]">Nr paszportu</Th>
+          <Th sort={by('termin')} className="w-[13rem]">Następny serwis</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <Tr key={r.site.id} href={siteHash(r.site.id)}>
+            <Td><a href={siteHash(r.site.id)} className="font-bold hover:text-action">{r.klient || 'Klient'}</a></Td>
+            <Td className="text-ink-2">{[r.site.miejscowosc, [r.site.nazwa, r.site.adres].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Obiekt'}</Td>
+            <Td pad="px-2.5">
+              <ul className="flex items-center gap-1.5" aria-label="Teczki">
+                {r.teczki.map((t) => (
+                  <li key={t.kategoria}>
+                    <a href={pszHash(r.site.id, t.kategoria)} title={`Teczka: ${t.kategoria}`} className="flex h-8 items-center gap-1 rounded-[3px] px-0.5 hover:bg-ink/6">
+                      <CatTab name={t.kategoria} className="w-9" /><span className="sr-only">{t.kategoria}</span>
+                      {!!t.nowe && <Badge tone="new" className="h-5 px-1.5"><span aria-hidden>{t.nowe}</span><span className="sr-only">, nowe od ostatniej wizyty: {t.nowe}</span></Badge>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </Td>
+            <Td className={cn('font-semibold', !r.numer && 'font-normal text-ink-2')}>{r.numer ?? '—'}</Td>
+            <Td><span className="flex items-center gap-2">{r.termin ? <>{fmtDay(r.termin)}<SerwisBadge nastepny={r.termin} soonOnly /></> : <span className="text-ink-2">—</span>}</span></Td>
+          </Tr>
+        ))}
+      </tbody>
+    </Table>
   );
 }

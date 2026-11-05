@@ -85,16 +85,16 @@ test('demo: zlecenie, dziennik ze zdjęciem, harmonogram, zakupy', async ({ page
   await expect(form.getByPlaceholder(/kwota/)).toHaveCount(0);
   await page.getByLabel('Co kupić').fill(`${tag} taśma`);
   await page.getByRole('button', { name: 'Dodaj', exact: true }).click();
-  const item = page.locator('li[id^="z-"]', { hasText: `${tag} taśma` });
+  const item = page.locator('[id^="z-"]', { hasText: `${tag} taśma` });
   await expect(item).toBeVisible();
   await expect(item).not.toContainText('wysyłanie');
   await page.reload();
-  await expect(page.locator('li[id^="z-"]', { hasText: `${tag} taśma` })).toBeVisible();
+  await expect(page.locator('[id^="z-"]', { hasText: `${tag} taśma` })).toBeVisible();
 
   // Admin: ptaszek przenosi pozycję do „Kupione”
   await expect(page.getByRole('combobox', { name: /^Status:/ })).toHaveCount(0);
   await page.getByRole('checkbox', { name: `Kupione: ${tag} taśma` }).click();
-  await expect(page.locator('li[id^="z-"]', { hasText: `${tag} taśma` })).toBeHidden(); // Kupione zwinięte
+  await expect(page.locator('[id^="z-"]', { hasText: `${tag} taśma` })).toBeHidden(); // Kupione zwinięte
   await page.getByRole('button', { name: /^Kupione/ }).click();
   await expect(page.getByRole('checkbox', { name: `Kupione: ${tag} taśma` })).toHaveAttribute('aria-checked', 'true');
   await page.reload();

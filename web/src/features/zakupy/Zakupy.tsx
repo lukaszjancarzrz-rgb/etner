@@ -12,6 +12,8 @@ import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
 import type { Route } from '../../routes.js';
+import { useDesk } from '../../core/layout/status.js';
+import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 
 const fail = (t: string) => (e: Error) => toast(t, { body: e.message, tone: 'error' });
 
@@ -26,6 +28,7 @@ export function Zakupy({ route }: { route: Route }) {
   const last = statusy.at(-1)?.wartosc;
   const hl = route.highlight;
   const hlStatus = hl && items.find((i) => i.id === hl)?.status;
+  const desk = useDesk();
 
   useEffect(() => {
     if (!hlStatus) return;
@@ -44,8 +47,8 @@ export function Zakupy({ route }: { route: Route }) {
   if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true" aria-label="Wczytywanie zakupów"><Skeleton className="h-40" />{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>;
 
   return (
-    <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
-      <AddForm />
+    <section className={cn('mx-auto grid gap-5', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')}>
+      <div className={cn(desk && 'max-w-3xl')}><AddForm /></div>
       {!items.length && <Empty icon={ShoppingCart} title="Lista zakupów jest pusta" hint="Dopisz, czego brakuje na budowie. Biuro dostanie powiadomienie." />}
       {groups.map(({ status, list }) => {
         if (!list.length) return null;
@@ -54,7 +57,8 @@ export function Zakupy({ route }: { route: Route }) {
         return (
           <div key={status} className="grid gap-2">
             <SectionTitle count={list.length} toggle={collapsible ? { open: !shut, onToggle: () => setDoneOpen((o) => !o) } : undefined}>{status}</SectionTitle>
-            {!shut && <ul className="grid gap-2">{list.map((i) => <Item key={i.id} i={i} statusy={statusy} flash={i.id === flash} />)}</ul>}
+            {!shut && (desk ? <ShopTable label={status} list={list} statusy={statusy} flash={flash} />
+              : <ul className="grid gap-2">{list.map((i) => <Item key={i.id} i={i} statusy={statusy} flash={i.id === flash} />)}</ul>)}
           </div>
         );
       })}
@@ -94,7 +98,28 @@ function AddForm() {
   );
 }
 
-function Item({ i, statusy, flash }: { i: Rec; statusy: Rec[]; flash: boolean }) {
+/** Komputer: pozycje grupy w tabeli z sortowaniem. */
+function ShopTable({ label, list, statusy, flash }: { label: string; list: Rec[]; statusy: Rec[]; flash?: string }) {
+  const names = useNames();
+  const { rows, by } = useSort(list, { co: (i) => i.co, uwagi: (i) => i.uwagi, kto: (i) => names(i.by), kiedy: (i) => i.createdAt });
+  return (
+    <Table aria-label={label}>
+      <thead>
+        <tr>
+          <Th className="w-[4.5rem]">Kupione</Th>
+          <Th sort={by('co')}>Pozycja</Th>
+          <Th sort={by('uwagi')} className="w-[26%]">Uwagi</Th>
+          <Th sort={by('kto')} className="w-[11rem]">Kto</Th>
+          <Th sort={by('kiedy')} className="w-[10rem]">Kiedy</Th>
+          <Th className="w-12"><span className="sr-only">Usuń</span></Th>
+        </tr>
+      </thead>
+      <tbody>{rows.map((i) => <Item key={i.id} i={i} statusy={statusy} flash={i.id === flash} desk />)}</tbody>
+    </Table>
+  );
+}
+
+function Item({ i, statusy, flash, desk }: { i: Rec; statusy: Rec[]; flash: boolean; desk?: boolean }) {
   const admin = useIsAdmin();
   const me = useMe();
   const names = useNames();
@@ -105,25 +130,37 @@ function Item({ i, statusy, flash }: { i: Rec; statusy: Rec[]; flash: boolean })
   const first = statusy[0]?.wartosc, last = statusy.at(-1)?.wartosc;
   const done = i.status === last;
   const canTick = admin && !i._tmp && first && last;
+  const tick = (big: boolean) => canTick ? (
+    // ptaszek admina: zaznaczone = ostatni status (Kupione), odznaczone = pierwszy (Do kupienia)
+    <label className={cn('grid cursor-pointer place-items-center hover:bg-ok/10', big ? 'h-11 w-11 rounded-xl' : 'mx-auto h-9 w-9 rounded-[4px]')}>
+      <Checkbox checked={done} aria-label={`Kupione: ${i.co}`} onCheckedChange={(v) => void put({ status: v === true ? last : first })} className={big ? 'h-8 w-8' : 'h-6 w-6'} />
+    </label>
+  ) : (
+    <span className={cn('grid place-items-center', big ? 'h-11 w-11' : 'mx-auto h-9 w-9')} role="img" aria-label={done ? 'Kupione' : 'Do kupienia'}>
+      <span className={cn('grid place-items-center rounded-lg border-2', big ? 'h-7 w-7' : 'h-6 w-6', done ? 'border-ok bg-ok text-bg' : 'border-line')}>{done && <Check weight="bold" className="h-4 w-4" />}</span>
+    </span>
+  );
+  const del = (i.by === me?.id || admin) && !i._tmp;
+  if (desk) return (
+    <Tr id={`z-${i.id}`} className={cn(flash && 'bg-ok/10 ring-4 ring-ok/25 ring-inset')}>
+      <Td pad="p-0">{tick(false)}</Td>
+      <Td className={cn('font-semibold', done && 'text-ink-2')} title={i.co}>{i.co}</Td>
+      <Td className="text-ink-2" title={i.uwagi || undefined}>{i.uwagi}</Td>
+      <Td>{names(i.by)}</Td>
+      <Td className="text-ink-2">{i._tmp ? 'wysyłanie…' : fmtWhen(i.createdAt)}</Td>
+      <Td pad="p-0" className="text-center">{del && <Button variant="ghost" size="sm" aria-label={`Usuń: ${i.co}`} onClick={remove} className="w-9 px-0 align-middle text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>}</Td>
+    </Tr>
+  );
   return (
     <li id={`z-${i.id}`} className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card py-3 pr-3 pl-2 transition-[box-shadow,border-color] duration-300', flash ? 'border-ok ring-4 ring-ok/25' : 'border-line')}>
-      {canTick ? (
-        // ptaszek admina: zaznaczone = ostatni status (Kupione), odznaczone = pierwszy (Do kupienia)
-        <label className="grid h-11 w-11 cursor-pointer place-items-center rounded-xl hover:bg-ok/10">
-          <Checkbox checked={done} aria-label={`Kupione: ${i.co}`} onCheckedChange={(v) => void put({ status: v === true ? last : first })} className="h-8 w-8" />
-        </label>
-      ) : (
-        <span className="grid h-11 w-11 place-items-center" role="img" aria-label={done ? 'Kupione' : 'Do kupienia'}>
-          <span className={cn('grid h-7 w-7 place-items-center rounded-lg border-2', done ? 'border-ok bg-ok text-bg' : 'border-line')}>{done && <Check weight="bold" className="h-4 w-4" />}</span>
-        </span>
-      )}
+      {tick(true)}
       <div className="min-w-0">
         <p className={cn('font-semibold leading-snug', done && 'text-ink-2')}>{i.co}</p>
         <p className="mt-0.5 text-sm text-ink-2">
           {[i.uwagi, `${names(i.by)}, ${i._tmp ? 'wysyłanie…' : fmtWhen(i.createdAt)}`].filter(Boolean).join(', ')}
         </p>
       </div>
-      {(i.by === me?.id || admin) && !i._tmp ? (
+      {del ? (
         <Button variant="ghost" size="sm" aria-label={`Usuń: ${i.co}`} onClick={remove} className="w-10 px-0 text-ink-2 hover:text-danger"><Trash className="h-5 w-5 shrink-0" /></Button>
       ) : <span className="w-10" aria-hidden />}
     </li>

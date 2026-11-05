@@ -1,7 +1,10 @@
 import { fmtZl } from '@etner/shared';
 import { ArrowLeft, ArrowsMerge, Briefcase, EnvelopeSimple, MagnifyingGlass, MapPin, NavigationArrow, PencilSimple, Phone, Plus, UsersThree } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
-import { fmtDay, mapsUrl, matches, telHref, useIsAdmin, useLoading } from '../../core/data.js';
+import { fmtDay, mapsUrl, matches, telHref, useIsAdmin, useLoading, useStatusGroup } from '../../core/data.js';
+import { useDesk } from '../../core/layout/status.js';
+import { cn } from '../../core/ui/cn.js';
+import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { useEntities, useEntity, type Rec } from '../../core/store.js';
 import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
@@ -27,6 +30,14 @@ function ClientList() {
   const loading = useLoading();
   const admin = useIsAdmin();
   const dups = useMemo(() => (admin ? duplicatePairs(clients as (Rec & { id: string; nazwa: string })[]) : []), [admin, clients]);
+  const desk = useDesk();
+  const jobs = useEntities('jobs');
+  const group = useStatusGroup();
+  const active = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const j of jobs) if (group(j.status) === 'aktualne') m.set(j.clientId, (m.get(j.clientId) ?? 0) + 1);
+    return m;
+  }, [jobs, group]);
   const list = useMemo(() => {
     const bySite = new Map<string, string[]>();
     for (const s of sites) bySite.set(s.clientId, [...(bySite.get(s.clientId) ?? []), s.miejscowosc, s.adres]);
@@ -35,15 +46,15 @@ function ClientList() {
   }, [clients, sites, q]);
   if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-16" />)}</div>;
   return (
-    <section className="mx-auto grid max-w-3xl gap-4 px-4 py-4 desk:py-6">
+    <section className={cn('mx-auto grid gap-4 px-4 py-4', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl')}>
       <a href="#wiecej" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />Więcej</a>
-      <label className="relative">
+      <label className="relative desk:w-[22rem]">
         <span className="sr-only">Szukaj klienta</span>
         <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-ink-2" />
         <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nazwisko, telefon, miejscowość" className="pl-11" />
       </label>
       {admin && !q && dups.length > 0 && <Duplicates pairs={dups} />}
-      {!list.length ? <Empty icon={UsersThree} title={q ? 'Nic nie znaleziono' : 'Brak klientów'} hint={q ? 'Spróbuj samego nazwiska albo numeru telefonu.' : 'Klient powstaje razem z nowym zleceniem.'} /> : (
+      {desk && list.length ? <ClientTable list={list} active={active} /> : !list.length ? <Empty icon={UsersThree} title={q ? 'Nic nie znaleziono' : 'Brak klientów'} hint={q ? 'Spróbuj samego nazwiska albo numeru telefonu.' : 'Klient powstaje razem z nowym zleceniem.'} /> : (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
           {list.map(({ c, place }) => (
             <li key={c.id}>
@@ -56,6 +67,39 @@ function ClientList() {
         </ul>
       )}
     </section>
+  );
+}
+
+type ClientRow = { c: Rec; place?: string };
+
+/** Komputer: tabela klientów z sortowaniem; klik w wiersz → karta klienta. */
+function ClientTable({ list, active }: { list: ClientRow[]; active: Map<string, number> }) {
+  const { rows, by } = useSort(list, {
+    nazwa: (r) => r.c.nazwa, miejsc: (r) => r.place, tel: (r) => r.c.telefony?.[0], mail: (r) => r.c.emaile?.[0], akt: (r) => active.get(r.c.id) ?? 0,
+  });
+  return (
+    <Table aria-label="Klienci">
+      <thead>
+        <tr>
+          <Th sort={by('nazwa')}>Nazwa</Th>
+          <Th sort={by('miejsc')} className="w-[22%]">Miejscowość</Th>
+          <Th sort={by('tel')} className="w-[10rem]">Telefon</Th>
+          <Th sort={by('mail')} className="w-[24%]">E-mail</Th>
+          <Th sort={by('akt')} num className="w-[9rem]">Aktywne zlecenia</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ c, place }) => (
+          <Tr key={c.id} href={`#kl/${c.id}`}>
+            <Td><a href={`#kl/${c.id}`} className="font-bold hover:text-action">{c.nazwa}</a></Td>
+            <Td className="text-ink-2">{place}</Td>
+            <Td>{c.telefony?.[0]}</Td>
+            <Td className="text-ink-2">{c.emaile?.[0]}</Td>
+            <Td num className={cn(!active.get(c.id) && 'text-ink-2')}>{active.get(c.id) ?? 0}</Td>
+          </Tr>
+        ))}
+      </tbody>
+    </Table>
   );
 }
 
