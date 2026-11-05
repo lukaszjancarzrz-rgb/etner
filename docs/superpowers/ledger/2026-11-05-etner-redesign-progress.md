@@ -12,3 +12,6 @@ R2: dispatched.
 R2: impl ac62b04..324031b; review dispatched. Controller look: Paszporty last column badge overflows table edge (to add to fixes).
 R2: review spec ✅ Needs fixes: I1 opened job outside scope/filter not shown/selected in desktop table. Fix round 1 dispatched (+ Paszporty badge overflow).
 - Ruling R80: Zakupy column labelled „Uwagi” (no quantity field exists) and category tab text navy where white fails contrast (e.g. amber „IN”) — accepted, truthful labels and AA contrast — cost: owner may want white text everywhere.
+R2: fix round 1/5 (2 addressed, 0 open; 324031b..35cab39) — complete (52875bf..35cab39).
+R2: minor (deferred): open job whose status changes while open may leave visible scope; M3 (Segmented), M6, M8, M9 from R2 review left.
+R3: dispatched (incl. Leady desktop table left by R2; Harmonogram toolbar restyle; job card pills).

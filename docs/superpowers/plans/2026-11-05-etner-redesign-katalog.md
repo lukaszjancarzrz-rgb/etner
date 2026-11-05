@@ -30,6 +30,9 @@ Files: new `web/src/core/ui/table.tsx` (sortable header: click toggles asc/desc,
 - Harmonogram: no pencil in every cell (edit on cell click/focus, pencil only on hover/focus at desk), no stray „·” in empty weekend cells, cells use CatTab abbreviation + client + town (no ellipsis on town at desk where space allows).
 - Job card / teczka / paszport / samochody / na jutro / zakupy / magazyn / narzędzia / ustawienia / użytkownicy / leady: apply panel + divider language; phone action rows: labelled primary action, destructive (trash) never adjacent to complete/check (move into overflow or separate end with gap ≥ 16 px and confirm kept).
 - Fix phone horizontal overflow on Zlecenia list.
+- Leady desktop: table like the other lists (left over from R2), phone unchanged.
+- Harmonogram toolbar (Dziś, arrows, week/month, persons rows/columns) and draft banner in the same control language as table filters; desktop rows may be slightly denser.
+- Job card / detail panels: pill buttons (`rounded-full`) → 4 px controls; phone number and Paszport as secondary buttons, Nawiguj primary.
 - Remove remaining `font-wide`, `shadow-card`, `rounded-2xl`, side stripes – named: Paszport teczka 6 px, Samochody header 4 px, Harmonogram cells 4 px (category stays visible via CatTab/tint, not a side border).
 - From R1 review (deferred minors): remove the theme-wide radius override in theme.css (replace rounded-xl/2xl/3xl usages with the real small radius classes); rail logo crops must not depend on hard-coded pixel offsets of logo.png (derive from the image or use a dedicated asset); dark theme: remove duplicate `--ink-3`, set dark `theme-color` meta so the phone status bar matches the navy top bar; input outline contrast ≥ 3:1 against its background.
 
