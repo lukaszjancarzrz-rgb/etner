@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T17:47:05.273883Z",
+  "title": "Design System: ETNER, Katalog techniczny",
+  "extensions": {
+    "colorMeta": {
+      "action-blue": {
+        "role": "primary",
+        "displayName": "Niebieski akcji",
+        "canonical": "#0070ab"
+      },
+      "new-red": {
+        "role": "secondary",
+        "displayName": "Czerwień nowe",
+        "canonical": "#c62828"
+      },
+      "paper-cool": {
+        "role": "neutral",
+        "displayName": "Papier chłodny",
+        "canonical": "#eef2f5"
+      },
+      "cat-pv": {
+        "role": "tertiary",
+        "displayName": "Branża PV",
+        "canonical": "#c4501b"
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Title",
+        "purpose": "Tytuł ekranu."
+      },
+      "column-head": {
+        "displayName": "Column head",
+        "purpose": "Nagłówki kolumn tabel."
+      },
+      "index-tab": {
+        "displayName": "Index tab",
+        "purpose": "Skrót branży w zakładce."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay",
+        "value": "0 2px 4px rgb(10 34 64 / 0.08), 0 12px 32px rgb(10 34 64 / 0.16)",
+        "purpose": "Tylko okna, menu rozwijane, toasty."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms (kolor, filtr, obrys)",
+        "purpose": "Przejścia stanów; reduced-motion zeruje."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "desk",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Akcja główna.",
+      "html": "<button class=\"ds-btn\">Nawiguj</button>",
+      "css": ".ds-btn{background:#0070ab;color:#fff;height:48px;padding:0 16px;border:0;border-radius:4px;font:700 1rem 'Sofia Sans',system-ui,sans-serif}.ds-btn:hover{filter:brightness(1.1)}.ds-btn:focus-visible{outline:2px solid #0070ab;outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Pole formularza.",
+      "html": "<input class=\"ds-input\" placeholder=\"Szukaj\">",
+      "css": ".ds-input{height:48px;width:220px;padding:0 12px;border:1px solid #74879a;border-radius:4px;background:#fff;color:#0a2240;font:400 1rem 'Sofia Sans',system-ui,sans-serif}.ds-input:focus{outline:0;border-color:#0070ab;box-shadow:0 0 0 2px rgb(0 112 171 / .25)}"
+    },
+    {
+      "name": "Index Tab",
+      "kind": "chip",
+      "refersTo": "cat-tab",
+      "description": "Skrót branży przy krawędzi wiersza.",
+      "html": "<span class=\"ds-tab\">PV</span>",
+      "css": ".ds-tab{display:inline-block;width:40px;padding:2px 0;text-align:center;background:#c4501b;color:#fff;border-radius:0 3px 3px 0;font:800 .8rem/1.25 'Sofia Sans Condensed',sans-serif}"
+    },
+    {
+      "name": "New Badge",
+      "kind": "chip",
+      "refersTo": "badge-new",
+      "description": "Znacznik nowe.",
+      "html": "<span class=\"ds-new\">nowe</span>",
+      "css": ".ds-new{display:inline-flex;align-items:center;height:20px;padding:0 6px;background:#c62828;color:#fff;border-radius:3px;font:700 .75rem 'Sofia Sans',sans-serif}"
+    },
+    {
+      "name": "Side Rail Item",
+      "kind": "nav",
+      "refersTo": "side-rail-item-on",
+      "description": "Pozycja szyny, aktywna.",
+      "html": "<div style=\"background:#0a2240;padding:8px;width:208px\"><a class=\"ds-nav\">Zlecenia</a></div>",
+      "css": ".ds-nav{display:flex;align-items:center;height:38px;padding:0 12px;border-radius:4px;background:#17396a;color:#fff;font:700 15px 'Sofia Sans',sans-serif}"
+    },
+    {
+      "name": "Table Header",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Nagłówek tabeli z kreską 2 px.",
+      "html": "<table class=\"ds-t\"><tr><th>Numer</th><th>Klient</th></tr><tr><td>Z0010</td><td>Kowalski</td></tr></table>",
+      "css": ".ds-t{border-collapse:separate;border-spacing:0;border:1px solid #c9d4de;border-radius:4px;background:#fff;color:#0a2240;font:400 .875rem 'Sofia Sans',sans-serif}.ds-t th{height:40px;padding:0 10px;text-align:left;border-bottom:2px solid #0a2240;color:#4a5d70;font:600 .875rem 'Sofia Sans Condensed',sans-serif}.ds-t td{height:32px;padding:0 10px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Katalog techniczny hurtowni",
+    "overview": "ERP czytany jak katalog elektrycznej hurtowni: gęste tabele, granatowa szyna, indeks branż; odrzuca przyjazny SaaS z pływających kart i pigułek.",
+    "keyCharacteristics": [
+      "Szyna 224 px, granat #0a2240",
+      "Promienie 3-4 px, cień tylko w okienkach",
+      "Sofia Sans + Sofia Sans Condensed",
+      "Kratka 32 px w tle (decyzja właściciela)"
+    ],
+    "rules": [
+      {
+        "name": "The One Job Rule",
+        "body": "Każdy kolor ma jedno zadanie.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red Means New Rule",
+        "body": "Wszystko nowe jest czerwone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Index Tab Rule",
+        "body": "Kolor branży w zakładkach-indeksach; wyjątek: odcień komórek harmonogramu.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono Is Credentials Rule",
+        "body": "font-mono tylko loginy i hasła.",
+        "section": "typography"
+      },
+      {
+        "name": "The Shadow Only Floats Rule",
+        "body": "Cień tylko dla elementów nad treścią.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do trzymać krawędź treści na linii kratki 32 px.",
+      "Do oznaczać każde nowe czerwienią #c62828."
+    ],
+    "donts": [
+      "Don't używać pigułek ani cieni poza oknami.",
+      "Don't grupować menu bocznego.",
+      "Don't stosować tego systemu na stronie /p/."
+    ]
+  }
+}
