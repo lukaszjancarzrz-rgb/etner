@@ -85,7 +85,7 @@ describe('migracje z danymi', () => {
     migrate(db);
     const live = (r: string) => (c.prepare('select wartosc, kolor from dict where rodzaj = ? and deleted_at is null order by kolejnosc').all(r) as any[]);
     expect(live('kategoria')).toEqual([
-      { wartosc: 'Elektryka', kolor: '#0070ab' }, { wartosc: 'Fotowoltaika', kolor: '#c62828' }, { wartosc: 'Rekuperacja', kolor: '#2e7d32' },
+      { wartosc: 'Elektryka', kolor: '#0070ab' }, { wartosc: 'Fotowoltaika', kolor: '#c4501b' /* 0024 */ }, { wartosc: 'Rekuperacja', kolor: '#2e7d32' },
       { wartosc: 'Klimatyzacja', kolor: '#7b1fa2' }, { wartosc: 'Inne', kolor: '#f9a825' }, { wartosc: 'Wentylacja', kolor: null }]);
     expect(live('rodzaj_zlecenia').map((x) => x.wartosc)).toEqual(['montaż', 'przygotówka', 'serwis', 'inne']);
     expect(c.prepare('select id, rodzaj, kategoria, updated_at from jobs order by id').all()).toEqual([
@@ -94,7 +94,8 @@ describe('migracje z danymi', () => {
     const ch = c.prepare('select entity, entity_id, action, after from changes order by seq').all() as { entity: string; entity_id: string; action: string; after: string }[];
     const key = (x: { entity: string; entity_id: string; action: string }) => `${x.entity}:${x.entity_id}:${x.action}`;
     const ids = (c.prepare("select id from dict where rodzaj in ('kategoria', 'rodzaj_zlecenia') and deleted_at is null").all() as any[]).map((x) => `dict:${x.id}:update`);
-    expect(ch.map(key).sort()).toEqual(['dict:k3:delete', 'dict:k4:delete', 'dict:r3:delete', 'jobs:j1:update', 'jobs:j2:update', 'leads:l1:update', ...ids].sort());
+    expect(ch.map(key).sort()).toEqual(['dict:k3:delete', 'dict:k4:delete', 'dict:r3:delete', 'jobs:j1:update', 'jobs:j2:update', 'leads:l1:update', ...ids,
+      `dict:${(c.prepare("select id from dict where wartosc = 'Fotowoltaika'").get() as { id: string }).id}:update`].sort()); // drugi wpis: 0024 (kolor Fotowoltaiki)
     // pełny wiersz w kształcie Drizzle (telefon podmienia cały rekord)
     const after = (id: string) => JSON.parse(ch.find((x) => x.entity_id === id && x.action === 'update')!.after);
     // kolumny dodane po 0012 (0013: pumbleChannelId) nie mogły być w tym wierszu
@@ -112,5 +113,28 @@ describe('migracje z danymi', () => {
     const db = dbUpTo('0011_worthless_solo');
     migrate(db);
     expect(db.$client.prepare('select count(*) n from dict').get()).toEqual({ n: 0 });
+  });
+
+  it('0024: Fotowoltaika z dawnym kolorem domyślnym dostaje #c4501b (wpis w changes); kolor zmieniony przez właściciela zostaje', () => {
+    const seed = (kolor: string) => {
+      const db = dbUpTo('0023_paszport');
+      const dict = db.$client.prepare('insert into dict (id, created_at, updated_at, rodzaj, wartosc, kolejnosc, kolor, cykl_mies) values (?, ?, ?, ?, ?, ?, ?, ?)');
+      dict.run('k1', T, T, 'kategoria', 'Elektryka', 0, '#c62828', null);
+      dict.run('k2', T, T, 'kategoria', 'Fotowoltaika', 1, kolor, 12);
+      migrate(db);
+      return db.$client;
+    };
+    const c = seed('#c62828');
+    expect(c.prepare('select id, kolor from dict order by id').all()).toEqual([{ id: 'k1', kolor: '#c62828' }, { id: 'k2', kolor: '#c4501b' }]);
+    const ch = c.prepare('select entity, entity_id, action, after from changes').all() as { entity: string; entity_id: string; action: string; after: string }[];
+    expect(ch.map((x) => `${x.entity}:${x.entity_id}:${x.action}`)).toEqual(['dict:k2:update']);
+    const after = JSON.parse(ch[0]!.after);
+    expect(Object.keys(after).sort()).toEqual(Object.keys(getTableColumns(dictT)).sort());
+    expect(after).toMatchObject({ wartosc: 'Fotowoltaika', kolor: '#c4501b', cyklMies: 12, platne: null, deletedAt: null });
+    expect(after.updatedAt).toBe((c.prepare("select updated_at u from dict where id = 'k2'").get() as { u: string }).u);
+
+    const own = seed('#aa3300');
+    expect(own.prepare("select kolor, updated_at from dict where id = 'k2'").get()).toEqual({ kolor: '#aa3300', updated_at: T });
+    expect(own.prepare('select count(*) n from changes').get()).toEqual({ n: 0 });
   });
 });

@@ -28,7 +28,7 @@ export const SEED: Record<DictRodzaj, Item[]> = {
   ],
   ekipa: ['ekipa Bartek', 'ekipa Marek', 'mieszane'],
   // R30: kolor kategorii = kolor zlecenia w harmonogramie; R67: domyślny cykl serwisu teczki (miesiące)
-  kategoria: [kol('Elektryka', '#0070ab'), kol('Fotowoltaika', '#c62828', 12), kol('Rekuperacja', '#2e7d32', 6), kol('Klimatyzacja', '#7b1fa2', 12),
+  kategoria: [kol('Elektryka', '#0070ab'), kol('Fotowoltaika', '#c4501b', 12), kol('Rekuperacja', '#2e7d32', 6), kol('Klimatyzacja', '#7b1fa2', 12),
     kol('Alarmy i monitoring', '#455a64'), kol('Smart home', '#00838f'), kol('Sprzedaż', '#6d4c41'), kol('Inne', '#f9a825')],
   rodzaj_zlecenia: ['montaż', 'przygotówka', 'serwis', 'inne'],
   zrodlo: ['Polecenie', 'Strona www', 'Facebook', 'Telefon', 'Inne'],
