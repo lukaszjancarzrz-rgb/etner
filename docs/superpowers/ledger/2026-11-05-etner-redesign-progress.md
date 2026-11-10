@@ -31,3 +31,4 @@ Owner 2026-11-10: PV → orange #c4501b (incl. production dictionary); abbreviat
 - Ruling R84: harmonogram cell category tint kept as a cited exception to „category colour only in index tabs” (cells need the tint to scan a week) — to be written into the contract/DESIGN.md.
 R4: final fix wave dispatched (Fable).
 Owner 2026-11-10: optimize usage — rules from now on: subagents default to Sonnet (screenshots, tests, small fixes, scoped re-reviews, documentation); Fable/Opus only for hard multi-file implementation and the final whole-change review; small fixes get one scoped re-review only; screenshots only of changed screens (no full series); a fresh session after release. Running final fix wave stays on Fable (switching mid-way would re-read context).
+R4: final fix wave a6da1c5..96c9c54 re-review (Sonnet) all addressed. Ready for release pending owner OK; DESIGN.md (documenter) after.
