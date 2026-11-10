@@ -23,3 +23,4 @@ R3: review spec ✅ Needs fixes: I1 --field duplicated in system-dark block, mis
 - Ruling R81: font-mono kept for logins/passwords (Użytkownicy, Import) — functional: distinguishes l/1/I in credentials; global „no monospace” rule targets decoration — cost: one more face on two admin screens.
 - Ruling R82: fix round 1 goes to a fresh implementer on Fable (owner asked to continue on Fable) instead of resuming the R3 implementer — cost: re-reading context.
 R3: controller full e2e at 5a27e90: 87 passed, 5 skipped, 2 failed (full.spec.ts:124 date assumption — 11.11 holiday, app correct). Fix round 1 dispatched on Fable (I1, M1, M3, M6, e2e date).
+R3: fix round 1/5 (4 addressed, 1 open — e2e date assertion too loose; f909041). Fix round 2 dispatched.
