@@ -6,7 +6,7 @@ import { outbox } from '../../core/outbox.js';
 import { store, useEntities, useEntity, type Rec } from '../../core/store.js';
 import { Badge, Empty, SectionTitle, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
-import { CategoryPill, useCatColor } from '../../core/ui/category.js';
+import { CatTab } from '../../core/ui/category.js';
 import { cn } from '../../core/ui/cn.js';
 import { Field, Input } from '../../core/ui/input.js';
 import { Select } from '../../core/ui/select.js';
@@ -28,7 +28,6 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
   const loading = useLoading();
   const statusy = useDict('status_leada');
   const group = useStatusGroup('status_leada');
-  const cat = useCatColor();
   const [form, setForm] = useState<null | 'edit' | 'job'>(null);
   const job = useMemo(() => jobs.find((j) => j.leadId === id), [jobs, id]);
   const jobClient = useEntity('clients', job?.clientId);
@@ -59,9 +58,9 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
                 {lead._tmp && <span className="font-semibold">zapisywanie</span>}
-                {lead.kategoria && <CategoryPill name={lead.kategoria} color={cat(lead.kategoria)} />}
+                {lead.kategoria && <><CatTab name={lead.kategoria} flush className="-ml-5" /><span className="sr-only">{lead.kategoria}</span></>}
               </p>
-              <h2 className="mt-1 text-2xl font-extrabold leading-tight">
+              <h2 className="mt-1 text-2xl font-extrabold leading-tight text-balance">
                 {client ? <a href={`#kl/${client.id}`} className="hover:text-action">{client.nazwa}</a> : 'Bez klienta'}
               </h2>
               <p className="mt-1 font-semibold">{lead.temat}</p>

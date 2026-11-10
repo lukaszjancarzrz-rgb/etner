@@ -7,7 +7,7 @@ import { useEntities, useEntity } from '../../core/store.js';
 import { Badge, Empty, NewMark } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
-import { CategoryPill, useCatColor } from '../../core/ui/category.js';
+import { CatTab } from '../../core/ui/category.js';
 import { Diary } from '../dziennik/Diary.js';
 import { pszHash } from '../paszport/Paszport.js';
 import { JobForm } from './JobForm.js';
@@ -29,7 +29,6 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const admin = useIsAdmin();
   const loading = useLoading();
   const crew = useCrewColor();
-  const cat = useCatColor();
   const [editing, setEditing] = useState(false);
   const days = useMemo(() => jobDays(sched, id), [sched, id]);
   const service = useEntities('service_entries');
@@ -88,10 +87,10 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
+                {job.kategoria && <><CatTab name={job.kategoria} flush className="-ml-5" /><span className="sr-only">{job.kategoria}</span></>}
                 <span className="font-semibold tabular-nums">{job._tmp ? 'zapisywanie' : job.numer}</span><Badge tone="action">{job.status}</Badge>{fj.has('status') && <NewMark sr="nowy status" />}
-                {job.kategoria && <CategoryPill name={job.kategoria} color={cat(job.kategoria)} />}
               </p>
-              <h2 className="mt-1 text-2xl font-extrabold leading-tight">
+              <h2 className="mt-1 text-2xl font-extrabold leading-tight text-balance">
                 {client ? <a href={`#kl/${client.id}`} className="hover:text-action">{client.nazwa}</a> : 'Klient'}{fc.has('nazwa') && <> <NewMark sr="nowa nazwa klienta" /></>}
               </h2>
               {site && <p className="mt-1 flex items-start gap-1.5 text-ink-2"><MapPin className="mt-0.5 h-5 w-5 shrink-0" /><span>{[site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ')}{fs.size > 0 && <> <NewMark sr="zmieniony obiekt" /></>}</span></p>}

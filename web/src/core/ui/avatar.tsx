@@ -10,8 +10,8 @@ export function initials(name: string): string {
   return (w[0]![0]! + (w.length > 1 ? w[w.length - 1]![0]! : '')).toLocaleUpperCase('pl');
 }
 
-// ciemne odcienie: biały tekst ma kontrast ≥4.5:1 w obu motywach
-const COLORS = ['#0070ab', '#00736b', '#8a5a00', '#7a3e9d', '#b3261e', '#3f5368', '#2e7d32', '#ad1457'];
+// neutralne szarości (chłodne i ciepłe): kolor nie udaje akcji, statusu ani branży; biały tekst ma kontrast ≥4.5:1 w obu motywach
+const COLORS = ['#3f5368', '#56687a', '#4a4f57', '#6a645c', '#5f5566', '#55604f'];
 /** Stały kolor kółka dla danego id (ten sam na każdym urządzeniu). */
 export function avatarColor(id: string): string {
   let h = 0;

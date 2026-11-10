@@ -6,7 +6,7 @@ describe('catAbbrevs', () => {
     const m = catAbbrevs(['Elektryka', 'Fotowoltaika', 'Rekuperacja', 'Klimatyzacja', 'Alarmy i monitoring', 'Smart home', 'Sprzedaż', 'Inne', 'Elewacje', 'Klimakonwektory']);
     expect(Object.fromEntries(m)).toEqual({
       Elektryka: 'EL', Fotowoltaika: 'PV', Rekuperacja: 'RW', Klimatyzacja: 'KL', 'Alarmy i monitoring': 'AM',
-      'Smart home': 'SH', Sprzedaż: 'SP', Inne: 'IN', Elewacje: 'EE', Klimakonwektory: 'KI',
+      'Smart home': 'SH', Sprzedaż: 'SP', Inne: 'I', Elewacje: 'EE', Klimakonwektory: 'KI',
     });
     expect(new Set(m.values()).size).toBe(m.size);
   });

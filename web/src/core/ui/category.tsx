@@ -11,19 +11,9 @@ export function useCatColor(): (kategoria: string | null | undefined) => string 
   }, [d]);
 }
 
-/** Pasek (w trybie ciemnym jaśniejszy, kontrast z kartą) i tło z odcieniem; tekst zostaje w kolorze ink. */
+/** Znacznik (w trybie ciemnym jaśniejszy, kontrast z kartą) i tło z odcieniem; tekst zostaje w kolorze ink. */
 export const catStripe = (c: string | undefined) => (c ? `color-mix(in srgb, ${c}, white var(--crew-mix))` : 'var(--line)');
 export const catTint = (c: string | undefined) => (c ? `color-mix(in srgb, ${c} 13%, transparent)` : 'color-mix(in srgb, var(--bg) 70%, transparent)');
-
-export function CategoryPill({ name, color, className }: { name: string; color?: string; className?: string }) {
-  return (
-    <span className={cn('inline-flex max-w-full items-center gap-1.5 rounded-[3px] px-1.5 py-0.5 text-xs font-semibold text-ink', className)}
-      style={{ background: catTint(color), boxShadow: `inset 0 0 0 1px ${catStripe(color)}` }}>
-      <span className="h-2 w-2 shrink-0 rounded-[2px]" style={{ background: catStripe(color) }} aria-hidden />
-      <span className="truncate">{name}</span>
-    </span>
-  );
-}
 
 /** Legenda: kategoria → kolor. */
 export function CategoryLegend({ className }: { className?: string }) {
@@ -41,8 +31,8 @@ export function CategoryLegend({ className }: { className?: string }) {
   );
 }
 
-/** Skróty branż ustalone przez właściciela (2026-11-05). */
-const FIXED: Record<string, string> = { elektryka: 'EL', rekuperacja: 'RW', klimatyzacja: 'KL', fotowoltaika: 'PV', 'alarmy i monitoring': 'AM' };
+/** Skróty branż ustalone przez właściciela (2026-11-05, 2026-11-10: SH, SP, I). */
+const FIXED: Record<string, string> = { elektryka: 'EL', rekuperacja: 'RW', klimatyzacja: 'KL', fotowoltaika: 'PV', 'alarmy i monitoring': 'AM', 'smart home': 'SH', 'sprzedaż': 'SP', inne: 'I' };
 
 const letters = (s: string) => s.replace(/[^\p{L}\p{N}]/gu, '').toUpperCase();
 /** Kandydaci na skrót: pierwsze litery dwóch słów, dwie pierwsze litery, potem pierwsza z każdą następną. */

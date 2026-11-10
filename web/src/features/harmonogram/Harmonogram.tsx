@@ -332,6 +332,7 @@ function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: '
   );
   // tabela (komputer): zakładka obok nazwy; telefon: zakładka nad nazwą, żeby klient i miejscowość miały całą szerokość
   const cls = cn('flex min-w-0 gap-1.5 rounded-[3px] py-1 pr-1.5 pl-1 text-left text-ink', compact ? 'items-start' : 'flex-col items-start gap-1 px-2 py-1.5');
+  // wyjątek od „kolor branży tylko w zakładkach” (decyzja właściciela): komórka harmonogramu zostaje z odcieniem branży
   const style = { background: catTint(c) };
   if (!link) return <span className={cls} style={style}>{body}</span>;
   return (
