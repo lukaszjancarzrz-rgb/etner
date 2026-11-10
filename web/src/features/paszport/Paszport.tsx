@@ -17,6 +17,15 @@ export const pszHash = (siteId: string, kategoria: string, rest = '') => `#psz/$
 /** Karta paszportu obiektu („karta nadrzędna”). */
 export const siteHash = (siteId: string) => `#psz/${seg(siteId)}`;
 
+/** Paszport obiektu ze sklepu (offline; token z synchronizacji – R65). */
+export const usePassport = (siteId: string) => useEntities('passports').find((p) => p.siteId === siteId);
+
+export function zalozPaszport(siteId: string): void {
+  void createVia('passports', { kind: 'paszport', url: '/api/passports', method: 'POST', body: { siteId } }, { siteId })
+    .catch((x: Error) => toast('Nie założono paszportu', { body: x.message, tone: 'error' }));
+  if (!navigator.onLine) toast('Zapisane w telefonie', { body: 'Numer paszportu nadamy, gdy wróci zasięg.' });
+}
+
 /** Teczki obiektu ze sklepu (offline), jak GET /api/sites/:id/teczki. */
 export function useTeczki(siteId: string | undefined): Teczka[] {
   const jobs = useEntities('jobs');
@@ -48,10 +57,21 @@ export function SerwisBadge({ nastepny, soonOnly }: { nastepny?: string | null; 
 export function PaszportSekcja({ site, label, onSite }: { site: Rec; label?: string; onSite?: boolean }) {
   const teczki = useTeczki(site.id);
   const admin = useIsAdmin();
+  const passport = usePassport(site.id);
   const [adding, setAdding] = useState(false);
   const me = useMe();
   const ver = useSeenVersion();
   const fresh = useMemo(() => (me ? new Map(teczki.map((t) => [t.kategoria, freshIn(t, seenFor(me.id)(seenKey(site.id, t.kategoria)), me.id).size])) : new Map<string, number>()), [teczki, me, site.id, ver]); // eslint-disable-line react-hooks/exhaustive-deps
+  // właściciel 2026-11-10: bez założonego paszportu nie pokazujemy teczek (zdjęcia ze zleceń pojawią się po założeniu)
+  if (!passport) return onSite ? null : (
+    <section className="grid gap-2" aria-label={`Paszport instalacji${label ? `: ${label}` : ''}`}>
+      <SectionTitle>Paszport instalacji{label && <span className="font-sans text-sm font-semibold text-ink-2">{label}</span>}</SectionTitle>
+      <div className="flex flex-wrap items-center gap-3 rounded-[4px] border border-line bg-card px-4 py-3">
+        <p className="flex min-w-0 flex-1 basis-56 items-center gap-2 text-sm text-ink-2"><IdentificationCard className="h-5 w-5 shrink-0" aria-hidden />Obiekt nie ma paszportu.</p>
+        <Button onClick={() => zalozPaszport(site.id)}>Załóż paszport</Button>
+      </div>
+    </section>
+  );
   return (
     <section className="grid gap-2" aria-label={onSite ? 'Teczki' : `Paszport instalacji${label ? `: ${label}` : ''}`}>
       <div className="flex flex-wrap items-center justify-between gap-x-3">

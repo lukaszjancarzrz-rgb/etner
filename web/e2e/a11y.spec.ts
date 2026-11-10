@@ -58,7 +58,13 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
     found.push(...(await audit(page, 'karta zlecenia')));
     // paszport (moduł 2): teczka, wpis serwisowy, karta klienta z sekcją teczek
-    await page.getByRole('link', { name: 'Paszport → Rekuperacja' }).click();
+    await page.getByRole('link', { name: /^Paszport( →|$)/ }).click();
+    if (!(await page.getByRole('region', { name: 'Karta serwisowa' }).isVisible())) {
+      const zaloz = page.getByRole('button', { name: 'Załóż paszport' });
+      await expect(zaloz.or(page.getByText(/^PSZ-\d{4}-\d{3}$/))).toBeVisible();
+      if (await zaloz.isVisible()) await zaloz.click();
+      await page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: /^Rekuperacja/ }).click();
+    }
     await expect(page.getByRole('region', { name: 'Karta serwisowa' })).toBeVisible();
     found.push(...(await audit(page, 'teczka')));
     await page.getByRole('link', { name: 'Wpis', exact: true }).click();

@@ -13,7 +13,7 @@ if (!process.env.E2E_PORT) {
 }
 const port = Number(process.env.E2E_PORT);
 // Chromium w środowisku bez `playwright install`; poza nim Playwright używa własnej przeglądarki.
-const local = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const local = '/opt/pw-browsers/chromium'; // stały link do Chromium w kontenerze (niezależny od wersji)
 const launchOptions = existsSync(local) ? { executablePath: local } : {};
 
 export default defineConfig({

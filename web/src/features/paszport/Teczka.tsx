@@ -1,10 +1,10 @@
-import { ArrowLeft, Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FileDoc, FilePdf, FileText, FileXls, FolderSimplePlus, Images, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
+import { Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FileDoc, FilePdf, FileText, FileXls, FolderSimplePlus, Images, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { addMonths } from '@etner/shared';
 import { fmtDay, markSeen, seenFor, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { useEntities, useEntity, type Rec } from '../../core/store.js';
-import { Badge, Empty, NewMark, SectionTitle } from '../../core/ui/bits.js';
+import { BackLink, Badge, Empty, NewMark, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { catStripe, useCatColor } from '../../core/ui/category.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
@@ -65,7 +65,7 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
     <article className="mx-auto grid grid-cols-[minmax(0,1fr)] max-w-3xl gap-5 px-4 py-4 desk:py-6">
       <div className="grid gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <a href={siteHash(siteId)} className="inline-flex h-11 items-center gap-2 font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
+          <BackLink fallback={siteHash(siteId)} />
         </div>
         <h2 className="text-2xl font-extrabold leading-tight">{kategoria}</h2>
         <a href={back} className="justify-self-start text-sm font-semibold text-action hover:underline">{client?.nazwa ?? 'Klient'}</a>
@@ -73,7 +73,7 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
       </div>
       <nav aria-label="Teczki obiektu" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {teczki.map((x) => (
-          <a key={x.kategoria} href={pszHash(siteId, x.kategoria)} aria-current={x.kategoria === kategoria ? 'page' : undefined}
+          <a key={x.kategoria} href={pszHash(siteId, x.kategoria)} onClick={(e) => { e.preventDefault(); location.replace(pszHash(siteId, x.kategoria)); }} aria-current={x.kategoria === kategoria ? 'page' : undefined}
             className={cn('inline-flex h-11 shrink-0 items-center gap-2 rounded-[4px] border px-4 font-semibold', x.kategoria === kategoria ? 'border-ink bg-ink text-bg' : 'border-line bg-card hover:border-ink-2')}>
             <span className="h-2.5 w-2.5 rounded-[2px]" style={{ background: catStripe(cat(x.kategoria)) }} aria-hidden />{x.kategoria}
           </a>

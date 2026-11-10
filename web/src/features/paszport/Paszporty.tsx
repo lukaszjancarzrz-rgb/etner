@@ -43,11 +43,11 @@ export function Paszporty() {
     const numer = new Map(passports.map((p) => [p.siteId, p.numer as string]));
     const seen = me ? seenFor(me.id) : undefined;
     const idx = indeks(d); // raz dla wszystkich obiektów
-    return sites.filter((s) => !s._tmp && (idx.jobs.has(s.id) || idx.folders.has(s.id))).map((site) => {
+    return sites.filter((s) => !s._tmp && numer.has(s.id)).map((site) => { // tylko założone paszporty (właściciel 2026-11-10)
       const teczki = teczkiObiektu(site.id, d, order, idx).map((t) => ({ ...t, nowe: me ? freshIn(t, seen!(seenKey(site.id, t.kategoria)), me.id).size : 0 }));
       const termin = teczki.map((t) => t.nastepnySerwis).filter((x): x is string => !!x).sort()[0];
       return { site, klient: klient.get(site.clientId) ?? '', numer: numer.get(site.id), teczki, ...(termin && { termin }) };
-    }).filter((r) => r.teczki.length);
+    });
   }, [sites, clients, passports, jobs, folders, diary, scope, attachments, devices, service, kat, me, ver]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const list = useMemo(() => sortPaszporty(rows.filter((r) => !q || matches(q, r.klient, r.site.nazwa, r.site.adres, r.site.miejscowosc, r.numer, ...r.teczki.map((t) => t.kategoria)))), [rows, q]);
@@ -57,7 +57,7 @@ export function Paszporty() {
     <section className={cn('mx-auto grid gap-4', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')} aria-label="Paszporty">
       <div className={cn(desk && 'w-[24rem]')}><Search value={q} onChange={setQ} label="Szukaj paszportu" placeholder="Klient, miejscowość, adres, PSZ, kategoria" /></div>
       <TitleCount n={list.length} />
-      {desk && list.length ? <PaszportyTable list={list} /> : !list.length ? <Empty icon={IdentificationCard} title={q ? 'Nic nie znaleziono' : 'Brak teczek'} hint={q ? 'Spróbuj samego nazwiska albo miejscowości.' : 'Teczka obiektu powstaje z pierwszym zleceniem z kategorią.'} /> : (
+      {desk && list.length ? <PaszportyTable list={list} /> : !list.length ? <Empty icon={IdentificationCard} title={q ? 'Nic nie znaleziono' : 'Brak paszportów'} hint={q ? 'Spróbuj samego nazwiska albo miejscowości.' : 'Paszport zakładasz na karcie obiektu: przycisk „Paszport” w zleceniu albo karta klienta.'} /> : (
         <ul className="grid gap-3">
           {list.map((r) => {
             const where = [r.site.nazwa, r.site.adres].filter(Boolean).join(', ');

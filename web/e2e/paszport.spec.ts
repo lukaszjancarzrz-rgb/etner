@@ -14,6 +14,17 @@ async function login(page: Page, name: string) {
 }
 const phone = (info: { project: { name: string } }) => info.project.name.startsWith('iPhone');
 
+/** Z karty zlecenia do teczki: bez paszportu „Paszport” prowadzi na kartę obiektu – tam „Załóż paszport” (wspólna baza: zakłada pierwszy test), potem kafelek teczki. */
+async function teczka(page: Page, kat: string) {
+  await page.getByRole('link', { name: /^Paszport( →|$)/ }).click();
+  if (await page.getByRole('heading', { name: kat, level: 2 }).isVisible()) return;
+  const zaloz = page.getByRole('button', { name: 'Załóż paszport' });
+  await expect(zaloz.or(page.getByText(/^PSZ-\d{4}-\d{3}$/))).toBeVisible();
+  if (await zaloz.isVisible()) await zaloz.click();
+  await page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: new RegExp(`^${kat}`) }).click();
+  await expect(page.getByRole('heading', { name: kat, level: 2 })).toBeVisible();
+}
+
 /** Karta zlecenia Józefa Bukowskiego (montaż Rekuperacji); obiekt ma też serwis Rekuperacji. */
 async function bukowski(page: Page) {
   await page.goto('/#zl');
@@ -28,7 +39,7 @@ test('paszport: klient → teczka Rekuperacja, wpis serwisowy offline z +6 mies.
 
   // ze zlecenia: „Paszport → Rekuperacja” otwiera tę teczkę
   if (!phone(info)) await page.screenshot({ path: `${shots}task4-desktop-jobcard.png` });
-  await page.getByRole('link', { name: 'Paszport → Rekuperacja' }).click();
+  await teczka(page, 'Rekuperacja');
   await expect(page.getByRole('heading', { name: 'Rekuperacja', level: 2 })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Rekuperacja', exact: true })).toHaveAttribute('aria-current', 'page');
   const folder = new URL(page.url()).hash;
@@ -81,7 +92,7 @@ test('teczka: „nowe” przy cudzym wpisie serwisowym (kafelek i karta), po pon
   const tag = `E2E cudzy wpis ${info.project.name} ${Date.now() % 100000}`;
   await login(page, 'Tomasz Wrona');
   await bukowski(page);
-  await page.getByRole('link', { name: 'Paszport → Rekuperacja' }).click();
+  await teczka(page, 'Rekuperacja');
   await expect(page.getByRole('region', { name: 'Karta serwisowa' })).toBeVisible();
   const folder = new URL(page.url()).hash;
   await page.getByRole('link', { name: 'Józef Bukowski', exact: true }).click(); // wyjście z teczki: obejrzana teraz
@@ -134,7 +145,7 @@ test('dziennik: typ dokumentu i „W paszporcie dla klienta”; pracownik nie wi
   await expect(page.locator('li[id^="e-"]', { hasText: `Projekt ${t}` }).getByRole('switch', { name: 'W paszporcie dla klienta' })).toHaveAttribute('aria-checked', 'true');
 
   // teczka: dokument z dziennika z typem i „dla klienta”; admin dodaje fakturę
-  await page.getByRole('link', { name: 'Paszport → Rekuperacja' }).click();
+  await teczka(page, 'Rekuperacja');
   const docs = page.getByRole('region', { name: 'Dokumenty' });
   await expect(docs.getByRole('listitem').filter({ hasText: `projekt-${t}.pdf` })).toContainText(/Projekt · Z\d+.*dla klienta/);
   await docs.getByRole('button', { name: 'Plik', exact: true }).click();
@@ -241,19 +252,32 @@ test('dziennik: „W paszporcie dla klienta” na miniaturach zdjęć (admin), b
   await expect(page.getByRole('dialog').getByRole('switch', { name: 'W paszporcie dla klienta' })).toHaveAttribute('aria-checked', 'true');
 });
 
-test('teczka: „Wróć” prowadzi do karty paszportu obiektu, jej „Wróć” – do listy Paszporty', async ({ page }) => {
+test('teczka: „Wróć” wraca tam, skąd przyszliśmy (lista → karta obiektu → teczka; zlecenie → teczka)', async ({ page }) => {
   await login(page, 'Tomasz Wrona');
+  await bukowski(page);
+  await teczka(page, 'Rekuperacja'); // paszport założony (jeśli go nie było)
   await page.goto('/#paszporty');
   const lista = page.getByRole('region', { name: 'Paszporty' });
-  await lista.locator('li, tr').filter({ has: page.getByText('Józef Bukowski', { exact: true }) }).getByRole('link', { name: /^Rekuperacja/ }).click();
+  await lista.getByRole('link', { name: /^Józef Bukowski/ }).first().click();
+  await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
+  const siteHash = new URL(page.url()).hash;
+  await page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: /^Rekuperacja/ }).click();
   await expect(page.getByRole('heading', { name: 'Rekuperacja', level: 2 })).toBeVisible();
-  const siteHash = new URL(page.url()).hash.split('/').slice(0, 2).join('/');
+  // przełączenie teczki nie dokłada kroku „Wróć”
+  const inna = page.getByRole('navigation', { name: 'Teczki obiektu' }).getByRole('link').filter({ hasNotText: 'Rekuperacja' }).first();
+  if (await inna.count()) await inna.click();
   await page.getByRole('link', { name: 'Wróć' }).click();
   expect(new URL(page.url()).hash).toBe(siteHash);
-  await expect(page.getByRole('heading', { name: 'Józef Bukowski', level: 2 })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: /^Rekuperacja/ })).toBeVisible();
   await page.getByRole('link', { name: 'Wróć' }).click();
   await expect(page).toHaveURL(/#paszporty$/);
+
+  // ze zlecenia: teczka → „Wróć” → to samo zlecenie
+  await bukowski(page);
+  const job = new URL(page.url()).hash;
+  await page.getByRole('link', { name: 'Paszport → Rekuperacja' }).click();
+  await expect(page.getByRole('heading', { name: 'Rekuperacja', level: 2 })).toBeVisible();
+  await page.getByRole('link', { name: 'Wróć' }).click();
+  expect(new URL(page.url()).hash).toBe(job);
 });
 
 test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 240×400, pionowo), link z naklejki → strona klienta, nowy link', async ({ page, browser }, info) => {
@@ -335,11 +359,10 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 240×400, 
 
 test('Do serwisu: teczka z terminem w 30 dni na liście i w liczniku menu, „Przesuń termin”, „Zrób zlecenie serwisowe” → karta zlecenia; pracownik bez dostępu', async ({ page, browser }, info) => {
   await login(page, 'Tomasz Wrona');
-  // teczka Klimatyzacja Wojciecha Kolasy (bez paszportu, P15): termin za 10 dni
+  // teczka Klimatyzacja Wojciecha Kolasy (paszport zakładany w teście): termin za 10 dni
   await page.goto('/#zl');
   await page.getByRole('link', { name: /Wojciech Kolasa/ }).first().click();
-  await page.getByRole('link', { name: 'Paszport → Klimatyzacja' }).click();
-  await expect(page.getByRole('heading', { name: 'Klimatyzacja', level: 2 })).toBeVisible();
+  await teczka(page, 'Klimatyzacja');
   const today = dayOf(new Date()), soon = addDays(today, 10), later = addDays(today, 20);
   await page.getByRole('button', { name: 'Zmień' }).click();
   await page.getByRole('dialog').getByLabel('Następny serwis').fill(soon);

@@ -1,24 +1,13 @@
-import { ArrowLeft, ArrowSquareOut, Bell, EnvelopeSimple, IdentificationCard, MapPin, Phone, QrCode } from '@phosphor-icons/react';
+import { ArrowSquareOut, Bell, EnvelopeSimple, IdentificationCard, MapPin, Phone, QrCode } from '@phosphor-icons/react';
 import { lazy, Suspense } from 'react';
 import { fmtDay, telHref, useLoading } from '../../core/data.js';
-import { useEntities, useEntity } from '../../core/store.js';
-import { Empty, SectionTitle } from '../../core/ui/bits.js';
+import { useEntity } from '../../core/store.js';
+import { BackLink, Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
-import { toast } from '../../core/ui/toast.js';
-import { createVia } from '../../core/write.js';
-import { PaszportSekcja, pszHash, SerwisBadge, useTeczki } from './Paszport.js';
+import { PaszportSekcja, pszHash, SerwisBadge, usePassport, useTeczki, zalozPaszport } from './Paszport.js';
 
 const Naklejka = lazy(() => import('./Naklejka.js'));
-
-/** Paszport obiektu ze sklepu (offline; token z synchronizacji – R65). */
-export const usePassport = (siteId: string) => useEntities('passports').find((p) => p.siteId === siteId);
-
-export function zalozPaszport(siteId: string): void {
-  void createVia('passports', { kind: 'paszport', url: '/api/passports', method: 'POST', body: { siteId } }, { siteId })
-    .catch((x: Error) => toast('Nie założono paszportu', { body: x.message, tone: 'error' }));
-  if (!navigator.onLine) toast('Zapisane w telefonie', { body: 'Numer paszportu nadamy, gdy wróci zasięg.' });
-}
 
 /** `#psz/<siteId>` – karta paszportu obiektu („karta nadrzędna”): numer, naklejka, kontakt, teczki, najbliższy serwis. */
 export function KartaObiektu({ siteId }: { siteId: string }) {
@@ -37,7 +26,7 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
   return (
     <article className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)] gap-5 px-4 py-4 desk:py-6">
       <div className="grid gap-1">
-        <a href="#paszporty" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
+        <BackLink fallback="#paszporty" />
         <h2 className="text-2xl font-extrabold leading-tight">{klient}</h2>
         <p className="flex items-center gap-1.5 text-ink-2"><MapPin className="h-4 w-4 shrink-0" aria-hidden />{[site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ') || 'Obiekt'}</p>
         {client && <a href={`#kl/${client.id}`} className="inline-flex min-h-11 items-center justify-self-start font-semibold text-action hover:underline">Karta klienta</a>}

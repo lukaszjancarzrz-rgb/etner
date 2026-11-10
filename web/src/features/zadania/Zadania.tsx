@@ -45,9 +45,15 @@ export function Zadania() {
       <div className="max-w-3xl"><AddForm /></div>
       <TitleCount n={tasks.length - done.length} />
       {!tasks.length && <Empty icon={ListChecks} title="Nie ma zadań" hint="Dopisz sprawę do załatwienia. Cykliczne wracają po oznaczeniu jako zrobione." />}
-      {groups.some((g) => g.list.length) && <TaskTable label="Zadania" list={groups.flatMap((g) => g.list)} onEdit={setEditing} />}
+      {/* właściciel 2026-11-10: każda lista osobno (tytuł + własna tabela), wyraźnie rozdzielone */}
+      {groups.filter((g) => g.list.length).map(({ grupa, list }) => (
+        <div key={grupa} className="grid gap-2 pt-3">
+          <SectionTitle count={list.length}>{grupa || 'Bez grupy'}</SectionTitle>
+          <TaskTable label={grupa || 'Bez grupy'} list={list} onEdit={setEditing} oneList />
+        </div>
+      ))}
       {done.length > 0 && (
-        <div className="grid gap-2">
+        <div className="grid gap-2 pt-3">
           <SectionTitle count={done.length} toggle={{ open: doneOpen, onToggle: () => setDoneOpen((o) => !o) }}>Zrobione</SectionTitle>
           {doneOpen && <TaskTable label="Zrobione" list={done} onEdit={setEditing} />}
         </div>
@@ -60,13 +66,13 @@ export function Zadania() {
       <AddForm />
       {!tasks.length && <Empty icon={ListChecks} title="Nie ma zadań" hint="Dopisz sprawę do załatwienia. Cykliczne wracają po oznaczeniu jako zrobione." />}
       {groups.map(({ grupa, list }) => (
-        <div key={grupa} className="grid gap-2">
+        <div key={grupa} className="grid gap-2 border-t-2 border-ink pt-1">
           <SectionTitle count={list.length}>{grupa || 'Bez grupy'}</SectionTitle>
           <ul className="grid gap-2">{list.map((t) => <Task key={t.id} t={t} onEdit={() => setEditing(t)} />)}</ul>
         </div>
       ))}
       {done.length > 0 && (
-        <div className="grid gap-2">
+        <div className="grid gap-2 border-t-2 border-ink pt-1">
           <SectionTitle count={done.length} toggle={{ open: doneOpen, onToggle: () => setDoneOpen((o) => !o) }}>Zrobione</SectionTitle>
           {doneOpen && <ul className="grid gap-2">{done.map((t) => <Task key={t.id} t={t} onEdit={() => setEditing(t)} />)}</ul>}
         </div>
@@ -108,7 +114,7 @@ function AddForm() {
 }
 
 /** Komputer: zadania w tabeli; klik w wiersz otwiera edycję. */
-function TaskTable({ label, list, onEdit }: { label: string; list: Rec[]; onEdit: (t: Rec) => void }) {
+function TaskTable({ label, list, onEdit, oneList }: { label: string; list: Rec[]; onEdit: (t: Rec) => void; oneList?: boolean }) {
   const clients = useEntities('clients');
   const nazwa = useMemo(() => new Map(clients.map((c) => [c.id, c.nazwa as string])), [clients]);
   const { rows, by } = useSort(list, {
@@ -121,7 +127,7 @@ function TaskTable({ label, list, onEdit }: { label: string; list: Rec[]; onEdit
         <tr>
           <Th className="w-12"><span className="sr-only">Zrobione</span></Th>
           <Th sort={by('tekst')}>Tytuł</Th>
-          <Th sort={by('grupa')} className="w-[9rem]">Lista</Th>
+          {!oneList && <Th sort={by('grupa')} className="w-[9rem]">Lista</Th>}
           <Th sort={by('prio')} num className="w-[5.5rem]">Priorytet</Th>
           <Th sort={by('termin')} className="w-[10rem]">Termin</Th>
           <Th sort={by('cykl')} className="w-[12rem]">Cykl</Th>
@@ -130,12 +136,12 @@ function TaskTable({ label, list, onEdit }: { label: string; list: Rec[]; onEdit
           <Th className="w-12"><span className="sr-only">Edycja</span></Th>
         </tr>
       </thead>
-      <tbody>{rows.map((t) => <Task key={t.id} t={t} onEdit={() => onEdit(t)} desk />)}</tbody>
+      <tbody>{rows.map((t) => <Task key={t.id} t={t} onEdit={() => onEdit(t)} desk oneList={oneList} />)}</tbody>
     </Table>
   );
 }
 
-function Task({ t, onEdit, desk }: { t: Rec; onEdit: () => void; desk?: boolean }) {
+function Task({ t, onEdit, desk, oneList }: { t: Rec; onEdit: () => void; desk?: boolean; oneList?: boolean }) {
   const statusy = useDict('status_zadania');
   const first = statusy[0]?.wartosc;
   const day = today();
@@ -160,7 +166,7 @@ function Task({ t, onEdit, desk }: { t: Rec; onEdit: () => void; desk?: boolean 
         <button type="button" onClick={onEdit} disabled={!!t._tmp} className={cn('font-semibold hover:text-action', done && 'text-ink-2 line-through decoration-2')}>{t.tekst}</button>
         {t._tmp && <span className="text-sm text-ink-2"> wysyłanie…</span>}
       </Td>
-      <Td className="text-ink-2">{t.grupa || 'Bez grupy'}</Td>
+      {!oneList && <Td className="text-ink-2">{t.grupa || 'Bez grupy'}</Td>}
       <Td num>{t.priorytet != null ? <Badge tone={t.priorytet === 1 ? 'ink' : 'line'} className="h-5">P{t.priorytet}</Badge> : <span className="text-ink-2">—</span>}</Td>
       <Td>{termin || <span className="text-ink-2">—</span>}</Td>
       <Td className="text-sm text-ink-2" title={t.cykliczne ? `${t.cykl ? CYKLE[t.cykl as Cykl] : 'cykliczne'}${t.ostatnio ? `, ostatnio ${fmtDay(t.ostatnio)}` : ''}` : undefined}>{fix ? <>{fix} </> : cykl || '—'}{fix && <span className="sr-only">{cykl}</span>}</Td>

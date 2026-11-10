@@ -9,7 +9,7 @@ import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { CatTab } from '../../core/ui/category.js';
 import { Diary } from '../dziennik/Diary.js';
-import { pszHash } from '../paszport/Paszport.js';
+import { pszHash, siteHash } from '../paszport/Paszport.js';
 import { JobForm } from './JobForm.js';
 import { Pumble } from './Pumble.js';
 import { Scope } from './Scope.js';
@@ -32,6 +32,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const [editing, setEditing] = useState(false);
   const days = useMemo(() => jobDays(sched, id), [sched, id]);
   const service = useEntities('service_entries');
+  const passports = useEntities('passports');
   const wpis = useMemo(() => service.filter((e) => e.jobId === id).sort((a, b) => (a.dzien < b.dzien ? 1 : -1))[0], [service, id]);
 
   // „nowe” liczone od ostatniej wizyty; wpisy przeczytane podczas otwartej karty też się liczą
@@ -78,6 +79,9 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const color = crew(job.ekipa);
   const psz = job.siteId && job.kategoria && !job._tmp ? pszHash(job.siteId, job.kategoria) : undefined;
   const serwis = !!psz && /serwis/i.test(job.rodzaj ?? '');
+  // bez założonego paszportu: karta obiektu z „Załóż paszport” zamiast teczki
+  const hasPsz = passports.some((p) => p.siteId === job.siteId);
+  const pszLink = psz && (hasPsz ? psz : siteHash(job.siteId));
 
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
@@ -102,7 +106,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
               {/* Nawiguj = akcja główna; telefon i paszport drugorzędne */}
               {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-action px-5 font-bold text-action-ink hover:brightness-110"><NavigationArrow className="h-5 w-5" weight="fill" />Nawiguj</a>}
               {phones.map((t) => <a key={t} href={telHref(t)} className={secondary}><Phone className="h-5 w-5" />{t}</a>)}
-              {psz && <a href={psz} className={secondary}><IdentificationCard className="h-5 w-5" />Paszport → {job.kategoria}</a>}
+              {pszLink && <a href={pszLink} className={secondary}><IdentificationCard className="h-5 w-5" />{hasPsz ? `Paszport → ${job.kategoria}` : 'Paszport'}</a>}
               {fc.has('telefony') && <span className="self-center"><NewMark sr="zmienione telefony klienta" /></span>}
             </div>
           )}

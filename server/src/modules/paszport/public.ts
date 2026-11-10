@@ -29,7 +29,7 @@ const CSS = `:root{--bg:#eef2f4;--card:#fff;--ink:#0a2240;--mut:#4a5d70;--line:#
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums}
 main{max-width:680px;margin:0 auto;padding:12px 16px 32px}a{color:var(--acc)}h1,h2,h3,p{margin:0}
 header{display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px;padding:4px 0 14px}header img{height:64px;width:auto;flex:none}
-header strong{display:block;font-size:1.6rem;font-weight:800;line-height:1.15}header a{font-size:.95rem}
+header a{font-size:.95rem}@media (min-width:700px){header img{height:104px}header a{font-size:1.1rem}}
 .plate{background:var(--plate);color:var(--plate-ink);border-radius:14px;padding:16px;display:grid;gap:12px}
 .plate .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .plate .lbl{color:var(--plate-mut);font-size:.85rem}.plate .no{font-size:1.5rem;font-weight:800}
@@ -63,7 +63,7 @@ const doc = (title: string, body: string) => `<!doctype html><html lang="pl"><he
 <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>${esc(title)}</title><style>${CSS}</style></head><body><main>${body}</main></body></html>`;
 
 const www = (f: Firma) => (f.www ? `<a href="https://${esc(f.www.replace(/^https?:\/\//, ''))}" rel="noopener">${esc(f.www)}</a>` : '');
-const head = (f: Firma) => `<header><img src="/logo.png" alt="ETNER, inteligentny wybór"><div><strong>${esc(f.nazwa)}</strong>${www(f)}</div></header>`;
+const head = (f: Firma) => `<header><img src="/logo.png" alt="ETNER, inteligentny wybór">${www(f)}</header>`;
 const tel = (f: Firma, cls = 'btn') => (f.telefon ? `<a class="${cls}" href="tel:${esc(f.telefon.replace(/[^\d+]/g, ''))}">Zadzwoń: ${esc(f.telefon)}</a>` : '');
 
 /** Ta sama strona dla unieważnionego i nieznanego tokenu (nie zdradza, który był kiedyś ważny). */

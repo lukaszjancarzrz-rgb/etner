@@ -1,6 +1,11 @@
-import { CaretDown, type Icon } from '@phosphor-icons/react';
+import { ArrowLeft, CaretDown, type Icon } from '@phosphor-icons/react';
 import type { HTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
 import { cn } from './cn.js';
+
+/** „Wróć” do poprzedniego ekranu (historia przeglądarki); `fallback`, gdy ekran otwarto bez historii (link, powiadomienie). */
+export const BackLink = ({ fallback, className }: { fallback: string; className?: string }) => (
+  <a href={fallback} onClick={(e) => { if (history.length > 1) { e.preventDefault(); history.back(); } }} className={cn('inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action', className)}><ArrowLeft className="h-5 w-5" />Wróć</a>
+);
 
 /** Nagłówek sekcji (17–18 px, 700) z liczbą pozycji. `toggle` = sekcja zwijana (przycisk w nagłówku). */
 export function SectionTitle({ children, count, className, toggle }: { children: ReactNode; count?: number; className?: string; toggle?: { open: boolean; onToggle: () => void } }) {

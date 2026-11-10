@@ -7,7 +7,7 @@ import { useDesk } from '../../core/layout/status.js';
 import { cn } from '../../core/ui/cn.js';
 import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { useEntities, useEntity, type Rec } from '../../core/store.js';
-import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
+import { BackLink, Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Input } from '../../core/ui/input.js';
 import { withoutEchoes } from '../../core/write.js';
@@ -152,7 +152,7 @@ function ClientCard({ id }: { id: string }) {
 
   return (
     <article className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
-      <a href={admin ? '#kl' : '#zl'} onClick={(e) => { if (history.length > 1) { e.preventDefault(); history.back(); } }} className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
+      <BackLink fallback={admin ? '#kl' : '#zl'} />
       <div className="grid gap-4 rounded-[4px] border border-line bg-card p-5">
         <div>
           {c.typ && <p className="text-sm text-ink-2">{c.typ === 'firma' ? 'Firma' : 'Osoba prywatna'}{c.nip ? `, NIP ${c.nip}` : ''}</p>}
