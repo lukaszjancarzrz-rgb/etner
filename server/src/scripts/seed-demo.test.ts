@@ -8,6 +8,7 @@ import { attachments, diaryEntries } from '../modules/dziennik/schema.js';
 import { scheduleDrafts, scheduleEntries } from '../modules/harmonogram/schema.js';
 import { clients, sites } from '../modules/klienci/schema.js';
 import { leads } from '../modules/leady/schema.js';
+import { devices, passportFolders, passports, serviceEntries } from '../modules/paszport/schema.js';
 import { checklists } from '../modules/na-jutro/schema.js';
 import { schedulePeople } from '../modules/uzytkownicy/schema.js';
 import { seedBase } from '../modules/slowniki/seed.js';
@@ -67,6 +68,14 @@ describe('seedDemo', () => {
     expect(n(db, tasks)).toBeGreaterThanOrEqual(4);
     expect(db.select().from(tasks).all().some((t) => t.cykliczne)).toBe(true);
     expect(db.select().from(leads).all().some((l) => l.nastepny && l.nastepny <= now.toISOString().slice(0, 10))).toBe(true);
+    // paszport z dwiema teczkami: serwis jednej w ciągu 30 dni, drugiej zaległy (Do serwisu)
+    const psz = db.select().from(passports).all();
+    expect(psz).toHaveLength(1);
+    expect(psz[0]).toMatchObject({ numer: 'PSZ-2026-001', token: expect.stringMatching(/^.{43}$/) });
+    expect(db.select().from(passportFolders).all().filter((f) => f.siteId === psz[0]!.siteId).map((f) => [f.kategoria, f.nastepnySerwis]).sort())
+      .toEqual([['Fotowoltaika', '2026-10-09'], ['Klimatyzacja', '2026-11-04']]);
+    expect(n(db, devices)).toBe(2);
+    expect(n(db, serviceEntries)).toBe(2);
 
     const before = [clients, jobs, leads, attachments, scheduleEntries, users].map((t) => n(db, t));
     expect(await seedDemo(db, deps.files, { now, photo: { w: 160, h: 120 } })).toBe(false);

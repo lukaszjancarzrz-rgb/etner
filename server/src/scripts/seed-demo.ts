@@ -13,6 +13,7 @@ import * as leady from '../modules/leady/service.js';
 import * as magazyn from '../modules/magazyn/service.js';
 import * as naJutro from '../modules/na-jutro/service.js';
 import * as narzedzia from '../modules/narzedzia/service.js';
+import * as paszport from '../modules/paszport/service.js';
 import * as samochody from '../modules/samochody/service.js';
 import * as uzytkownicy from '../modules/uzytkownicy/service.js';
 import * as zadania from '../modules/zadania/service.js';
@@ -262,6 +263,19 @@ export async function seedDemo(db: Db, files: FileStore, opts: DemoOpts = {}): P
     const [k1, k2] = magazyn.list(db);
     magazyn.take(db, u.marek!.id, k1!, new Date(now.getTime() - 86_400_000));
     magazyn.take(db, u.piotr!.id, k2!, now);
+
+    // Paszport instalacji (obiekt bez zleceń w toku): dwie teczki, serwis jednej za 14 dni, drugiej zaległy (ekrany Paszporty i Do serwisu).
+    const dom = cl[11]!;
+    paszport.createPassport(db, a1, dom.siteId, now);
+    const montaz = jobs.find((j) => j.siteId === dom.siteId)!;
+    paszport.createDevice(db, a1, { siteId: dom.siteId, kategoria: 'Klimatyzacja', nazwa: 'Klimatyzator split – salon', producent: 'Gree', model: 'Pular 3,5 kW', nrSeryjny: 'GR-2026-004417',
+      montaz: addDays(today, -30), jobId: montaz.id, gwarancjaDo: addDays(today, 5 * 365), dlaKlienta: true });
+    paszport.createEntry(db, u.marek!.id, { siteId: dom.siteId, kategoria: 'Klimatyzacja', dzien: addDays(today, -30), jobId: montaz.id, czynnosci: ['Kontrola ciśnienia i szczelności', 'Kontrola odpływu skroplin'],
+      uwagi: 'Uruchomienie po montażu, bez uwag.', dlaKlienta: true, uploadIds: [], nastepnySerwis: addDays(today, 14) });
+    paszport.createDevice(db, a1, { siteId: dom.siteId, kategoria: 'Fotowoltaika', nazwa: 'Falownik', producent: 'Fronius', model: 'Symo 8.2', nrSeryjny: 'FR-31885201',
+      montaz: addDays(today, -760), gwarancjaDo: addDays(today, 1065), dlaKlienta: true });
+    paszport.createEntry(db, u.bartek!.id, { siteId: dom.siteId, kategoria: 'Fotowoltaika', dzien: addDays(today, -377), czynnosci: ['Przegląd falownika', 'Kontrola zabezpieczeń DC/AC', 'Odczyt produkcji'],
+      uwagi: 'Produkcja roczna 7,9 MWh.', dlaKlienta: true, uploadIds: [], nastepnySerwis: addDays(today, -12) });
 
     // Zadania (jedno cykliczne).
     const task = (tekst: string, priorytet: number | null, grupa: string, termin: string | null, status?: string, cykliczne = false) =>
