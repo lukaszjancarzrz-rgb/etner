@@ -8,6 +8,7 @@ import { store, useEntities, useEntity, type Rec } from '../../core/store.js';
 import { setTheme, useTheme, type Theme } from '../../core/theme.js';
 import { Button } from '../../core/ui/button.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
+import { Segmented } from '../../core/ui/bits.js';
 import { cn } from '../../core/ui/cn.js';
 import { Field, Input } from '../../core/ui/input.js';
 import { Select } from '../../core/ui/select.js';
@@ -73,15 +74,7 @@ function ThemeCard() {
   const theme = useTheme();
   return (
     <Card title="Motyw" icon={Sun} hint="Wygląd aplikacji na tym urządzeniu. Auto = jak w telefonie.">
-      <div role="radiogroup" aria-label="Motyw" className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-[4px] border border-line bg-card">
-        {themes.map(({ v, label, icon: I }) => (
-          <button key={v} role="radio" aria-checked={theme === v} onClick={() => setTheme(v)}
-            className={cn('flex h-11 items-center justify-center gap-2 px-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-offset-[-2px]',
-              theme === v ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/6 hover:text-ink')}>
-            <I className="h-5 w-5 shrink-0" /><span className="truncate">{label}</span>
-          </button>
-        ))}
-      </div>
+      <Segmented label="Motyw" value={theme} onChange={setTheme} options={themes} />
     </Card>
   );
 }
@@ -374,7 +367,7 @@ function Dictionaries() {
               <Input aria-label={`Wartość ${i + 1}`} value={x.wartosc} onChange={(e) => patch(i, { wartosc: e.target.value })} className={cn('h-11', !WITH_KOLOR.has(rodzaj) && 'col-span-2')} />
               <Button variant="ghost" size="iconTight" aria-label={`W górę: ${x.wartosc}`} disabled={k === 0} onClick={() => moveShown(k, -1)}><ArrowUp className="h-5 w-5" /></Button>
               <Button variant="ghost" size="iconTight" aria-label={`W dół: ${x.wartosc}`} disabled={k === shown.length - 1} onClick={() => moveShown(k, 1)}><ArrowDown className="h-5 w-5" /></Button>
-              <Button variant="ghost" size="iconTight" aria-label={`Usuń: ${x.wartosc}`} onClick={() => edit(list.filter((_, k) => k !== i))} className="ml-3 text-danger"><Trash className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="iconTight" aria-label={`Usuń: ${x.wartosc}`} onClick={() => edit(list.filter((_, k) => k !== i))} className="ml-3.5 text-danger"><Trash className="h-5 w-5" /></Button>
             </div>
             {rodzaj === 'kategoria' && (
               <label className="flex min-h-10 items-center gap-2 pl-1 text-sm font-semibold">

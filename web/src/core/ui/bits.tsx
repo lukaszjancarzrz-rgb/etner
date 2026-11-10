@@ -45,7 +45,7 @@ export const NewMark = ({ sr }: { sr: string }) => (
 
 /** Przełącznik segmentowy (radio): ramka 1 px, wybrany segment granatowy. */
 export function Segmented<T extends string>({ value, onChange, options, label, className }: {
-  value: T; onChange: (v: T) => void; options: { v: T; label: string }[]; label: string; className?: string;
+  value: T; onChange: (v: T) => void; options: { v: T; label: string; icon?: Icon }[]; label: string; className?: string;
 }) {
   return (
     <div role="radiogroup" aria-label={label} className={cn('grid auto-cols-fr grid-flow-col divide-x divide-line overflow-hidden rounded-[4px] border border-line bg-card', className)}>
@@ -62,7 +62,7 @@ export function Segmented<T extends string>({ value, onChange, options, label, c
             (e.currentTarget.parentElement?.children[options.indexOf(n)] as HTMLElement | undefined)?.focus();
           }}
           className={cn('h-11 truncate px-3 text-sm font-semibold transition-colors duration-150 focus-visible:outline-offset-[-2px]', value === o.v ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/6 hover:text-ink')}>
-          {o.label}
+          {o.icon ? <span className="flex items-center justify-center gap-2"><o.icon className="h-5 w-5 shrink-0" /><span className="truncate">{o.label}</span></span> : o.label}
         </button>
       ))}
     </div>

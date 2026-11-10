@@ -477,3 +477,16 @@ test('harmonogram: link z powiadomienia `#harm/<dzień>~<osoba>` otwiera tamten 
   await expect(page.locator(`[data-day="${mondayOf(day)}"]`)).toHaveCount(1); // poniedziałek tamtego tygodnia
   await expect(cell).not.toHaveAttribute('data-flash', 'true', { timeout: 5000 });
 });
+
+test('ustawienia: Motyw to jeden przystanek Tab, strzałki przełączają motyw', async ({ page }) => {
+  await loginAdmin(page);
+  await page.goto('/#ust');
+  const g = page.getByRole('radiogroup', { name: 'Motyw' });
+  await expect(g.locator('[tabindex="0"]')).toHaveCount(1);
+  await g.getByRole('radio', { name: 'Jasny' }).click();
+  await page.keyboard.press('ArrowRight');
+  await expect(g.getByRole('radio', { name: 'Ciemny' })).toBeFocused();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  // jawny ciemny ma ten sam obrys pól co ciemny systemowy
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--field').trim())).toBe('#6688b3');
+});

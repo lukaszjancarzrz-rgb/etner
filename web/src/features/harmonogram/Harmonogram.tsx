@@ -385,7 +385,7 @@ function CellButton({ dzien, person, p, compact }: { dzien: string; person: Rec;
       {p.open && (
         <button type="button" aria-label={`Edytuj komórkę ${person.nazwa} ${dayShort(dzien)}`} onClick={() => { p.tap?.(dzien); p.open!(dzien, person); }}
           className={cn('grid place-items-center rounded-[3px] text-ink-2 hover:bg-action/10 hover:text-action focus-visible:outline-2 focus-visible:outline-action',
-            compact ? 'absolute right-1.5 bottom-1.5 h-6 w-6 border border-line bg-card opacity-0 group-hover:opacity-100 focus-visible:opacity-100' : 'h-8 w-8')}>
+            compact ? 'absolute right-1.5 bottom-1.5 h-6 w-6 border border-line bg-card opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100' : 'h-8 w-8')}>
           <PencilSimple className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
         </button>
       )}

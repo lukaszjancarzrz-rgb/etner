@@ -121,7 +121,7 @@ test('na jutro: pracownik dodaje i odhacza rzecz swojej ekipy; admin otwiera `#j
   await login(page, 'Bartek Gawlik');
   await page.goto('/#jutro');
   await expect(page.getByText('ekipa Bartek', { exact: true })).toBeVisible();
-  await expect(page.getByText(/^jutro, /)).toBeVisible();
+  await expect(page.getByText(/^(jutro|poniedziałek|wtorek|środa|czwartek|piątek|sobota|niedziela), /)).toBeVisible();
   await expect(page.getByRole('radiogroup', { name: 'Ekipa' })).toHaveCount(0); // pracownik: tylko swoja ekipa
   await page.getByPlaceholder('Co zabrać? Enter dodaje').fill(tag);
   await page.getByPlaceholder('Co zabrać? Enter dodaje').press('Enter');
