@@ -17,18 +17,17 @@ export function Mark({ className = 'h-9 w-9' }: { className?: string }) {
   );
 }
 
-/** Logo firmy (public/logo.png) na białym bloku w obu motywach (PNG ma ciemny napis). `imgClass`: szerokość obrazka.
- * `rail`: ten sam PNG w dwóch wycinkach (znak + napis), żeby w szynie 224 px hasło miało ≥10 px wysokości wersalików (cały obrazek dałby ~8 px). */
-export function Logo({ className, imgClass = 'w-52', rail }: { className?: string; imgClass?: string; rail?: boolean }) {
+/** Logo firmy na białym bloku w obu motywach: znak i napis „ETNER” to wycinki public/logo.png (znak 250×255, napis 197×51),
+ * hasło „INTELIGENTNY WYBÓR” jako żywy tekst (ostre w każdej skali, kontrast 9,6:1 na bieli). Wielkość całości ustawia `font-size` (klasa w `className`).
+ * `rail`: szyna 224 px – hasło w osobnym wierszu na całą szerokość, żeby wersaliki miały ≥10 px. */
+export function Logo({ className, rail }: { className?: string; rail?: boolean }) {
+  const haslo = <span className="block font-semibold tracking-[0.18em] whitespace-nowrap text-[#33475e]">INTELIGENTNY WYBÓR</span>;
   return (
-    <span className={cn('bg-white', rail ? 'flex items-center gap-[10px]' : 'block', className)} role="img" aria-label="ETNER, inteligentny wybór" data-logo>
-      {rail ? (
-        <>
-          {/* wycinki public/logo.png (znak 250×255, napis 324×88) jako osobne pliki: rozmiar wynika z obrazka, bez przesunięć tła */}
-          <img src="/logo-mark.png" alt="" width={250} height={255} className="block h-[58px] w-auto shrink-0" />
-          <img src="/logo-word.png" alt="" width={324} height={88} className="block h-auto w-[142px]" />
-        </>
-      ) : <img src="/logo.png" alt="" width={601} height={255} className={cn('block h-auto', imgClass)} />}
+    <span className={cn('grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-[0.7em] bg-white leading-none', className)} role="img" aria-label="ETNER, inteligentny wybór" data-logo>
+      <img src="/logo-mark.png" alt="" width={250} height={255} className={cn('block w-auto', rail ? 'h-[3.1em]' : 'h-[5.6em]')} />
+      {rail ? <img src="/logo-name.png" alt="" width={197} height={51} className="block h-[2.1em] w-auto" />
+        : <span className="grid gap-[0.55em]"><img src="/logo-name.png" alt="" width={197} height={51} className="block h-auto w-[8.4em]" />{haslo}</span>}
+      {rail && <span className="col-span-2 mt-[0.5em]">{haslo}</span>}
     </span>
   );
 }

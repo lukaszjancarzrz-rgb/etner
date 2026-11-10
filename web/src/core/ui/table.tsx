@@ -30,7 +30,7 @@ export function useSort<T, K extends string>(rows: readonly T[], cols: Record<K,
   };
 }
 
-/** Tabela na komputerze: ramka 1 px, nagłówek przyklejony pod paskiem tytułu (`--th-top`), wiersze z liniami. */
+/** Tabela na komputerze: ramka 1 px, nagłówek przyklejony pod paskiem tytułu (48 px), wiersze z liniami; wysokości `--th-h` / `--row-h` z theme.css (mysz: 40 / 32 px, w kratkę tła). */
 export const Table = ({ className, children, ...p }: HTMLAttributes<HTMLTableElement>) => (
   <table className={cn('w-full table-fixed border-separate border-spacing-0 rounded-[4px] border border-line bg-card text-left tabular-nums [&>tbody>tr:last-child>td]:border-b-0', className)} {...p}>{children}</table>
 );
@@ -40,7 +40,7 @@ export function Th({ children, sort, num, pad = 'px-2.5', className, ...p }: HTM
   const I = sort?.dir === 'asc' ? ArrowUp : sort?.dir === 'desc' ? ArrowDown : CaretUpDown;
   return (
     <th scope="col" aria-sort={sort?.dir ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
-      className={cn('sticky top-[var(--th-top,4rem)] z-10 h-10 border-b-2 border-ink bg-[color-mix(in_srgb,var(--card)_55%,var(--bg))] align-middle font-cond text-sm font-semibold whitespace-nowrap text-ink-2', pad, num && 'text-right', className)} {...p}>
+      className={cn('sticky top-[48px] z-10 h-[var(--th-h)] border-b-2 border-ink bg-[color-mix(in_srgb,var(--card)_55%,var(--bg))] align-middle font-cond text-sm font-semibold whitespace-nowrap text-ink-2', pad, num && 'text-right', className)} {...p}>
       {sort ? (
         <button type="button" onClick={sort.onSort} className={cn('group inline-flex h-8 max-w-full items-center gap-1 rounded-[3px] hover:text-ink focus-visible:outline-offset-1', num && 'flex-row-reverse', sort.dir && 'text-ink')}>
           <span className="truncate">{children}</span>
@@ -60,7 +60,7 @@ export function Tr({ href, onOpen, selected, className, ...p }: HTMLAttributes<H
     if (!act || !e.currentTarget.contains(t) || t.closest('a,button,input,label,textarea') || getSelection()?.toString()) return;
     act();
   };
-  return <tr onClick={open} className={cn('h-11 transition-colors duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-action', act && 'cursor-pointer', selected ? 'bg-action/10' : 'hover:bg-ink/4', className)} {...p} />;
+  return <tr onClick={open} className={cn('h-[var(--row-h)] transition-colors duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-action', act && 'cursor-pointer', selected ? 'bg-action/10' : 'hover:bg-ink/4', className)} {...p} />;
 }
 
 /** Komórka; `pad` zastępuje domyślne odstępy (cn nie scala klas Tailwind), np. `pr-2.5` przy zakładce branży przy krawędzi. */

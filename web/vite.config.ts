@@ -13,7 +13,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['icon.svg', 'logo.png', 'logo-mark.png', 'logo-word.png', 'apple-touch-icon.png', 'badge-96.png', 'push-sw.js'],
+      includeAssets: ['icon.svg', 'logo.png', 'logo-mark.png', 'logo-name.png', 'apple-touch-icon.png', 'badge-96.png', 'push-sw.js', 'fonts/*.woff2'],
       manifest: {
         name: 'ETNER',
         short_name: 'ETNER',
@@ -37,13 +37,6 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//, /^\/p\//], // /p/<token>: strona klienta z serwera, nie aplikacja
         importScripts: ['push-sw.js'],
         cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
-            handler: 'CacheFirst',
-            options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 365 * 86400 }, cacheableResponse: { statuses: [0, 200] } },
-          },
-        ],
       },
     }),
   ],

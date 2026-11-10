@@ -34,7 +34,7 @@ export function Login() {
     <main className="grid min-h-[100dvh] grid-rows-[auto_1fr]">
       <div className="h-2 bg-rail" aria-hidden />
       <div className="mx-auto flex w-full max-w-md flex-col justify-center gap-5 px-4 py-10">
-        <Logo className="self-start rounded-[4px] border border-line px-3 py-2.5" imgClass="w-72 desk:w-[300px]" />
+        <Logo className="justify-center rounded-[4px] border border-line px-4 py-4 text-[clamp(13px,4.2vw,18px)]" />
         <form onSubmit={submit} className="grid gap-4 rounded-[4px] border border-line bg-card p-5">
           <div>
             <h1 className="text-2xl font-extrabold tracking-[-0.01em] desk:text-[1.75rem]">Zaloguj się</h1>

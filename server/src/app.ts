@@ -65,12 +65,11 @@ export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
   const index = hasWeb ? readFileSync(join(webDist, 'index.html'), 'utf8') : '';
 
   // Nagłówki bezpieczeństwa. Zdjęcia z R2 to podpisane adresy https (img-src https:), podglądy przed wysłaniem to blob:,
-  // czcionki z Google Fonts (też pobierane przez service worker, stąd connect-src). Style inline: Radix wstawia <style>.
-  const fonts = ['https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
+  // czcionki z własnego serwera (web/public/fonts). Style inline: Radix wstawia <style>.
   const appHeaders = secureHeaders({
     contentSecurityPolicy: {
-      defaultSrc: ["'self'"], scriptSrc: ["'self'", ...inlineScriptHashes(index)], styleSrc: ["'self'", "'unsafe-inline'", fonts[0]!],
-      fontSrc: ["'self'", fonts[1]!], imgSrc: ["'self'", 'https:', 'data:', 'blob:'], connectSrc: ["'self'", ...fonts],
+      defaultSrc: ["'self'"], scriptSrc: ["'self'", ...inlineScriptHashes(index)], styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'"], imgSrc: ["'self'", 'https:', 'data:', 'blob:'], connectSrc: ["'self'"],
       workerSrc: ["'self'"], manifestSrc: ["'self'"], objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"], frameAncestors: ["'none'"],
     },
   });

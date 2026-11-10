@@ -16,8 +16,8 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
   const more = moreGroups(admin, true).length > 0; // Więcej tylko z ekranami spoza tego menu (adres #wiecej działa dalej)
   return (
     <nav aria-label="Menu" className="fixed inset-y-0 left-0 z-30 hidden w-[224px] flex-col bg-rail text-white desk:flex">
-      {/* logo na pełną szerokość szyny: hasło „INTELIGENTNY WYBÓR” ma być czytelne */}
-      <Logo rail className="px-[6px] py-[12px]" />
+      {/* logo na pełną szerokość szyny, blok 96 px (3 kratki): hasło „INTELIGENTNY WYBÓR” ma być czytelne */}
+      <Logo rail className="h-[96px] shrink-0 content-center px-[14px] text-[14px]" />
       <ul className="grid min-h-0 content-start gap-px overflow-y-auto px-[8px] py-[12px]">
         {Object.entries(screens).filter(([k, s]) => (k === 'wiecej' ? more : inSideNav(k, admin)))
           .sort(([ka, a], [kb, b]) => rank(ka, a.adminEnd, admin) - rank(kb, b.adminEnd, admin)).map(([k, s]) => {
