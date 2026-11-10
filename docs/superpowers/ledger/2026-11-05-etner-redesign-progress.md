@@ -18,3 +18,4 @@ R3: dispatched (incl. Leady desktop table left by R2; Harmonogram toolbar restyl
 Owner 2026-11-05: „Więcej” last in side menu (under „Na jutro”) — controller change on working branch; ships with redesign. R3 implementer hit usage limit before any commit (resets 13:50 UTC); to resume.
 Owner 2026-11-05: pause after current change (usage limit); R3 implementer told to finish bits.tsx, commit, write status, stop. Resume later: R3 remaining items + review, then R4 (screenshots, detector, finish review, DESIGN.md, release).
 R3: impl 5e25e79..ed67da0 (paused): unit+build ok; full e2e run1 88/1 fail fixed in ed67da0 (menu order), re-run stopped at 45 passed. TODO on resume: one full e2e run, R3 review, then R4.
+Owner 2026-11-10: use Fable model for further subagents (implementers, reviewers, finish review, documenter). Running R3 reviewer stays on its model. Full e2e for R3 running.
