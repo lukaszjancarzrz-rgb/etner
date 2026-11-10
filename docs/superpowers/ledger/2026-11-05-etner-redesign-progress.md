@@ -22,3 +22,4 @@ Owner 2026-11-10: use Fable model for further subagents (implementers, reviewers
 R3: review spec ✅ Needs fixes: I1 --field duplicated in system-dark block, missing in explicit dark. Minors M1 (pencil invisible on touch at desk), M3 (Usuń 14px gap), M6 (Motyw switch without arrow keys) folded into fix round.
 - Ruling R81: font-mono kept for logins/passwords (Użytkownicy, Import) — functional: distinguishes l/1/I in credentials; global „no monospace” rule targets decoration — cost: one more face on two admin screens.
 - Ruling R82: fix round 1 goes to a fresh implementer on Fable (owner asked to continue on Fable) instead of resuming the R3 implementer — cost: re-reading context.
+R3: controller full e2e at 5a27e90: 87 passed, 5 skipped, 2 failed (full.spec.ts:124 date assumption — 11.11 holiday, app correct). Fix round 1 dispatched on Fable (I1, M1, M3, M6, e2e date).
