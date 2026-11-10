@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addDays, addMonths, dayOf } from '@etner/shared';
+import { addDays, addMonths, dayOf, nextWorkday } from '@etner/shared';
 
 /** Logowanie kontem demo z listy na ekranie logowania. */
 async function login(page: Page, name: string) {
@@ -121,7 +121,12 @@ test('na jutro: pracownik dodaje i odhacza rzecz swojej ekipy; admin otwiera `#j
   await login(page, 'Bartek Gawlik');
   await page.goto('/#jutro');
   await expect(page.getByText('ekipa Bartek', { exact: true })).toBeVisible();
-  await expect(page.getByText(/^(jutro|poniedziałek|wtorek|środa|czwartek|piątek|sobota|niedziela), /)).toBeVisible();
+  // domyślny dzień = następny roboczy (jak NaJutro.tsx); „jutro, …” tylko gdy to faktycznie jutro, inaczej dokładna etykieta dnia
+  const t = dayOf(new Date()), next = nextWorkday(t);
+  const wd = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'][new Date(`${next}T12:00:00Z`).getUTCDay()]!;
+  const mon = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'][Number(next.slice(5, 7)) - 1]!;
+  const label = `${wd}, ${Number(next.slice(8, 10))} ${mon}`;
+  await expect(page.getByText(next === addDays(t, 1) ? `jutro, ${label}` : label, { exact: true })).toBeVisible();
   await expect(page.getByRole('radiogroup', { name: 'Ekipa' })).toHaveCount(0); // pracownik: tylko swoja ekipa
   await page.getByPlaceholder('Co zabrać? Enter dodaje').fill(tag);
   await page.getByPlaceholder('Co zabrać? Enter dodaje').press('Enter');
