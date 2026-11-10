@@ -19,3 +19,6 @@ Owner 2026-11-05: „Więcej” last in side menu (under „Na jutro”) — con
 Owner 2026-11-05: pause after current change (usage limit); R3 implementer told to finish bits.tsx, commit, write status, stop. Resume later: R3 remaining items + review, then R4 (screenshots, detector, finish review, DESIGN.md, release).
 R3: impl 5e25e79..ed67da0 (paused): unit+build ok; full e2e run1 88/1 fail fixed in ed67da0 (menu order), re-run stopped at 45 passed. TODO on resume: one full e2e run, R3 review, then R4.
 Owner 2026-11-10: use Fable model for further subagents (implementers, reviewers, finish review, documenter). Running R3 reviewer stays on its model. Full e2e for R3 running.
+R3: review spec ✅ Needs fixes: I1 --field duplicated in system-dark block, missing in explicit dark. Minors M1 (pencil invisible on touch at desk), M3 (Usuń 14px gap), M6 (Motyw switch without arrow keys) folded into fix round.
+- Ruling R81: font-mono kept for logins/passwords (Użytkownicy, Import) — functional: distinguishes l/1/I in credentials; global „no monospace” rule targets decoration — cost: one more face on two admin screens.
+- Ruling R82: fix round 1 goes to a fresh implementer on Fable (owner asked to continue on Fable) instead of resuming the R3 implementer — cost: re-reading context.
