@@ -59,9 +59,10 @@ for (const theme of ['light', 'dark'] as const) {
     found.push(...(await audit(page, 'karta zlecenia')));
     // paszport (moduł 2): teczka, wpis serwisowy, karta klienta z sekcją teczek
     await page.getByRole('link', { name: /^Paszport( →|$)/ }).click();
-    if (!(await page.getByRole('region', { name: 'Karta serwisowa' }).isVisible())) {
-      const zaloz = page.getByRole('button', { name: 'Załóż paszport' });
-      await expect(zaloz.or(page.getByText(/^PSZ-\d{4}-\d{3}$/))).toBeVisible();
+    const karta = page.getByRole('region', { name: 'Karta serwisowa' });
+    const zaloz = page.getByRole('button', { name: 'Załóż paszport' });
+    await expect(karta.or(zaloz).or(page.getByText(/^PSZ-\d{4}-\d{3}$/))).toBeVisible();
+    if (!(await karta.isVisible())) {
       if (await zaloz.isVisible()) await zaloz.click();
       await page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: /^Rekuperacja/ }).click();
     }

@@ -17,9 +17,10 @@ const phone = (info: { project: { name: string } }) => info.project.name.startsW
 /** Z karty zlecenia do teczki: bez paszportu „Paszport” prowadzi na kartę obiektu – tam „Załóż paszport” (wspólna baza: zakłada pierwszy test), potem kafelek teczki. */
 async function teczka(page: Page, kat: string) {
   await page.getByRole('link', { name: /^Paszport( →|$)/ }).click();
-  if (await page.getByRole('heading', { name: kat, level: 2 }).isVisible()) return;
+  const head = page.getByRole('heading', { name: kat, level: 2 });
   const zaloz = page.getByRole('button', { name: 'Załóż paszport' });
-  await expect(zaloz.or(page.getByText(/^PSZ-\d{4}-\d{3}$/))).toBeVisible();
+  await expect(head.or(zaloz).or(page.getByText(/^PSZ-\d{4}-\d{3}$/))).toBeVisible();
+  if (await head.isVisible()) return;
   if (await zaloz.isVisible()) await zaloz.click();
   await page.getByRole('region', { name: 'Teczki' }).getByRole('link', { name: new RegExp(`^${kat}`) }).click();
   await expect(page.getByRole('heading', { name: kat, level: 2 })).toBeVisible();
