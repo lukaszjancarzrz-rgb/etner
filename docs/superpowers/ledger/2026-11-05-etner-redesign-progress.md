@@ -26,3 +26,7 @@ R3: controller full e2e at 5a27e90: 87 passed, 5 skipped, 2 failed (full.spec.ts
 R3: fix round 1/5 (4 addressed, 1 open — e2e date assertion too loose; f909041). Fix round 2 dispatched.
 R3: fix round 2/5 (1 addressed, 0 open; ac69361) — complete (04295a9..ac69361). R4: final screenshots + detector dispatched (Fable).
 R4: final screenshots 61 (shots/final), detector only owner grid. Finish review (Fable): disposition fix — 8 material fixes + owner decisions (PV colour = red of „nowe”, SH/SP/IN, self-host fonts). Summary in sdd finish-review.md.
+Owner 2026-11-10: PV → orange #c4501b (incl. production dictionary); abbreviations SH, SP ok, Inne → „I”; self-host fonts (RODO).
+- Ruling R83: /p/ customer page stays out of this redesign (it was redesigned separately as the compact „tabliczka” page; owner reviewed it) — cost: page keeps system font; can follow later.
+- Ruling R84: harmonogram cell category tint kept as a cited exception to „category colour only in index tabs” (cells need the tint to scan a week) — to be written into the contract/DESIGN.md.
+R4: final fix wave dispatched (Fable).
