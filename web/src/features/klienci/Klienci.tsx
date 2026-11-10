@@ -1,4 +1,5 @@
 import { fmtZl } from '@etner/shared';
+import { TitleCount } from '../../core/layout/TopBar.js';
 import { ArrowLeft, ArrowsMerge, Briefcase, EnvelopeSimple, MagnifyingGlass, MapPin, NavigationArrow, PencilSimple, Phone, Plus, UsersThree } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { fmtDay, mapsUrl, matches, telHref, useIsAdmin, useLoading, useStatusGroup } from '../../core/data.js';
@@ -54,6 +55,7 @@ function ClientList() {
         <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nazwisko, telefon, miejscowość" className="pl-11" />
       </label>
       {admin && !q && dups.length > 0 && <Duplicates pairs={dups} />}
+      <TitleCount n={list.length} />
       {desk && list.length ? <ClientTable list={list} active={active} /> : !list.length ? <Empty icon={UsersThree} title={q ? 'Nic nie znaleziono' : 'Brak klientów'} hint={q ? 'Spróbuj samego nazwiska albo numeru telefonu.' : 'Klient powstaje razem z nowym zleceniem.'} /> : (
         <ul className="divide-y divide-line overflow-hidden rounded-[4px] border border-line bg-card">
           {list.map(({ c, place }) => (

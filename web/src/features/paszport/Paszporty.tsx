@@ -1,4 +1,5 @@
 import { CaretRight, IdentificationCard, MapPin } from '@phosphor-icons/react';
+import { TitleCount } from '../../core/layout/TopBar.js';
 import { useMemo, useState } from 'react';
 import { fmtDay, matches, seenFor, today, useDict, useLoading, useMe, useSeenVersion } from '../../core/data.js';
 import { useDesk } from '../../core/layout/status.js';
@@ -55,6 +56,7 @@ export function Paszporty() {
   return (
     <section className={cn('mx-auto grid gap-4', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')} aria-label="Paszporty">
       <div className={cn(desk && 'w-[24rem]')}><Search value={q} onChange={setQ} label="Szukaj paszportu" placeholder="Klient, miejscowość, adres, PSZ, kategoria" /></div>
+      <TitleCount n={list.length} />
       {desk && list.length ? <PaszportyTable list={list} /> : !list.length ? <Empty icon={IdentificationCard} title={q ? 'Nic nie znaleziono' : 'Brak teczek'} hint={q ? 'Spróbuj samego nazwiska albo miejscowości.' : 'Teczka obiektu powstaje z pierwszym zleceniem z kategorią.'} /> : (
         <ul className="grid gap-3">
           {list.map((r) => {

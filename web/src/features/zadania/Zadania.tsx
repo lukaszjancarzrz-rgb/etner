@@ -1,4 +1,5 @@
 import { ArrowsClockwise, ListChecks, PencilSimple, Plus, User, Warning, X } from '@phosphor-icons/react';
+import { TitleCount } from '../../core/layout/TopBar.js';
 import { CYKLE, nextTermin, type Cykl } from '@etner/shared';
 import { useMemo, useState } from 'react';
 import { fmtDay, today, useDict, useLoading } from '../../core/data.js';
@@ -42,6 +43,7 @@ export function Zadania() {
   if (desk) return (
     <section className="mx-auto grid max-w-[1400px] gap-5 px-8 py-5">
       <div className="max-w-3xl"><AddForm /></div>
+      <TitleCount n={tasks.length - done.length} />
       {!tasks.length && <Empty icon={ListChecks} title="Nie ma zadań" hint="Dopisz sprawę do załatwienia. Cykliczne wracają po oznaczeniu jako zrobione." />}
       {groups.some((g) => g.list.length) && <TaskTable label="Zadania" list={groups.flatMap((g) => g.list)} onEdit={setEditing} />}
       {done.length > 0 && (

@@ -1,11 +1,12 @@
 import { Briefcase, MagnifyingGlass, Plus } from '@phosphor-icons/react';
+import { TitleCount } from '../../core/layout/TopBar.js';
 import { useEffect, useMemo, useState } from 'react';
 import { matches, seenFor, useCrewColor, useDict, useIsAdmin, useLoading, useMe, useSeenVersion, useStatusGroup } from '../../core/data.js';
 import { freshByJob } from '../../core/badges.js';
 import { useEntities } from '../../core/store.js';
 import { Badge, Empty, SectionTitle, Segmented } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
-import { CategoryPill, CatTab, useCatAbbr, useCatColor } from '../../core/ui/category.js';
+import { CatTab, useCatAbbr, useCatColor } from '../../core/ui/category.js';
 import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { cn } from '../../core/ui/cn.js';
 import { Input } from '../../core/ui/input.js';
@@ -120,7 +121,6 @@ const byMonth = (items: JobView[]): [string, JobView[]][] => {
 };
 
 function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe: number; missing: boolean; color?: string }) {
-  const cat = useCatColor();
   const nazwa = j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient';
   return (
     <li>
@@ -128,6 +128,7 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
         className={cn('grid grid-cols-[minmax(0,1fr)] gap-1 px-4 py-3 transition-colors duration-200', on ? 'bg-action/10' : 'hover:bg-ink/4')}>
         {/* plakietki zawijają się pod numer na wąskim telefonie (bez przewijania w poziomie) */}
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          {j.kategoria && <><CatTab name={j.kategoria} flush className="-ml-4" /><span className="sr-only">{j.kategoria}</span></>}
           <span className="font-semibold tabular-nums text-ink-2">{j._tmp ? 'zapisywanie' : j.numer}</span>
           <span className="min-w-0 truncate text-ink-2">{j.status}</span>
           <span className="ml-auto flex flex-wrap justify-end gap-1.5">
@@ -139,7 +140,6 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
         <span className="flex items-end gap-2 text-sm text-ink-2">
           {j.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
           <span className="ml-auto flex shrink-0 flex-col items-end gap-1">
-            {j.kategoria && <CategoryPill name={j.kategoria} color={cat(j.kategoria)} />}
             {j.ekipa && <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color ?? 'var(--line)' }} aria-hidden />{j.ekipa}</span>}
           </span>
         </span>
@@ -256,9 +256,10 @@ function JobTable({ list, q, setQ, selected, highlight, fresh, planned }: {
             </tbody>
           </Table>
         )}
-        {open && <div key={selected} className="sticky top-[4.75rem] max-h-[calc(100dvh-5.75rem)] overflow-y-auto overscroll-contain"><JobCard id={selected} highlight={highlight} /></div>}
+        {open && <div key={selected} className="sticky top-[64px] max-h-[calc(100dvh-148px)] overflow-y-auto overscroll-contain"><JobCard id={selected} highlight={highlight} /></div>}
       </div>
       {creating && <JobForm onClose={() => setCreating(false)} />}
+      <TitleCount n={sorted.length} />
     </section>
   );
 }

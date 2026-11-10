@@ -38,7 +38,6 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
     <article className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)] gap-5 px-4 py-4 desk:py-6">
       <div className="grid gap-1">
         <a href="#paszporty" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-5 w-5" />Wróć</a>
-        <p className="text-sm font-semibold text-ink-2">Paszport instalacji</p>
         <h2 className="text-2xl font-extrabold leading-tight">{klient}</h2>
         <p className="flex items-center gap-1.5 text-ink-2"><MapPin className="h-4 w-4 shrink-0" aria-hidden />{[site.nazwa, site.adres, site.miejscowosc].filter(Boolean).join(', ') || 'Obiekt'}</p>
         {client && <a href={`#kl/${client.id}`} className="inline-flex min-h-11 items-center justify-self-start font-semibold text-action hover:underline">Karta klienta</a>}
@@ -69,7 +68,7 @@ export function KartaObiektu({ siteId }: { siteId: string }) {
 
       {client && (client.telefony?.length || client.emaile?.length) ? (
         <section aria-label="Kontakt z klientem" className="flex flex-wrap gap-2">
-          {(client.telefony as string[]).map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-action px-5 font-semibold text-action-ink"><Phone className="h-5 w-5" weight="fill" />{t}</a>)}
+          {(client.telefony as string[]).map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-[4px] border border-line bg-card px-5 font-semibold hover:border-ink-2"><Phone className="h-5 w-5" />{t}</a>)}
           {((client.emaile ?? []) as string[]).map((m) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
         </section>
       ) : null}

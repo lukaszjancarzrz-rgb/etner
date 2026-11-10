@@ -73,22 +73,33 @@ test('samochody: pracownik zgłasza usterkę, admin planuje naprawę; ekipa auta
 
 test('narzędzia: pracownik tylko szuka (wszystkie miejsca); admin w „Edytuj listy” dodaje, przenosi do Magazynu, usuwa', async ({ page, browser }, info) => {
   const tag = `E2E ${info.project.name}`;
+  // telefon: listy miejsc; komputer: jedna tabela (Narzędzie, Miejsce, Auto)
+  const desk = !info.project.name.startsWith('iPhone');
+  const place = (p: Page, nazwa: string, auto: string | null, miejsce = 'Magazyn') => desk
+    ? p.getByRole('table', { name: 'Narzędzia' }).getByRole('row').filter({ hasText: nazwa }).filter({ hasText: miejsce }).filter({ hasText: auto ?? '—' })
+    : p.getByRole('list', { name: auto ? `${auto} · ${miejsce}` : 'Magazyn' }).getByText(nazwa);
   const worker = await as(browser, 'Piotr Kuchta', info);
   await worker.goto('/#narz');
-  await expect(worker.getByRole('list', { name: 'Magazyn' })).toContainText('Drabina 3 m');
+  await expect(place(worker, 'Drabina 3 m', null)).toBeVisible();
   await expect(worker.getByRole('button', { name: /^Edytuj|Dodaj narzędzie/ })).toHaveCount(0); // R43: bez zmian
   await worker.context().close();
 
   await login(page, 'Tomasz Wrona');
   await page.goto('/#narz');
   // bez wyszukiwania: sekcje miejsc, w aucie wg podmiejsca
-  await expect(page.getByRole('list', { name: 'Mała Toyota · Górna półka na regale' })).toContainText('Wkrętarka Makita');
-  await expect(page.getByRole('list', { name: 'Magazyn' })).toContainText('Drabina 3 m');
+  await expect(place(page, 'Wkrętarka Makita', 'Mała Toyota', 'Górna półka na regale')).toBeVisible();
+  await expect(place(page, 'Drabina 3 m', null)).toBeVisible();
   await page.getByLabel('Szukaj narzędzia').fill('wkretarka');
-  const res = page.getByRole('list', { name: 'Wyniki wyszukiwania' });
-  await expect(res.locator('li')).toHaveCount(2);
-  await expect(res).toContainText('Mała Toyota · Górna półka na regale');
-  await expect(res).toContainText('Stary Ducato · W kabinie');
+  if (desk) {
+    await expect(page.getByRole('table', { name: 'Narzędzia' }).locator('tbody tr')).toHaveCount(2);
+    await expect(place(page, 'Wkrętarka Makita', 'Mała Toyota', 'Górna półka na regale')).toBeVisible();
+    await expect(place(page, 'Wkrętarka Makita', 'Stary Ducato', 'W kabinie')).toBeVisible();
+  } else {
+    const res = page.getByRole('list', { name: 'Wyniki wyszukiwania' });
+    await expect(res.locator('li')).toHaveCount(2);
+    await expect(res).toContainText('Mała Toyota · Górna półka na regale');
+    await expect(res).toContainText('Stary Ducato · W kabinie');
+  }
   await page.getByRole('button', { name: 'Wyczyść wyszukiwanie' }).click();
 
   await expect(page.getByRole('button', { name: /^Edytuj:|Dodaj narzędzie/ })).toHaveCount(0); // na co dzień tylko wyszukiwanie
@@ -104,7 +115,7 @@ test('narzędzia: pracownik tylko szuka (wszystkie miejsca); admin w „Edytuj l
   await page.getByRole('option', { name: 'Nad kabiną' }).click();
   await dlg.getByRole('button', { name: 'Zapisz' }).click();
   await expect(dlg).toBeHidden();
-  await expect(page.getByRole('list', { name: 'Nowa Duża Toyota · Nad kabiną' })).toContainText(`${tag} szlifierka`);
+  await expect(place(page, `${tag} szlifierka`, 'Nowa Duża Toyota', 'Nad kabiną')).toBeVisible();
 
   await page.getByRole('button', { name: `Edytuj: ${tag} szlifierka` }).click();
   const ed = page.getByRole('dialog', { name: 'Narzędzie' });
@@ -112,9 +123,9 @@ test('narzędzia: pracownik tylko szuka (wszystkie miejsca); admin w „Edytuj l
   await page.getByRole('option', { name: 'Magazyn' }).click();
   await expect(ed.getByLabel('Gdzie w samochodzie')).toHaveCount(0);
   await ed.getByRole('button', { name: 'Zapisz' }).click();
-  await expect(page.getByRole('list', { name: 'Magazyn' })).toContainText(`${tag} szlifierka`);
+  await expect(place(page, `${tag} szlifierka`, null)).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('list', { name: 'Magazyn' })).toContainText(`${tag} szlifierka`);
+  await expect(place(page, `${tag} szlifierka`, null)).toBeVisible();
 
   await page.getByRole('button', { name: 'Edytuj listy' }).click(); // po odświeżeniu tryb edycji wyłączony
   await page.getByRole('button', { name: `Edytuj: ${tag} szlifierka` }).click();

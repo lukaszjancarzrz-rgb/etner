@@ -289,12 +289,15 @@ function ScheduleColumns() {
       <ol className="divide-y divide-rule rounded-[4px] border border-line bg-card">
         {people.map((p, i) => (
           <li key={p.id} className="grid gap-2 p-3">
+            {/* widoczne podpisy pól; pełne nazwy (z osobą) są w aria-label */}
             <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1">
+              <span aria-hidden className="col-span-full -mb-1 text-sm font-semibold text-ink-2">Nazwa kolumny</span>
               <NameInput p={p} onSave={(nazwa) => void update(p, { nazwa })} />
               <Button variant="ghost" size="icon" aria-label={`W górę: ${p.nazwa}`} disabled={i === 0} onClick={() => reorder(i, -1)}><ArrowUp className="h-5 w-5" /></Button>
               <Button variant="ghost" size="icon" aria-label={`W dół: ${p.nazwa}`} disabled={i === people.length - 1} onClick={() => reorder(i, 1)}><ArrowDown className="h-5 w-5" /></Button>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1">
+              <span aria-hidden className="col-span-full -mb-1 text-sm font-semibold text-ink-2">Konto</span>
               <Select aria-label={`Konto: ${p.nazwa}`} value={p.userId ?? NONE} onValueChange={(v) => void update(p, { userId: v === NONE ? null : v })} options={userOpts} />
               <Button variant={confirm === p.id ? 'danger' : 'ghost'} size={confirm === p.id ? 'md' : 'icon'} aria-label={confirm === p.id ? undefined : `Usuń: ${p.nazwa}`} onClick={() => remove(p)} className={cn(confirm !== p.id && 'text-danger')}>
                 {confirm === p.id ? 'Usunąć?' : <Trash className="h-5 w-5" />}

@@ -1,9 +1,11 @@
 import { PODMIEJSCA } from '@etner/shared';
+import { TitleCount } from '../../core/layout/TopBar.js';
 import { Check, MagnifyingGlass, PencilSimple, Plus, Wrench } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { matches, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { useEntities, type Rec } from '../../core/store.js';
+import { useDesk } from '../../core/layout/status.js';
 import { Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
@@ -12,6 +14,7 @@ import { Search } from '../../core/ui/search.js';
 import { Select } from '../../core/ui/select.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
+import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
 
@@ -33,6 +36,7 @@ export function Narzedzia() {
   const [editing, setEditing] = useState(false);
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState<Rec | 'new' | null>(null);
+  const desk = useDesk();
   const cars = useMemo(() => [...carsList].filter((c) => !c._tmp).sort((a, b) => a.kolejnosc - b.kolejnosc || a.createdAt.localeCompare(b.createdAt)), [carsList]);
   const carMap = useMemo(() => new Map(cars.map((c) => [c.id, c])), [cars]);
   const found = useMemo(() => (q.trim() ? tools.filter((t) => matches(q, t.nazwa)).sort((a, b) => byName(a, b) || placeOf(a, carMap).localeCompare(placeOf(b, carMap), 'pl')) : null), [q, tools, carMap]);
@@ -50,13 +54,15 @@ export function Narzedzia() {
           <Button size="sm" variant="secondary" onClick={() => setEditing(false)}><Check className="h-4 w-4" weight="bold" />Gotowe</Button>
         </div>
       )}
-      {found ? (
+      {found && (!desk || !found.length) ? (
         found.length ? (
           <div className="grid gap-2">
             <SectionTitle count={found.length}>Gdzie szukać</SectionTitle>
             <ul className="grid gap-2" aria-label="Wyniki wyszukiwania">{found.map((t) => <ToolRow key={t.id} t={t} place={placeOf(t, carMap)} onEdit={open} />)}</ul>
           </div>
         ) : <Empty icon={MagnifyingGlass} title="Nie ma takiego narzędzia" hint={admin ? 'Sprawdź pisownię albo dodaj narzędzie w trybie „Edytuj listy”.' : 'Sprawdź pisownię. Brakujące narzędzie dopisuje administrator.'} />
+      ) : desk && tools.length ? (
+        <ToolTable tools={found ?? tools} cars={cars} carMap={carMap} onEdit={open} />
       ) : !tools.length ? (
         <Empty icon={Wrench} title="Lista narzędzi jest pusta" hint={admin ? 'Dodaj narzędzia z samochodów i Magazynu w trybie „Edytuj listy”, żeby każdy wiedział, gdzie ich szukać.' : 'Administrator dopisze narzędzia z samochodów i Magazynu.'} />
       ) : (
@@ -95,9 +101,43 @@ export function Narzedzia() {
           })()}
         </>
       )}
-      {admin && !editing && <div className="flex justify-center"><Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-ink-2"><PencilSimple className="h-4 w-4" />Edytuj listy</Button></div>}
+      {admin && !editing && <div className="flex justify-center desk:justify-start"><Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-ink-2"><PencilSimple className="h-4 w-4" />Edytuj listy</Button></div>}
       {edit && <ToolForm tool={edit === 'new' ? undefined : edit} cars={cars} onClose={() => setEdit(null)} />}
+      <TitleCount n={(found ?? tools).length} />
     </section>
+  );
+}
+
+/** Komputer: jedna tabela wszystkich narzędzi (też wyniki wyszukiwania); domyślnie auta w kolejności listy aut, w aucie wg podmiejsca, Magazyn na końcu. */
+function ToolTable({ tools, cars, carMap, onEdit }: { tools: Rec[]; cars: Rec[]; carMap: Map<string, Rec>; onEdit?: (t: Rec) => void }) {
+  const carAt = useMemo(() => new Map(cars.map((c, i) => [c.id as string, i])), [cars]);
+  const auto = (t: Rec) => (t.carId ? (carMap.get(t.carId)?.nazwa as string | undefined) ?? 'Samochód' : '');
+  const pos = (t: Rec) => (t.carId ? (carAt.get(t.carId) ?? cars.length) * 100 + PODMIEJSCA.indexOf(t.podmiejsce) : 1e6);
+  const list = useMemo(() => [...tools].sort((a, b) => pos(a) - pos(b) || byName(a, b)), [tools, carAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { rows, by } = useSort(list, { nazwa: (t) => t.nazwa, miejsce: (t) => (t.carId ? t.podmiejsce : 'Magazyn'), auto });
+  return (
+    <Table aria-label="Narzędzia" className="max-w-[60rem]">
+      <thead>
+        <tr>
+          <Th sort={by('nazwa')}>Narzędzie</Th>
+          <Th sort={by('miejsce')} className="w-[34%]">Miejsce</Th>
+          <Th sort={by('auto')} className="w-[26%]">Auto</Th>
+          {onEdit && <Th className="w-12"><span className="sr-only">Edycja</span></Th>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((t) => (
+          <Tr key={t.id}>
+            <Td className="font-semibold">{t.nazwa}</Td>
+            <Td>{t.carId ? t.podmiejsce : 'Magazyn'}</Td>
+            <Td className="text-ink-2">{auto(t) || '—'}</Td>
+            {onEdit && <Td pad="px-1">{t._tmp ? <span className="sr-only">wysyłanie</span>
+              : <button type="button" aria-label={`Edytuj: ${t.nazwa}, ${placeOf(t, carMap)}`} onClick={() => onEdit(t)}
+                className="grid h-[calc(var(--row-h)-6px)] w-full place-items-center rounded-[3px] text-ink-2 hover:bg-ink/6 hover:text-ink"><PencilSimple className="h-4 w-4" /></button>}</Td>}
+          </Tr>
+        ))}
+      </tbody>
+    </Table>
   );
 }
 

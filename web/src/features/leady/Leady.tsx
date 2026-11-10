@@ -1,11 +1,12 @@
-import { Handshake, MagnifyingGlass, Phone, Plus } from '@phosphor-icons/react';
+import { CaretDown, Handshake, MagnifyingGlass, Phone, Plus } from '@phosphor-icons/react';
+import { TitleCount } from '../../core/layout/TopBar.js';
 import { fmtZl } from '@etner/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { fmtDay, matches, today, useLoading, useStatusGroup } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Badge, Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
-import { CategoryPill, CatTab, useCatAbbr, useCatColor } from '../../core/ui/category.js';
+import { CatTab, useCatAbbr, useCatColor } from '../../core/ui/category.js';
 import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { cn } from '../../core/ui/cn.js';
 import { Input } from '../../core/ui/input.js';
@@ -23,7 +24,7 @@ export function Leady({ route }: { route: Route }) {
   if (desk) return (
     <div className={cn('mx-auto grid max-w-[1600px] items-start gap-6 px-8 py-5', id && 'grid-cols-[minmax(0,30rem)_minmax(0,1fr)]')}>
       <LeadList selected={id} />
-      {id && <div key={id} className="sticky top-[4.75rem] max-h-[calc(100dvh-5.75rem)] overflow-y-auto overscroll-contain"><LeadCard id={id} highlight={route.highlight} /></div>}
+      {id && <div key={id} className="sticky top-[64px] max-h-[calc(100dvh-96px)] overflow-y-auto overscroll-contain"><LeadCard id={id} highlight={route.highlight} /></div>}
     </div>
   );
   return (
@@ -81,26 +82,34 @@ function LeadList({ selected }: { selected?: string }) {
         q ? <Empty icon={MagnifyingGlass} title="Nic nie znaleziono" hint="Sprawdź pisownię albo wpisz samo nazwisko lub miejscowość." />
           : <Empty icon={Handshake} title="Nie ma jeszcze leadów" hint="Dodaj zapytanie klienta przyciskiem Nowy." />
       )}
-      {sec.zalegle.length > 0 && (
-        <div className="grid gap-2">
-          <SectionTitle count={sec.zalegle.length} className="border-danger text-danger">Zaległe kontakty</SectionTitle>
-          {desk ? <LeadTable label="Zaległe kontakty" list={sec.zalegle} selected={selected} open={open} overdue={day} />
-            : <ul className="grid gap-2">{sec.zalegle.map((l) => <LeadRow key={l.id} l={l} on={l.id === selected} overdue={day} />)}</ul>}
-        </div>
-      )}
-      {SECTIONS.map(({ k, title }) => {
-        const items = sec[k];
-        if (!items.length) return null;
-        const collapsed = k === 'zamkniete' && !closedOpen && !q;
-        return (
-          <div key={k} className="grid gap-2">
-            <SectionTitle count={items.length} toggle={k === 'zamkniete' && !q ? { open: !collapsed, onToggle: () => setClosedOpen((o) => !o) } : undefined}>{title}</SectionTitle>
-            {!collapsed && (desk ? <LeadTable label={title} list={items} selected={selected} open={open} />
-              : <ul className="grid gap-2">{items.map((l) => <LeadRow key={l.id} l={l} on={l.id === selected} />)}</ul>)}
+      {desk ? view.length > 0 && (
+        <LeadTable selected={selected} open={open} groups={[
+          { k: 'zalegle', title: 'Zaległe kontakty', list: sec.zalegle, overdue: day },
+          ...SECTIONS.map(({ k, title }) => ({ k, title, list: sec[k], ...(k === 'zamkniete' && !q && { toggle: { open: closedOpen, onToggle: () => setClosedOpen((o) => !o) } }) })),
+        ].filter((g) => g.list.length)} />
+      ) : (
+        <>
+        {sec.zalegle.length > 0 && (
+          <div className="grid gap-2">
+            <SectionTitle count={sec.zalegle.length} className="border-danger text-danger">Zaległe kontakty</SectionTitle>
+            <ul className="grid gap-2">{sec.zalegle.map((l) => <LeadRow key={l.id} l={l} on={l.id === selected} overdue={day} />)}</ul>
           </div>
-        );
-      })}
+        )}
+        {SECTIONS.map(({ k, title }) => {
+          const items = sec[k];
+          if (!items.length) return null;
+          const collapsed = k === 'zamkniete' && !closedOpen && !q;
+          return (
+            <div key={k} className="grid gap-2">
+              <SectionTitle count={items.length} toggle={k === 'zamkniete' && !q ? { open: !collapsed, onToggle: () => setClosedOpen((o) => !o) } : undefined}>{title}</SectionTitle>
+              {!collapsed && <ul className="grid gap-2">{items.map((l) => <LeadRow key={l.id} l={l} on={l.id === selected} />)}</ul>}
+            </div>
+          );
+        })}
+        </>
+      )}
       {creating && <LeadForm onClose={() => setCreating(false)} />}
+      <TitleCount n={view.length} />
     </section>
   );
 }
@@ -117,16 +126,17 @@ function Next({ l, overdue }: { l: Rec; overdue?: string }) {
   ) : null;
 }
 
-/** Komputer: sekcja leadów jako tabela z sortowaniem; przy otwartej karcie tylko branża, klient, status i kontakt. */
-function LeadTable({ label, list, selected, open, overdue }: { label: string; list: Rec[]; selected?: string; open: boolean; overdue?: string }) {
+type Grupa = { k: string; title: string; list: Rec[]; overdue?: string; toggle?: { open: boolean; onToggle: () => void } };
+/** Komputer: jedna tabela z jednym nagłówkiem kolumn, sekcje jako wiersze grup (sortowanie działa w każdej grupie); przy otwartej karcie tylko branża, klient, status i kontakt. */
+function LeadTable({ groups, selected, open }: { groups: Grupa[]; selected?: string; open: boolean }) {
   const abbr = useCatAbbr();
-  const { rows, by } = useSort(list, {
+  const { rows, by } = useSort(groups.flatMap((g) => g.list), {
     kat: (l) => (l.kategoria ? abbr(l.kategoria) : ''), nr: (l) => l.numer, klient: nazwaOf, temat: (l) => l.temat, miejsc: (l) => l.site?.miejscowosc,
     status: (l) => l.status, wartosc: (l) => l.wartoscGr, kontakt: (l) => l.nastepny,
   }, open ? ['nr', 'temat', 'miejsc', 'wartosc'] : []);
   useEffect(() => { document.querySelector(`a[aria-current="page"][href="#ld/${selected}"]`)?.closest('tr')?.scrollIntoView({ block: 'nearest' }); }, [selected]);
   return (
-    <Table aria-label={label}>
+    <Table aria-label="Leady">
       <thead>
         <tr>
           <Th sort={by('kat')} pad="pl-2 pr-2.5" className="w-14"><span className="sr-only">Branża</span><span aria-hidden>Br.</span></Th>
@@ -139,9 +149,24 @@ function LeadTable({ label, list, selected, open, overdue }: { label: string; li
           <Th sort={by('kontakt')} className="w-[8.5rem]">Kontakt</Th>
         </tr>
       </thead>
-      <tbody>
-        {rows.map((l) => {
+      {groups.map((g, i) => {
+        const label = <>{g.title}<span className="font-sans font-semibold text-ink-2">{g.list.length}</span></>;
+        return (
+        <tbody key={g.k}>
+          <tr>
+            <th colSpan={open ? 4 : 8} scope="rowgroup" className={cn('border-b border-line bg-bg/60 px-2.5 text-left', i > 0 && 'border-t')}>
+              <h2 className={cn('flex h-[var(--row-h)] items-center font-bold', g.overdue && 'text-danger')}>
+                {g.toggle ? (
+                  <button type="button" onClick={g.toggle.onToggle} aria-expanded={g.toggle.open} className="flex h-full flex-1 items-center gap-2 text-left">
+                    {label}<CaretDown className={cn('ml-auto h-4 w-4 text-ink-2 transition-transform duration-200', g.toggle.open && 'rotate-180')} aria-hidden />
+                  </button>
+                ) : <span className="flex items-center gap-2">{label}</span>}
+              </h2>
+            </th>
+          </tr>
+          {(!g.toggle || g.toggle.open) && rows.filter((l) => g.list.includes(l)).map((l) => {
           const on = l.id === selected;
+          const overdue = g.overdue;
           return (
             <Tr key={l.id} href={`#ld/${l.id}`} selected={on} className="scroll-mt-28">
               <Td pad="py-1.5 pr-2.5">{l.kategoria && <><CatTab name={l.kategoria} flush /><span className="sr-only">{l.kategoria}</span></>}</Td>
@@ -161,13 +186,14 @@ function LeadTable({ label, list, selected, open, overdue }: { label: string; li
             </Tr>
           );
         })}
-      </tbody>
+        </tbody>
+        );
+      })}
     </Table>
   );
 }
 
 function LeadRow({ l, on, overdue }: { l: Rec; on: boolean; overdue?: string }) {
-  const cat = useCatColor();
   const nazwa = nazwaOf(l);
   const next = l.nastepny && <Next l={l} overdue={overdue} />;
   return (
@@ -175,6 +201,7 @@ function LeadRow({ l, on, overdue }: { l: Rec; on: boolean; overdue?: string }) 
       <a href={`#ld/${l.id}`} aria-current={on ? 'page' : undefined}
         className={cn('grid grid-cols-[minmax(0,1fr)] gap-1 rounded-[4px] border bg-card px-4 py-3 transition-colors duration-200 hover:border-ink-2', on ? 'border-action ring-2 ring-action/25' : overdue ? 'border-danger/60' : 'border-line')}>
         <span className="flex items-center gap-2 text-sm">
+          {l.kategoria && <><CatTab name={l.kategoria} flush className="-ml-4" /><span className="sr-only">{l.kategoria}</span></>}
           {l._tmp && <span className="font-semibold text-ink-2">zapisywanie</span>}
           <span className="truncate text-ink-2">{l.status}</span>
           {overdue && <Badge tone="warn">zaległe</Badge>}
@@ -183,7 +210,6 @@ function LeadRow({ l, on, overdue }: { l: Rec; on: boolean; overdue?: string }) 
         <span className="truncate text-lg font-extrabold leading-tight">{nazwa}</span>
         <span className="flex items-end gap-2 text-sm text-ink-2">
           <span className="min-w-0 truncate">{[l.temat, l.site?.miejscowosc].filter(Boolean).join(', ')}</span>
-          {l.kategoria && <CategoryPill name={l.kategoria} color={cat(l.kategoria)} className="ml-auto shrink-0" />}
         </span>
       </a>
     </li>

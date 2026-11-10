@@ -1,4 +1,5 @@
 import { BellRinging, Briefcase, CalendarBlank, MapPin, Phone } from '@phosphor-icons/react';
+import { TitleCount } from '../../core/layout/TopBar.js';
 import { useMemo, useState } from 'react';
 import { fmtDay, telHref, today, useDict, useLoading } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
@@ -35,6 +36,7 @@ export function DoSerwisu() {
   const groups: [string, Wiersz[]][] = [['Zaległe', rows.filter((r) => r.f.nastepnySerwis < day)], ['W ciągu 30 dni', rows.filter((r) => r.f.nastepnySerwis >= day)]];
   return (
     <section className={cn('mx-auto grid grid-cols-[minmax(0,1fr)] gap-6', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')} aria-label="Do serwisu">
+      <TitleCount n={rows.length} />
       {!rows.length ? <Empty icon={BellRinging} title="Brak serwisów w najbliższych 30 dniach" hint="Termin następnego serwisu ustawisz w teczce albo przy wpisie serwisowym." /> : (
         groups.map(([title, list]) => !!list.length && (
           <div key={title} className="grid grid-cols-[minmax(0,1fr)] gap-3">
