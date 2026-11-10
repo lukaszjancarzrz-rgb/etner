@@ -215,7 +215,7 @@ Prostokąty z promieniem 3-4 px (przyciski, pola, panele, tabele 4 px; znaczniki
 - **Pasek tytułu:** telefon granat z białym tekstem; komputer tło papieru 95%, kreska dolna.
 
 ### Segmented / Panel / Sheet
-- Segmented: obrys, dzielniki, aktywny tusz na tle papieru (11 px wys. 44). Panel: biel, obrys, 4 px. Sheet: dolne okno 6 px, nakładka granat 50%, cień overlay.
+- Segmented: obrys, dzielniki, aktywny tusz na tle papieru (wysokość 44 px). Panel: biel, obrys, 4 px. Sheet: dolne okno 6 px, nakładka granat 50%, cień overlay.
 
 ## Do's and Don'ts
 
