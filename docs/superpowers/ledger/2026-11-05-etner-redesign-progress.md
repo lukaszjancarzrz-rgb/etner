@@ -25,3 +25,4 @@ R3: review spec ✅ Needs fixes: I1 --field duplicated in system-dark block, mis
 R3: controller full e2e at 5a27e90: 87 passed, 5 skipped, 2 failed (full.spec.ts:124 date assumption — 11.11 holiday, app correct). Fix round 1 dispatched on Fable (I1, M1, M3, M6, e2e date).
 R3: fix round 1/5 (4 addressed, 1 open — e2e date assertion too loose; f909041). Fix round 2 dispatched.
 R3: fix round 2/5 (1 addressed, 0 open; ac69361) — complete (04295a9..ac69361). R4: final screenshots + detector dispatched (Fable).
+R4: final screenshots 61 (shots/final), detector only owner grid. Finish review (Fable): disposition fix — 8 material fixes + owner decisions (PV colour = red of „nowe”, SH/SP/IN, self-host fonts). Summary in sdd finish-review.md.
