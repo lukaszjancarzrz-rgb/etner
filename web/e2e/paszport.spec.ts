@@ -391,9 +391,11 @@ test('Do serwisu: teczka z terminem w 30 dni na liście i w liczniku menu, „Pr
   await expect(row).toContainText(fmt(later));
   await expect(row).toContainText('następny serwis za 20 dni');
 
-  // „Zrób zlecenie serwisowe” → karta nowego zlecenia (serwis, Klimatyzacja, miesiąc terminu)
-  await row.getByRole('button', { name: 'Zrób zlecenie serwisowe' }).click();
+  // dane demo mają otwarte zlecenie serwisowe tej teczki: zamiast przycisku link „Zlecenie Z…” → karta zlecenia (plakietka Serwis)
+  await expect(row.getByRole('button', { name: 'Zrób zlecenie serwisowe' })).toHaveCount(0);
+  await row.getByRole('link', { name: /^Zlecenie Z\d+$/ }).click();
   await expect(page).toHaveURL(/#zl\/[0-9A-Z]{26}$/);
+  await expect(page.getByRole('article').getByText('Serwis', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Wojciech Kolasa', level: 2 })).toBeVisible();
   await expect(page.getByRole('main')).toContainText('serwis');
   await expect(page.getByRole('link', { name: 'Paszport → Klimatyzacja' })).toBeVisible();

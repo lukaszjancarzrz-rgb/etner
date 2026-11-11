@@ -35,3 +35,6 @@ export function byTermin(firstDay: Map<string, string>): (a: Rec, b: Rec) => num
 
 export const fmtDni = (n: number) => `${String(n).replace('.', ',')} ${n === 1 ? 'dzień' : 'dni'}`;
 export const place = (j: JobView) => j.site?.miejscowosc || '';
+
+/** Zlecenie serwisowe: rodzaj „serwis” (wielkość liter bez znaczenia). */
+export const isSerwis = (j: Rec) => /serwis/i.test(j.rodzaj ?? '');
