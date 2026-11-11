@@ -20,3 +20,5 @@ export * from './schemas/magazyn.js';
 export * from './schemas/paszport.js';
 export * from './finanse.js';
 export * from './schemas/finanse.js';
+export * from './place.js';
+export * from './schemas/place.js';
