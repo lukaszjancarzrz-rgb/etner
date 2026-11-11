@@ -1,4 +1,4 @@
-import { Bell, Briefcase, Camera, ClipboardText, Cpu, Eye, FileDoc, FilePdf, FileText, FileXls, FolderSimplePlus, Images, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
+import { Bell, Briefcase, IdentificationCard, Camera, ClipboardText, Cpu, Eye, FileDoc, FilePdf, FileText, FileXls, FolderSimplePlus, Images, PencilSimple, Plus, Receipt, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { addMonths } from '@etner/shared';
 import { fmtDay, markSeen, seenFor, today, useDict, useIsAdmin, useLoading, useMe, useNames } from '../../core/data.js';
@@ -15,7 +15,7 @@ import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia, withoutEchoes } from '../../core/write.js';
-import type { Route } from '../../routes.js';
+import { cameFrom, type Route } from '../../routes.js';
 import { KlientToggle, fileUrl, usePicker } from '../dziennik/Diary.js';
 import { Viewer } from '../dziennik/Viewer.js';
 import { fmtTermin } from '../zlecenia/JobCard.js';
@@ -66,6 +66,8 @@ function Folder({ siteId, kategoria }: { siteId: string; kategoria: string }) {
       <div className="grid gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <BackLink fallback={siteHash(siteId)} />
+          {/* karta paszportu obiektu; gdy z niej przyszliśmy – krok wstecz (bez pętli w historii) */}
+          <a href={siteHash(siteId)} onClick={(e) => { if (cameFrom(siteHash(siteId))) { e.preventDefault(); history.back(); } }} className="inline-flex h-11 items-center gap-2 rounded-[4px] border border-line bg-card px-4 font-semibold hover:border-ink-2"><IdentificationCard className="h-5 w-5" />Karta paszportu</a>
         </div>
         <h2 className="text-2xl font-extrabold leading-tight">{kategoria}</h2>
         <a href={back} className="justify-self-start text-sm font-semibold text-action hover:underline">{client?.nazwa ?? 'Klient'}</a>
