@@ -41,3 +41,5 @@ R4: DESIGN.md + .impeccable/design.json written (7a55de1). Redesign complete.
 - /p/ header: company name removed (stays in footer), logo 104 px on ≥700 px.
 - Job/lead form: „Edytuj klienta” next to „Nowy klient” (ClientForm; submit stopped from bubbling through the portal into the job form).
 - playwright.config: Chromium path → /opt/pw-browsers/chromium (version-independent). e2e: full run had test races (fixed); rerun flaky only (leady contacts count, diary toggle after reload) — passed on repeat.
+Owner 2026-11-11: teczka „Karta paszportu” button (history.back when came from it); phone schedule chips with category tab beside the name. Released.
+- Ruling R86 (owner 2026-11-11): from now on fixes go straight to production after tests/review, no screenshots to the owner and no „tak” prompt for small fixes (supersedes the per-release OK for poprawki).
