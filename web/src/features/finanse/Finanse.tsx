@@ -20,7 +20,7 @@ export function Finanse() {
   const desk = useDesk();
   const [tab, setTab] = useState<'przychody' | 'koszty'>('przychody');
   const [q, setQ] = useState('');
-  const [mies, setMies] = useState(today().slice(0, 7)); // pusty = cały rok
+  const [mies, setMies] = useState(''); // pusty = cały rok (domyślnie: właściciel po imporcie nie widział danych z wcześniejszych miesięcy)
   const [filtr, setFiltr] = useState({ przychody: ALL, koszty: ALL });
   const kat = useDict(tab === 'przychody' ? 'kategoria' : 'kategoria_kosztu');
   const [imp, setImp] = useState(false);
