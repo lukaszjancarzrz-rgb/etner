@@ -2,7 +2,7 @@ import { costCreateSchema, costUpdateSchema, kpirFileSchema, kpirMonthSchema, re
 import type { Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
-import { count } from 'drizzle-orm';
+import { count, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import type { AppDeps } from '../../app.js';
 import { requireAdmin } from '../../core/auth.js';
@@ -89,10 +89,11 @@ export function routes(app: Hono, deps: AppDeps): void {
     return c.json(runOp(db, opId, me(c).id, () => svc.setKpirMonth(db, me(c).id, miesiac, d)).result);
   });
 
-  // Jednorazowe przeniesienie z arkusza (tylko puste tabele); bez ?naprawde=1 próba (zapis wycofany w transakcji).
+  // Jednorazowe przeniesienie z arkusza (tylko gdy brak nieusuniętych przychodów i kosztów); bez ?naprawde=1 próba (zapis wycofany w transakcji).
   const limit = bodyLimit({ maxSize: XLSX_MAX + 64 * 1024, onError: (c) => c.json({ error: 'Plik jest za duży (max 10 MB).' }, 413) });
   app.post('/api/finanse/import-xlsx', admin, limit, async (c) => {
-    const niepuste = () => db.select({ n: count() }).from(revenues).get()!.n + db.select({ n: count() }).from(costs).get()!.n > 0;
+    // usunięte wiersze nie blokują: kilka wpisów dodanych za wcześnie wystarczy usunąć
+    const niepuste = () => db.select({ n: count() }).from(revenues).where(isNull(revenues.deletedAt)).get()!.n + db.select({ n: count() }).from(costs).where(isNull(costs.deletedAt)).get()!.n > 0;
     const zajete = () => new HTTPException(409, { message: 'Finanse mają już dane – przeniesienie tylko do pustych tabel' });
     if (niepuste()) throw zajete();
     const f = ((await c.req.parseBody().catch(() => ({}))) as Record<string, unknown>)['plik'];

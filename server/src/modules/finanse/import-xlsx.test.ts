@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { ne } from 'drizzle-orm';
 import { newId } from '@etner/shared';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
@@ -50,7 +51,7 @@ const post = async (app: ReturnType<typeof createApp>, cookie: string, q = '') =
 };
 
 describe('przeniesienie finansów z arkusza', () => {
-  it('próba nic nie zapisuje, prawdziwy zapis tak; dopasowanie do zlecenia; drugi import 409', async () => {
+  it('próba nic nie zapisuje, prawdziwy zapis tak; dopasowanie do zlecenia; drugi import 409, usunięte wiersze nie blokują', async () => {
     const { deps, app, admin, worker } = await setup();
     const n = () => [revenues, costs, kpirMonths].map((t) => deps.db.select().from(t).all().length);
     expect((await post(app, worker)).status).toBe(403);
@@ -74,6 +75,13 @@ describe('przeniesienie finansów z arkusza', () => {
     const drugi = await post(app, admin, '?naprawde=1');
     expect(drugi.status).toBe(409);
     expect(n()).toEqual([5, 2, 1]);
+    // usunięte wiersze nie blokują przeniesienia; jeden nieusunięty – tak
+    deps.db.update(revenues).set({ deletedAt: new Date().toISOString() }).run();
+    deps.db.update(costs).set({ deletedAt: new Date().toISOString() }).where(ne(costs.nrDokumentu, 'FV/A')).run();
+    expect((await post(app, admin)).status).toBe(409);
+    deps.db.update(costs).set({ deletedAt: new Date().toISOString() }).run();
+    expect((await post(app, admin, '?naprawde=1')).status).toBe(200);
+    expect(n()).toEqual([10, 4, 1]);
     const m = r.filter((x) => x.klient === 'Mieszany').sort((x, y) => x.nettoGr - y.nettoGr);
     expect(m.map((x) => [x.sposob, x.nettoGr, x.nrFaktury, x.uwagi])).toEqual([['bez', 150000, '', 'hydraulika'], ['vat8', 1532407, 'FV/2', 'hydraulika']]);
   });
