@@ -48,6 +48,18 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.post('/api/jobs', admin, async (c) => write(c, await body(c, jobCreateSchema)));
   app.put('/api/jobs/:id', admin, async (c) => write(c, await body(c, jobUpdateSchema), c.req.param('id')));
 
+  // Usunięcie zlecenia założonego przez pomyłkę (miękkie); z historią (dziennik, harmonogram) – 409
+  app.delete('/api/jobs/:id', admin, (c) => {
+    const id = c.req.param('id');
+    if (!svc.get(db, id)) {
+      if (svc.removed(db, id)) return c.json({ ok: true }); // już usunięte: powtórka z kolejki
+      throw new HTTPException(404, { message: 'Nie znaleziono' });
+    }
+    if (svc.hasHistory(db, id)) throw new HTTPException(409, { message: 'Zlecenie ma wpisy w dzienniku albo dni w harmonogramie – zmień status na „Anulowane”.' });
+    svc.remove(db, c.get('user').id, id);
+    return c.json({ ok: true });
+  });
+
   // Zakres prac: zapisuje tylko admin, widzą wszyscy (przez synchronizację).
   const nf = <T>(r: T | undefined): T => { if (!r) throw new HTTPException(404, { message: 'Nie znaleziono' }); return r; };
   const op = <T>(c: Context, opId: string | undefined, fn: () => T) => runOp(db, opId, c.get('user').id, fn).result;

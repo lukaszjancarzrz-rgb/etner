@@ -1,7 +1,7 @@
 import { BellRinging, Briefcase, CalendarBlank, MapPin, Phone } from '@phosphor-icons/react';
 import { TitleCount } from '../../core/layout/TopBar.js';
 import { useMemo, useState } from 'react';
-import { fmtDay, telHref, today, useDict, useLoading } from '../../core/data.js';
+import { fmtDay, telHref, today, useDict, useLoading, useStatusGroup } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
@@ -83,6 +83,10 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
   const cat = useCatColor();
   const status = useDict('status_zlecenia').find((d) => d.grupa === 'aktualne')?.wartosc;
   const [move, setMove] = useState(false);
+  const jobs = useEntities('jobs');
+  const group = useStatusGroup();
+  // otwarte zlecenie serwisowe tej teczki: zamiast przycisku link do niego
+  const open = jobs.find((j) => !j.deletedAt && j.siteId === site.id && j.kategoria === f.kategoria && /serwis/i.test(j.rodzaj ?? '') && group(j.status) !== 'zamkniete');
   const [busy, setBusy] = useState(() => ordered.has(f.id));
   const tel = (client?.telefony as string[] | undefined)?.[0];
   const where = [site.miejscowosc, [site.nazwa, site.adres].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
@@ -120,7 +124,7 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
       <Td><span className="flex items-center gap-2"><span className="font-bold">{fmtDay(f.nastepnySerwis)}</span><SerwisBadge nastepny={f.nastepnySerwis} /></span></Td>
       <Td pad="px-2.5">
         <span className="flex items-center gap-1.5">
-          <Button size="sm" disabled={busy} onClick={() => void zlecenie()}><Briefcase className="h-4 w-4" weight="bold" />Zrób zlecenie serwisowe</Button>
+          {open ? <a href={`#zl/${open.id}`} className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold hover:border-ink-2"><Briefcase className="h-4 w-4" weight="bold" />Zlecenie {open.numer}</a> : <Button size="sm" disabled={busy} onClick={() => void zlecenie()}><Briefcase className="h-4 w-4" weight="bold" />Zrób zlecenie serwisowe</Button>}
           <Button size="sm" variant="secondary" onClick={() => setMove(true)}><CalendarBlank className="h-4 w-4" />Przesuń termin</Button>
           {tel && <a href={telHref(tel)} aria-label={`Zadzwoń: ${tel}`} title={tel} className="inline-flex h-10 w-10 items-center justify-center rounded-[4px] border border-line hover:border-ink-2"><Phone className="h-4 w-4" /></a>}
         </span>
@@ -148,7 +152,7 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
         {note && <span className="text-sm text-ink-2">{note}</span>}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={busy} onClick={() => void zlecenie()}><Briefcase className="h-4 w-4" weight="bold" />Zrób zlecenie serwisowe</Button>
+        {open ? <a href={`#zl/${open.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold hover:border-ink-2"><Briefcase className="h-4 w-4" weight="bold" />Zlecenie {open.numer}</a> : <Button size="sm" disabled={busy} onClick={() => void zlecenie()}><Briefcase className="h-4 w-4" weight="bold" />Zrób zlecenie serwisowe</Button>}
         <Button size="sm" variant="secondary" onClick={() => setMove(true)}><CalendarBlank className="h-4 w-4" />Przesuń termin</Button>
         {tel && <a href={telHref(tel)} aria-label={`Zadzwoń: ${tel}`} className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold hover:border-ink-2"><Phone className="h-4 w-4" />Zadzwoń</a>}
       </div>

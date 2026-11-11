@@ -18,6 +18,7 @@ export const jobs = sqliteTable('jobs', {
   ekipa: text('ekipa'),
   zakres: text('zakres').notNull().default(''),
   uwagiAdmin: text('uwagi_admin').notNull().default(''),
+  krotkiOpis: text('krotki_opis'),
   zamknieteAt: text('zamkniete_at'),
   /** Prywatny kanał Pumble zlecenia (zadanie 18g); brak = jeszcze nie założony. */
   pumbleChannelId: text('pumble_channel_id'),

@@ -1,12 +1,16 @@
-import { ArrowLeft, CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, User } from '@phosphor-icons/react';
+import { CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api.js';
 import { useDesk, useSynced } from '../../core/layout/status.js';
 import { fmtDay, mapsUrl, markSeen, seenFor, seenSettled, telHref, useCrewColor, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { useEntities, useEntity } from '../../core/store.js';
-import { Badge, Empty, NewMark } from '../../core/ui/bits.js';
+import { BackLink, Badge, Empty, NewMark } from '../../core/ui/bits.js';
+import { outbox } from '../../core/outbox.js';
+import { toast } from '../../core/ui/toast.js';
+import { go } from '../../routes.js';
 import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
+import { cn } from '../../core/ui/cn.js';
 import { CatTab } from '../../core/ui/category.js';
 import { Diary } from '../dziennik/Diary.js';
 import { pszHash, siteHash } from '../paszport/Paszport.js';
@@ -14,7 +18,7 @@ import { JobForm } from './JobForm.js';
 import { Pumble } from './Pumble.js';
 import { Scope } from './Scope.js';
 import { CLIENT_FIELDS, JOB_FIELDS, SITE_FIELDS, changedFields } from './changed.js';
-import { fmtDni, jobDays } from './jobs.js';
+import { fmtDni, isSerwis, jobDays } from './jobs.js';
 
 const MON = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 export const fmtTermin = (t?: string | null) => (t ? `${MON[Number(t.slice(5, 7)) - 1]} ${t.slice(0, 4)}` : 'bez terminu');
@@ -30,6 +34,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const loading = useLoading();
   const crew = useCrewColor();
   const [editing, setEditing] = useState(false);
+  const [sure, setSure] = useState(false);
   const days = useMemo(() => jobDays(sched, id), [sched, id]);
   const service = useEntities('service_entries');
   const passports = useEntities('passports');
@@ -74,6 +79,13 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
       <div className="p-4 desk:p-0"><Empty icon={MapPin} title="Nie ma takiego zlecenia" hint="Mogło zostać usunięte. Wróć do listy zleceń."><a href="#zl" className="font-semibold text-action">Lista zleceń</a></Empty></div>
     );
   }
+  // usunięcie pomyłkowego zlecenia: serwer odmówi (409), gdy ma dziennik albo harmonogram; wtedy wiersz wraca (rollback kolejki)
+  function remove() {
+    if (!sure) return setSure(true);
+    void outbox.enqueue({ kind: 'zlecenie', url: `/api/jobs/${id}`, method: 'DELETE', optimistic: (s) => s.remove('jobs', id) })
+      .catch((e: Error) => toast('Nie usunięto zlecenia', { body: e.message, tone: 'error' }));
+    go('#zl');
+  }
   const nav = mapsUrl(site);
   const phones = (client?.telefony as string[] | undefined) ?? [];
   const color = crew(job.ekipa);
@@ -85,14 +97,14 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
 
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
-      <a href="#zl" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action desk:hidden"><ArrowLeft className="h-5 w-5" />Zlecenia</a>
+      <BackLink fallback="#zl" className="desk:hidden" />
       <div className="overflow-hidden rounded-[4px] border border-line bg-card">
         <div className="grid gap-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
                 {job.kategoria && <><CatTab name={job.kategoria} flush className="-ml-5" /><span className="sr-only">{job.kategoria}</span></>}
-                <span className="font-semibold tabular-nums">{job._tmp ? 'zapisywanie' : job.numer}</span><Badge tone="action">{job.status}</Badge>{fj.has('status') && <NewMark sr="nowy status" />}
+                <span className="font-semibold tabular-nums">{job._tmp ? 'zapisywanie' : job.numer}</span>{isSerwis(job) && <Badge tone="ink">Serwis</Badge>}<Badge tone="action">{job.status}</Badge>{fj.has('status') && <NewMark sr="nowy status" />}
               </p>
               <h2 className="mt-1 text-2xl font-extrabold leading-tight text-balance">
                 {client ? <a href={`#kl/${client.id}`} className="hover:text-action">{client.nazwa}</a> : 'Klient'}{fc.has('nazwa') && <> <NewMark sr="nowa nazwa klienta" /></>}
@@ -136,6 +148,12 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
       <Scope jobId={id} disabled={!!job._tmp} since={since} />
       <Pumble job={job} since={since} />
       <Diary ownerType="job" ownerId={id} highlight={highlight} disabled={!!job._tmp} since={since} />
+      {admin && !job._tmp && (
+        <Button variant={sure ? 'danger' : 'ghost'} onClick={remove} className={cn('justify-self-start', !sure && 'text-danger')}>
+          <Trash className="h-4 w-4" />{sure ? 'Na pewno usunąć zlecenie?' : 'Usuń zlecenie'}
+        </Button>
+      )}
+      <a href="#zl" className="inline-flex h-11 items-center justify-self-start font-semibold text-action desk:hidden">Lista zleceń</a>
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}
     </article>
   );

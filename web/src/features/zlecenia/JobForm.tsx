@@ -37,10 +37,10 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
   const [accept, setAccept] = useState(true);
   const acceptId = useId();
 
-  const [f, setF] = useState(pre ? { ...pre, ekipa: NONE, termin: '', rodzaj: rodzaje[0]?.wartosc ?? '', uwagiAdmin: '' } : {
+  const [f, setF] = useState(pre ? { ...pre, ekipa: NONE, termin: '', rodzaj: rodzaje[0]?.wartosc ?? '', uwagiAdmin: '', krotkiOpis: '' } : {
     clientId: job?.clientId ?? '', siteId: job?.siteId ?? '', status: job?.status ?? statusy[0]?.wartosc ?? '',
     ekipa: job?.ekipa ?? NONE, termin: job?.termin ?? '', rodzaj: job?.rodzaj || rodzaje[0]?.wartosc || '', kategoria: job?.kategoria || '',
-    uwagiAdmin: job?.uwagiAdmin ?? '',
+    uwagiAdmin: job?.uwagiAdmin ?? '', krotkiOpis: job?.krotkiOpis ?? '',
   });
   const [nowy, setNowy] = useState<NewClient | null>(null);
   const [err, setErr] = useState<Record<string, string>>({});
@@ -61,7 +61,7 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
 
     const body: Record<string, unknown> = {
       status: f.status, ekipa: f.ekipa === NONE ? null : f.ekipa, termin: f.termin || null, rodzaj: f.rodzaj, kategoria: f.kategoria,
-      uwagiAdmin: f.uwagiAdmin.trim(),
+      uwagiAdmin: f.uwagiAdmin.trim(), krotkiOpis: f.krotkiOpis.trim() || null,
     };
     if (nowy) Object.assign(body, newClientBody(nowy));
     else if (!job || f.clientId !== job.clientId || (f.siteId || null) !== (job.siteId ?? null)) {
@@ -124,6 +124,7 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
               </label>
             </>
           )}
+          <Field label="Krótki opis" hint="Widać go na liście zleceń.">{(id, d) => <Input id={id} aria-describedby={d} maxLength={60} value={f.krotkiOpis} onChange={(e) => set({ krotkiOpis: e.target.value })} placeholder="np. wymiana rekuperatora" />}</Field>
           <Field label="Uwagi admina" hint="Widzą je tylko administratorzy.">{(id, d) => <Textarea id={id} aria-describedby={d} value={f.uwagiAdmin} onChange={(e) => set({ uwagiAdmin: e.target.value })} />}</Field>
           <div className="flex justify-end gap-3 border-t border-line pt-4">
             <Button variant="secondary" onClick={onClose}>Anuluj</Button>

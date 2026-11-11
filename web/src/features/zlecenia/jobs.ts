@@ -35,3 +35,12 @@ export function byTermin(firstDay: Map<string, string>): (a: Rec, b: Rec) => num
 
 export const fmtDni = (n: number) => `${String(n).replace('.', ',')} ${n === 1 ? 'dzień' : 'dni'}`;
 export const place = (j: JobView) => j.site?.miejscowosc || '';
+
+/** Opis zlecenia na liście: krótki opis albo „rodzaj, kategoria” (wtedy `fallback`: szary tekst). */
+export const opisZlecenia = (j: Rec): { text: string; fallback: boolean } => {
+  const t = (j.krotkiOpis ?? '').trim();
+  return t ? { text: t, fallback: false } : { text: [j.rodzaj, j.kategoria].filter(Boolean).join(', '), fallback: true };
+};
+
+/** Zlecenie serwisowe: rodzaj „serwis” (wielkość liter bez znaczenia). */
+export const isSerwis = (j: Rec) => /serwis/i.test(j.rodzaj ?? '');

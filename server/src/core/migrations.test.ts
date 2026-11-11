@@ -25,6 +25,17 @@ function dbUpTo(tag: string) {
 }
 const T = '2026-10-01T10:00:00.000Z';
 
+describe('dziennik migracji', () => {
+  // migrator stosuje migrację tylko gdy jej `when` > ostatnio zastosowanej – inaczej produkcja ją po cichu pomija
+  it('znaczniki `when` rosną ściśle razem z idx', () => {
+    const { entries } = JSON.parse(readFileSync(join(SRC, 'meta', '_journal.json'), 'utf8')) as { entries: { idx: number; when: number }[] };
+    entries.forEach((e, i) => {
+      expect(e.idx).toBe(i);
+      if (i) expect(e.when).toBeGreaterThan(entries[i - 1]!.when);
+    });
+  });
+});
+
 describe('migracje z danymi', () => {
   it('0010: zakupy bez kwoty/sklepu/grupy, Zamówione -> Do kupienia, słowniki miękko usunięte z wpisem w changes', () => {
     const db = dbUpTo('0009_cute_grey_gargoyle');
@@ -98,8 +109,8 @@ describe('migracje z danymi', () => {
       `dict:${(c.prepare("select id from dict where wartosc = 'Fotowoltaika'").get() as { id: string }).id}:update`].sort()); // drugi wpis: 0024 (kolor Fotowoltaiki)
     // pełny wiersz w kształcie Drizzle (telefon podmienia cały rekord)
     const after = (id: string) => JSON.parse(ch.find((x) => x.entity_id === id && x.action === 'update')!.after);
-    // kolumny dodane po 0012 (0013: pumbleChannelId) nie mogły być w tym wierszu
-    expect(Object.keys(after('j1')).sort()).toEqual(Object.keys(getTableColumns(jobs)).filter((k) => k !== 'pumbleChannelId').sort());
+    // kolumny dodane po 0012 (0013: pumbleChannelId, 0025: krotkiOpis) nie mogły być w tym wierszu
+    expect(Object.keys(after('j1')).sort()).toEqual(Object.keys(getTableColumns(jobs)).filter((k) => k !== 'pumbleChannelId' && k !== 'krotkiOpis').sort());
     expect(after('j1')).toMatchObject({ kategoria: 'Inne', rodzaj: 'montaż', uwagiAdmin: 'tajne', updatedAt: T });
     expect(after('j2')).toMatchObject({ rodzaj: 'inne' });
     expect(Object.keys(after('l1')).sort()).toEqual(Object.keys(getTableColumns(leads)).sort());

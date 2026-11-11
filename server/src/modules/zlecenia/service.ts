@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 import { newId, type JobSaveInput } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
@@ -10,6 +10,8 @@ import * as klienci from '../klienci/service.js';
 import * as slowniki from '../slowniki/service.js';
 import * as users from '../uzytkownicy/service.js';
 import { dictRefsFor } from '../../core/dict-refs.js';
+import { diaryEntries } from '../dziennik/schema.js';
+import { scheduleEntries } from '../harmonogram/schema.js';
 import { jobs } from './schema.js';
 
 /** Słowniki: wartości przechowywane w zleceniach (zmiana nazwy, blokada usuwania). */
@@ -146,4 +148,20 @@ export function save(db: Db, userId: string, input: JobSaveInput, out: Outbox = 
 
 function reemit(db: Db, userId: string, entity: 'clients' | 'sites', row: unknown): void {
   if (row) recordChange(db, userId, entity, (row as { id: string }).id, 'update', row, row);
+}
+
+/** Wiersz istnieje, ale jest już usunięty (powtórzone usunięcie z kolejki offline). */
+export const removed = (db: Db, id: string): boolean => !!db.select({ d: jobs.deletedAt }).from(jobs).where(eq(jobs.id, id)).get()?.d;
+
+/** Zlecenie ma wpisy użytkowników w dzienniku (systemowe, bez autora, nie liczą się) albo dni w harmonogramie (wtedy nie usuwamy, tylko „Anulowane”). */
+export const hasHistory = (db: Db, id: string): boolean =>
+  !!db.select({ id: diaryEntries.id }).from(diaryEntries).where(and(eq(diaryEntries.ownerType, 'job'), eq(diaryEntries.ownerId, id), isNull(diaryEntries.deletedAt), isNotNull(diaryEntries.authorId))).limit(1).get()
+  || !!db.select({ id: scheduleEntries.id }).from(scheduleEntries).where(and(eq(scheduleEntries.jobId, id), isNull(scheduleEntries.deletedAt))).limit(1).get();
+
+export function remove(db: Db, userId: string, id: string): void {
+  const old = get(db, id);
+  if (!old) return;
+  const now = new Date().toISOString();
+  const row = db.update(jobs).set({ deletedAt: now, updatedAt: now }).where(eq(jobs.id, id)).returning().get();
+  recordChange(db, userId, 'jobs', id, 'delete', old, row);
 }

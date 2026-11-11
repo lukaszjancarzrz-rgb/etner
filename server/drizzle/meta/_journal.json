@@ -180,8 +180,15 @@
     {
       "idx": 25,
       "version": "6",
-      "when": 1794381953982,
-      "tag": "0025_finanse",
+      "when": 1794383684579,
+      "tag": "0025_krotki_opis",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1794384314044,
+      "tag": "0026_finanse",
       "breakpoints": true
     }
   ]

@@ -6,6 +6,8 @@ import { newId } from '@etner/shared';
 import { seedBase } from '../slowniki/seed.js';
 import { modules } from '../index.js';
 import { addSite, create as newClient } from '../klienci/service.js';
+import { addSystem } from '../dziennik/service.js';
+import { diaryEntries } from '../dziennik/schema.js';
 import { active, forSite, get, jobLabel } from './service.js';
 
 async function setup() {
@@ -128,5 +130,27 @@ describe('zlecenia', () => {
     const { app, worker, k } = await setup();
     expect((await app.request('/api/jobs', req(worker, 'POST', { clientId: k.client.id, status: 'Nowe' }))).status).toBe(403);
     expect((await app.request('/api/jobs/x', req(worker, 'PUT', { status: 'Nowe' }))).status).toBe(403);
+  });
+
+  it('DELETE /api/jobs/:id: admin usuwa puste (miękko, z wpisem w synchronizacji), z dziennikiem 409, powtórka 200, pracownik 403', async () => {
+    const { app, admin, worker, k, deps, a: adm } = await setup();
+    const post = async () => (await app.request('/api/jobs', req(admin, 'POST', { clientId: k.client.id, status: 'Nowe' }))).json();
+    const ids = async () => ((await (await app.request('/api/jobs', req(admin, 'GET'))).json()) as any[]).map((j) => j.id);
+    const [a, b] = [await post(), await post()];
+    expect((await app.request(`/api/jobs/${a.id}`, req(worker, 'DELETE'))).status).toBe(403);
+    expect((await app.request(`/api/jobs/${a.id}`, req(admin, 'DELETE'))).status).toBe(200);
+    expect(await ids()).toEqual([b.id]);
+    expect((await feed(app, admin)).some((c) => c.entity === 'jobs' && c.id === a.id && c.action === 'delete')).toBe(true);
+    expect((await app.request(`/api/jobs/${a.id}`, req(admin, 'DELETE'))).status).toBe(200);
+    const now = new Date().toISOString();
+    deps.db.insert(diaryEntries).values({ id: newId(), ownerType: 'job', ownerId: b.id, authorId: adm.user.id, tekst: 'wpis', createdAt: now, createdBy: null, updatedAt: now }).run();
+    // wpis systemowy (bez autora) nie blokuje usunięcia
+    const c = await post();
+    addSystem(deps.db, { type: 'job', id: c.id }, 'Utworzono z leada');
+    expect((await app.request(`/api/jobs/${c.id}`, req(admin, 'DELETE'))).status).toBe(200);
+    const r = await app.request(`/api/jobs/${b.id}`, req(admin, 'DELETE'));
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toContain('Anulowane');
+    expect(await ids()).toEqual([b.id]);
   });
 });
