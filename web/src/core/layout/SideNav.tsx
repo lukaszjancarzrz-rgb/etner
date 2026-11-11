@@ -1,4 +1,5 @@
 import { inSideNav, navKey, screens, type Route } from '../../routes.js';
+import { zapleczeBadge } from '../../screens/Zaplecze.js';
 import { SignOut } from '@phosphor-icons/react';
 import { moreGroups } from '../../screens/More.js';
 import { logout, useSession } from '../session.js';
@@ -21,9 +22,9 @@ export function SideNav({ route, badges }: { route: Route; badges: Record<string
       <ul className="grid min-h-0 content-start gap-px overflow-y-auto px-[8px] py-[12px]">
         {Object.entries(screens).filter(([k, s]) => (k === 'wiecej' ? more : inSideNav(k, admin)))
           .sort(([ka, a], [kb, b]) => rank(ka, a.adminEnd, admin) - rank(kb, b.adminEnd, admin)).map(([k, s]) => {
-          const on = navKey(route.screen) === k;
+          const on = navKey(route.screen, admin) === k;
           const I = s.icon;
-          const n = badges[k] ?? 0;
+          const n = (k === 'zap' ? zapleczeBadge(badges) : badges[k]) ?? 0;
           return (
             <li key={k}>
               <a href={`#${k}`} aria-current={on ? 'page' : undefined}

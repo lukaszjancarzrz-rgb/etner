@@ -1,11 +1,12 @@
-import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, Toolbox, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
 import { badgeLabel, badgeText } from '../core/badges.js';
 import { useBadges } from '../core/layout/useBadges.js';
 import { logout, useSession } from '../core/session.js';
 import { Button } from '../core/ui/button.js';
 import { useDesk } from '../core/layout/status.js';
 import { Empty, Panel } from '../core/ui/bits.js';
-import { inBottomBar, inSideNav } from '../routes.js';
+import { inBottomBar, inSideNav, screens } from '../routes.js';
+import { zapleczeBadge } from './Zaplecze.js';
 
 const Tile = ({ href, icon: I, title, hint, count = 0, sr = ' bez terminu naprawy' }: { href: string; icon: Icon; title: string; hint: string; count?: number; sr?: string }) => (
   <a href={href} className="flex min-h-16 items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-action/6 focus-visible:outline-offset-[-2px]">
@@ -28,6 +29,7 @@ const GROUPS: { admin?: true; tiles: T[] }[] = [
   { admin: true, tiles: [
     { k: 'leady', icon: Handshake, title: 'Leady', hint: 'Zapytania klientów, kontakty, zlecenie z leada' },
     { k: 'serwis', icon: BellRinging, title: 'Do serwisu', hint: 'Serwisy w 30 dni i zaległe, zlecenie serwisowe' },
+    { k: 'zap', icon: Toolbox, title: 'Zaplecze', hint: 'Samochody, narzędzia, rzeczy nietypowe, Na jutro' },
     { k: 'zad', icon: ListChecks, title: 'Zadania', hint: 'Sprawy biura: grupy, terminy, cykliczne' },
     { k: 'fin', icon: Coins, title: 'Finanse', hint: 'Przychody, koszty, import z KPiR' },
     { k: 'place', icon: Wallet, title: 'Płace', hint: 'Godziny, wypłaty, urlopy, koszty pracowników' },
@@ -40,7 +42,7 @@ const GROUPS: { admin?: true; tiles: T[] }[] = [
 
 /** Kafelki Więcej bez ekranów, które już są w menu: na komputerze w menu bocznym, na telefonie w dolnym pasku. */
 export const moreGroups = (admin: boolean, desk: boolean): T[][] =>
-  GROUPS.filter((g) => !g.admin || admin).map((g) => g.tiles.filter((t) => !(desk ? inSideNav(t.k, admin) : inBottomBar(t.k, admin)))).filter((g) => g.length);
+  GROUPS.filter((g) => !g.admin || admin).map((g) => g.tiles.filter((t) => !(desk ? inSideNav(t.k, admin) : inBottomBar(t.k, admin)) && !(admin && screens[t.k]?.zaplecze))).filter((g) => g.length);
 
 /** Więcej: Paszporty, Samochody, Narzędzia, Rzeczy nietypowe; Leady, Do serwisu, Zadania, Klienci, Użytkownicy (admin); Ustawienia; Na jutro (admin); wylogowanie. */
 export function More() {
@@ -54,7 +56,7 @@ export function More() {
       {groups.map((g) => (
         <Panel key={g[0]!.k} className="divide-y divide-rule overflow-hidden">
           {g.map((t) => <Tile key={t.k} href={`#${t.k}`} icon={t.icon} title={t.title} hint={typeof t.hint === 'string' ? t.hint : t.hint(admin)}
-            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'zad' && { count: badges.zad, sr: badgeLabel('zad', badges.zad ?? 0).replace(',', '') })} {...(t.k === 'leady' && { count: badges.leady, sr: badgeLabel('leady', badges.leady ?? 0).replace(',', '') })} {...(t.k === 'serwis' && { count: badges.serwis, sr: badgeLabel('serwis', badges.serwis ?? 0).replace(',', '') })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
+            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'zap' && { count: zapleczeBadge(badges), sr: ' – nowe' })} {...(t.k === 'zad' && { count: badges.zad, sr: badgeLabel('zad', badges.zad ?? 0).replace(',', '') })} {...(t.k === 'leady' && { count: badges.leady, sr: badgeLabel('leady', badges.leady ?? 0).replace(',', '') })} {...(t.k === 'serwis' && { count: badges.serwis, sr: badgeLabel('serwis', badges.serwis ?? 0).replace(',', '') })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
         </Panel>
       ))}
       {!desk && (

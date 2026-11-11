@@ -409,23 +409,27 @@ test('licznik „Na jutro” w menu pokazuje niezabrane rzeczy pracownika', asyn
   await expect(page.getByRole('link', { name: 'Zakupy', exact: true })).toBeVisible(); // pracownik: bez licznika zakupów
 });
 
-test('admin: Na jutro poza głównym menu (koniec menu bocznego / kafelek w Więcej), adres #jutro działa', async ({ page }, info) => {
+test('admin: Samochody, Narzędzia, Rzeczy nietypowe i Na jutro w Zapleczu (zakładki); adres #jutro działa', async ({ page }, info) => {
   const phone = info.project.name.startsWith('iPhone');
   await loginAdmin(page);
   const nav = page.getByRole('navigation', { name: 'Menu' }).filter({ visible: true });
+  await expect(nav.getByRole('link', { name: /^(Na jutro|Samochody|Narzędzia|Rzeczy nietypowe)/ })).toHaveCount(0);
   if (phone) {
-    await expect(nav.getByRole('link', { name: /^Na jutro/ })).toHaveCount(0);
     await expect(nav.getByRole('listitem')).toHaveCount(4);
     await nav.getByRole('link', { name: /^Więcej/ }).click();
-    await page.getByRole('link', { name: /^Na jutro/ }).click();
+    await page.getByRole('main').getByRole('link', { name: /^Zaplecze/ }).click();
   } else {
-    // właściciel: „Więcej” zawsze na końcu, „Na jutro” tuż nad nim
     await expect(nav.getByRole('listitem').last().getByRole('link')).toHaveText(/^Więcej/);
-    await expect(nav.getByRole('listitem').nth(-2).getByRole('link')).toHaveText(/^Na jutro/);
-    await nav.getByRole('link', { name: /^Na jutro/ }).click();
+    await nav.getByRole('link', { name: /^Zaplecze/ }).click();
   }
+  await expect(page.getByRole('heading', { name: 'Samochody', level: 1 })).toBeVisible();
+  const zak = page.getByRole('navigation', { name: 'Zaplecze' });
+  if (phone) { await zak.getByLabel('Zaplecze').click(); await page.getByRole('option', { name: /^Na jutro/ }).click(); }
+  else await zak.getByRole('radio', { name: /^Na jutro/ }).click();
   await expect(page.getByRole('heading', { name: 'Na jutro', level: 1 })).toBeVisible();
-  if (phone) await expect(nav.getByRole('link', { name: /^Więcej/ })).toHaveAttribute('aria-current', 'page');
+  await expect(nav.getByRole('link', { name: phone ? /^Więcej/ : /^Zaplecze/ })).toHaveAttribute('aria-current', 'page');
+  await page.goto('/#narz');
+  await expect(page.getByRole('heading', { name: 'Narzędzia', level: 1 })).toBeVisible();
 });
 
 test('komputer: Więcej bez ekranów z menu bocznego, z Użytkownikami i Ustawieniami; wylogowanie w menu', async ({ page }, info) => {
@@ -436,7 +440,7 @@ test('komputer: Więcej bez ekranów z menu bocznego, z Użytkownikami i Ustawie
   await side.getByRole('link', { name: /^Więcej/ }).click();
   const main = page.getByRole('main');
   for (const n of ['Klienci', 'Użytkownicy', 'Ustawienia']) await expect(main.getByRole('link', { name: new RegExp(`^${n}`) })).toBeVisible();
-  await expect(main.getByRole('link', { name: /^(Samochody|Leady|Na jutro)/ })).toHaveCount(0);
+  await expect(main.getByRole('link', { name: /^(Samochody|Leady|Na jutro|Zaplecze)/ })).toHaveCount(0);
   await main.getByRole('link', { name: /^Ustawienia/ }).click();
   await expect(side.getByRole('link', { name: /^Więcej/ })).toHaveAttribute('aria-current', 'page');
   await side.getByRole('button', { name: 'Wyloguj' }).click();

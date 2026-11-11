@@ -33,7 +33,7 @@ Szyty na miarę dla jednej firmy instalacyjnej: łączy planowanie ekip, dokumen
 ## Brand Commitments
 - Nazwa: ETNER, hasło „Inteligentny wybór”. Logo firmy: `web/public/logo.png` (znak: okrąg turkus→błękit z kropkami u góry i dołu, dach błękitny, granatowy „impuls”; napis „ET” błękitny, „NER” granatowy), znak wektorowo w `web/public/icon.svg`.
 - Właściciel chce wyglądu profesjonalnego systemu ERP, nie „oczywiście wygenerowanego przez AI”.
-- Decyzje właściciela (2026-11-05): zostaje delikatna kratka w tle; wszystko „nowe” oznaczone na czerwono; menu bez grupowania (obecna kolejność); hasło „INTELIGENTNY WYBÓR” w logo czytelne (większe); na komputerze listy jako tabele z sortowaniem, na telefonie karty.
+- Decyzje właściciela (2026-11-05): zostaje delikatna kratka w tle; wszystko „nowe” oznaczone na czerwono; menu bez grupowania (obecna kolejność) – wyjątek 2026-11-11: u admina „Zaplecze” (Samochody, Narzędzia, Rzeczy nietypowe, Na jutro jako zakładki; pracownik bez zmian) i Paszporty w menu bocznym; hasło „INTELIGENTNY WYBÓR” w logo czytelne (większe); na komputerze listy jako tabele z sortowaniem, na telefonie karty.
 
 ## Evidence on Hand
 - Dane demo w aplikacji (tryb DEMO); prawdziwe dane tylko na produkcji, nigdy w repozytorium.

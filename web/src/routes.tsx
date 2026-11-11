@@ -1,6 +1,7 @@
-import { BellRinging, Briefcase, CalendarDots, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, Briefcase, CalendarDots, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, Toolbox, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
 import { lazy, useSyncExternalStore, type ComponentType } from 'react';
 import { More } from './screens/More.js';
+import { Zaplecze } from './screens/Zaplecze.js';
 
 /** `parts`: odkodowane segmenty parametru, gdy jest ich kilka (np. `#psz/<siteId>/<kategoria>`; w kategorii może być „/” i „~”). */
 export type Route = { screen: string; param?: string; highlight?: string; parts?: string[] };
@@ -22,7 +23,8 @@ export function parseHash(hash: string): Route {
  * `nav`: brak = dolny pasek i menu boczne; 'side' = tylko menu boczne i kafelek w Więcej; false = poza menu. `admin` = tylko admin (inni: „Brak dostępu”).
  * `adminEnd`: u admina poza dolnym paskiem, na końcu menu bocznego i kafelków Więcej (pracownik bez zmian).
  */
-export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true; adminEnd?: true; moreOnly?: true };
+export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true; adminEnd?: true; moreOnly?: true; zaplecze?: true; adminSide?: true };
+/** `adminSide`: ekran z Więcej, który u admina jest w menu bocznym komputera. `zaplecze`: u admina zamiast osobnej pozycji w menu – zakładka ekranu „Zaplecze” (pracownik bez zmian; adresy ekranów te same). */
 
 // Ekrany ładowane osobno (mniejszy pierwszy pakiet JS); `preload` = pobranie pakietu bez renderu.
 const lazyScreen = (f: () => Promise<{ default: ComponentType<{ route: Route }> }>) => Object.assign(lazy(f), { preload: f });
@@ -47,15 +49,16 @@ const Klienci = lazyScreen(() => import('./features/klienci/Klienci.js').then((m
 /** Ekrany w kolejności menu. */
 export const screens: Record<string, Screen> = {
   harm: { title: 'Harmonogram', icon: CalendarDots, component: Harmonogram },
-  jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true }, // admin rzadko: koniec menu
+  jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true, zaplecze: true }, // admin rzadko: koniec menu
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
   leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
   serwis: { title: 'Do serwisu', icon: BellRinging, component: DoSerwisu, nav: 'side', admin: true },
-  paszporty: { title: 'Paszporty', icon: IdentificationCard, component: Paszporty, nav: 'side', moreOnly: true },
+  paszporty: { title: 'Paszporty', icon: IdentificationCard, component: Paszporty, nav: 'side', moreOnly: true, adminSide: true },
   zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
-  auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side' },
-  narz: { title: 'Narzędzia', icon: Wrench, component: Narzedzia, nav: 'side' },
-  mag: { title: 'Rzeczy nietypowe', icon: Package, component: Magazyn, nav: 'side' },
+  zap: { title: 'Zaplecze', icon: Toolbox, component: Zaplecze, nav: 'side', admin: true },
+  auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side', zaplecze: true },
+  narz: { title: 'Narzędzia', icon: Wrench, component: Narzedzia, nav: 'side', zaplecze: true },
+  mag: { title: 'Rzeczy nietypowe', icon: Package, component: Magazyn, nav: 'side', zaplecze: true },
   zad: { title: 'Zadania', icon: ListChecks, component: Zadania, nav: 'side', admin: true },
   fin: { title: 'Finanse', icon: Coins, component: Finanse, nav: 'side', admin: true },
   place: { title: 'Płace', icon: Wallet, component: Place, nav: 'side', admin: true },
@@ -82,10 +85,10 @@ export const useRoute = (): Route =>
 export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.nav === undefined && !(admin && screens[k]!.adminEnd);
 
 /** Czy ekran jest w menu bocznym komputera (bez Więcej). */
-export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && !screens[k]!.moreOnly && (!screens[k]!.admin || admin);
+export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && (!screens[k]!.moreOnly || (admin && !!screens[k]!.adminSide)) && (!screens[k]!.admin || admin) && !(admin && screens[k]!.zaplecze);
 
-/** Ekran podświetlany w menu: `ld` (karta leada) → Leady, `psz` (karta paszportu obiektu, teczka) → Więcej, `kl` i ekrany tylko z Więcej → Więcej. */
-export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : screen === 'psz' ? 'wiecej' : screen === 'kl' || screens[screen]?.moreOnly ? 'wiecej' : screen);
+/** Ekran podświetlany w menu: u admina ekrany Zaplecza → Zaplecze; `ld` (karta leada) → Leady, `psz` (karta paszportu obiektu, teczka) → Więcej (u admina Paszporty), `kl` i ekrany tylko z Więcej → Więcej. */
+export const navKey = (screen: string, admin = false): string => (admin && screens[screen]?.zaplecze ? 'zap' : screen === 'ld' ? 'leady' : screen === 'psz' || (admin && screen === 'paszporty') ? (admin ? 'paszporty' : 'wiecej') : screen === 'kl' || screens[screen]?.moreOnly ? 'wiecej' : screen);
 
 // poprzedni adres w aplikacji (np. po zapisie wpisu: „wstecz”, gdy przyszliśmy z teczki – bez podwójnego wpisu historii)
 let prevHash = '';
