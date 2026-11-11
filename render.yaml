@@ -67,7 +67,9 @@ services:
         value: mailto:etner@etner-instalacje.pl
       - key: PUMBLE_API_KEY
         sync: false
-      # E-mail (np. zaległe kontakty z leadami); puste SMTP_HOST lub MAIL_FROM = e-maile wyłączone.
+      # E-mail (np. zaległe kontakty z leadami): BREVO_API_KEY (HTTPS, zalecane – Render ogranicza porty SMTP) albo SMTP_*; MAIL_FROM = nadawca. Puste = e-maile wyłączone.
+      - key: BREVO_API_KEY
+        sync: false
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

@@ -15,3 +15,20 @@ export function smtpMailerFromEnv(env: NodeJS.ProcessEnv): Mailer | undefined {
   });
   return async (m) => { await t.sendMail({ from: env.MAIL_FROM, ...m }); };
 }
+
+/** Brevo (HTTPS API, port 443 – nie blokowany jak SMTP na Render): BREVO_API_KEY + MAIL_FROM (nadawca potwierdzony w Brevo). */
+export function brevoMailerFromEnv(env: NodeJS.ProcessEnv, f: typeof fetch = fetch): Mailer | undefined {
+  if (!env.BREVO_API_KEY || !env.MAIL_FROM) return undefined;
+  return async (m) => {
+    const r = await f('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY!, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ sender: { email: env.MAIL_FROM, name: 'ETNER' }, to: [{ email: m.to }], subject: m.subject, textContent: m.text, htmlContent: m.html, ...(m.replyTo && { replyTo: { email: m.replyTo } }) }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!r.ok) throw new Error(`Brevo ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  };
+}
+
+/** Brevo, gdy jest klucz; inaczej SMTP; brak obu = e-maile wyłączone. */
+export const mailerFromEnv = (env: NodeJS.ProcessEnv): Mailer | undefined => brevoMailerFromEnv(env) ?? smtpMailerFromEnv(env);

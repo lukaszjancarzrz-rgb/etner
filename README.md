@@ -94,6 +94,7 @@ Zbierz wartości z listy niżej, zanim założysz Blueprint. Wklejasz je tylko w
 | Zmienna | Skąd wziąć |
 |---|---|
 | `PUMBLE_API_KEY` | Pumble → **Apps** → dodatek **„API Keys”** → nowy klucz (zob. „Pumble” wyżej) |
+| `BREVO_API_KEY` | klucz API Brevo (brevo.com → SMTP & API → API Keys); gdy ustawiony, e-maile idą przez Brevo (HTTPS) zamiast SMTP – Render blokuje/ogranicza porty SMTP |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | dane serwera poczty od dostawcy skrzynki (np. home.pl, Gmail z hasłem aplikacji); `MAIL_FROM` = adres nadawcy |
 | `BASE_URL` | własna domena aplikacji, np. `https://app.etner-instalacje.pl` (krok 6); puste = adres `onrender.com` |
 | `SHEETS_ID`, `GOOGLE_SA_JSON` | nocny eksport tabel do arkusza Google (`deploy/README-odtworzenie.md`) |

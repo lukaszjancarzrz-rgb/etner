@@ -8,7 +8,7 @@ import { migrate, openDb } from './core/db.js';
 import { pruneCron, registerCron } from './core/cron.js';
 import { closeStreams } from './core/sync.js';
 import { vapidFromEnv, webPushSender } from './core/notify.js';
-import { smtpMailerFromEnv } from './core/mail.js';
+import { mailerFromEnv } from './core/mail.js';
 import { modulesOf } from './core/registry.js';
 import { pumbleClient, type PumbleClient } from './core/pumble.js';
 import { fakePumble } from './core/pumble-fake.js';
@@ -79,7 +79,7 @@ const deps = {
   version: process.env.APP_VERSION ?? pkg.version, db, files, secret,
   demoAccounts: demo ? () => demoAccounts(db) : undefined,
   pumble,
-  mailer: smtpMailerFromEnv(process.env), baseUrl: process.env.BASE_URL ?? process.env.RENDER_EXTERNAL_URL,
+  mailer: mailerFromEnv(process.env), baseUrl: process.env.BASE_URL ?? process.env.RENDER_EXTERNAL_URL,
   push: webPushSender(vapid, process.env.VAPID_SUBJECT), vapidPublic: vapid.publicKey,
 };
 const app = createApp(deps, modules);
