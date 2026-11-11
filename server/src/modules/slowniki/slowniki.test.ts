@@ -25,6 +25,15 @@ async function setup() {
 const put = (app: any, rodzaj: string, cookie: string, items: unknown[], extra: object = {}) =>
   app.request(`/api/dict/${rodzaj}`, { method: 'PUT', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ items, ...extra }) });
 
+describe('statusy zleceń', () => {
+  it('są stałe: PUT /api/dict/status_zlecenia → 403, wartości bez zmian', async () => {
+    const { deps, app, admin } = await setup();
+    const n = list(deps.db, 'status_zlecenia').length;
+    expect((await put(app, 'status_zlecenia', admin, [{ wartosc: 'Nowe', grupa: 'aktualne' }])).status).toBe(403);
+    expect(list(deps.db, 'status_zlecenia')).toHaveLength(n);
+  });
+});
+
 describe('seed', () => {
   it('jest idempotentny i tworzy firmę ETNER', async () => {
     const { deps } = await setup();
@@ -100,15 +109,11 @@ describe('słowniki', () => {
     const entryId = newId();
     db.insert(scheduleEntries).values({ id: entryId, dzien: '2026-10-22', personId: p.id, rodzaj: 'kod', kod: 'L4', createdAt: t, updatedAt: t }).run();
     const items = (rodzaj: string, from: string, to: string) => list(db, rodzaj as never).map((r) => ({ id: r.id, wartosc: r.wartosc === from ? to : r.wartosc, grupa: r.grupa, kolor: r.kolor, platne: r.platne }));
-    const before = list(db, 'status_zlecenia').find((r) => r.wartosc === 'Rozliczone')!;
-
-    for (const [rodzaj, from, to] of [['status_zlecenia', 'Rozliczone', 'Rozliczone (FV)'], ['status_leada', 'Przyjęta', 'Wygrana'], ['ekipa', 'ekipa Marek', 'ekipa Marka'],
+    for (const [rodzaj, from, to] of [['status_leada', 'Przyjęta', 'Wygrana'], ['ekipa', 'ekipa Marek', 'ekipa Marka'],
       ['kod_nieobecnosci', 'L4', 'Chorobowe'], ['kategoria', 'Elektryka', 'Elektryczne'], ['zrodlo', 'Telefon', 'Telefonicznie']] as const) {
       expect((await put(app, rodzaj, admin, items(rodzaj, from, to))).status).toBe(200);
     }
-    expect(list(db, 'status_zlecenia').find((r) => r.wartosc === 'Rozliczone (FV)')!.id).toBe(before.id); // ten sam wiersz
-    expect(getJob(db, job.id)).toMatchObject({ status: 'Rozliczone (FV)', kategoria: 'Elektryczne', ekipa: 'ekipa Marka' });
-    expect(groupOf(db, 'status_zlecenia', getJob(db, job.id)!.status)).toBe('zamkniete');
+    expect(getJob(db, job.id)).toMatchObject({ status: 'Rozliczone', kategoria: 'Elektryczne', ekipa: 'ekipa Marka' }); // statusy zleceń stałe (403)
     expect(getLead(db, lead.id)).toMatchObject({ status: 'Wygrana', zrodlo: 'Telefonicznie' });
     expect(groupOf(db, 'status_leada', 'Wygrana')).toBe('zamkniete');
     expect(getUser(db, w.user.id)!.ekipa).toBe('ekipa Marka');
@@ -137,7 +142,7 @@ describe('słowniki', () => {
     expect(list(deps.db, 'ekipa').map((r) => r.wartosc)).toContain('ekipa Bartek'); // nic się nie zmieniło
     expect(getUser(deps.db, w.user.id)!.ekipa).toBe('ekipa Bartek');
     expect((await put(app, 'ekipa', admin, [...keep, { wartosc: 'ekipa Bartek' }])).status).toBe(200); // bez id, po tekście: zostaje
-    for (const r of ['status_zlecenia', 'status_leada', 'status_zadania', 'status_zakupu']) expect((await put(app, r, admin, [])).status).toBe(400);
+    for (const r of ['status_leada', 'status_zadania', 'status_zakupu']) expect((await put(app, r, admin, [])).status).toBe(400);
     expect((await put(app, 'status_zakupu', admin, [{ wartosc: 'Do kupienia' }, { wartosc: 'Zamówione' }, { wartosc: 'Kupione' }])).status).toBe(400);
     expect((await put(app, 'grupa_zadan', admin, [])).status).toBe(200);
   });

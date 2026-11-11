@@ -27,6 +27,8 @@ export function routes(app: Hono, { db }: AppDeps): void {
     const rodzaj = dictRodzajSchema.safeParse(c.req.param('rodzaj'));
     const body = dictPutSchema.safeParse(await c.req.json().catch(() => null));
     if (!rodzaj.success) throw new HTTPException(400, { message: 'Nieznany rodzaj słownika' });
+    // właściciel 2026-11-11: statusy zleceń stałe (automat harmonogramu rozpoznaje je po nazwie)
+    if (rodzaj.data === 'status_zlecenia') throw new HTTPException(403, { message: 'Statusów zleceń nie można zmieniać' });
     if (!body.success) throw new HTTPException(400, { message: body.error.issues[0]?.message ?? 'Błędne dane' });
     const values = body.data.items.map((i) => i.wartosc);
     if (new Set(body.data.items.map(dictKey(rodzaj.data))).size !== values.length) {

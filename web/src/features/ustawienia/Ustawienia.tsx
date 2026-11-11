@@ -356,7 +356,7 @@ function Dictionaries() {
 
   return (
     <Card title="Słowniki" icon={BookOpen} hint="Listy wyboru w formularzach. Zmiana nazwy zmienia ją też we wszystkich zapisanych rekordach. Usuwając wartość w użyciu, wybierasz, na co ją zamienić.">
-      <Field label="Słownik">{(id) => <Select id={id} value={rodzaj} onValueChange={switchTo} options={DICT_RODZAJE.map((r) => ({ value: r, label: DICT_LABEL[r] ?? r }))} />}</Field>
+      <Field label="Słownik">{(id) => <Select id={id} value={rodzaj} onValueChange={switchTo} options={DICT_RODZAJE.filter((r) => r !== 'status_zlecenia').map((r) => ({ value: r, label: DICT_LABEL[r] ?? r }))} />}</Field>
       {DICT_HINT[rodzaj] && <p className="rounded-[4px] bg-action/8 px-3 py-2 text-sm">{DICT_HINT[rodzaj]}</p>}
       {czyn && <Field label="Kategoria" hint="Lista do odhaczenia we wpisie serwisowym tej kategorii.">{(id, d) => <Select id={id} aria-describedby={d} value={katNow || undefined} onValueChange={(k) => { setKat(k); setErr(''); }} options={kats.map((k) => ({ value: k, label: k }))} />}</Field>}
       <ol className="divide-y divide-rule rounded-[4px] border border-line" aria-label={`Wartości: ${DICT_LABEL[rodzaj]}${czyn ? `, ${katNow}` : ''}`}>
