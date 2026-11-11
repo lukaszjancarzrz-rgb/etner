@@ -210,9 +210,12 @@ function Morning() {
 
 const DAY_MS = 86_400_000;
 function Backups() {
-  const [k, setK] = useState<{ eksport: string | null; zdjecia: string | null } | null>(null);
+  type K = { eksport: string | null; zdjecia: string | null; dysk?: { calyB: number; wolneB: number; bazaB: number } | null };
+  const [k, setK] = useState<K | null>(null);
   const [err, setErr] = useState('');
-  useEffect(() => { api<{ eksport: string | null; zdjecia: string | null }>('/api/settings/kopie').then(setK, (e) => setErr(msg(e))); }, []);
+  useEffect(() => { api<K>('/api/settings/kopie').then(setK, (e) => setErr(msg(e))); }, []);
+  const mb = (b: number) => (b >= 1e9 ? `${(b / 1e9).toLocaleString('pl-PL', { maximumFractionDigits: 1 })} GB` : `${Math.round(b / 1e6).toLocaleString('pl-PL')} MB`);
+  const d = k?.dysk, zajete = d ? d.calyB - d.wolneB : 0, proc = d && d.calyB ? Math.round((zajete / d.calyB) * 100) : 0;
   const row = (label: string, at: string | null | undefined, hint: string) => {
     const old = !!at && Date.now() - Date.parse(at) > 2 * DAY_MS;
     return (
@@ -231,6 +234,14 @@ function Backups() {
         <dl className="grid gap-3">
           {row('Eksport do arkusza Google', k?.eksport, 'Codziennie o 2:30, wszystkie tabele.')}
           {row('Kopia zdjęć', k?.zdjecia, 'Codziennie o 3:00, nowe pliki do zapasowego magazynu.')}
+          {d && (
+            <div className="grid gap-1 border-t border-line pt-3">
+              <dt className="font-semibold">Miejsce na dysku</dt>
+              <dd className={cn('text-sm', proc >= 80 ? 'font-semibold text-danger' : 'text-ok')}>Zajęte {mb(zajete)} z {mb(d.calyB)} ({proc}%){proc >= 80 ? ' – czas powiększyć dysk w Render' : ''}</dd>
+              <dd className="h-2 overflow-hidden rounded-full bg-field" aria-hidden><span className={cn('block h-full', proc >= 80 ? 'bg-danger' : 'bg-ok')} style={{ width: `${proc}%` }} /></dd>
+              <dd className="text-xs text-ink-2">W tym baza danych: {mb(d.bazaB)}. Zdjęcia są osobno (Cloudflare R2), nie zajmują tego dysku.</dd>
+            </div>
+          )}
         </dl>
       )}
     </Card>

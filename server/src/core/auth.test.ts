@@ -242,10 +242,10 @@ describe('uprawnienia', () => {
     expect((await put('24:00', a)).status).toBe(400);
     expect((await put('06:30', a)).status).toBe(200);
     expect(await (await get(app, '/api/settings/rano', a)).json()).toEqual({ godzina: '06:30' });
-    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ eksport: null, zdjecia: null });
+    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ eksport: null, zdjecia: null, dysk: null });
     const at = '2026-10-21T01:30:00.000Z';
     deps.db.insert(settings).values({ key: 'kopia_eksport_at', value: at, updatedAt: at }).run();
-    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ eksport: at, zdjecia: null });
+    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ eksport: at, zdjecia: null, dysk: null });
   });
 });
 

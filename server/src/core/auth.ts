@@ -1,4 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { statfsSync, statSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { Hono, MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -176,5 +178,15 @@ export function mountAuth(app: Hono, deps: AppDeps): void {
       .onConflictDoUpdate({ target: settings.key, set: { value: godzina, updatedAt: now } }).run();
     return c.json({ godzina });
   });
-  app.get('/api/settings/kopie', requireAdmin(db), (c) => c.json({ eksport: setting('kopia_eksport_at'), zdjecia: setting('kopia_zdjec_at') }));
+  // dysk z bazą (Render: /var/data): zajęte i całość dysku, sama baza z plikami -wal/-shm; baza w pamięci (testy) = null
+  const dysk = () => {
+    const f = db.$client.name;
+    if (!f || f === ':memory:') return null;
+    const size = (p: string) => { try { return statSync(p).size; } catch { return 0; } };
+    try {
+      const s = statfsSync(dirname(f));
+      return { calyB: s.blocks * s.bsize, wolneB: s.bavail * s.bsize, bazaB: size(f) + size(`${f}-wal`) + size(`${f}-shm`) };
+    } catch { return null; }
+  };
+  app.get('/api/settings/kopie', requireAdmin(db), (c) => c.json({ eksport: setting('kopia_eksport_at'), zdjecia: setting('kopia_zdjec_at'), dysk: dysk() }));
 }
