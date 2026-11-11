@@ -2,7 +2,8 @@ import * as S from '@radix-ui/react-select';
 import { CaretDown, Check } from '@phosphor-icons/react';
 import { cn } from './cn.js';
 
-export type Option = { value: string; label: string };
+/** `count`: czerwony znacznik z liczbą (jak w menu), też w polu po wybraniu. */
+export type Option = { value: string; label: string; count?: number };
 
 export function Select({ value, onValueChange, options, placeholder, id, className, 'aria-label': label, 'aria-describedby': describedBy, 'aria-invalid': invalid }: {
   'aria-label'?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean; value?: string; onValueChange: (v: string) => void; options: Option[]; placeholder?: string; id?: string; className?: string;
@@ -18,7 +19,7 @@ export function Select({ value, onValueChange, options, placeholder, id, classNa
           <S.Viewport className="p-1">
             {options.map((o) => (
               <S.Item key={o.value} value={o.value} className="flex h-11 cursor-pointer items-center justify-between gap-3 rounded-[3px] px-3 outline-none data-[highlighted]:bg-action/10 data-[state=checked]:font-semibold">
-                <S.ItemText>{o.label}</S.ItemText>
+                <S.ItemText>{o.count ? <span className="inline-flex items-center gap-2">{o.label}<span aria-hidden className="min-w-[22px] rounded-[3px] bg-new px-1.5 py-0.5 text-center text-xs font-bold leading-4 tabular-nums text-white">{o.count > 99 ? '99+' : o.count}</span><span className="sr-only">: {o.count}</span></span> : o.label}</S.ItemText>
                 <S.ItemIndicator><Check className="h-4 w-4 text-action" /></S.ItemIndicator>
               </S.Item>
             ))}

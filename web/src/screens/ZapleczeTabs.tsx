@@ -12,7 +12,7 @@ export default function ZapleczeTabs({ screen, badges }: { screen: string; badge
   return (
     <nav aria-label="Zaplecze" className={desk ? 'mx-auto max-w-[1400px] px-8 pt-5' : 'mx-auto max-w-3xl px-4 pt-4'}>
       {desk ? <Segmented label="Zaplecze" value={screen} onChange={(k) => go(`#${k}`)} options={opts} className="max-w-3xl" />
-        : <Select aria-label="Zaplecze" value={screen} onValueChange={(k) => go(`#${k}`)} options={opts.map((o) => ({ value: o.v, label: o.count ? `${o.label} (${o.count})` : o.label }))} />}
+        : <Select aria-label="Zaplecze" value={screen} onValueChange={(k) => go(`#${k}`)} options={opts.map((o) => ({ value: o.v, label: o.label, count: o.count }))} />}
     </nav>
   );
 }

@@ -2,6 +2,7 @@ import { inBottomBar, screens, type Route } from '../../routes.js';
 import { useIsAdmin } from '../data.js';
 import { badgeLabel, badgeText } from '../badges.js';
 import { cn } from '../ui/cn.js';
+import { zapleczeBadge } from '../../screens/Zaplecze.js';
 
 export function BottomNav({ route, badges }: { route: Route; badges: Record<string, number> }) {
   const admin = useIsAdmin();
@@ -12,7 +13,7 @@ export function BottomNav({ route, badges }: { route: Route; badges: Record<stri
         {items.map(([k, s]) => {
           const on = route.screen === k || (k === 'wiecej' && !!screens[route.screen] && !inBottomBar(route.screen, admin)); // ekrany spoza paska są w Więcej
           const I = s.icon;
-          const n = (k === 'wiecej' ? badges.auta : badges[k]) ?? 0; // telefon: Samochody są w Więcej
+          const n = (k === 'wiecej' ? (admin ? zapleczeBadge(badges) : badges.auta) : badges[k]) ?? 0; // telefon: Samochody (u admina całe Zaplecze) są w Więcej
           return (
             <li key={k}>
               <a href={`#${k}`} aria-current={on ? 'page' : undefined}
@@ -21,7 +22,7 @@ export function BottomNav({ route, badges }: { route: Route; badges: Record<stri
                   <I className="h-6 w-6" weight={on ? 'fill' : 'regular'} />
                   {n > 0 && <span aria-hidden className="absolute -top-1 left-[calc(50%+0.4rem)] min-w-5 rounded-[3px] bg-new px-1.5 py-0.5 text-center text-[11px] font-bold leading-none tabular-nums text-white ring-2 ring-card">{badgeText(n)}</span>}
                 </span>
-                <span className="max-w-full truncate px-0.5 tracking-[0.01em]" aria-hidden={n > 0 || undefined}>{s.title}</span>{n > 0 && <span className="sr-only">{s.title}{badgeLabel(k, n)}</span>}
+                <span className="max-w-full truncate px-0.5 tracking-[0.01em]" aria-hidden={n > 0 || undefined}>{s.title}</span>{n > 0 && <span className="sr-only">{s.title}{badgeLabel(k === 'wiecej' && admin ? 'zap' : k, n)}</span>}
               </a>
             </li>
           );

@@ -19,3 +19,4 @@ Owner 2026-11-11: admin menu — „Zaplecze” (auta, narz, mag, jutro as tabs 
 Owner 2026-11-11: status „Do rozliczenia” counts as active (groupOf override server+client, production dict row says zamkniete and the status dictionary is locked); Zlecenia: own section „Do rozliczenia” under Aktualne (phone section, desktop second table in Aktualne). Released (R86).
 Owner 2026-11-11: phone layout — Finanse Przychody/Koszty no longer wider than the screen (grid minmax(0,1fr) on list/form); Płace phone: Godziny one month at a time with large fields per person, TabelaSum (Urlopy, Podsumowanie) as cards on phone; verified by Pixel 7 screenshots on the local copy. Released (R86).
 Owner 2026-11-11: Zaplecze tabs show red count badges (Segmented option count; phone Select keeps „(n)”). Released (R86).
+Owner 2026-11-11: phone — Select options support red count badges (Zaplecze list + trigger); admin bottom „Więcej” badge = Zaplecze sum. Released (R86).
