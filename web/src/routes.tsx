@@ -1,4 +1,4 @@
-import { BellRinging, Briefcase, CalendarDots, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, Briefcase, CalendarDots, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
 import { lazy, useSyncExternalStore, type ComponentType } from 'react';
 import { More } from './screens/More.js';
 
@@ -32,6 +32,7 @@ const Zakupy = lazyScreen(() => import('./features/zakupy/Zakupy.js').then((m) =
 const NaJutro = lazyScreen(() => import('./features/na-jutro/NaJutro.js').then((m) => ({ default: m.NaJutro })));
 const Leady = lazyScreen(() => import('./features/leady/Leady.js').then((m) => ({ default: m.Leady })));
 const Zadania = lazyScreen(() => import('./features/zadania/Zadania.js').then((m) => ({ default: m.Zadania })));
+const Finanse = lazyScreen(() => import('./features/finanse/Finanse.js').then((m) => ({ default: m.Finanse })));
 const Uzytkownicy = lazyScreen(() => import('./features/uzytkownicy/Uzytkownicy.js').then((m) => ({ default: m.Uzytkownicy })));
 const Ustawienia = lazyScreen(() => import('./features/ustawienia/Ustawienia.js').then((m) => ({ default: m.Ustawienia })));
 const Samochody = lazyScreen(() => import('./features/samochody/Samochody.js').then((m) => ({ default: m.Samochody })));
@@ -55,6 +56,7 @@ export const screens: Record<string, Screen> = {
   narz: { title: 'Narzędzia', icon: Wrench, component: Narzedzia, nav: 'side' },
   mag: { title: 'Rzeczy nietypowe', icon: Package, component: Magazyn, nav: 'side' },
   zad: { title: 'Zadania', icon: ListChecks, component: Zadania, nav: 'side', admin: true },
+  fin: { title: 'Finanse', icon: Coins, component: Finanse, nav: 'side', admin: true },
   uz: { title: 'Użytkownicy', icon: UserGear, component: Uzytkownicy, nav: 'side', admin: true, moreOnly: true },
   ust: { title: 'Ustawienia', icon: GearSix, component: Ustawienia, nav: 'side', moreOnly: true },
   wiecej: { title: 'Więcej', icon: DotsThreeCircle, component: More },

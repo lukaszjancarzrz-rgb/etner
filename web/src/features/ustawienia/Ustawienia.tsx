@@ -22,6 +22,7 @@ import { Templates } from './Listy.js';
 import { LeadyEmail } from '../leady/LeadyEmail.js';
 import { Import } from './Import.js';
 import { Przeniesienie } from './Przeniesienie.js';
+import { FinanseUstawienia } from './FinanseUstawienia.js';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Brak połączenia z serwerem.');
 
@@ -46,6 +47,7 @@ export function Ustawienia() {
           <Dictionaries />
           <Import />
           <Przeniesienie />
+          <FinanseUstawienia />
           <ErrorLog />
         </div>
       )}
