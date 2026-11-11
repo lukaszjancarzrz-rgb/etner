@@ -34,3 +34,10 @@ Owner 2026-11-10: optimize usage — rules from now on: subagents default to Son
 R4: final fix wave a6da1c5..96c9c54 re-review (Sonnet) all addressed. Ready for release pending owner OK; DESIGN.md (documenter) after.
 Owner 2026-11-10: „Tak” — redesign released to produkcja (migration 0024 data-only).
 R4: DESIGN.md + .impeccable/design.json written (7a55de1). Redesign complete.
+## Owner 2026-11-10/11: production check notes → controller fixes (d48a6f4), released to produkcja (no migration)
+- Zadania: desktop one table per list (title + count), phone lists separated by 2 px ink rule.
+- Ruling R85 (owner chose „Lista + karty”): no teczki without a founded passport — Paszporty list only founded passports; client card shows „Obiekt nie ma paszportu” + „Załóż paszport”; job card „Paszport” → site card when none. Do serwisu/reminders unchanged (still count folders without passport).
+- „Wróć” (BackLink, history.back with fallback) on teczka, site card, client card; teczka tab switch uses location.replace → job → teczka → Wróć returns to the job.
+- /p/ header: company name removed (stays in footer), logo 104 px on ≥700 px.
+- Job/lead form: „Edytuj klienta” next to „Nowy klient” (ClientForm; submit stopped from bubbling through the portal into the job form).
+- playwright.config: Chromium path → /opt/pw-browsers/chromium (version-independent). e2e: full run had test races (fixed); rerun flaky only (leady contacts count, diary toggle after reload) — passed on repeat.
