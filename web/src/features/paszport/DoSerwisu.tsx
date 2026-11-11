@@ -38,10 +38,10 @@ export function DoSerwisu() {
     <section className={cn('mx-auto grid grid-cols-[minmax(0,1fr)] gap-6', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')} aria-label="Do serwisu">
       <TitleCount n={rows.length} />
       {!rows.length ? <Empty icon={BellRinging} title="Brak serwisów w najbliższych 30 dniach" hint="Termin następnego serwisu ustawisz w teczce albo przy wpisie serwisowym." /> : (
-        groups.map(([title, list]) => !!list.length && (
+        desk ? <SerwisTable groups={groups} /> : groups.map(([title, list]) => !!list.length && (
           <div key={title} className="grid grid-cols-[minmax(0,1fr)] gap-3">
             <SectionTitle count={list.length}>{title}</SectionTitle>
-            {desk ? <SerwisTable title={title} list={list} /> : <ul className="grid grid-cols-[minmax(0,1fr)] gap-3" aria-label={title}>{list.map((r) => <Row key={r.f.id} {...r} />)}</ul>}
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-3" aria-label={title}>{list.map((r) => <Row key={r.f.id} {...r} />)}</ul>
           </div>
         ))
       )}
@@ -49,13 +49,13 @@ export function DoSerwisu() {
   );
 }
 
-/** Komputer: tabela grupy z sortowaniem; akcje w ostatniej kolumnie. */
-function SerwisTable({ title, list }: { title: string; list: Wiersz[] }) {
-  const { rows, by } = useSort(list, {
+/** Komputer: jedna tabela (jeden nagłówek) z wierszami grup „Zaległe” / „W ciągu 30 dni”, jak w Leadach; sortowanie w grupach. */
+function SerwisTable({ groups }: { groups: [string, Wiersz[]][] }) {
+  const { rows, by } = useSort(groups.flatMap(([, l]) => l), {
     klient: (r) => r.client?.nazwa, obiekt: (r) => [r.site.miejscowosc, r.site.nazwa, r.site.adres].filter(Boolean).join(' '), kat: (r) => r.f.kategoria, termin: (r) => r.f.nastepnySerwis,
   });
   return (
-    <Table aria-label={title}>
+    <Table aria-label="Do serwisu">
       <thead>
         <tr>
           <Th sort={by('klient')} className="w-[16%]">Klient</Th>
@@ -65,7 +65,16 @@ function SerwisTable({ title, list }: { title: string; list: Wiersz[] }) {
           <Th className="w-[30rem]">Akcje</Th>
         </tr>
       </thead>
-      <tbody>{rows.map((r) => <Row key={r.f.id} {...r} desk />)}</tbody>
+      {groups.filter(([, l]) => l.length).map(([title, list], i) => (
+        <tbody key={title} aria-label={title}>
+          <tr>
+            <th colSpan={5} scope="rowgroup" className={cn('border-b border-line bg-bg/60 px-2.5 text-left', i > 0 && 'border-t')}>
+              <h2 className={cn('flex h-[var(--row-h)] items-center gap-2 font-bold', title === 'Zaległe' && 'text-danger')}>{title}<span className="font-sans font-semibold text-ink-2">{list.length}</span></h2>
+            </th>
+          </tr>
+          {rows.filter((r) => list.includes(r)).map((r) => <Row key={r.f.id} {...r} desk />)}
+        </tbody>
+      ))}
     </Table>
   );
 }
