@@ -15,7 +15,7 @@ import { useDesk } from '../../core/layout/status.js';
 import type { Route } from '../../routes.js';
 import { fmtTermin, JobCard } from './JobCard.js';
 import { JobForm } from './JobForm.js';
-import { byTermin, isSerwis, useJobs, type JobView } from './jobs.js';
+import { byTermin, isSerwis, opisZlecenia, useJobs, type JobView } from './jobs.js';
 
 const GROUPS = [
   { g: 'aktualne', title: 'Aktualne' },
@@ -69,7 +69,7 @@ function JobList({ selected, highlight }: { selected?: string; highlight?: strin
   }, [scope]);
   const list = useMemo(() => [...jobs.values()]
     .filter((j) => !serwisowe || isSerwis(j))
-    .filter((j) => !q || matches(q, j.numer, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.status, j.ekipa, ...(scopeText.get(j.id) ?? [])))
+    .filter((j) => !q || matches(q, j.numer, j.krotkiOpis, j.client?.nazwa, j.site?.miejscowosc, j.site?.adres, j.status, j.ekipa, ...(scopeText.get(j.id) ?? [])))
     .sort(byTermin(firstDay)), [jobs, q, serwisowe, scopeText, firstDay]);
 
   if (desk && !loading) return <JobTable list={list} q={q} setQ={setQ} serwisowe={serwisowe} setSerwisowe={setSerwisowe} selected={selected} highlight={highlight} fresh={fresh} planned={planned} />;
@@ -125,6 +125,7 @@ const byMonth = (items: JobView[]): [string, JobView[]][] => {
 
 function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe: number; missing: boolean; color?: string }) {
   const nazwa = j.client?.nazwa ?? j.newClient?.nazwa ?? 'Klient';
+  const opis = opisZlecenia(j);
   return (
     <li>
       <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined}
@@ -132,8 +133,7 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
         {/* plakietki zawijają się pod numer na wąskim telefonie (bez przewijania w poziomie) */}
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           {j.kategoria && <><CatTab name={j.kategoria} flush className="-ml-4" /><span className="sr-only">{j.kategoria}</span></>}
-          <span className="font-semibold tabular-nums text-ink-2">{j._tmp ? 'zapisywanie' : j.numer}</span>
-          <span className="min-w-0 truncate text-ink-2">{j.status}</span>
+          <span className="min-w-0 truncate text-ink-2">{j._tmp ? 'zapisywanie' : j.status}</span>
           <span className="ml-auto flex flex-wrap justify-end gap-1.5">
             {isSerwis(j) && <Badge tone="ink">Serwis</Badge>}
             {nowe > 0 && <Badge tone="new">{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</Badge>}
@@ -141,6 +141,7 @@ function JobRow({ j, on, nowe, missing, color }: { j: JobView; on: boolean; nowe
           </span>
         </span>
         <span className="truncate text-lg font-extrabold leading-tight">{nazwa}</span>
+        <span className={cn('truncate text-sm', opis.fallback ? 'text-ink-2' : 'font-semibold')}>{opis.text}<span className="sr-only">, {j.numer}</span></span>
         <span className="flex items-end gap-2 text-sm text-ink-2">
           {j.site?.miejscowosc && <span className="truncate">{j.site.miejscowosc}</span>}
           <span className="ml-auto flex shrink-0 flex-col items-end gap-1">
@@ -187,7 +188,7 @@ function JobTable({ list, q, setQ, serwisowe, setSerwisowe, selected, highlight,
   const inKat = list.filter((j) => !kat || j.kategoria === kat);
   const rows = inKat.filter((j) => group(j.status) === zakres);
   const { rows: sorted, by } = useSort(rows, {
-    kat: (j) => (j.kategoria ? abbr(j.kategoria) : ''), nr: (j) => j.numer, klient: nazwa, miejsc: (j) => j.site?.miejscowosc,
+    kat: (j) => (j.kategoria ? abbr(j.kategoria) : ''), opis: (j) => opisZlecenia(j).text.toLowerCase(), klient: nazwa, miejsc: (j) => j.site?.miejscowosc,
     status: (j) => j.status, ekipa: (j) => j.ekipa, termin: (j) => j.termin,
     uwagi: (j) => (fresh.get(j.id) ?? 0) * 2 + Number(group(j.status) === 'aktualne' && !planned.has(j.id)),
   }, selected ? ['miejsc', 'ekipa'] : []); // przy otwartej karcie te kolumny są ukryte, więc nie sortują
@@ -200,16 +201,17 @@ function JobTable({ list, q, setQ, serwisowe, setSerwisowe, selected, highlight,
           <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-3.5 h-5 w-5 -translate-y-1/2 text-ink-2" />
           <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Klient, miejscowość, numer" className="pl-10" />
         </label>
-        <Segmented label="Zakres" value={zakres} onChange={setZakres}
+        {/* stała szerokość: liczby przy zakresach zmieniają się z branżą i przesuwały kafelki obok */}
+        <Segmented label="Zakres" value={zakres} onChange={setZakres} className="w-[26rem] tabular-nums"
           options={GROUPS.map(({ g, title }) => ({ v: g, label: `${title} ${inKat.filter((j) => group(j.status) === g).length}` }))} />
         <div role="radiogroup" aria-label="Branża" className="flex h-11 items-center gap-0.5 rounded-[4px] border border-line bg-card px-1">
           <button type="button" role="radio" aria-checked={!kat} onClick={() => setKat(undefined)}
-            className={cn('h-8 rounded-[3px] px-2.5 text-sm font-semibold', !kat ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/6 hover:text-ink')}>Wszystkie</button>
+            className={cn('h-8 rounded-[3px] border border-transparent px-2.5 text-sm font-semibold', !kat ? 'bg-ink text-bg' : 'text-ink-2 hover:bg-ink/6 hover:text-ink')}>Wszystkie</button>
           {kats.map((k) => {
             const on = kat === k.wartosc;
             return (
               <button key={k.id} type="button" role="radio" aria-checked={on} aria-label={k.wartosc} title={k.wartosc} onClick={() => setKat(on ? undefined : k.wartosc)}
-                className={cn('grid h-8 place-items-center rounded-[3px] px-1 transition-opacity', on ? 'bg-ink/10 outline-2 -outline-offset-2 outline-ink' : kat ? 'opacity-45 hover:opacity-100' : 'hover:bg-ink/6')}>
+                className={cn('grid h-8 place-items-center rounded-[3px] border border-transparent px-1 transition-opacity', on ? 'bg-ink/10 outline-2 -outline-offset-2 outline-ink' : kat ? 'opacity-45 hover:opacity-100' : 'hover:bg-ink/6')}>
                 <CatTab name={k.wartosc} />
               </button>
             );
@@ -227,7 +229,7 @@ function JobTable({ list, q, setQ, serwisowe, setSerwisowe, selected, highlight,
             <thead>
               <tr>
                 <Th sort={by('kat')} pad="pl-2 pr-2.5" className="w-14"><span className="sr-only">Branża</span><span aria-hidden>Br.</span></Th>
-                <Th sort={by('nr')} className="w-[5.5rem]">Nr</Th>
+                <Th sort={by('opis')} className="w-[16rem]">Krótki opis</Th>
                 <Th sort={by('klient')}>Klient</Th>
                 {!open && <Th sort={by('miejsc')} className="w-[18%]">Miejscowość</Th>}
                 <Th sort={by('status')} className="w-[8.5rem]">Status</Th>
@@ -243,7 +245,7 @@ function JobTable({ list, q, setQ, serwisowe, setSerwisowe, selected, highlight,
                 return (
                   <Tr key={j.id} href={`#zl/${j.id}`} selected={on} className="scroll-mt-28">
                     <Td pad="py-1.5 pr-2.5">{j.kategoria && <><CatTab name={j.kategoria} flush /><span className="sr-only">{j.kategoria}</span></>}</Td>
-                    <Td className="font-extrabold">{j._tmp ? 'zapisywanie' : j.numer}</Td>
+                    <Td className={cn(opisZlecenia(j).fallback ? 'text-ink-2' : 'font-semibold')} title={opisZlecenia(j).text}>{j._tmp ? 'zapisywanie' : opisZlecenia(j).text}</Td>
                     <Td>
                       {/* tekst dla czytnika na końcu linku: pierwszy fragment linku musi być widoczny (cel kliknięcia) */}
                       <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined} className="font-bold hover:text-action">

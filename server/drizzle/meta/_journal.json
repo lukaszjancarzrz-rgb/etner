@@ -176,6 +176,13 @@
       "when": 1794300000000,
       "tag": "0024_kolor_fotowoltaiki",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1794383684579,
+      "tag": "0025_krotki_opis",
+      "breakpoints": true
     }
   ]
 }

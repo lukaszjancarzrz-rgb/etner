@@ -18,6 +18,8 @@ const fields = {
   ekipa: txt.min(1).nullish(),
   zakres: txt,
   uwagiAdmin: txt,
+  /** Krótki opis na liście zleceń (np. „wymiana rekuperatora”). */
+  krotkiOpis: txt.max(60, 'Najwyżej 60 znaków').nullish(),
 };
 
 const defaults = { rodzaj: txt.default(''), kategoria: txt.default(''), zakres: txt.default(''), uwagiAdmin: txt.default('') };

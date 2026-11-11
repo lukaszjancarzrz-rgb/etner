@@ -98,8 +98,8 @@ describe('migracje z danymi', () => {
       `dict:${(c.prepare("select id from dict where wartosc = 'Fotowoltaika'").get() as { id: string }).id}:update`].sort()); // drugi wpis: 0024 (kolor Fotowoltaiki)
     // pełny wiersz w kształcie Drizzle (telefon podmienia cały rekord)
     const after = (id: string) => JSON.parse(ch.find((x) => x.entity_id === id && x.action === 'update')!.after);
-    // kolumny dodane po 0012 (0013: pumbleChannelId) nie mogły być w tym wierszu
-    expect(Object.keys(after('j1')).sort()).toEqual(Object.keys(getTableColumns(jobs)).filter((k) => k !== 'pumbleChannelId').sort());
+    // kolumny dodane po 0012 (0013: pumbleChannelId, 0025: krotkiOpis) nie mogły być w tym wierszu
+    expect(Object.keys(after('j1')).sort()).toEqual(Object.keys(getTableColumns(jobs)).filter((k) => k !== 'pumbleChannelId' && k !== 'krotkiOpis').sort());
     expect(after('j1')).toMatchObject({ kategoria: 'Inne', rodzaj: 'montaż', uwagiAdmin: 'tajne', updatedAt: T });
     expect(after('j2')).toMatchObject({ rodzaj: 'inne' });
     expect(Object.keys(after('l1')).sort()).toEqual(Object.keys(getTableColumns(leads)).sort());

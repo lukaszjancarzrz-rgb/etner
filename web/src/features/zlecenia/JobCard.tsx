@@ -1,10 +1,10 @@
-import { ArrowLeft, CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
+import { CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api.js';
 import { useDesk, useSynced } from '../../core/layout/status.js';
 import { fmtDay, mapsUrl, markSeen, seenFor, seenSettled, telHref, useCrewColor, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { useEntities, useEntity } from '../../core/store.js';
-import { Badge, Empty, NewMark } from '../../core/ui/bits.js';
+import { BackLink, Badge, Empty, NewMark } from '../../core/ui/bits.js';
 import { outbox } from '../../core/outbox.js';
 import { toast } from '../../core/ui/toast.js';
 import { go } from '../../routes.js';
@@ -97,7 +97,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
 
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
-      <a href="#zl" className="inline-flex h-11 items-center gap-2 justify-self-start font-semibold text-action desk:hidden"><ArrowLeft className="h-5 w-5" />Zlecenia</a>
+      <BackLink fallback="#zl" className="desk:hidden" />
       <div className="overflow-hidden rounded-[4px] border border-line bg-card">
         <div className="grid gap-4 p-5">
           <div className="flex items-start justify-between gap-3">
@@ -153,6 +153,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
           <Trash className="h-4 w-4" />{sure ? 'Na pewno usunąć zlecenie?' : 'Usuń zlecenie'}
         </Button>
       )}
+      <a href="#zl" className="inline-flex h-11 items-center justify-self-start font-semibold text-action desk:hidden">Lista zleceń</a>
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}
     </article>
   );

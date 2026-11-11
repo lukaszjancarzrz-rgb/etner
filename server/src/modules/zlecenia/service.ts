@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 import { newId, type JobSaveInput } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
@@ -153,9 +153,9 @@ function reemit(db: Db, userId: string, entity: 'clients' | 'sites', row: unknow
 /** Wiersz istnieje, ale jest już usunięty (powtórzone usunięcie z kolejki offline). */
 export const removed = (db: Db, id: string): boolean => !!db.select({ d: jobs.deletedAt }).from(jobs).where(eq(jobs.id, id)).get()?.d;
 
-/** Zlecenie ma wpisy w dzienniku albo dni w harmonogramie (wtedy nie usuwamy, tylko „Anulowane”). */
+/** Zlecenie ma wpisy użytkowników w dzienniku (systemowe, bez autora, nie liczą się) albo dni w harmonogramie (wtedy nie usuwamy, tylko „Anulowane”). */
 export const hasHistory = (db: Db, id: string): boolean =>
-  !!db.select({ id: diaryEntries.id }).from(diaryEntries).where(and(eq(diaryEntries.ownerType, 'job'), eq(diaryEntries.ownerId, id), isNull(diaryEntries.deletedAt))).limit(1).get()
+  !!db.select({ id: diaryEntries.id }).from(diaryEntries).where(and(eq(diaryEntries.ownerType, 'job'), eq(diaryEntries.ownerId, id), isNull(diaryEntries.deletedAt), isNotNull(diaryEntries.authorId))).limit(1).get()
   || !!db.select({ id: scheduleEntries.id }).from(scheduleEntries).where(and(eq(scheduleEntries.jobId, id), isNull(scheduleEntries.deletedAt))).limit(1).get();
 
 export function remove(db: Db, userId: string, id: string): void {
