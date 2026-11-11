@@ -9,16 +9,21 @@ import { openRevenue } from './RevenueHost.js';
 // shortcut: dopasowanie po nazwie wartości słownika (jak jobStatusFromLead); po zmianie nazwy statusu przestaje działać – przejść na flagę w słowniku
 const rozliczone = (s: string) => s.trim().toLowerCase() === 'rozliczone';
 
+/** Podpowiedź przychodu ze zlecenia: klient, miejscowość, branża, opis i kwota z leada (jeśli zlecenie powstało z leada). */
+export function prefillZlecenia(job: Rec): Partial<Rec> {
+  const lead = store.get('leads', job.leadId);
+  return {
+    jobId: job.id, kategoria: job.kategoria, klient: store.get('clients', job.clientId)?.nazwa ?? '', miejscowosc: store.get('sites', job.siteId)?.miejscowosc ?? '',
+    opis: `${job.rodzaj ?? ''} ${job.kategoria ?? ''}`.trim(), kwotaGr: (lead?.wartoscGr as number | null | undefined) || undefined,
+  };
+}
+
 /** Po zapisie zlecenia ze zmianą statusu na „Rozliczone” (i bez przychodu): przychód od razu (ustawienie + kwota z leada) albo okienko z podpowiedzią. */
 export async function przychodPoRozliczeniu(job: Rec, nowyStatus: string): Promise<void> {
   if (!rozliczone(nowyStatus) || rozliczone(String(job.status ?? ''))) return;
   if (store.all('revenues').some((r) => r.jobId === job.id && !r.deletedAt)) return;
-  const lead = store.get('leads', job.leadId);
-  const kwotaGr = (lead?.wartoscGr as number | null | undefined) || undefined;
-  const prefill: Partial<Rec> = {
-    jobId: job.id, kategoria: job.kategoria, klient: store.get('clients', job.clientId)?.nazwa ?? '', miejscowosc: store.get('sites', job.siteId)?.miejscowosc ?? '',
-    opis: `${job.rodzaj ?? ''} ${job.kategoria ?? ''}`.trim(), kwotaGr,
-  };
+  const prefill = prefillZlecenia(job);
+  const kwotaGr = prefill.kwotaGr as number | undefined;
   const dialog = () => openRevenue({ prefill, fromJob: true });
   if (!kwotaGr) return dialog();
   let s: { autoPrzychod: boolean; domyslnySposob: Sposob };

@@ -91,3 +91,21 @@ export function statystyki(entries: Rec[], jobs: Rec[], rok: string) {
   const rows = (m: typeof kat) => [...m].map(([nazwa, v]) => ({ nazwa, zlecen: v.zlecenia.size, dni: v.dni, srednio: v.dni / v.zlecenia.size, udzial: razem ? v.dni / razem : 0 })).sort((a, b) => b.dni - a.dni);
   return { kategorie: rows(kat), ekipy: rows(eki), krzyz, razem };
 }
+
+export type WynikZlecenia = { przychod: number; materialy: number; dni: number; robocizna: number; wynik: number; marza: number | null };
+
+/** Wynik zlecenia (gr): przychody netto (bez zwrotu VAT) − materiały (szacunek z przychodów) − robocizna (osobodni z harmonogramu × stawka, szacunek). */
+export function wynikZlecenia(jobId: string, revenues: Rec[], entries: Rec[], stawkaGr: number): WynikZlecenia {
+  const rev = revenues.filter((r) => live(r) && r.jobId === jobId && r.sposob !== 'zwrot');
+  const przychod = rev.reduce((s, r) => s + (r.nettoGr as number), 0);
+  const materialy = rev.reduce((s, r) => s + ((r.materialyGr as number | null) ?? 0), 0);
+  const dni = entries.filter((e) => live(e) && e.jobId === jobId).reduce((s, e) => s + (e.polDnia ? 0.5 : 1), 0);
+  const robocizna = Math.round(dni * stawkaGr), wynik = przychod - materialy - robocizna;
+  return { przychod, materialy, dni, robocizna, wynik, marza: przychod ? wynik / przychod : null };
+}
+
+/** Zlecenia z przychodem w danym roku (miesiąc przychodu) z ich wynikiem. */
+export function wynikiZlecen(jobs: Rec[], revenues: Rec[], entries: Rec[], stawkaGr: number, rok: string) {
+  const ids = new Set(revenues.filter((r) => live(r) && r.jobId && r.sposob !== 'zwrot' && miesiacWiersza(r)?.startsWith(rok)).map((r) => r.jobId as string));
+  return jobs.filter((j) => live(j) && ids.has(j.id as string)).map((job) => ({ job, ...wynikZlecenia(job.id as string, revenues, entries, stawkaGr) }));
+}

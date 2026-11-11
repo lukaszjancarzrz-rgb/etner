@@ -1,15 +1,17 @@
 import { SPOSOBY, SPOSOB_LABEL, type Sposob } from '@etner/shared';
 import { Coins, FileXls } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { parseZl } from '../leady/model.js';
+import { setStawka } from '../finanse/stawka.js';
 import { ApiError, api } from '../../core/api.js';
 import { Button } from '../../core/ui/button.js';
 import { Checkbox } from '../../core/ui/checkbox.js';
-import { Field } from '../../core/ui/input.js';
+import { Field, Input } from '../../core/ui/input.js';
 import { Select } from '../../core/ui/select.js';
 import { toast } from '../../core/ui/toast.js';
 import { Card } from './card.js';
 
-type Ust = { autoPrzychod: boolean; domyslnySposob: Sposob };
+type Ust = { autoPrzychod: boolean; domyslnySposob: Sposob; stawkaOsobodniaGr: number };
 type Wynik = { przychody: number; dopasowane: number; doPrzejrzenia: number; koszty: number; kpirMiesiace: number };
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Brak połączenia z serwerem.');
 
@@ -48,6 +50,7 @@ export function FinanseUstawienia() {
             <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold">
               <Checkbox checked={u.autoPrzychod} onCheckedChange={(v) => save({ autoPrzychod: v === true })} />Dodawaj przychód automatycznie
             </label>
+            <Stawka u={u} save={save} />
             <Field label="Domyślny sposób">{(id) => <Select id={id} value={u.domyslnySposob} onValueChange={(v) => save({ domyslnySposob: v as Sposob })} options={SPOSOBY.map((v) => ({ value: v, label: SPOSOB_LABEL[v] }))} />}</Field>
           </div>
         )}
@@ -74,4 +77,16 @@ export function FinanseUstawienia() {
       </Card>
     </>
   );
+}
+
+/** Stawka osobodnia (zł) do szacunku robocizny w wyniku zlecenia (do czasu modułu Płace); zapis po wyjściu z pola. */
+function Stawka({ u, save }: { u: Ust; save: (p: Partial<Ust>) => void }) {
+  const [t, setT] = useState(u.stawkaOsobodniaGr ? String(u.stawkaOsobodniaGr / 100).replace('.', ',') : '');
+  const [err, setErr] = useState('');
+  const commit = () => {
+    const p = t.trim() ? parseZl(t) : { gr: 0 };
+    if ('error' in p) return setErr(p.error);
+    setErr(''); if (p.gr !== u.stawkaOsobodniaGr) { save({ stawkaOsobodniaGr: p.gr }); setStawka(p.gr); }
+  };
+  return <Field label="Stawka osobodnia (zł)" hint="Koszt 1 dnia pracy 1 osoby – do szacunku robocizny w wyniku zlecenia." error={err}>{(id, d) => <Input id={id} aria-describedby={d} inputMode="decimal" value={t} onChange={(e) => setT(e.target.value)} onBlur={commit} placeholder="np. 480" />}</Field>;
 }

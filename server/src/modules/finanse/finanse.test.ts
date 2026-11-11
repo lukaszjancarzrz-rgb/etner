@@ -37,6 +37,14 @@ describe('finanse', () => {
     expect((await app.request('/api/revenues/nie-ma', req(admin, 'DELETE'))).status).toBe(404);
   });
 
+  it('stawka osobodnia w ustawieniach: domyślnie 0, zapis, brak pola nie zeruje', async () => {
+    const { app, admin } = await setup();
+    expect(await (await app.request('/api/settings/finanse', req(admin, 'GET'))).json()).toMatchObject({ stawkaOsobodniaGr: 0 });
+    await app.request('/api/settings/finanse', req(admin, 'PUT', { autoPrzychod: false, domyslnySposob: 'vat8', stawkaOsobodniaGr: 48000 }));
+    await app.request('/api/settings/finanse', req(admin, 'PUT', { autoPrzychod: true, domyslnySposob: 'bez' }));
+    expect(await (await app.request('/api/settings/finanse', req(admin, 'GET'))).json()).toEqual({ autoPrzychod: true, domyslnySposob: 'bez', stawkaOsobodniaGr: 48000 });
+  });
+
   it('koszty pracowników: miesiąc → kwota, usunięcie null, zły miesiąc 400, pracownik 403', async () => {
     const { app, admin, worker } = await setup();
     expect(await (await app.request('/api/finanse/place/2026-10', req(admin, 'PUT', { kwotaGr: 1689000 }))).json()).toEqual({ '2026-10': 1689000 });
@@ -106,8 +114,8 @@ describe('finanse', () => {
 
   it('ustawienia: domyślne i zapis', async () => {
     const { app, admin } = await setup();
-    expect(await (await app.request('/api/settings/finanse', req(admin, 'GET'))).json()).toEqual({ autoPrzychod: false, domyslnySposob: 'vat8' });
+    expect(await (await app.request('/api/settings/finanse', req(admin, 'GET'))).json()).toEqual({ autoPrzychod: false, domyslnySposob: 'vat8', stawkaOsobodniaGr: 0 });
     const r = await (await app.request('/api/settings/finanse', req(admin, 'PUT', { autoPrzychod: true, domyslnySposob: 'bez' }))).json();
-    expect(r).toEqual({ autoPrzychod: true, domyslnySposob: 'bez' });
+    expect(r).toEqual({ autoPrzychod: true, domyslnySposob: 'bez', stawkaOsobodniaGr: 0 });
   });
 });

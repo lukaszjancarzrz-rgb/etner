@@ -1,5 +1,5 @@
-import { CalendarCheck, ClipboardText, Coins, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
-import { useEffect, useMemo, useState } from 'react';
+import { CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api.js';
 import { useDesk, useSynced } from '../../core/layout/status.js';
 import { fmtDay, mapsUrl, markSeen, seenFor, seenSettled, telHref, useCrewColor, useIsAdmin, useLoading, useMe } from '../../core/data.js';
@@ -17,8 +17,8 @@ import { pszHash, siteHash } from '../paszport/Paszport.js';
 import { JobForm } from './JobForm.js';
 import { Pumble } from './Pumble.js';
 import { Scope } from './Scope.js';
-import { fmtZl, SPOSOB_LABEL, type Sposob } from '@etner/shared';
-import { openRevenue } from '../finanse/RevenueHost.js';
+// finanse ładowane dopiero przy otwarciu karty (start bundle)
+const Rozliczenie = lazy(() => import('../finanse/Rozliczenie.js'));
 import { CLIENT_FIELDS, JOB_FIELDS, SITE_FIELDS, changedFields } from './changed.js';
 import { fmtDni, isSerwis, jobDays } from './jobs.js';
 
@@ -32,7 +32,6 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const client = useEntity('clients', job?.clientId);
   const site = useEntity('sites', job?.siteId ?? undefined);
   const sched = useEntities('schedule_entries');
-  const przychody = useEntities('revenues').filter((r) => r.jobId === id && !r.deletedAt); // tylko admin dostaje przychody w synchronizacji
   const admin = useIsAdmin();
   const loading = useLoading();
   const crew = useCrewColor();
@@ -149,17 +148,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
           {!wpis && <a href={`${psz}/wpis~${id}`} className="inline-flex h-10 items-center gap-2 rounded-[4px] bg-action px-4 text-sm font-semibold text-action-ink hover:brightness-110"><Plus className="h-4 w-4" weight="bold" />Dodaj wpis do karty serwisowej</a>}
         </div>
       )}
-      {admin && przychody.length > 0 && (
-        <section aria-label="Przychód ze zlecenia" className="flex flex-wrap items-center gap-2 rounded-[4px] border border-line bg-card px-4 py-3">
-          <Coins className="h-6 w-6 shrink-0 text-ok" weight="duotone" aria-hidden />
-          <span className="font-semibold">Przychód:</span>
-          {przychody.map((r) => (
-            <button key={r.id} type="button" onClick={() => openRevenue({ revenue: r })} className="inline-flex min-h-11 items-center gap-2 rounded-[4px] border border-line px-3 text-sm font-semibold hover:border-ink-2 desk:min-h-9">
-              {r.nrFaktury || SPOSOB_LABEL[r.sposob as Sposob]} · <span className="tabular-nums">{fmtZl(r.kwotaGr)}</span>
-            </button>
-          ))}
-        </section>
-      )}
+      {admin && !job._tmp && <Suspense fallback={null}><Rozliczenie jobId={id} /></Suspense>}
       <Scope jobId={id} disabled={!!job._tmp} since={since} />
       <Pumble job={job} since={since} />
       <Diary ownerType="job" ownerId={id} highlight={highlight} disabled={!!job._tmp} since={since} />

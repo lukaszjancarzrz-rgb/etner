@@ -158,12 +158,12 @@ export function importKpir(db: Db, userId: string, f: KpirFile): KpirImportResul
 }
 
 // ---------- ustawienia ----------
-export interface FinanseSettings { autoPrzychod: boolean; domyslnySposob: Sposob }
+export interface FinanseSettings { autoPrzychod: boolean; domyslnySposob: Sposob; stawkaOsobodniaGr: number }
 const setting = (db: Db, key: string) => db.select().from(settings).where(eq(settings.key, key)).get()?.value;
 
 export function getSettings(db: Db): FinanseSettings {
   const s = setting(db, 'finanse_domyslny_sposob') as Sposob | undefined;
-  return { autoPrzychod: setting(db, 'finanse_auto_przychod') === '1', domyslnySposob: s && SPOSOBY.includes(s) ? s : 'vat8' };
+  return { autoPrzychod: setting(db, 'finanse_auto_przychod') === '1', domyslnySposob: s && SPOSOBY.includes(s) ? s : 'vat8', stawkaOsobodniaGr: Number(setting(db, 'finanse_stawka_osobodnia') ?? 0) };
 }
 
 /** Koszty pracowników na miesiąc (gr, RRRR-MM → kwota), wpisywane ręcznie do czasu modułu Płace. */
@@ -176,9 +176,11 @@ export function setPlace(db: Db, miesiac: string, gr: number | null): Record<str
   return v;
 }
 
-export function setSettings(db: Db, v: FinanseSettings): FinanseSettings {
+export function setSettings(db: Db, v: Omit<FinanseSettings, 'stawkaOsobodniaGr'> & { stawkaOsobodniaGr?: number }): FinanseSettings {
   const t = now();
-  for (const [key, value] of [['finanse_auto_przychod', v.autoPrzychod ? '1' : '0'], ['finanse_domyslny_sposob', v.domyslnySposob]] as const) {
+  // stawka opcjonalna: starsza wersja aplikacji jej nie wysyła i nie może jej wyzerować
+  const pary: [string, string][] = [['finanse_auto_przychod', v.autoPrzychod ? '1' : '0'], ['finanse_domyslny_sposob', v.domyslnySposob], ...(v.stawkaOsobodniaGr === undefined ? [] : [['finanse_stawka_osobodnia', String(v.stawkaOsobodniaGr)] as [string, string]])];
+  for (const [key, value] of pary) {
     db.insert(settings).values({ key, value, updatedAt: t }).onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: t } }).run();
   }
   return getSettings(db);

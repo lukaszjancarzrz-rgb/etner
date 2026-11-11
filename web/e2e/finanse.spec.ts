@@ -98,7 +98,7 @@ test('Finanse 3b: Wynik z kosztami pracowników, Kontrola KPiR, Statystyki', asy
   await page.getByRole('button', { name: /Tomasz Wrona/ }).click();
   await expect(page.getByRole('heading', { name: 'Harmonogram', level: 1 })).toBeVisible();
   await page.goto('/#fin');
-  await page.getByRole('radio', { name: 'Wynik' }).click();
+  await page.getByRole('radio', { name: 'Wynik', exact: true }).click();
   const tabela = page.getByRole('table', { name: /Wynik firmy/ });
   await expect(tabela).toBeVisible();
   await tabela.getByRole('button', { name: /Koszty pracowników .*-01/ }).click();

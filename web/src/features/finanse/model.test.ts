@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kontrolaKpir, rozliczoneBezPrzychodu, statystyki, sumaMiesiaca, wynikRoku } from './model.js';
+import { kontrolaKpir, rozliczoneBezPrzychodu, statystyki, sumaMiesiaca, wynikiZlecen, wynikRoku, wynikZlecenia } from './model.js';
 
 describe('rozliczoneBezPrzychodu', () => {
   it('zwraca „Rozliczone” bez przychodu, pomija z przychodem, „Zakończone” i usunięte przychody nie liczą się', () => {
@@ -49,5 +49,20 @@ describe('3b: wynik, kontrola KPiR, statystyki', () => {
     expect(s.kategorie[0]).toMatchObject({ nazwa: 'Rekuperacja', zlecen: 1, dni: 2, srednio: 2, udzial: 0.8 });
     expect(s.ekipy.find((x) => x.nazwa === 'ekipa Marek')).toMatchObject({ dni: 0.5 });
     expect(s.krzyz.get('Rekuperacja\u0000ekipa Bartek')).toBe(2);
+  });
+});
+
+describe('3c: wynik zlecenia', () => {
+  const revenues = [{ id: 'r1', jobId: 'j', sposob: 'vat8', nettoGr: 1_850_000, materialyGr: 800_000, dzien: '2026-10-01' }, { id: 'r2', jobId: 'j', sposob: 'bez', nettoGr: 150_000, materialyGr: null, dzien: '2026-10-01' },
+    { id: 'r3', jobId: 'j', sposob: 'zwrot', nettoGr: 99_999, dzien: '2026-10-01' }, { id: 'r4', jobId: 'j', sposob: 'bez', nettoGr: 5, deletedAt: 'x', dzien: '2026-10-01' }];
+  const entries = [{ id: 'e1', jobId: 'j', dzien: '2026-09-01' }, { id: 'e2', jobId: 'j', dzien: '2026-09-02', polDnia: true }, { id: 'e3', jobId: 'inne', dzien: '2026-09-02' }];
+  it('przychód − materiały − osobodni × stawka; zwrot VAT i usunięte pominięte', () => {
+    expect(wynikZlecenia('j', revenues, entries, 48_000)).toEqual({ przychod: 2_000_000, materialy: 800_000, dni: 1.5, robocizna: 72_000, wynik: 1_128_000, marza: 0.564 });
+    expect(wynikZlecenia('brak', revenues, entries, 48_000)).toMatchObject({ przychod: 0, marza: null });
+  });
+  it('wynikiZlecen: tylko zlecenia z przychodem w roku', () => {
+    const w = wynikiZlecen([{ id: 'j' }, { id: 'inne' }], revenues, entries, 0, '2026');
+    expect(w.map((x) => x.job.id)).toEqual(['j']);
+    expect(wynikiZlecen([{ id: 'j' }], revenues, entries, 0, '2025')).toEqual([]);
   });
 });

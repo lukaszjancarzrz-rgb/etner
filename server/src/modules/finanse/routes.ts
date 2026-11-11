@@ -15,7 +15,7 @@ import * as svc from './service.js';
 
 const XLSX_MAX = 10 * 1024 * 1024;
 
-const settingsSchema = z.object({ autoPrzychod: z.boolean(), domyslnySposob: z.enum(SPOSOBY) });
+const settingsSchema = z.object({ autoPrzychod: z.boolean(), domyslnySposob: z.enum(SPOSOBY), stawkaOsobodniaGr: z.number().int().min(0).max(10_000_000).optional() });
 class Rollback { constructor(readonly result: svc.KpirImportResult | XlsImportResult) {} }
 
 export function routes(app: Hono, deps: AppDeps): void {
