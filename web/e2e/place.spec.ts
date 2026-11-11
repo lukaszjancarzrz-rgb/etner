@@ -25,6 +25,7 @@ test('płace: godziny wpisane w tabeli i zaliczka liczą „do wypłaty” w roz
   const wybierz = async (label: string, opcja: string) => { await page.getByLabel(label, { exact: true }).click(); await page.getByRole('option', { name: opcja, exact: true }).click(); };
   await widok('Godziny');
   await wybierz('Rok', rok);
+  if (info.project.name.startsWith('iPhone')) await wybierz('Miesiąc', 'Marzec'); // telefon: jeden miesiąc naraz
   const pole = page.getByLabel(new RegExp(`^Godziny ${os.nazwa}, Mar\\w* ${rok}$`));
   await pole.fill('100');
   await pole.press('Tab');

@@ -41,7 +41,7 @@ export function Przychody({ q, okres, filtr }: Filtry) {
   const zlecenie = (r: Rec) => (r.jobId && numer.get(r.jobId) ? <a href={`#zl/${r.jobId}`} className="font-semibold text-action hover:underline">{numer.get(r.jobId)}</a> : <span className="text-ink-2">—</span>);
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <TitleCount n={list.length} />
       {bez.length > 0 && (
         <div className="rounded-[4px] border border-line bg-card">
@@ -76,9 +76,9 @@ export function Przychody({ q, okres, filtr }: Filtry) {
           </tbody>
         </Table>
       ) : (
-        <ul className="grid gap-3">{rows.map((r) => (
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">{rows.map((r) => (
           <li key={r.id} className="rounded-[4px] border border-line bg-card">
-            <button type="button" disabled={!!r._tmp} onClick={() => setForm({ revenue: r })} className="grid w-full gap-1 px-4 py-3 text-left">
+            <button type="button" disabled={!!r._tmp} onClick={() => setForm({ revenue: r })} className="grid w-full grid-cols-[minmax(0,1fr)] gap-1 px-4 py-3 text-left">
               <span className="flex items-start justify-between gap-3">
                 <span className="min-w-0"><span className="block truncate font-extrabold">{r.klient || 'Przychód'}</span><span className="block truncate text-sm text-ink-2">{[r.miejscowosc, r.opis].filter(Boolean).join(' · ')}</span></span>
                 <span className="shrink-0 text-right tabular-nums"><span className="block font-extrabold">{fmtZl(r.nettoGr)}</span><span className="block text-xs text-ink-2">netto</span></span>

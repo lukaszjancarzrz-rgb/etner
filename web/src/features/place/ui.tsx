@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
 import { SectionTitle } from '../../core/ui/bits.js';
+import { useDesk } from '../../core/layout/status.js';
 import { kw, lb } from './fmt.js';
 import { usun } from './zapis.js';
 
@@ -13,6 +14,26 @@ const cell = (v: number | null | undefined, t?: 'h' | 'p') => (v == null ? '—'
 
 /** Tabela liczb: wiersz na osobę (albo miesiąc) i wiersz RAZEM; pierwsza kolumna przyklejona, tabela przewija się w bok. */
 export function TabelaSum({ title, first, cols, rows, razem }: { title: string; first: string; cols: Kol[]; rows: Wiersz[]; razem?: Record<string, number | null> }) {
+  const desk = useDesk();
+  // telefon: karta na wiersz (bez przewijania w bok); puste pola pomijane, pogrubione zawsze
+  if (!desk) {
+    const karta = (r: Wiersz, suma?: boolean) => (
+      <li key={r.id} className={cn('rounded-[4px] border border-line bg-card p-4', suma && 'border-ink bg-bg/60')}>
+        <p className="font-bold">{r.label}</p>
+        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm tabular-nums">
+          {cols.filter((c) => c.b || r.v[c.k]).map((c) => (
+            <div key={c.k} className="flex items-baseline justify-between gap-2 border-b border-rule pb-1"><dt className="text-ink-2">{c.label}</dt><dd className={cn('text-right', c.b && 'font-bold')}>{cell(r.v[c.k], c.t)}</dd></div>
+          ))}
+        </dl>
+      </li>
+    );
+    return (
+      <section className="grid gap-2" aria-label={title}>
+        <SectionTitle>{title}</SectionTitle>
+        <ul className="grid gap-2">{rows.map((r) => karta(r))}{razem && karta({ id: 'razem', label: 'RAZEM', v: razem }, true)}</ul>
+      </section>
+    );
+  }
   return (
     <section className="grid gap-2" aria-label={title}>
       <SectionTitle>{title}</SectionTitle>

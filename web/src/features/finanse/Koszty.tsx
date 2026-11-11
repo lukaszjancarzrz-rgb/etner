@@ -68,9 +68,9 @@ export function Koszty({ q, okres, filtr }: Filtry) {
   const wynik = (c: Rec) => (c.doWyniku ? 'tak' : 'nie');
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <TitleCount n={list.length} />
-      <form onSubmit={add} noValidate className="grid gap-2 min-[700px]:grid-cols-[minmax(0,1fr)_9rem_14rem_auto]">
+      <form onSubmit={add} noValidate className="grid grid-cols-[minmax(0,1fr)] gap-2 min-[700px]:grid-cols-[minmax(0,1fr)_9rem_14rem_auto]">
         <Input aria-label="Opis kosztu" placeholder="Opis kosztu" value={opis} onChange={(e) => setOpis(e.target.value)} aria-invalid={!!err} />
         <Input aria-label="Kwota netto (zł)" inputMode="decimal" placeholder="Netto zł" value={kwota} onChange={(e) => setKwota(e.target.value)} />
         <Select aria-label="Kategoria kosztu" value={kat || kategorie[0]?.wartosc} onValueChange={setKat} options={kategorie.map((x) => ({ value: x.wartosc as string, label: x.wartosc as string }))} placeholder="Kategoria" />
@@ -93,7 +93,7 @@ export function Koszty({ q, okres, filtr }: Filtry) {
           </tbody>
         </Table>
       ) : (
-        <ul className="grid gap-3">{rows.map((c) => (
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">{rows.map((c) => (
           <li key={c.id} className="flex items-start justify-between gap-3 rounded-[4px] border border-line bg-card px-4 py-3">
             <button type="button" disabled={!!c._tmp} onClick={() => setEdit(c)} className="min-w-0 flex-1 text-left">
               <span className="block font-semibold leading-snug">{c.opis || c.kontrahent || 'Koszt'}</span>
