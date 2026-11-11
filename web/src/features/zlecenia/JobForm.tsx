@@ -13,6 +13,7 @@ import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia } from '../../core/write.js';
 import { ClientPicker, newClientBody, siteLabel, type NewClient } from '../klienci/ClientPicker.js';
 import { badEmail } from '../klienci/forms.js';
+import { przychodPoRozliczeniu } from '../finanse/przychodZeZlecenia.js';
 import { jobPrefill } from '../leady/model.js';
 
 const NONE = '-';
@@ -79,6 +80,7 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
         : createVia<Rec>('jobs', { kind: 'zlecenie', url: '/api/jobs', method: 'POST', body }, tmp);
     if (!navigator.onLine) {
       toast('Zapisane w telefonie', { body: 'Zlecenie wyśle się, gdy wróci zasięg.' });
+      if (job) przychodPoRozliczeniu(job, f.status);
       p.catch((x: Error) => toast('Zlecenie nie zostało zapisane', { body: x.message, tone: 'error' }));
       return onClose();
     }
@@ -86,6 +88,7 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
     try {
       const r = (await p) as Rec;
       onClose();
+      if (job) przychodPoRozliczeniu(job, f.status);
       if (!job && r?.id) go(`#zl/${r.id}`);
     } catch (x) {
       setErr({ form: (x as Error).message });

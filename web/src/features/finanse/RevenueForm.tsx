@@ -1,5 +1,5 @@
 import { fmtZl, rozbij, SPOSOBY, SPOSOB_LABEL, type Sposob } from '@etner/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { api } from '../../core/api.js';
 import { outbox } from '../../core/outbox.js';
 import { today, useDict } from '../../core/data.js';
@@ -17,12 +17,22 @@ import { parseZl } from '../leady/model.js';
 const zlText = (gr: number | null | undefined) => (gr == null ? '' : fmtZl(gr).replace(/\s?zł$/, ''));
 const NONE = '-';
 
+// Jedno okienko przychodu na całą aplikację: otwierane też z miejsc, które same już nie istnieją (formularz zlecenia, toast „Popraw”).
+type Open = { revenue?: Rec; prefill?: Partial<Rec>; fromJob?: boolean } | null;
+let open: Open = null;
+const subs = new Set<() => void>();
+export const openRevenue = (o: Open) => { open = o; for (const f of subs) f(); };
+export function RevenueHost() {
+  const o = useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => open);
+  return o ? <RevenueForm key={o.revenue?.id ?? 'nowy'} {...o} onClose={() => openRevenue(null)} /> : null;
+}
+
 /** Przychód: nowy (z `prefill`, np. ze zlecenia) albo edycja. Kwota brutto przy fakturze VAT, bez VAT przy „bez faktury” i zwrocie; netto i VAT na żywo. */
-export function RevenueForm({ revenue, prefill, onClose }: { revenue?: Rec; prefill?: Partial<Rec>; onClose: () => void }) {
+export function RevenueForm({ revenue, prefill, fromJob, onClose }: { revenue?: Rec; prefill?: Partial<Rec>; fromJob?: boolean; onClose: () => void }) {
   const kategorie = useDict('kategoria');
   const src: Partial<Rec> = revenue ?? prefill ?? {};
   const [f, setF] = useState({
-    kwota: zlText(revenue?.kwotaGr), sposob: (revenue?.sposob ?? 'bez') as Sposob, dzien: (revenue ? revenue.dzien : today()) ?? '', innyMiesiac: revenue?.innyMiesiac ?? '',
+    kwota: zlText(src.kwotaGr), sposob: (revenue?.sposob ?? 'bez') as Sposob, dzien: (revenue ? revenue.dzien : today()) ?? '', innyMiesiac: revenue?.innyMiesiac ?? '',
     nrFaktury: revenue?.nrFaktury ?? '', materialy: zlText(revenue?.materialyGr), kategoria: src.kategoria ?? '', klient: src.klient ?? '', miejscowosc: src.miejscowosc ?? '',
     opis: src.opis ?? '', uwagi: revenue?.uwagi ?? '',
   });
@@ -68,7 +78,7 @@ export function RevenueForm({ revenue, prefill, onClose }: { revenue?: Rec; pref
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <Sheet title={revenue ? 'Przychód' : 'Nowy przychód'} className="desk:w-[min(640px,92vw)]">
+      <Sheet title={revenue ? 'Przychód' : fromJob ? 'Przychód ze zlecenia' : 'Nowy przychód'} className="desk:w-[min(640px,92vw)]">
         <form onSubmit={submit} noValidate className="grid gap-4">
           <Field label={f.sposob === 'vat8' || f.sposob === 'vat23' ? 'Kwota brutto (zł)' : 'Kwota (zł)'} error={err.kwota}
             hint={podzial ? undefined : 'Przy fakturze VAT wpisz kwotę brutto.'}>
@@ -89,7 +99,7 @@ export function RevenueForm({ revenue, prefill, onClose }: { revenue?: Rec; pref
           <Field label="Uwagi">{(id) => <Textarea id={id} value={f.uwagi} onChange={(e) => set({ uwagi: e.target.value })} />}</Field>
           <div className="flex flex-wrap justify-between gap-3 border-t border-line pt-4">
             {revenue ? <Button variant={confirm ? 'danger' : 'ghost'} onClick={remove} className={cn(!confirm && 'text-danger')}>{confirm ? 'Na pewno usunąć?' : 'Usuń przychód'}</Button> : <span />}
-            <div className="flex gap-3"><Button variant="secondary" onClick={onClose}>Anuluj</Button><Button type="submit">Zapisz przychód</Button></div>
+            <div className="flex gap-3"><Button variant="secondary" onClick={onClose}>{fromJob ? 'Pomiń' : 'Anuluj'}</Button><Button type="submit">Zapisz przychód</Button></div>
           </div>
         </form>
       </Sheet>

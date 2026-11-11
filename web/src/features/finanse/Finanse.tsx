@@ -32,7 +32,7 @@ export function Finanse() {
       <Segmented label="Widok" value={tab} onChange={setTab} options={[{ v: 'przychody', label: 'Przychody' }, { v: 'koszty', label: 'Koszty' }]} className="max-w-sm" />
       <div className="flex flex-wrap items-center gap-3">
         <div className="w-full desk:w-[24rem]"><Search value={q} onChange={setQ} label="Szukaj" placeholder="Klient, opis, kontrahent" /></div>
-        <div className="w-44"><Input type="month" aria-label="Miesiąc" value={mies} onChange={(e) => setMies(e.target.value)} /></div>
+        <div className="w-52"><Input type="month" aria-label="Miesiąc" value={mies} onChange={(e) => setMies(e.target.value)} /></div>
         <Button variant={mies ? 'secondary' : 'primary'} onClick={() => setMies(mies ? '' : today().slice(0, 7))} aria-pressed={!mies}>Cały rok</Button>
         <div className="w-56"><Select aria-label={tab === 'przychody' ? 'Branża' : 'Kategoria'} value={filtr[tab] || '*'} onValueChange={(v) => setFiltr({ ...filtr, [tab]: v === '*' ? ALL : v })}
           options={[{ value: '*', label: tab === 'przychody' ? 'Wszystkie branże' : 'Wszystkie kategorie' }, ...kat.map((x) => ({ value: x.wartosc as string, label: x.wartosc as string }))]} /></div>

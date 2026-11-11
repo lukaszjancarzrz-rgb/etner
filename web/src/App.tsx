@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { RevenueHost } from './features/finanse/RevenueForm.js';
 import { bus } from './core/api.js';
 import { Shell } from './core/layout/Shell.js';
 import { Login } from './screens/Login.js';
@@ -35,6 +36,7 @@ export function App() {
     <>
       {status === 'loading' ? <Loading /> : status === 'out' || (status === 'expired' && askLogin) ? <Login /> : <Shell />}
       <Toaster />
+      <RevenueHost />
     </>
   );
 }
