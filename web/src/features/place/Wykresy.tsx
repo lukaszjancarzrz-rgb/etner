@@ -11,8 +11,8 @@ const GREY = 'var(--field)';
 type Seria = { name: string; color: string; values: number[] };
 type F = { tick: (v: number) => string; tip: (v: number) => string };
 const ZL: F = { tick: (v) => (Math.abs(v) >= 100_000 ? `${Math.round(v / 100_000)} tys.` : zl(v)), tip: (v) => `${zl(v)} zł` };
-const H: F = { tick: lb, tip: (v) => `${lb(v)} h` };
-const DNI: F = { tick: lb, tip: (v) => `${lb(v)} dni` };
+const H: F = { tick: (v) => (v ? lb(v) : '0'), tip: (v) => `${lb(v)} h` };
+const DNI: F = { tick: (v) => (v ? lb(v) : '0'), tip: (v) => `${lb(v)} dni` };
 const sum = (a: number[]) => a.reduce((s, x) => s + x, 0);
 
 function Legenda({ s }: { s: { name: string; color: string; line?: boolean }[] }) {
@@ -36,6 +36,8 @@ function Slupki({ s, f, stacked, line, h = 220 }: { s: Seria[]; f: F; stacked?: 
   const y = (v: number) => T + (h - T - B) * (max - v) / max;
   const lmax = Math.max(...(line?.values ?? []), 0) || 1;
   const ly = (v: number) => (line?.right ? T + (h - T - B) * (lmax - v) / lmax : y(v));
+  // linia kończy się na ostatnim miesiącu z danymi (bez spadku do zera w przyszłych miesiącach)
+  const pkt = line ? line.values.slice(0, line.values.length - [...line.values].reverse().findIndex((v) => v !== 0)) : [];
   const bw = stacked ? slot * 0.6 : (slot * 0.7) / s.length;
   return (
     <svg viewBox={`0 0 ${W} ${h}`} className="w-full text-ink-2" style={{ maxHeight: h }}>
@@ -58,8 +60,8 @@ function Slupki({ s, f, stacked, line, h = 220 }: { s: Seria[]; f: F; stacked?: 
         );
       })}
       {line && <>
-        <polyline fill="none" stroke={line.color} strokeWidth="2" points={line.values.map((v, i) => `${L + i * slot + slot / 2},${ly(v)}`).join(' ')} />
-        {line.values.map((v, i) => <circle key={i} cx={L + i * slot + slot / 2} cy={ly(v)} r="4" fill={line.color} stroke="var(--card)" strokeWidth="2"><title>{`${MIES[i]}: ${line.name} ${(line.f ?? f).tip(v)}`}</title></circle>)}
+        <polyline fill="none" stroke={line.color} strokeWidth="2" points={pkt.map((v, i) => `${L + i * slot + slot / 2},${ly(v)}`).join(' ')} />
+        {pkt.map((v, i) => <circle key={i} cx={L + i * slot + slot / 2} cy={ly(v)} r="4" fill={line.color} stroke="var(--card)" strokeWidth="2"><title>{`${MIES[i]}: ${line.name} ${(line.f ?? f).tip(v)}`}</title></circle>)}
       </>}
     </svg>
   );
@@ -83,7 +85,12 @@ function Poziome({ rows, f }: { rows: { name: string; parts: { color: string; v:
   );
 }
 
-/** Wykresy płac roku: godziny, wypłaty, koszty, urlopy i nieobecności; dokładne liczby w pozostałych zakładkach. */
+const KOSZT = [
+  { k: 'wyplata', name: 'Wypłaty za godziny', color: SLOT[0]! }, { k: 'urlop', name: 'Urlop płatny', color: SLOT[2]! }, { k: 'premie', name: 'Premie i dodatki', color: SLOT[4]! },
+  { k: 'kosztUmowy', name: 'Koszty umowy (ZUS, zdrow., PIT)', color: SLOT[1]! }, { k: 'inne', name: 'Inne koszty', color: SLOT[3]! },
+] as const;
+
+/** Wykresy płac roku jak w arkuszu (Podsumowanie płac, Statystyki urlopów): godziny, wypłaty, koszty, urlopy i nieobecności; dokładne liczby w pozostałych zakładkach. */
 export function Wykresy({ rok }: { rok: string }) {
   const dane = useDane();
   const P = useMemo(() => przygotuj(dane), [dane]);
@@ -92,43 +99,39 @@ export function Wykresy({ rok }: { rok: string }) {
     const u = P.urlopyRoku(rok);
     const os = P.lista.map((o, j) => {
       const id = o.personId as string, wr = ms.map((m) => wierszRozliczenia(P, dane, id, m)), uu = u.get(id)!;
-      return { name: P.nazwa(id), color: SLOT[j % SLOT.length]!, wr, uu, h: wr.map((r) => r.godziny), nalezne: wr.map((r) => r.nalezne) };
+      return { name: P.nazwa(id), color: SLOT[j % SLOT.length]!, wr, uu, h: wr.map((r) => r.godziny) };
     });
     const mies = (g: (o: (typeof os)[number], i: number) => number) => MIES.map((_, i) => sum(os.map((o) => g(o, i))));
-    const nieob = (k: 'wypoczynkowy' | 'naZadanie' | 'L4' | 'okolicznosciowy' | 'bezplatny') => mies((o, i) => o.uu.mies[i]![k]);
+    // te same składniki kosztu co w arkuszu „Podsumowanie płac”
+    const sk = KOSZT.map((k) => ({ ...k, values: mies((o, i) => o.wr[i]![k.k]) }));
+    const nieobOsoby = (o: (typeof os)[number]) => o.uu.mies.map((n) => n.wypoczynkowy + n.naZadanie + n.L4 + n.okolicznosciowy + n.bezplatny);
     return {
       os,
-      godz: os.map((o) => ({ name: o.name, color: o.color, values: o.h })), wyp: os.map((o) => ({ name: o.name, color: o.color, values: o.nalezne })),
-      struktura: [
-        { name: 'Wynagrodzenia', color: SLOT[0]!, values: mies((o, i) => o.wr[i]!.nalezne) }, { name: 'Koszt umowy', color: SLOT[1]!, values: mies((o, i) => o.wr[i]!.kosztUmowy) }, { name: 'Inne koszty', color: SLOT[3]!, values: mies((o, i) => o.wr[i]!.inne) },
-      ].filter((s) => sum(s.values)),
-      razemH: { name: 'Godziny razem', color: 'var(--ink)', values: mies((o, i) => o.h[i]!), right: true, f: H },
-      razemW: { name: 'Wypłaty razem', color: SLOT[0]!, values: mies((o, i) => o.nalezne[i]!) },
-      nieob: [
-        { name: 'Urlop', color: SLOT[0]!, values: MIES.map((_, i) => nieob('wypoczynkowy')[i]! + nieob('naZadanie')[i]!) }, { name: 'L4', color: SLOT[1]!, values: nieob('L4') },
-        { name: 'Okolicznościowy', color: SLOT[3]!, values: nieob('okolicznosciowy') }, { name: 'Bezpłatny', color: GREY, values: nieob('bezplatny') },
-      ].filter((s) => sum(s.values)),
+      godz: os.map((o) => ({ name: o.name, color: o.color, values: o.h })), wyp: os.map((o) => ({ name: o.name, color: o.color, values: o.wr.map((r) => r.wyplata) })),
+      struktura: sk.filter((x) => sum(x.values)),
+      razemH: { name: 'Godziny', color: 'var(--ink)', values: mies((o, i) => o.h[i]!), right: true, f: H },
+      razemW: { name: 'Wypłaty za godziny', color: SLOT[0]!, values: mies((o, i) => o.wr[i]!.wyplata) },
+      nieob: os.map((o) => ({ name: o.name, color: o.color, values: nieobOsoby(o) })).filter((x) => sum(x.values)),
     };
   }, [P, dane, rok]);
   const ludzie = x.os.map((o) => ({ name: o.name, color: o.color }));
-  const koszt = [{ name: 'Wynagrodzenia', color: SLOT[0]! }, { name: 'Koszt umowy', color: SLOT[1]! }, { name: 'Inne koszty', color: SLOT[3]! }];
-  const urlop = [{ name: 'Płatny', color: SLOT[2]! }, { name: 'Darmowy', color: SLOT[1]! }, { name: 'Pozostały', color: GREY }];
+  const urlop = [{ name: 'Płatny', color: SLOT[2]! }, { name: 'Darmowy (ponad limit)', color: SLOT[1]! }, { name: 'Pozostało płatnych', color: GREY }];
   return (
     <div className="grid gap-4 min-[1400px]:grid-cols-2">
-      <Wykres title="Godziny w miesiącach (na osobę)" opis="Słupki skumulowane: godziny osób w miesiącach." legend={<Legenda s={ludzie} />}><Slupki s={x.godz} f={H} stacked /></Wykres>
-      <Wykres title="Wypłaty w miesiącach (na osobę)" opis="Słupki skumulowane: należne wypłaty osób w miesiącach." legend={<Legenda s={ludzie} />}><Slupki s={x.wyp} f={ZL} stacked /></Wykres>
-      <Wykres title={`Godziny w ${rok} (na osobę)`} opis="Ranking osób wg godzin w roku.">
+      <Wykres title="Godziny pracy w miesiącach — każdy pracownik" opis="Słupki skumulowane: godziny osób w miesiącach." legend={<Legenda s={ludzie} />}><Slupki s={x.godz} f={H} stacked /></Wykres>
+      <Wykres title="Wypłaty za godziny w miesiącach — każdy pracownik" opis="Słupki skumulowane: godziny × stawka każdej osoby." legend={<Legenda s={ludzie} />}><Slupki s={x.wyp} f={ZL} stacked /></Wykres>
+      <Wykres title={`Godziny w roku ${rok} — na pracownika`} opis="Ranking osób wg godzin w roku.">
         <Poziome f={H} rows={x.os.map((o) => ({ name: o.name, parts: [{ color: o.color, v: sum(o.h) }] })).sort((a, b) => b.parts[0]!.v - a.parts[0]!.v)} />
       </Wykres>
-      <Wykres title={`Koszt roczny ${rok} (na osobę)`} opis="Dla każdej osoby podział kosztu na wynagrodzenie, koszt umowy i inne koszty." legend={<Legenda s={koszt} />}>
-        <Poziome f={ZL} rows={x.os.map((o) => ({ name: o.name, parts: [{ color: SLOT[0]!, label: 'Wynagrodzenia', v: sum(o.nalezne) }, { color: SLOT[1]!, label: 'Koszt umowy', v: sum(o.wr.map((r) => r.kosztUmowy)) }, { color: SLOT[3]!, label: 'Inne koszty', v: sum(o.wr.map((r) => r.inne)) }] }))} />
+      <Wykres title={`Koszt roczny ${rok} na pracownika`} opis="Dla każdej osoby: wypłaty za godziny, urlop płatny, premie, koszty umowy i inne koszty." legend={<Legenda s={[...KOSZT]} />}>
+        <Poziome f={ZL} rows={x.os.map((o) => ({ name: o.name, parts: KOSZT.map((k) => ({ color: k.color, label: k.name, v: sum(o.wr.map((r) => r[k.k])) })) }))} />
       </Wykres>
-      <Wykres title="Struktura kosztów w miesiącach" opis="Słupki skumulowane: wynagrodzenia, koszt umowy, inne koszty." legend={<Legenda s={x.struktura} />}><Slupki s={x.struktura} f={ZL} stacked /></Wykres>
-      <Wykres title="Wypłaty i godziny łącznie" opis="Słupki wypłat wszystkich osób, linia godzin (oś po prawej)." legend={<Legenda s={[x.razemW, { ...x.razemH, line: true }]} />}><Slupki s={[x.razemW]} f={ZL} line={x.razemH} /></Wykres>
+      <Wykres title="Koszty firmy w miesiącach — struktura" opis="Słupki skumulowane: wypłaty za godziny, urlop płatny, premie, koszty umów, inne koszty." legend={<Legenda s={x.struktura} />}><Slupki s={x.struktura} f={ZL} stacked /></Wykres>
+      <Wykres title="Łącznie w miesiącach: wypłaty za godziny i godziny" opis="Słupki: wypłaty za godziny wszystkich osób; linia: godziny (oś po prawej)." legend={<Legenda s={[x.razemW, { ...x.razemH, line: true }]} />}><Slupki s={[x.razemW]} f={ZL} line={x.razemH} /></Wykres>
       <Wykres title={`Urlop ${rok}: płatny, darmowy, pozostały (dni)`} opis="Dla każdej osoby dni urlopu płatnego, darmowego i pozostałych do limitu." legend={<Legenda s={urlop} />}>
-        <Poziome f={DNI} rows={x.os.map((o) => ({ name: o.name, parts: [{ color: urlop[0]!.color, label: 'Płatny', v: o.uu.platneRazem }, { color: urlop[1]!.color, label: 'Darmowy', v: o.uu.darmowe }, { color: urlop[2]!.color, label: 'Pozostały', v: Math.max(0, o.uu.pozostalo) }] }))} />
+        <Poziome f={DNI} rows={x.os.map((o) => ({ name: o.name, parts: [{ color: urlop[0]!.color, label: urlop[0]!.name, v: o.uu.platneRazem }, { color: urlop[1]!.color, label: urlop[1]!.name, v: o.uu.darmowe }, { color: urlop[2]!.color, label: urlop[2]!.name, v: Math.max(0, o.uu.pozostalo) }] }))} />
       </Wykres>
-      <Wykres title="Nieobecności w miesiącach (dni)" opis="Słupki skumulowane: urlop, L4, okolicznościowy, bezpłatny." legend={<Legenda s={x.nieob} />}><Slupki s={x.nieob} f={DNI} stacked /></Wykres>
+      <Wykres title="Nieobecności w miesiącach — wszyscy (dni)" opis="Słupki skumulowane: urlopy, L4 i inne nieobecności każdej osoby (dni robocze)." legend={<Legenda s={x.nieob} />}><Slupki s={x.nieob} f={DNI} stacked /></Wykres>
     </div>
   );
 }

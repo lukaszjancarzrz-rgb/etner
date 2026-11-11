@@ -105,6 +105,15 @@ export function updatePerson(db: Db, by: string, id: string, d: Partial<{ nazwa:
   return row;
 }
 
+/** Przywrócenie usuniętej osoby (np. pracownik wraca) – ta sama osoba, więc historia harmonogramu i płac ciągnie się dalej. */
+export function restorePerson(db: Db, by: string, id: string): SchedulePerson | null {
+  const old = db.select().from(schedulePeople).where(eq(schedulePeople.id, id)).get();
+  if (!old?.deletedAt) return null;
+  const row = db.update(schedulePeople).set({ deletedAt: null, kolejnosc: listPeople(db).length, updatedAt: new Date().toISOString() }).where(eq(schedulePeople.id, id)).returning().get();
+  recordChange(db, by, 'schedule_people', id, 'update', old, row);
+  return row;
+}
+
 export const removedPerson = (db: Db, id: string): boolean => !!db.select({ d: schedulePeople.deletedAt }).from(schedulePeople).where(eq(schedulePeople.id, id)).get()?.d;
 
 export function deletePerson(db: Db, by: string, id: string): boolean {

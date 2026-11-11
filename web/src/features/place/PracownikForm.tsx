@@ -1,7 +1,9 @@
 import { FORMA_LABEL, FORMY, parametryMiesiaca, type Forma } from '@etner/shared';
-import { Plus } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Plus } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { api } from '../../core/api.js';
 import { useEntities, type Rec } from '../../core/store.js';
+import { toast } from '../../core/ui/toast.js';
 import { Segmented, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Field, Input } from '../../core/ui/input.js';
@@ -60,9 +62,15 @@ export function PracownikForm({ osoba, dane, rec, onClose }: { osoba: Rec; dane:
     setNowa({ ...nowa, stawka: '' }); setErrS('');
   }
 
+  const przywroc = () => api(`/api/schedule-people/${osoba.id}/restore`, { method: 'POST' })
+    .then(() => { toast('Przywrócono do harmonogramu'); onClose(); }, (e: Error) => toast('Nie przywrócono', { body: e.message, tone: 'error' }));
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <Sheet title={osoba.nazwa as string} description="Dane płacowe pracownika" className="desk:w-[min(680px,92vw)]">
+        {osoba.deletedAt && <div className="flex flex-wrap items-center gap-3 rounded-[4px] border border-line bg-bg px-3 py-2">
+          <p className="min-w-0 flex-1 basis-48 text-sm">Usunięty z harmonogramu. Gdy wraca – przywróć tę samą osobę, a stawki, umowa i urlop liczą się dalej.</p>
+          <Button variant="secondary" onClick={przywroc}><ArrowCounterClockwise className="h-5 w-5" />Przywróć do harmonogramu</Button>
+        </div>}
         <form onSubmit={submit} noValidate className="grid gap-4">
           <div className="grid gap-4 min-[560px]:grid-cols-2">
             <Field label="Forma umowy">{(id) => <Select id={id} value={f.forma} onValueChange={(forma) => set({ forma: forma as Forma })} options={FORMY.map((v) => ({ value: v, label: FORMA_LABEL[v] }))} />}</Field>

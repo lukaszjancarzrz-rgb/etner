@@ -36,7 +36,7 @@ export function Place() {
   return (
     <section className={cn('mx-auto grid grid-cols-[minmax(0,1fr)] gap-4', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')} aria-label="Płace">
       {/* telefon: 7 zakładek nie mieści się w jednym rzędzie – lista wyboru */}
-      {desk ? <Segmented label="Widok" value={tab} onChange={setTab} options={TABS} className="max-w-5xl" />
+      {desk ? <Segmented label="Widok" value={tab} onChange={setTab} options={TABS} className="max-w-6xl" />
         : <Select aria-label="Widok" value={tab} onValueChange={(v) => setTab(v as Tab)} options={TABS.map((o) => ({ value: o.v, label: o.label }))} />}
       {tab !== 'pracownicy' && (
         <div className="flex flex-wrap gap-3">

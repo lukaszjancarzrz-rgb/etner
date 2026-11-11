@@ -36,6 +36,11 @@ describe('płace – API', () => {
     deletePerson(deps.db, adminId, jan.id);
     expect((await app.request(`/api/payroll/people/${jan.id}`, req(admin, 'PUT', { ...osoba, uwagi: 'praktyki' }))).status).toBe(200);
     expect(await (await app.request('/api/payroll/byli', req(admin, 'GET'))).json()).toEqual([{ id: jan.id, nazwa: jan.nazwa, kolejnosc: jan.kolejnosc }]);
+    // powrót: ta sama osoba wraca do harmonogramu i znika z „byłych”
+    expect((await app.request(`/api/schedule-people/${jan.id}/restore`, req(admin, 'POST'))).status).toBe(200);
+    expect(await (await app.request('/api/payroll/byli', req(admin, 'GET'))).json()).toEqual([]);
+    expect((await (await app.request('/api/schedule-people', req(admin, 'GET'))).json()).map((p: { id: string }) => p.id)).toContain(jan.id);
+    expect((await app.request(`/api/schedule-people/${jan.id}/restore`, req(admin, 'POST'))).status).toBe(404);
   });
 
   it('osoba: upsert nie dubluje, miesiąc: upsert i usunięcie przy dwóch null', async () => {

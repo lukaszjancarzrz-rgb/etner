@@ -79,6 +79,12 @@ export function routes(app: Hono, { db, files }: AppDeps): void {
     return c.json({ ok: true });
   });
 
+  app.post('/api/schedule-people/:id/restore', admin, (c) => {
+    const row = svc.restorePerson(db, me(c), c.req.param('id'));
+    if (!row) throw notFound();
+    return c.json(row);
+  });
+
   // Zdjęcie użytkownika: zmienia on sam albo admin; widzi każdy zalogowany (link podpisany, krótki TTL).
   const AVATAR_MAX = 10 * 1024 * 1024;
   const selfOrAdmin = (c: Context) => {
