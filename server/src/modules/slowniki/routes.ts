@@ -13,10 +13,11 @@ import { dictRefs as zakupy } from '../zakupy/service.js';
 import { dictRefs as zlecenia } from '../zlecenia/service.js';
 import { dictRefs as uzytkownicy } from '../uzytkownicy/service.js';
 import { dictRefs as paszport } from '../paszport/service.js';
+import { dictRefs as finanse } from '../finanse/service.js';
 import { czynnosciRefs, dictKey, listAll, replace, ValueInUseError } from './service.js';
 
 // Moduły, których rekordy przechowują wartości słowników (zmiana nazwy idzie do nich, usunięcie używanej jest blokowane).
-const refs = [zlecenia, leady, uzytkownicy, naJutro, listy, harmonogram, zadania, zakupy, samochody, paszport, czynnosciRefs];
+const refs = [zlecenia, leady, uzytkownicy, naJutro, listy, harmonogram, zadania, zakupy, samochody, paszport, finanse, czynnosciRefs];
 const STATUSY = new Set(['status_zlecenia', 'status_leada', 'status_zadania', 'status_zakupu']);
 
 export function routes(app: Hono, { db }: AppDeps): void {
