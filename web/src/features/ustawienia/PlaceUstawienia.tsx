@@ -1,7 +1,11 @@
-import { FileXls } from '@phosphor-icons/react';
-import { useRef, useState } from 'react';
+import { FileXls, Percent } from '@phosphor-icons/react';
+import { parametryMiesiaca, type Parametry } from '@etner/shared';
+import { useEffect, useRef, useState } from 'react';
 import { ApiError, api } from '../../core/api.js';
+import { today } from '../../core/data.js';
 import { Button } from '../../core/ui/button.js';
+import { Field, Input } from '../../core/ui/input.js';
+import { setParametry } from '../place/dane.js';
 import { Card } from './card.js';
 
 type Wynik = { rok: number; osoby: number; stawki: number; miesiace: number; wpisy: number; ostrzezenia: string[] };
@@ -46,6 +50,42 @@ export function PlaceUstawienia() {
           )}
         </div>
       )}
+    </Card>
+  );
+}
+
+// pola parametrów: % = ułamek pokazywany w procentach, zł = grosze, n = liczba
+const POLA: [keyof Parametry, string, '%' | 'zł' | 'n'][] = [
+  ['placaMinGr', 'Płaca minimalna (zł/mies.)', 'zł'], ['emP', 'Emerytalna – pracownik (%)', '%'], ['rentP', 'Rentowa – pracownik (%)', '%'], ['chor', 'Chorobowa (%)', '%'],
+  ['zdr', 'Zdrowotna (%)', '%'], ['pit', 'Zaliczka PIT (%)', '%'], ['kwotaZmnGr', 'Kwota zmniejszająca podatek (zł/mies.)', 'zł'], ['kupGr', 'Koszty uzyskania – umowa o pracę (zł/mies.)', 'zł'],
+  ['kupZl', 'Koszty uzyskania – zlecenie (%)', '%'], ['emF', 'Emerytalna – pracodawca (%)', '%'], ['rentF', 'Rentowa – pracodawca (%)', '%'], ['wyp', 'Wypadkowa (%)', '%'],
+  ['fp', 'Fundusz Pracy (%)', '%'], ['fgsp', 'FGŚP (%)', '%'], ['godzDnia', 'Godziny w dniu pracy', 'n'], ['urlopMin', 'Urlop ustawowy – staż < 10 lat (dni)', 'n'],
+  ['urlopMax', 'Urlop ustawowy – staż ≥ 10 lat (dni)', 'n'], ['godzUrlop', 'Godziny płatne za 1 dzień urlopu', 'n'],
+];
+const pokaz = (v: number, j: '%' | 'zł' | 'n') => String(j === '%' ? +(v * 100).toFixed(4) : j === 'zł' ? v / 100 : v).replace('.', ',');
+
+/** Parametry płac na rok (ZUS, PIT, urlopy); zapis po wyjściu z pola. Rok bez własnych parametrów bierze je z poprzedniego. */
+export function ParametryPlac() {
+  const rok = today().slice(0, 4);
+  const [mapa, setMapa] = useState<Record<string, Parametry> | null>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => { api<Record<string, Parametry>>('/api/settings/place').then(setMapa, (e) => setErr(msg(e))); }, []);
+  if (!mapa) return err ? <p role="alert" className="text-danger">{err}</p> : null;
+  const p = parametryMiesiaca(mapa, rok);
+  async function zapisz(k: keyof Parametry, t: string, j: '%' | 'zł' | 'n') {
+    const n = Number(t.replace(',', '.').replace(/\s/g, ''));
+    if (!t.trim() || !Number.isFinite(n) || n < 0) return setErr('Wpisz liczbę.');
+    const v = j === '%' ? n / 100 : j === 'zł' ? Math.round(n * 100) : n;
+    if (v === p[k]) return setErr('');
+    try { const m = await api<Record<string, Parametry>>('/api/settings/place', { method: 'PUT', json: { ...mapa, [rok]: { ...p, [k]: v } } }); setMapa(m); setParametry(m); setErr(''); }
+    catch (e) { setErr(msg(e)); }
+  }
+  return (
+    <Card title={`Parametry płac ${rok}`} icon={Percent} hint="Stawki ZUS i PIT, płaca minimalna, urlopy. Zmieniaj tylko, gdy zmienią się przepisy.">
+      {err && <p role="alert" className="text-danger">{err}</p>}
+      <div className="grid gap-3 min-[700px]:grid-cols-2 desk:grid-cols-3">
+        {POLA.map(([k, label, j]) => <Field key={`${k}${p[k]}`} label={label}>{(id) => <Input id={id} inputMode="decimal" defaultValue={pokaz(p[k], j)} onBlur={(e) => zapisz(k, e.target.value, j)} />}</Field>)}
+      </div>
     </Card>
   );
 }

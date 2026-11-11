@@ -79,7 +79,7 @@ export function FinanseUstawienia() {
   );
 }
 
-/** Stawka osobodnia (zł) do szacunku robocizny w wyniku zlecenia (do czasu modułu Płace); zapis po wyjściu z pola. */
+/** Stawka osobodnia (zł) do robocizny w wyniku zlecenia dla osób bez danych w Płacach; zapis po wyjściu z pola. */
 function Stawka({ u, save }: { u: Ust; save: (p: Partial<Ust>) => void }) {
   const [t, setT] = useState(u.stawkaOsobodniaGr ? String(u.stawkaOsobodniaGr / 100).replace('.', ',') : '');
   const [err, setErr] = useState('');
@@ -88,5 +88,5 @@ function Stawka({ u, save }: { u: Ust; save: (p: Partial<Ust>) => void }) {
     if ('error' in p) return setErr(p.error);
     setErr(''); if (p.gr !== u.stawkaOsobodniaGr) { save({ stawkaOsobodniaGr: p.gr }); setStawka(p.gr); }
   };
-  return <Field label="Stawka osobodnia (zł)" hint="Koszt 1 dnia pracy 1 osoby – do szacunku robocizny w wyniku zlecenia." error={err}>{(id, d) => <Input id={id} aria-describedby={d} inputMode="decimal" value={t} onChange={(e) => setT(e.target.value)} onBlur={commit} placeholder="np. 480" />}</Field>;
+  return <Field label="Stawka osobodnia (zł)" hint="Koszt 1 dnia pracy osoby, która nie ma stawki ani godzin w Płacach." error={err}>{(id, d) => <Input id={id} aria-describedby={d} inputMode="decimal" value={t} onChange={(e) => setT(e.target.value)} onBlur={commit} placeholder="np. 480" />}</Field>;
 }

@@ -23,7 +23,7 @@ import { LeadyEmail } from '../leady/LeadyEmail.js';
 import { Import } from './Import.js';
 import { Przeniesienie } from './Przeniesienie.js';
 import { FinanseUstawienia } from './FinanseUstawienia.js';
-import { PlaceUstawienia } from './PlaceUstawienia.js';
+import { ParametryPlac, PlaceUstawienia } from './PlaceUstawienia.js';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Brak połączenia z serwerem.');
 
@@ -49,6 +49,7 @@ export function Ustawienia() {
           <Import />
           <Przeniesienie />
           <FinanseUstawienia />
+          <ParametryPlac />
           <PlaceUstawienia />
           <ErrorLog />
         </div>

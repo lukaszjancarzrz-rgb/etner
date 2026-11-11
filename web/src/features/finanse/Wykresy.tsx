@@ -6,6 +6,7 @@ import { SectionTitle } from '../../core/ui/bits.js';
 import { useCatColor } from '../../core/ui/category.js';
 import { miesiacWiersza, statystyki, wynikRoku } from './model.js';
 import { zl } from './Wynik.js';
+import { useKosztyPracownikow } from '../place/dane.js';
 
 const MIES = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru'];
 // paleta referencyjna (zweryfikowana, kolejność stała) – dla serii bez własnego koloru w aplikacji (kategorie kosztów)
@@ -92,7 +93,8 @@ const sumBy = <T,>(rows: T[], key: (r: T) => string, val: (r: T) => number) => {
 export function Wykresy({ rok }: { rok: string }) {
   const revenues = useEntities('revenues'), costs = useEntities('costs'), jobs = useEntities('jobs'), leads = useEntities('leads'), entries = useEntities('schedule_entries');
   const cat = useCatColor(), crew = useCrewColor();
-  const [place, setPlace] = useState<Record<string, number>>({});
+  const [reczne, setPlace] = useState<Record<string, number>>({});
+  const { place } = useKosztyPracownikow(rok, reczne);
   useEffect(() => { api<Record<string, number>>('/api/finanse/place').then(setPlace, () => {}); }, []);
   const d = useMemo(() => {
     const w = wynikRoku(revenues, costs, place, rok).slice(0, 12);

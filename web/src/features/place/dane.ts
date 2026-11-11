@@ -3,7 +3,9 @@ import type { Parametry } from '@etner/shared';
 import { api } from '../../core/api.js';
 import { today, useDict } from '../../core/data.js';
 import { useEntities } from '../../core/store.js';
-import type { Dane } from './model.js';
+import type { KosztDnia } from '../finanse/model.js';
+import { useStawka } from '../finanse/stawka.js';
+import { kosztDnia, kosztyPracownikowMiesiecy, type Dane } from './model.js';
 
 // parametry płac z ustawień (RRRR → Parametry); jedno pobranie na sesję, zmiana w Ustawieniach odświeża przez setParametry
 let cache: Record<string, Parametry> | undefined;
@@ -26,4 +28,19 @@ export function useDane(): Dane {
   const wolne = useDict('dzien_wolny'), parametry = useParametry();
   return useMemo(() => ({ people, osoby, stawki, miesiace, wpisy, entries, parametry, dzis: today(), dniWolne: wolne.map((d) => d.wartosc as string) }),
     [people, osoby, stawki, miesiace, wpisy, entries, parametry, wolne]);
+}
+
+/** Koszt 1 dnia osoby (gr) do robocizny zleceń – pełny koszt firmy z Płac (decyzja D4). */
+export function useKosztDnia(): KosztDnia {
+  const d = useDane(), stawka = useStawka() ?? 0;
+  return useMemo(() => kosztDnia(d, stawka), [d, stawka]);
+}
+
+/** Koszty pracowników do Wyniku firmy: ręczne kwoty, nadpisane kosztem z Płac w miesiącach z danymi płac; `zPlac` = te miesiące. */
+export function useKosztyPracownikow(rok: string, reczne: Record<string, number>) {
+  const d = useDane();
+  return useMemo(() => {
+    const zPlac = kosztyPracownikowMiesiecy(d, rok);
+    return { place: { ...reczne, ...zPlac }, zPlac };
+  }, [d, rok, reczne]);
 }

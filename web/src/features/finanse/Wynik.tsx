@@ -12,6 +12,7 @@ import { toast } from '../../core/ui/toast.js';
 import { parseZl } from '../leady/model.js';
 import { sumaOkresu, wynikRoku, type MiesiacWyniku } from './model.js';
 import { Select } from '../../core/ui/select.js';
+import { useKosztyPracownikow } from '../place/dane.js';
 
 const MIES_PELNE = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
 const MIES = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru'];
@@ -26,11 +27,12 @@ const WIERSZE: [keyof MiesiacWyniku, string, 'sum' | 'bold' | 'pct' | 'n' | ''][
   ['zlecen', 'Liczba zleceń', 'n'], ['srednia', 'Średnia wartość zlecenia', ''], ['zwrotVat', 'Zwrot VAT z US', ''], ['wynikZeZwrotem', 'WYNIK ze zwrotem VAT', 'sum'],
 ];
 
-/** Wynik firmy jak arkusz „Wyniki firmy”: miesiące roku, koszty pracowników wpisywane ręcznie (do czasu modułu Płace). */
+/** Wynik firmy jak arkusz „Wyniki firmy”: miesiące roku, koszty pracowników z Płac, a w miesiącach bez danych płac – wpisane ręcznie. */
 export function Wynik({ rok }: { rok: string }) {
   const desk = useDesk();
   const revenues = useEntities('revenues'), costs = useEntities('costs');
-  const [place, setPlace] = useState<Record<string, number>>({});
+  const [reczne, setPlace] = useState<Record<string, number>>({});
+  const { place, zPlac } = useKosztyPracownikow(rok, reczne);
   const [edit, setEdit] = useState<string | null>(null);
   useEffect(() => { api<Record<string, number>>('/api/finanse/place').then(setPlace, () => { /* bez sieci: płace 0 */ }); }, []);
   const w = useMemo(() => wynikRoku(revenues, costs, place, rok), [revenues, costs, place, rok]);
@@ -104,7 +106,7 @@ export function Wynik({ rok }: { rok: string }) {
               <th scope="row" className="sticky left-0 bg-inherit px-2.5 py-1.5 text-left font-semibold whitespace-nowrap">{label}</th>
               {w.slice(0, 12).map((r, i) => (
                 <td key={r.miesiac} className={cn('px-2 py-1.5 text-right whitespace-nowrap', i + 1 >= a && i + 1 <= b && 'bg-action/8')}>
-                  {k === 'kosztyPracownikow'
+                  {k === 'kosztyPracownikow' && !(r.miesiac in zPlac)
                     ? <button type="button" onClick={() => setEdit(r.miesiac)} className="inline-flex items-center gap-1 hover:text-action" aria-label={`Koszty pracowników ${r.miesiac}: ${zl(r.kosztyPracownikow)} zł, zmień`}>{zl(r.kosztyPracownikow)}<PencilSimple className="h-3.5 w-3.5 text-ink-2" aria-hidden /></button>
                     : val(r, k, t)}
                 </td>
@@ -114,7 +116,7 @@ export function Wynik({ rok }: { rok: string }) {
           ))}
         </tbody>
       </table>
-      {edit && <PlaceForm miesiac={edit} kwota={place[edit]} onClose={() => setEdit(null)} onSaved={setPlace} />}
+      {edit && <PlaceForm miesiac={edit} kwota={reczne[edit]} onClose={() => setEdit(null)} onSaved={setPlace} />}
     </div>
     </div>
   );

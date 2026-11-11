@@ -7,16 +7,16 @@ import { cn } from '../../core/ui/cn.js';
 import { wynikZlecenia } from './model.js';
 import { openRevenue } from './RevenueHost.js';
 import { prefillZlecenia } from './przychodZeZlecenia.js';
-import { useStawka } from './stawka.js';
+import { useKosztDnia } from '../place/dane.js';
 
 const dni = (v: number) => v.toLocaleString('pl-PL', { maximumFractionDigits: 1 });
 
-/** Karta zlecenia (admin): przychody zlecenia i wynik = przychód − materiały (szacunek) − robocizna z harmonogramu (szacunek). */
+/** Karta zlecenia (admin): przychody zlecenia i wynik = przychód − materiały (szacunek) − robocizna z harmonogramu (pełny koszt firmy z Płac). */
 export default function Rozliczenie({ jobId }: { jobId: string }) {
   const revenues = useEntities('revenues'), entries = useEntities('schedule_entries');
-  const stawka = useStawka() ?? 0;
+  const koszt = useKosztDnia();
   const przychody = revenues.filter((r) => r.jobId === jobId && !r.deletedAt);
-  const w = useMemo(() => wynikZlecenia(jobId, revenues, entries, stawka), [jobId, revenues, entries, stawka]);
+  const w = useMemo(() => wynikZlecenia(jobId, revenues, entries, koszt), [jobId, revenues, entries, koszt]);
   const dodaj = () => { const job = store.get('jobs', jobId); if (job) openRevenue({ prefill: prefillZlecenia(job), fromJob: true }); };
   const Wiersz = ({ k, sub, v, strong }: { k: string; sub?: string; v: number; strong?: boolean }) => (
     <div className={cn('grid grid-cols-[minmax(0,1fr)_auto] gap-x-3', strong && 'border-t-2 border-ink pt-2 text-lg font-extrabold')}>
@@ -41,7 +41,7 @@ export default function Rozliczenie({ jobId }: { jobId: string }) {
           <div className="grid gap-2">
             <Wiersz k="Przychód netto" v={w.przychod} />
             <Wiersz k="− Materiały" sub="szacunek z przychodu" v={-w.materialy || 0} />
-            <Wiersz k="− Robocizna" sub={stawka ? `szacunek: ${dni(w.dni)} osobodni × ${fmtZl(stawka)}` : 'ustaw stawkę osobodnia w Ustawieniach → Finanse'} v={-w.robocizna || 0} />
+            <Wiersz k="− Robocizna" sub={`${dni(w.dni)} osobodni × koszt dnia osoby (Płace)`} v={-w.robocizna || 0} />
             <Wiersz k={`Wynik zlecenia${w.marza === null ? '' : ` · ${Math.round(w.marza * 100)}%`}`} v={w.wynik} strong />
           </div>
         </>

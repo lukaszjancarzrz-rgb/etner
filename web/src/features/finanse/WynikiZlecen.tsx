@@ -8,7 +8,7 @@ import { CatTab } from '../../core/ui/category.js';
 import { cn } from '../../core/ui/cn.js';
 import { Table, Td, Th, Tr, useSort } from '../../core/ui/table.js';
 import { wynikiZlecen } from './model.js';
-import { useStawka } from './stawka.js';
+import { useKosztDnia } from '../place/dane.js';
 
 const proc = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
 
@@ -16,9 +16,9 @@ const proc = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}
 export function WynikiZlecen({ rok }: { rok: string }) {
   const desk = useDesk();
   const jobs = useEntities('jobs'), revenues = useEntities('revenues'), entries = useEntities('schedule_entries'), clients = useEntities('clients');
-  const stawka = useStawka() ?? 0;
+  const koszt = useKosztDnia();
   const klient = useMemo(() => new Map(clients.map((c) => [c.id as string, c.nazwa as string])), [clients]);
-  const list = useMemo(() => wynikiZlecen(jobs, revenues, entries, stawka, rok), [jobs, revenues, entries, stawka, rok]);
+  const list = useMemo(() => wynikiZlecen(jobs, revenues, entries, koszt, rok), [jobs, revenues, entries, koszt, rok]);
   const branze = useMemo(() => {
     const m = new Map<string, { p: number; w: number; n: number }>();
     for (const r of list) { const k = (r.job.kategoria as string) || 'Bez branży'; const v = m.get(k) ?? { p: 0, w: 0, n: 0 }; v.p += r.przychod; v.w += r.wynik; v.n++; m.set(k, v); }
@@ -28,7 +28,7 @@ export function WynikiZlecen({ rok }: { rok: string }) {
   if (!list.length) return <Empty icon={Briefcase} title="Brak zleceń z przychodem w tym roku" hint="Przychody z importu arkusza nie są powiązane ze zleceniami – wynik zlecenia liczy się dla przychodów dodanych przy zleceniu." />;
   return (
     <div className="grid gap-4">
-      <p className="text-sm text-ink-2">Materiały i robocizna to szacunki: materiały wpisane przy przychodzie, robocizna = osobodni z harmonogramu × stawka osobodnia ({stawka ? fmtZl(stawka) : 'nie ustawiona – Ustawienia → Finanse'}).</p>
+      <p className="text-sm text-ink-2">Materiały i robocizna to szacunki: materiały wpisane przy przychodzie, robocizna = dni z harmonogramu × koszt dnia osoby z Płac (koszt całkowity osoby w miesiącu ÷ jej dni pracy; bez danych płac – stawka osobodnia z Ustawień).</p>
       <section aria-label="Średnia marża wg branży" className="grid gap-2">
         <SectionTitle>Średnia marża wg branży</SectionTitle>
         <ul className="flex flex-wrap gap-2">{branze.map((b) => <li key={b.k} className="inline-flex items-center gap-2 rounded-[4px] border border-line bg-card px-3 py-1.5 text-sm"><CatTab name={b.k} /><span className="font-semibold">{b.k}</span><span className="tabular-nums">{proc(b.marza)}</span><span className="text-ink-2">({b.n})</span></li>)}</ul>
