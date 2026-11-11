@@ -37,7 +37,6 @@ UTF-8, rozszerzenie `.json`, nazwa `kpir-RRRR-MM.json`.
       "netto": 1234.56,
       "kolumnaKpir": 12,
       "doWyniku": true,
-      "zlecenie": null,
       "uwagi": ""
     }
   ]
@@ -64,6 +63,6 @@ Pola:
   - Inne
   - Do wyjaśnienia – błąd w KPiR (nie liczone) → `doWyniku: false`
 - `doWyniku` – czy koszt liczy się do wyniku firmy (domyślnie `true`).
-- `zlecenie` – numer zlecenia (np. `"Z0040"`), tylko gdy opis jednoznacznie wskazuje zlecenie (np. nazwisko klienta i data pasują do jednego zlecenia); inaczej `null`. Admin może przypisać później w aplikacji.
+- Kosztów **nie** przypisujemy do zleceń (materiały zlecenia admin wpisuje szacunkowo na karcie zlecenia).
 
 Duplikaty: aplikacja pomija pozycję o tym samym miesiącu, numerze dokumentu, dacie i kwocie netto (ponowne wgranie tego samego pliku nic nie dubluje).

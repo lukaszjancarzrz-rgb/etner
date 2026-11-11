@@ -1,6 +1,6 @@
 # Moduł 3 „Finanse” – szkic (do akceptacji właściciela)
 
-Stan: SZKIC 2026-11-11, po odpowiedziach właściciela (sekcja 6). Podstawa: arkusz właściciela (wersja 2026_5, analizowany tylko w sesji, bez danych w repozytorium).
+Stan: ZAAKCEPTOWANY 2026-11-11 (sekcja 6; materiały zlecenia wpisywane szacunkowo – 6.3). Podstawa: arkusz właściciela (wersja 2026_5, analizowany tylko w sesji, bez danych w repozytorium).
 Moduł 4 „Płace” osobno (arkusze Pracownicy, Godziny, Rozliczenie miesiąca, Zaliczki i dodatki, Statystyki urlopów, Parametry).
 
 ## 1. Co dziś robi arkusz (część finansowa)
@@ -22,7 +22,7 @@ Nowy ekran **Finanse** w menu (wszyscy administratorzy), na komputerze tabele, n
 2. **Przychody** – tabela z sortowaniem i filtrem miesiąca/branży (zakładki-indeksy EL, RW, KL, PV…). Wiersz = przychód: zlecenie (link do karty, jeśli powiązane), klient, miejscowość, kwota bez faktury / brutto + VAT → netto, nr faktury, miesiąc. „+ Przychód” po prawej.
    - Przy zmianie statusu zlecenia na „Rozliczone” – patrz sekcja 6.5 (okienko z kwotą i sposobem rozliczenia).
    - Karta zlecenia (admin): sekcja „Rozliczenie” z przychodami tego zlecenia (tu wraca usunięta wcześniej „notatka z rozliczeniem”, R71).
-3. **Koszty** – import miesięczny z KPiR (plik JSON przygotowany przez Claude, instrukcja: `docs/instrukcje/import-kpir.md`) + tabela jak arkusz Koszty: data, nr dokumentu, kontrahent, opis, kategoria (słownik w Ustawieniach, start: 12 kategorii z arkusza), netto, kolumna KPiR, „do wyniku”. Szybkie dodawanie (Enter dodaje, jak Zadania), filtr miesiąca i kategorii, suma na dole. Opcjonalnie powiązanie kosztu ze zleceniem (pytanie 3).
+3. **Koszty** – import miesięczny z KPiR (plik JSON przygotowany przez Claude, instrukcja: `docs/instrukcje/import-kpir.md`) + tabela jak arkusz Koszty: data, nr dokumentu, kontrahent, opis, kategoria (słownik w Ustawieniach, start: 12 kategorii z arkusza), netto, kolumna KPiR, „do wyniku”. Szybkie dodawanie (Enter dodaje, jak Zadania), filtr miesiąca i kategorii, suma na dole.
 4. **Kontrola KPiR** – miesiąc po miesiącu: wpisujesz sumy z księgi, obok sumy z aplikacji i różnica (czerwona, gdy ≠ 0).
 5. **Statystyki** – osobodni z harmonogramu wg branży, ekipy, branża × ekipa (to aplikacja już wie – bez wpisywania).
 (Kasa gotówkowa – na razie nie; właściciel 2026-11-11.)
@@ -71,14 +71,14 @@ Na karcie zlecenia (tylko admin) nowa sekcja **„Rozliczenie”**:
 Rozliczenie                                    Z0040 · Rekuperacja
 ─────────────────────────────────────────────────────────────────
 Przychód netto            faktura VAT 8%, FV 12/11/2026   18 500,00
-− Materiały               4 koszty przypisane             −7 940,00
+− Materiały (szacunek)    wpisane ręcznie                 −8 000,00
 − Robocizna (szacunek)    9 osobodni × 480 zł             −4 320,00
 ═════════════════════════════════════════════════════════════════
-Wynik zlecenia                                     6 240,00   34%
+Wynik zlecenia                                     6 180,00   33%
 ```
 
 - **Przychód netto** – suma przychodów powiązanych ze zleceniem.
-- **Materiały** – koszty przypisane do zlecenia: w tabeli Koszty kolumna „Zlecenie” (wybór z listy); przy imporcie z KPiR Claude podpowiada zlecenie, gdy opis/data jednoznacznie pasuje (np. nazwisko klienta w opisie), resztę admin przypisuje ręcznie albo zostawia jako koszt ogólny.
+- **Materiały (szacunek)** – kwota wpisana ręcznie „na oko” przez admina na karcie zlecenia (pole w sekcji Rozliczenie, także w okienku „Rozliczone”). Właściciel 2026-11-11: kosztów z KPiR **nie** przypisujemy do zleceń.
 - **Robocizna** – osobodni z harmonogramu (aplikacja już je liczy) × stawka osobodnia z Ustawień; oznaczona „szacunek”. Po module Płace: rzeczywisty koszt 1 h pracownika × 8 h.
 - Koszty ogólne firmy (paliwo, księgowość, amortyzacja…) **nie** są rozdzielane na zlecenia – liczą się tylko w Wyniku firmy.
 - W Finansach zakładka **„Wyniki zleceń”**: tabela zakończonych zleceń z przychodem, materiałami, robocizną, wynikiem i marżą; sortowanie, filtr branży i okresu; średnia marża wg branży (np. „Rekuperacja śr. 31%, Klimatyzacja śr. 24%”).
@@ -89,7 +89,7 @@ Wynik zlecenia                                     6 240,00   34%
 - Gdy admin zmienia status zlecenia na **„Rozliczone”** i zlecenie **nie ma jeszcze przychodu**, otwiera się okienko **„Przychód ze zlecenia”**:
   - Kwota (zł), podpowiedziana z wartości leada, jeśli zlecenie powstało z leada.
   - Sposób rozliczenia (przełącznik): **Bez faktury** · **Faktura VAT 8%** · **Faktura VAT 23%** (przy fakturze kwota = brutto; VAT i netto liczą się same, widoczne od razu).
-  - Nr faktury (opcjonalnie), miesiąc (domyślnie bieżący; „inny miesiąc” jak w arkuszu).
+  - Materiały (szacunek, opcjonalnie), nr faktury (opcjonalnie), miesiąc (domyślnie bieżący; „inny miesiąc” jak w arkuszu).
   - Przyciski: „Zapisz przychód” · „Pomiń” (status zmienia się tak czy inaczej; zlecenie bez przychodu trafia na listę „Rozliczone bez przychodu” w Finansach).
 - Opcja w Ustawieniach (domyślnie wyłączona): **„Dodawaj przychód automatycznie”** – gdy zlecenie ma kwotę z leada, przychód zapisuje się bez okienka ze sposobem ustawionym jako domyślny w Ustawieniach (np. Faktura VAT 8%); powiadomienie „Dodano przychód 18 500 zł – Cofnij/Popraw”.
 - Zlecenie, które ma już przychód, nie dostaje drugiego (bez okienka).
