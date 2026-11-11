@@ -30,6 +30,9 @@ export function freshByJob(jobs: Rec[], entries: Rec[], scope: Rec[], meId: stri
   for (const p of scope) if (freshScope(p, meId, at(p.jobId))) bump(p.jobId);
   // pracownik (jobRow=false): wiersz zlecenia pomijamy, bo zmiana mogła dotyczyć tylko uwag admina
   if (jobRow) for (const j of jobs) if (byOther(j, meId) && j.updatedAt > at(j.id)) bump(j.id);
+  // tylko zlecenia z listy: wpisy usuniętego (albo niewidocznego) zlecenia nie mogą podbijać licznika w menu
+  const ids = new Set(jobs.filter((j) => !j.deletedAt).map((j) => j.id as string));
+  for (const id of [...m.keys()]) if (!ids.has(id)) m.delete(id);
   return m;
 }
 

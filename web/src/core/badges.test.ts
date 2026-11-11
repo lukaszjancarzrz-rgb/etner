@@ -20,7 +20,10 @@ describe('liczniki w menu', () => {
     expect(Object.fromEntries(freshByJob(jobs, entries, scope, 'me', () => T1, false))).toEqual({ j1: 1, j3: 1 });
     // Pumble: cudze wiadomości po wizycie; własne (wysłane z ETNER) i stare nie
     const pb = [r({ jobId: 'j3', createdBy: null, createdAt: T2 }), r({ jobId: 'j3', createdBy: 'me', createdAt: T2 }), r({ jobId: 'j2', createdBy: 'w', createdAt: T0 })];
-    expect(Object.fromEntries(freshByJob([], [], [], 'me', () => T1, false, pb))).toEqual({ j3: 1 });
+    expect(Object.fromEntries(freshByJob(jobs, [], [], 'me', () => T1, false, pb))).toEqual({ j3: 1 });
+    // zlecenie usunięte albo nieobecne na liście nie podbija licznika (właściciel 2026-11-11: „nowe” w menu bez znacznika na liście)
+    expect(Object.fromEntries(freshByJob([r({ id: 'j1', deletedAt: T2 })], entries, scope, 'me', () => T1))).toEqual({});
+    expect(freshByJob([], entries, scope, 'me', () => T1).size).toBe(0);
   });
 
   it('freshByJob: zmiany z przeniesienia, z innego urządzenia i sprzed pierwszej synchronizacji nie są nowe (24-A 8)', () => {
