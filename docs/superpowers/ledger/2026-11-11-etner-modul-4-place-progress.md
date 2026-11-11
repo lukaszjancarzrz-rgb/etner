@@ -1,0 +1,13 @@
+# Progress ledger – moduł 4 „Płace”
+Plan: docs/superpowers/plans/2026-11-11-etner-modul-4-place.md · Spec: docs/superpowers/specs/2026-11-11-etner-modul-4-place-design.md
+Owner 2026-11-11: answers — hours entered manually + schedule hint (D1); all admins (D2); robocizna = person month cost ÷ person schedule work days (D4, confirmed instead of 8 h/day); no employee view (D5). Sketch + plan accepted.
+- Ruling R91: branch claude/dreamy-cori-3oxws3 restarted from claude/great-lovelace-gwkc9f (latest work); the assigned branch was at the initial commit.
+- Ruling R92: all payroll calculations client-side in web/src/features/place/model.ts (pure, tested); server = CRUD, sync (admin only), import. Constants zod-free in shared/src/place.ts (R87 pattern).
+- Ruling R93: Wynik „Koszty pracowników” = Płace for months with hours / premia / inny entries; zaliczka/przelew alone do not switch a month; other months keep manual finanse_place.
+- Ruling R94: /api/settings/place PUT merges years with stored ones (card sends only its year).
+Tasks: 1 model (731c44c), 2+3 server + import (76d47ac, Sonnet), 4 screens (ec2b3a8, Sonnet), 5 finance wiring + parameters card + e2e (647888f), review fixes (15346e1).
+Verified on the owner's real workbook (local scratch DB, never committed): import 6 people / 13 entries / 0 warnings; year totals and per-person results (hours, wages, paid leave, bonuses, contract costs, total cost, cost per hour, paid/free leave days) equal „Podsumowanie płac” exactly.
+Final review (Opus): no Critical; Important 1–5 fixed (entry date outside month, advances switching Wynik, offline month save losing hours, import of people deleted from schedule, stale/overwritten parameters) + minors (param float compare, no-op cost override, person read-only on entry edit, import param validation, Excel-date month, rows beyond 309, day cost without rate, etat in fallback, job-card hint).
+Verification at 15346e1: shared 21, web 127, server 321; build ok; size 134.98/150, 393.77/500 kB; e2e 96 passed / 6 skipped / 2 failed — failures (demo.spec:105, full.spec:12 iPhone) unrelated and pre-existing: base 7ec4d34 also fails 2 (full.spec:12, paszport.spec:128) — shared-DB flakiness.
+Deferred minors: duplicate rates with same odMiesiaca allowed (first wins); POST rates/entries don't check person exists; only current year editable in Parametry; contract cost 0 for future months (planned job days under-costed until the month starts); dzis memoised per session; deleted schedule people shown as „?” in Płace; chart blocks duplicated from finanse/Wykresy.tsx (extract later); e2e flakiness.
+Release pending owner „tak” (new module + migration 0027 additive). After deploy: owner runs Ustawienia → „Płace z arkusza” (trial, then save).

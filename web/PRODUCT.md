@@ -28,7 +28,7 @@ Szyty na miarę dla jednej firmy instalacyjnej: łączy planowanie ekip, dokumen
 - Dwie role: admin i pracownik; część ekranów tylko dla admina.
 - Jasny i ciemny motyw w aplikacji; strona paszportu dla klienta zawsze jasna.
 - Produkcja z prawdziwymi danymi; zmiany bazy tylko dodające.
-- Kolejne moduły planowane: Finanse, Płace.
+- Moduły Finanse i Płace (tylko admini); Płace liczą wypłaty, urlopy i pełny koszt pracowników do Wyniku firmy i robocizny zleceń.
 
 ## Brand Commitments
 - Nazwa: ETNER, hasło „Inteligentny wybór”. Logo firmy: `web/public/logo.png` (znak: okrąg turkus→błękit z kropkami u góry i dołu, dach błękitny, granatowy „impuls”; napis „ET” błękitny, „NER” granatowy), znak wektorowo w `web/public/icon.svg`.
