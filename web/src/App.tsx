@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { RevenueHost } from './features/finanse/RevenueForm.js';
+import { RevenueHost } from './features/finanse/RevenueHost.js';
 import { bus } from './core/api.js';
 import { Shell } from './core/layout/Shell.js';
 import { Login } from './screens/Login.js';

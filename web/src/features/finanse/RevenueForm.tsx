@@ -1,5 +1,5 @@
 import { fmtZl, rozbij, SPOSOBY, SPOSOB_LABEL, type Sposob } from '@etner/shared';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../core/api.js';
 import { outbox } from '../../core/outbox.js';
 import { today, useDict } from '../../core/data.js';
@@ -16,16 +16,6 @@ import { parseZl } from '../leady/model.js';
 
 const zlText = (gr: number | null | undefined) => (gr == null ? '' : fmtZl(gr).replace(/\s?zł$/, ''));
 const NONE = '-';
-
-// Jedno okienko przychodu na całą aplikację: otwierane też z miejsc, które same już nie istnieją (formularz zlecenia, toast „Popraw”).
-type Open = { revenue?: Rec; prefill?: Partial<Rec>; fromJob?: boolean } | null;
-let open: Open = null;
-const subs = new Set<() => void>();
-export const openRevenue = (o: Open) => { open = o; for (const f of subs) f(); };
-export function RevenueHost() {
-  const o = useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => open);
-  return o ? <RevenueForm key={o.revenue?.id ?? 'nowy'} {...o} onClose={() => openRevenue(null)} /> : null;
-}
 
 /** Przychód: nowy (z `prefill`, np. ze zlecenia) albo edycja. Kwota brutto przy fakturze VAT, bez VAT przy „bez faktury” i zwrocie; netto i VAT na żywo. */
 export function RevenueForm({ revenue, prefill, fromJob, onClose }: { revenue?: Rec; prefill?: Partial<Rec>; fromJob?: boolean; onClose: () => void }) {

@@ -4,7 +4,7 @@ import { today } from '../../core/data.js';
 import { store, type Rec } from '../../core/store.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia } from '../../core/write.js';
-import { openRevenue } from './RevenueForm.js';
+import { openRevenue } from './RevenueHost.js';
 
 // shortcut: dopasowanie po nazwie wartości słownika (jak jobStatusFromLead); po zmianie nazwy statusu przestaje działać – przejść na flagę w słowniku
 const rozliczone = (s: string) => s.trim().toLowerCase() === 'rozliczone';

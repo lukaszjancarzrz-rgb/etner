@@ -13,7 +13,6 @@ import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia } from '../../core/write.js';
 import { ClientPicker, newClientBody, siteLabel, type NewClient } from '../klienci/ClientPicker.js';
 import { badEmail } from '../klienci/forms.js';
-import { przychodPoRozliczeniu } from '../finanse/przychodZeZlecenia.js';
 import { jobPrefill } from '../leady/model.js';
 
 const NONE = '-';
@@ -23,6 +22,9 @@ const opts = (d: Rec[]) => d.map((x) => ({ value: x.wartosc as string, label: x.
  * Nowe zlecenie albo edycja (admin). Klient z listy albo „Nowy klient” w tym samym formularzu.
  * `lead`: zlecenie z leada (POST /api/leads/:id/to-job), pola wypełnione z leada, pierwszy punkt zakresu i „Przyjęta”.
  */
+// Finanse ładowane na żądanie (start bundle); błąd ładowania nie psuje zapisu zlecenia.
+const rozlicz = (job: Rec, status: string) => { import('../finanse/przychodZeZlecenia.js').then((m) => m.przychodPoRozliczeniu(job, status)).catch((x: Error) => toast('Nie udało się dodać przychodu', { body: x.message, tone: 'error' })); };
+
 export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose: () => void }) {
   const allStatusy = useDict('status_zlecenia');
   const statusy = lead ? allStatusy.filter((s) => jobStatusFromLead(s.wartosc)) : allStatusy; // z leada: bez „Nowe” i „Do wyceny”
@@ -80,7 +82,7 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
         : createVia<Rec>('jobs', { kind: 'zlecenie', url: '/api/jobs', method: 'POST', body }, tmp);
     if (!navigator.onLine) {
       toast('Zapisane w telefonie', { body: 'Zlecenie wyśle się, gdy wróci zasięg.' });
-      if (job) przychodPoRozliczeniu(job, f.status);
+      if (job) rozlicz(job, f.status);
       p.catch((x: Error) => toast('Zlecenie nie zostało zapisane', { body: x.message, tone: 'error' }));
       return onClose();
     }
@@ -88,7 +90,7 @@ export function JobForm({ job, lead, onClose }: { job?: Rec; lead?: Rec; onClose
     try {
       const r = (await p) as Rec;
       onClose();
-      if (job) przychodPoRozliczeniu(job, f.status);
+      if (job) rozlicz(job, f.status);
       if (!job && r?.id) go(`#zl/${r.id}`);
     } catch (x) {
       setErr({ form: (x as Error).message });
