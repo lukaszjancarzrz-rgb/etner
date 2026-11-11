@@ -1,6 +1,5 @@
 import ExcelJS from 'exceljs';
-import { isNull } from 'drizzle-orm';
-import { norm, PARAMETRY_2026, type Forma, type Parametry, type RodzajWpisu } from '@etner/shared';
+import { norm, PARAMETRY_2026, parametrySchema, type Forma, type Parametry, type RodzajWpisu } from '@etner/shared';
 import type { Db } from '../../core/db.js';
 import { day, num, raw, text } from '../../scripts/migrate-old/read-xlsx.js';
 import { schedulePeople } from '../uzytkownicy/schema.js';
@@ -64,26 +63,32 @@ export async function readPlace(buf: Buffer): Promise<XlsData> {
     urlopMin: p(74, d.urlopMin), urlopMax: p(75, d.urlopMax), godzUrlop: p(76, d.godzUrlop),
   };
 
+  // np. 9,76 zamiast 9,76% dałoby absurdalne koszty umów
+  const ok = parametrySchema.safeParse(parametry).success;
+  if (!ok) ostrzezenia.push('Parametry: nieprawidłowe wartości w arkuszu – użyto domyślnych stawek 2026.');
+
   const wpisy: XlsWpis[] = [];
-  for (let r = 10; r <= 309; r++) {
+  for (let r = 10; r <= Math.max(309, zal.actualRowCount); r++) {
     const nazwa = text(cell(zal, r, 5));
     if (!nazwa) continue;
     const dzien = day(cell(zal, r, 3));
     const i = MIESIACE.indexOf(text(cell(zal, r, 4)).toLowerCase());
-    const miesiac = i >= 0 ? mm(rok, i) : dzien?.slice(0, 7);
+    const zaMies = day(cell(zal, r, 4)); // „za miesiąc” wpisany jako data
+    const miesiac = i >= 0 ? mm(rok, i) : zaMies?.slice(0, 7) ?? dzien?.slice(0, 7);
     const rodzaj = RODZAJ[text(cell(zal, r, 6)).toLowerCase()];
     const kwota = gr(num(cell(zal, r, 7)));
     if (!miesiac || !rodzaj || kwota === null) { ostrzezenia.push(`Zaliczki i dodatki, wiersz ${r}: pominięty (${!miesiac ? 'brak miesiąca' : !rodzaj ? 'nieznany rodzaj' : 'brak kwoty'})`); continue; }
     wpisy.push({ nazwa, miesiac, dzien, rodzaj, kwotaGr: kwota, opis: text(cell(zal, r, 8)) });
   }
-  return { rok, osoby, parametry, wpisy, ostrzezenia };
+  return { rok, osoby, parametry: ok ? parametry : PARAMETRY_2026, wpisy, ostrzezenia };
 }
 
 export interface XlsImportResult { rok: number; osoby: number; stawki: number; miesiace: number; wpisy: number; ostrzezenia: string[] }
 
 /** Zapis w bieżącej transakcji (wywołuj w tx). */
 export function applyPlace(db: Db, userId: string, x: XlsData): XlsImportResult {
-  const ludzie = new Map(db.select().from(schedulePeople).where(isNull(schedulePeople.deletedAt)).all().map((s) => [norm(s.nazwa), s.id]));
+  // także osoby usunięte z harmonogramu (np. odeszły w trakcie roku) – inaczej koszty roku byłyby niepełne; nieusunięta ma pierwszeństwo
+  const ludzie = new Map(db.select().from(schedulePeople).all().sort((a, b) => Number(!a.deletedAt) - Number(!b.deletedAt)).map((s) => [norm(s.nazwa), s.id]));
   const ostrzezenia = [...x.ostrzezenia];
   const nieznane = new Set<string>();
   const znajdz = (nazwa: string) => {

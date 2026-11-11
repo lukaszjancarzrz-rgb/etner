@@ -104,6 +104,7 @@ export function Godziny({ rok }: { rok: string }) {
                                 if (!t.trim()) return void zapiszMiesiac(id, mm, { kosztUmowyGr: null });
                                 const k = parseZl(t);
                                 if ('error' in k) return k.error;
+                                if (!nad && k.gr === P.kosztUmowy(id, mm)) return; // ta sama kwota inaczej zapisana – bez zamrażania
                                 zapiszMiesiac(id, mm, { kosztUmowyGr: k.gr });
                               }} />
                           </div>

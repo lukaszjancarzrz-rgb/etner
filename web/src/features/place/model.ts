@@ -184,9 +184,9 @@ export function rozliczenieMiesiaca(d: Dane, m: string, P = przygotuj(d)) {
   return { wiersze, razem: zsumuj(wiersze) };
 }
 
-/** Czy miesiąc ma dane płac (godziny albo wpisy) – wtedy koszty pracowników w Wyniku liczą się z Płac. */
+/** Czy miesiąc ma dane płac (godziny, premie albo inne koszty; zaliczka to nie koszt) – wtedy koszty pracowników w Wyniku liczą się z Płac. */
 export const maDanePlac = (P: Przygotowane, m: string): boolean =>
-  [...P.mies.values()].some((r) => r.miesiac === m && Number(r.godziny ?? 0) > 0) || P.wpisy.some((w) => w.miesiac === m);
+  [...P.mies.values()].some((r) => r.miesiac === m && Number(r.godziny ?? 0) > 0) || P.wpisy.some((w) => w.miesiac === m && (w.rodzaj === 'premia' || w.rodzaj === 'inny'));
 
 /** Podsumowanie roku: miesiące (sumy wszystkich osób) i osoby (sumy roku); koszt 1 h = koszt ÷ godziny przepracowane. */
 export function podsumowanieRoku(d: Dane, rok: string, P = przygotuj(d)) {
@@ -218,9 +218,9 @@ export function kosztDnia(d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) 
     if (v !== undefined) return v;
     const r = P.osoby.has(personId) ? wierszRozliczenia(P, d, personId, m) : null;
     const p = parametryMiesiaca(d.parametry, m);
-    if (r && r.godziny > 0 && r.dniPracy > 0) v = Math.round(r.koszt / r.dniPracy);
+    if (r && r.stawka > 0 && r.godziny > 0 && r.dniPracy > 0) v = Math.round(r.koszt / r.dniPracy);
     else if (r && r.stawka > 0) {
-      const wymiar = p.godzDnia * dniRobocze(m, d.dniWolne);
+      const wymiar = p.godzDnia * dniRobocze(m, d.dniWolne) * Number(P.osoby.get(personId)?.etat ?? 1);
       v = Math.round((r.stawka + (wymiar ? r.kosztUmowy / wymiar : 0)) * p.godzDnia);
     } else v = stawkaOsobodniaGr;
     memo.set(k, v);

@@ -1,11 +1,11 @@
 import { FileXls, Percent } from '@phosphor-icons/react';
 import { parametryMiesiaca, type Parametry } from '@etner/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ApiError, api } from '../../core/api.js';
 import { today } from '../../core/data.js';
 import { Button } from '../../core/ui/button.js';
 import { Field, Input } from '../../core/ui/input.js';
-import { setParametry } from '../place/dane.js';
+import { setParametry, useParametry } from '../place/dane.js';
 import { Card } from './card.js';
 
 type Wynik = { rok: number; osoby: number; stawki: number; miesiace: number; wpisy: number; ostrzezenia: string[] };
@@ -25,7 +25,7 @@ export function PlaceUstawienia() {
     fd.set('plik', f);
     try {
       setW({ ...(await api<Wynik>(`/api/payroll/import-xlsx${naprawde ? '?naprawde=1' : ''}`, { method: 'POST', body: fd })), naprawde });
-      if (naprawde) setFile(null);
+      if (naprawde) { setFile(null); api<Record<string, Parametry>>('/api/settings/place').then(setParametry, () => {}); }
     } catch (e) { setErr(e instanceof ApiError && e.status === 409 ? 'W Płacach są już dane – przeniesienie jest tylko do pustej bazy.' : msg(e)); }
     finally { setBusy(false); }
   }
@@ -64,20 +64,26 @@ const POLA: [keyof Parametry, string, '%' | 'zł' | 'n'][] = [
 ];
 const pokaz = (v: number, j: '%' | 'zł' | 'n') => String(j === '%' ? +(v * 100).toFixed(4) : j === 'zł' ? v / 100 : v).replace('.', ',');
 
+let kolejka = Promise.resolve();
+
 /** Parametry płac na rok (ZUS, PIT, urlopy); zapis po wyjściu z pola. Rok bez własnych parametrów bierze je z poprzedniego. */
 export function ParametryPlac() {
   const rok = today().slice(0, 4);
-  const [mapa, setMapa] = useState<Record<string, Parametry> | null>(null);
+  const mapa = useParametry();
   const [err, setErr] = useState('');
-  useEffect(() => { api<Record<string, Parametry>>('/api/settings/place').then(setMapa, (e) => setErr(msg(e))); }, []);
-  if (!mapa) return err ? <p role="alert" className="text-danger">{err}</p> : null;
+  const ost = useRef(mapa);
+  ost.current = mapa;
+  if (!mapa) return null;
   const p = parametryMiesiaca(mapa, rok);
-  async function zapisz(k: keyof Parametry, t: string, j: '%' | 'zł' | 'n') {
+  // zapisy po kolei, każdy od najnowszych parametrów (dwa pola zmienione szybko po sobie)
+  const zapisz = (k: keyof Parametry, t: string, j: '%' | 'zł' | 'n') => { kolejka = kolejka.then(() => zapisz1(k, t, j)); };
+  async function zapisz1(k: keyof Parametry, t: string, j: '%' | 'zł' | 'n') {
+    const p = parametryMiesiaca(ost.current ?? {}, rok);
     const n = Number(t.replace(',', '.').replace(/\s/g, ''));
     if (!t.trim() || !Number.isFinite(n) || n < 0) return setErr('Wpisz liczbę.');
-    const v = j === '%' ? n / 100 : j === 'zł' ? Math.round(n * 100) : n;
+    const v = j === '%' ? +(n / 100).toFixed(6) : j === 'zł' ? Math.round(n * 100) : n; // 9,76/100 ≠ 0,0976 w liczbach zmiennoprzecinkowych
     if (v === p[k]) return setErr('');
-    try { const m = await api<Record<string, Parametry>>('/api/settings/place', { method: 'PUT', json: { ...mapa, [rok]: { ...p, [k]: v } } }); setMapa(m); setParametry(m); setErr(''); }
+    try { const m = await api<Record<string, Parametry>>('/api/settings/place', { method: 'PUT', json: { [rok]: { ...p, [k]: v } } }); ost.current = m; setParametry(m); setErr(''); }
     catch (e) { setErr(msg(e)); }
   }
   return (

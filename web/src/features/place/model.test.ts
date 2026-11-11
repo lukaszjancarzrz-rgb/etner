@@ -77,6 +77,9 @@ describe('podsumowanie i Wynik firmy', () => {
     const k = kosztyPracownikowMiesiecy(d, '2026');
     expect(Object.keys(k)).toEqual(['2026-04']);
     expect(k['2026-04']).toBe(s.miesiace[3]!.koszt);
+    // sama zaliczka (wypłata, nie koszt) nie przełącza miesiąca na Płace; premia tak
+    const z = dane({ wpisy: [{ id: 'z', personId: 'a', miesiac: '2026-07', rodzaj: 'zaliczka', kwotaGr: 1 }, { id: 'p', personId: 'a', miesiac: '2026-08', rodzaj: 'premia', kwotaGr: 1 }] });
+    expect(Object.keys(kosztyPracownikowMiesiecy(z, '2026'))).toEqual(['2026-04', '2026-08']);
     expect(s.razem.koszt1h).toBe(Math.round(s.razem.koszt / 110));
   });
 });
@@ -91,6 +94,7 @@ describe('robocizna zlecenia', () => {
     expect(koszt('a', '2026-04')).toBe(Math.round(kwiecien / 2.5));
     expect(koszt('a', '2026-05')).toBe(Math.round((3500 + 218_443 / (8 * dniRobocze('2026-05', []))) * 8));
     expect(koszt('x', '2026-04')).toBe(40_000);
+    expect(koszt('b', '2026-06')).toBe(Math.round(2000 * 8)); // bez godzin: stawka × godziny dnia
     expect(robociznaZlecenia('J', entries, koszt)).toBe(Math.round(1.5 * koszt('a', '2026-04') + koszt('a', '2026-05') + 40_000));
   });
 });

@@ -26,7 +26,6 @@ export function WpisForm({ wpis, osoby, osoba, miesiac, onClose }: { wpis?: Rec;
     if ('error' in kwota) er.kwota = kwota.error;
     if (!f.personId) er.personId = 'Wybierz osobę';
     if (!/^\d{4}-\d{2}$/.test(f.miesiac)) er.miesiac = 'Podaj miesiąc';
-    if (f.dzien && !f.dzien.startsWith(f.miesiac)) er.dzien = 'Data musi być w wybranym miesiącu';
     setErr(er);
     if (Object.keys(er).length || 'error' in kwota) return;
     const body = { miesiac: f.miesiac, dzien: f.dzien || null, rodzaj: f.rodzaj, kwotaGr: kwota.gr, opis: f.opis.trim() };
@@ -39,7 +38,7 @@ export function WpisForm({ wpis, osoby, osoba, miesiac, onClose }: { wpis?: Rec;
       <Sheet title={wpis ? 'Wpis w płacach' : 'Nowy wpis w płacach'} className="desk:w-[min(560px,92vw)]">
         <form onSubmit={submit} noValidate className="grid gap-4">
           <div className="grid gap-4 min-[560px]:grid-cols-2">
-            <Field label="Osoba" error={err.personId}>{(id, d) => <Select id={id} aria-describedby={d} value={f.personId} onValueChange={(personId) => set({ personId })} options={osoby.map((o) => ({ value: o.id, label: o.nazwa }))} placeholder="Osoba" />}</Field>
+            <Field label="Osoba" error={err.personId}>{(id, d) => wpis ? <Input id={id} value={osoby.find((o) => o.id === f.personId)?.nazwa ?? ''} readOnly /> : <Select id={id} aria-describedby={d} value={f.personId} onValueChange={(personId) => set({ personId })} options={osoby.map((o) => ({ value: o.id, label: o.nazwa }))} placeholder="Osoba" />}</Field>
             <Field label="Rodzaj">{(id) => <Select id={id} value={f.rodzaj} onValueChange={(rodzaj) => set({ rodzaj: rodzaj as RodzajWpisu })} options={RODZAJE_WPISU.map((r) => ({ value: r, label: RODZAJ_WPISU_LABEL[r] }))} />}</Field>
             <Field label="Miesiąc" error={err.miesiac}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.miesiac} type="month" value={f.miesiac} onChange={(e) => set({ miesiac: e.target.value })} />}</Field>
             <Field label="Data (nieobowiązkowa)" error={err.dzien}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.dzien} type="date" value={f.dzien} onChange={(e) => set({ dzien: e.target.value })} />}</Field>

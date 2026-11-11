@@ -7,7 +7,9 @@ export const fail = (t: string) => (e: Error) => toast(t, { body: e.message, ton
 
 /** Godziny i/lub koszt umowy osoby w miesiącu (PUT upsert; oba null = wyczyszczenie). */
 export function zapiszMiesiac(personId: string, miesiac: string, patch: { godziny?: number | null; kosztUmowyGr?: number | null }): void {
-  const cur = store.all('payroll_months').find((r) => !r.deletedAt && !r._tmp && r.personId === personId && r.miesiac === miesiac);
+  // wiersz dodany bez sieci (_tmp) też się liczy – inaczej drugi zapis wysłałby null w miejsce wpisanych godzin
+  const rows = store.all('payroll_months').filter((r) => !r.deletedAt && r.personId === personId && r.miesiac === miesiac);
+  const cur = rows.find((r) => !r._tmp) ?? rows[0];
   const body = { godziny: (cur?.godziny as number | null | undefined) ?? null, kosztUmowyGr: (cur?.kosztUmowyGr as number | null | undefined) ?? null, ...patch };
   const w = { kind: 'płace: godziny', url: `/api/payroll/months/${personId}/${miesiac}`, method: 'PUT' as const, body };
   void (cur ? updateVia('payroll_months', cur.id, body, w) : createVia('payroll_months', w, { personId, miesiac, ...body })).catch(fail('Nie zapisano'));

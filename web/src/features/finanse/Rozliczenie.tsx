@@ -41,7 +41,7 @@ export default function Rozliczenie({ jobId }: { jobId: string }) {
           <div className="grid gap-2">
             <Wiersz k="Przychód netto" v={w.przychod} />
             <Wiersz k="− Materiały" sub="szacunek z przychodu" v={-w.materialy || 0} />
-            <Wiersz k="− Robocizna" sub={`${dni(w.dni)} osobodni × koszt dnia osoby (Płace)`} v={-w.robocizna || 0} />
+            <Wiersz k="− Robocizna" sub={w.dni && !w.robocizna ? 'brak danych w Płacach – uzupełnij Płace albo stawkę osobodnia (Ustawienia → Finanse)' : `${dni(w.dni)} osobodni × koszt dnia osoby (Płace)`} v={-w.robocizna || 0} />
             <Wiersz k={`Wynik zlecenia${w.marza === null ? '' : ` · ${Math.round(w.marza * 100)}%`}`} v={w.wynik} strong />
           </div>
         </>

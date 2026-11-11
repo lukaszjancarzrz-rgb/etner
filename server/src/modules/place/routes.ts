@@ -60,7 +60,8 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.delete('/api/payroll/entries/:id', admin, (c) => { svc.removeEntry(db, me(c).id, c.req.param('id')); return c.json({ ok: true }); });
 
   app.get('/api/settings/place', admin, (c) => c.json(svc.getParametry(db)));
-  app.put('/api/settings/place', admin, async (c) => c.json(svc.setParametry(db, await body(c, parametryMapSchema))));
+  // scalanie z zapisanymi latami: jedna karta w Ustawieniach wysyła tylko swój rok
+  app.put('/api/settings/place', admin, async (c) => c.json(svc.setParametry(db, { ...svc.getParametry(db), ...(await body(c, parametryMapSchema)) })));
 
   // Jednorazowe przeniesienie z arkusza (tylko gdy brak nieusuniętych wierszy Płac); bez ?naprawde=1 próba (zapis wycofany w transakcji).
   const limit = bodyLimit({ maxSize: XLSX_MAX + 64 * 1024, onError: (c) => c.json({ error: 'Plik jest za duży (max 10 MB).' }, 413) });
