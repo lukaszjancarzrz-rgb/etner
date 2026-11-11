@@ -139,13 +139,14 @@ describe('migrate (atrapa)', () => {
     expect(zlecenia.list(db).every((j) => j.createdBy === admin.id)).toBe(true);
   });
 
-  it('decyzje właściciela: kategorie z kodów, H → Inne, „Do rozliczenia” zamknięte, rodzaj pusty, numery w kolejności daty', async () => {
+  it('decyzje właściciela: kategorie z kodów, H → Inne, „Do rozliczenia” aktywne, rodzaj pusty, numery w kolejności daty', async () => {
     const { db } = await migrated();
     const js = zlecenia.list(db);
     expect(jobOf(db, 'Anna Wiśniewska')[0]!.kategoria).toBe('Inne');
     expect(jobOf(db, 'Nowak')[0]!.kategoria).toBe('Rekuperacja');
     const dudek = jobOf(db, 'Józef Dudek')[0]!;
-    expect([dudek.status, slowniki.groupOf(db, 'status_zlecenia', dudek.status), dudek.zamknieteAt]).toEqual(['Do rozliczenia', 'zamkniete', '2026-10-20T12:00:00.000Z']);
+    // przeniesienie: w słowniku „zamknięte” (decyzja z 2026-10); od 2026-11-11 właściciel: „Do rozliczenia” liczy się jako aktywne (groupOf)
+    expect([dudek.status, slowniki.groupOf(db, 'status_zlecenia', dudek.status), dudek.zamknieteAt]).toEqual(['Do rozliczenia', 'aktualne', null]); // aktywne = bez daty zamknięcia
     expect(js.every((j) => j.rodzaj === '')).toBe(true);
     // „Od” z arkusza, inaczej pierwszy dzień po przeniesieniu, inaczej miesiąc terminu; bez daty na końcu
     const byNum = [...js].sort((a, b) => a.numer.localeCompare(b.numer)).map((j) => klienci.get(db, j.clientId)!.nazwa);

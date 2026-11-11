@@ -1,4 +1,4 @@
-import { addDays, dayOf } from '@etner/shared';
+import { addDays, dayOf, doRozliczenia } from '@etner/shared';
 import { staleDayKeys } from './badges.js';
 import { useMemo, useSyncExternalStore } from 'react';
 import { useSession } from './session.js';
@@ -34,7 +34,7 @@ export function useStatusGroup(rodzaj = 'status_zlecenia'): (status: string) => 
   const st = useDict(rodzaj);
   return useMemo(() => {
     const m = new Map(st.map((d) => [d.wartosc, d.grupa ?? 'aktualne']));
-    return (s) => m.get(s) ?? 'aktualne';
+    return (s) => (rodzaj === 'status_zlecenia' && doRozliczenia(s) ? 'aktualne' : m.get(s) ?? 'aktualne'); // jak groupOf na serwerze
   }, [st]);
 }
 

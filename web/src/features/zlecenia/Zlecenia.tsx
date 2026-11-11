@@ -1,3 +1,4 @@
+import { doRozliczenia } from '@etner/shared';
 import { Briefcase, MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { TitleCount } from '../../core/layout/TopBar.js';
 import { useEffect, useMemo, useState } from 'react';
@@ -22,6 +23,8 @@ const GROUPS = [
   { g: 'pozniej', title: 'Na później' },
   { g: 'zamkniete', title: 'Zamknięte' },
 ] as const;
+/** Telefon: sekcje listy; „Do rozliczenia” to podgrupa Aktualnych (zakres na komputerze ten sam). */
+const SEKCJE = [GROUPS[0], { g: 'rozl', title: 'Do rozliczenia' }, GROUPS[1], GROUPS[2]] as const;
 
 /** Zlecenia: telefon – lista wg grup albo karta; komputer – tabela z kartą zaznaczonego zlecenia obok. */
 export function Zlecenia({ route }: { route: Route }) {
@@ -90,8 +93,8 @@ function JobList({ selected, highlight }: { selected?: string; highlight?: strin
         q || serwisowe ? <Empty icon={MagnifyingGlass} title="Nic nie znaleziono" hint="Sprawdź pisownię albo wpisz samą miejscowość lub nazwisko." />
           : <Empty icon={Briefcase} title="Nie ma jeszcze zleceń" hint={admin ? 'Dodaj pierwsze zlecenie przyciskiem Nowe.' : 'Zlecenia pojawią się, gdy biuro je doda.'} />
       )}
-      {GROUPS.map(({ g, title }) => {
-        const items = list.filter((j) => group(j.status) === g);
+      {SEKCJE.map(({ g, title }) => {
+        const items = list.filter((j) => (g === 'rozl' ? doRozliczenia(j.status) : group(j.status) === g && !doRozliczenia(j.status)));
         if (!items.length) return null;
         const collapsed = g === 'zamkniete' && !closedOpen && !q;
         return (
@@ -193,6 +196,53 @@ function JobTable({ list, q, setQ, serwisowe, setSerwisowe, selected, highlight,
     uwagi: (j) => (fresh.get(j.id) ?? 0) * 2 + Number(group(j.status) === 'aktualne' && !planned.has(j.id)),
   }, selected ? ['miejsc', 'ekipa'] : []); // przy otwartej karcie te kolumny są ukryte, więc nie sortują
   const open = !!selected;
+  const rozl = sorted.filter((j) => doRozliczenia(j.status));
+  const tabela = (lista: JobView[], label: string) => (
+          <Table aria-label={label}>
+            <thead>
+              <tr>
+                <Th sort={by('kat')} pad="pl-2 pr-2.5" className="w-14"><span className="sr-only">Branża</span><span aria-hidden>Br.</span></Th>
+                <Th sort={by('opis')} className="w-[16rem]">Krótki opis</Th>
+                <Th sort={by('klient')}>Klient</Th>
+                {!open && <Th sort={by('miejsc')} className="w-[18%]">Miejscowość</Th>}
+                <Th sort={by('status')} className="w-[8.5rem]">Status</Th>
+                {!open && <Th sort={by('ekipa')} className="w-[9rem]">Ekipa</Th>}
+                <Th sort={by('termin')} className="w-[6.5rem]">Termin</Th>
+                <Th sort={by('uwagi')} className="w-[14.5rem]">Uwagi</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((j) => {
+                const nowe = fresh.get(j.id) ?? 0;
+                const on = j.id === selected;
+                return (
+                  <Tr key={j.id} href={on ? '#zl' : `#zl/${j.id}`} selected={on} className="scroll-mt-28">
+                    <Td pad="py-1.5 pr-2.5">{j.kategoria && <><CatTab name={j.kategoria} flush /><span className="sr-only">{j.kategoria}</span></>}</Td>
+                    <Td className={cn(opisZlecenia(j).fallback ? 'text-ink-2' : 'font-semibold')} title={opisZlecenia(j).text}>{j._tmp ? 'zapisywanie' : opisZlecenia(j).text}</Td>
+                    <Td>
+                      {/* tekst dla czytnika na końcu linku: pierwszy fragment linku musi być widoczny (cel kliknięcia) */}
+                      <a href={on ? '#zl' : `#zl/${j.id}`} aria-current={on ? 'page' : undefined} className="font-bold hover:text-action">
+                        {nazwa(j)}<span className="sr-only">, {j.numer}{nowe > 0 && `, ${nowe} ${nowe === 1 ? 'nowy' : 'nowe'}`}</span>
+                      </a>
+                      {open && j.site?.miejscowosc && <span className="text-ink-2">, {j.site.miejscowosc}</span>}
+                    </Td>
+                    {!open && <Td className="text-ink-2">{j.site?.miejscowosc}</Td>}
+                    <Td>{j.status}</Td>
+                    {!open && <Td className="text-ink-2">{j.ekipa ? <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: crew(j.ekipa) ?? 'var(--line)' }} aria-hidden />{j.ekipa}</span> : '—'}</Td>}
+                    <Td>{terminKrotko(j.termin) || <span className="text-ink-2">bez terminu</span>}</Td>
+                    <Td>
+                      <span className="flex items-center gap-2">
+                        {isSerwis(j) && <Badge tone="ink" className="h-5 px-1.5">Serwis</Badge>}
+                        {nowe > 0 && <Badge tone="new" className="h-5 px-1.5"><span aria-hidden>{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</span></Badge>}
+                        {group(j.status) === 'aktualne' && !doRozliczenia(j.status) && !planned.has(j.id) && <span className="truncate text-sm font-bold text-danger">brak w harmonogramie</span>}
+                      </span>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </Table>
+  );
   return (
     <section className="mx-auto grid max-w-[1600px] gap-4 px-8 py-5">
       <div className="flex flex-wrap items-center gap-2">
@@ -221,55 +271,15 @@ function JobTable({ list, q, setQ, serwisowe, setSerwisowe, selected, highlight,
         {admin && <Button onClick={() => setCreating(true)} aria-label="Nowe zlecenie" className="ml-auto px-4"><Plus className="h-5 w-5" weight="bold" />Nowe zlecenie</Button>}
       </div>
       <div className={cn('grid items-start gap-4', open && 'grid-cols-[minmax(0,1fr)_27rem]')}>
+        <div className="grid gap-4">
         {!sorted.length ? (
           <Empty icon={q || kat || serwisowe ? MagnifyingGlass : Briefcase} title={q || kat || serwisowe ? 'Nic nie znaleziono w tym zakresie' : 'Brak zleceń w tym zakresie'}
             hint={q || kat || serwisowe ? 'Liczby przy zakresach pokazują, gdzie są pasujące zlecenia.' : admin ? 'Dodaj zlecenie przyciskiem Nowe zlecenie.' : 'Zlecenia pojawią się, gdy biuro je doda.'} />
         ) : (
-          <Table aria-label="Zlecenia">
-            <thead>
-              <tr>
-                <Th sort={by('kat')} pad="pl-2 pr-2.5" className="w-14"><span className="sr-only">Branża</span><span aria-hidden>Br.</span></Th>
-                <Th sort={by('opis')} className="w-[16rem]">Krótki opis</Th>
-                <Th sort={by('klient')}>Klient</Th>
-                {!open && <Th sort={by('miejsc')} className="w-[18%]">Miejscowość</Th>}
-                <Th sort={by('status')} className="w-[8.5rem]">Status</Th>
-                {!open && <Th sort={by('ekipa')} className="w-[9rem]">Ekipa</Th>}
-                <Th sort={by('termin')} className="w-[6.5rem]">Termin</Th>
-                <Th sort={by('uwagi')} className="w-[14.5rem]">Uwagi</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((j) => {
-                const nowe = fresh.get(j.id) ?? 0;
-                const on = j.id === selected;
-                return (
-                  <Tr key={j.id} href={on ? '#zl' : `#zl/${j.id}`} selected={on} className="scroll-mt-28">
-                    <Td pad="py-1.5 pr-2.5">{j.kategoria && <><CatTab name={j.kategoria} flush /><span className="sr-only">{j.kategoria}</span></>}</Td>
-                    <Td className={cn(opisZlecenia(j).fallback ? 'text-ink-2' : 'font-semibold')} title={opisZlecenia(j).text}>{j._tmp ? 'zapisywanie' : opisZlecenia(j).text}</Td>
-                    <Td>
-                      {/* tekst dla czytnika na końcu linku: pierwszy fragment linku musi być widoczny (cel kliknięcia) */}
-                      <a href={on ? '#zl' : `#zl/${j.id}`} aria-current={on ? 'page' : undefined} className="font-bold hover:text-action">
-                        {nazwa(j)}<span className="sr-only">, {j.numer}{nowe > 0 && `, ${nowe} ${nowe === 1 ? 'nowy' : 'nowe'}`}</span>
-                      </a>
-                      {open && j.site?.miejscowosc && <span className="text-ink-2">, {j.site.miejscowosc}</span>}
-                    </Td>
-                    {!open && <Td className="text-ink-2">{j.site?.miejscowosc}</Td>}
-                    <Td>{j.status}</Td>
-                    {!open && <Td className="text-ink-2">{j.ekipa ? <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: crew(j.ekipa) ?? 'var(--line)' }} aria-hidden />{j.ekipa}</span> : '—'}</Td>}
-                    <Td>{terminKrotko(j.termin) || <span className="text-ink-2">bez terminu</span>}</Td>
-                    <Td>
-                      <span className="flex items-center gap-2">
-                        {isSerwis(j) && <Badge tone="ink" className="h-5 px-1.5">Serwis</Badge>}
-                        {nowe > 0 && <Badge tone="new" className="h-5 px-1.5"><span aria-hidden>{nowe} {nowe === 1 ? 'nowy' : 'nowe'}</span></Badge>}
-                        {group(j.status) === 'aktualne' && !planned.has(j.id) && <span className="truncate text-sm font-bold text-danger">brak w harmonogramie</span>}
-                      </span>
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </tbody>
-          </Table>
+          sorted.length > rozl.length && tabela(sorted.filter((j) => !doRozliczenia(j.status)), 'Zlecenia')
         )}
+        {rozl.length > 0 && <section className="grid gap-2" aria-label="Do rozliczenia"><SectionTitle count={rozl.length}>Do rozliczenia</SectionTitle>{tabela(rozl, 'Do rozliczenia')}</section>}
+        </div>
         {open && <div key={selected} className="sticky top-[64px] max-h-[calc(100dvh-148px)] overflow-y-auto overscroll-contain"><JobCard id={selected} highlight={highlight} /></div>}
       </div>
       {creating && <JobForm onClose={() => setCreating(false)} />}

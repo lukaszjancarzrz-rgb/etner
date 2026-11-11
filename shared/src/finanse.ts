@@ -17,3 +17,6 @@ export function rozbij(kwotaGr: number, sposob: Sposob): { nettoGr: number; vatG
 /** Miesiąc (RRRR-MM), do którego liczy się przychód: „inny miesiąc” ma pierwszeństwo przed datą. */
 export const miesiacPrzychodu = (dzien: string | null, innyMiesiac: string | null): string | null =>
   innyMiesiac || (dzien ? dzien.slice(0, 7) : null);
+
+/** Status zlecenia „Do rozliczenia”: praca skończona, czeka na rozliczenie – zlecenie jest aktywne (nie zamknięte), osobna sekcja w Aktualnych. */
+export const doRozliczenia = (status: string | null | undefined): boolean => String(status ?? '').trim().toLowerCase() === 'do rozliczenia';

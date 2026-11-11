@@ -73,6 +73,7 @@ describe('słowniki', () => {
     expect(groupOf(deps.db, 'status_zlecenia', 'Na później')).toBe('pozniej');
     expect(groupOf(deps.db, 'status_zlecenia', 'Nowe')).toBe('aktualne');
     expect(groupOf(deps.db, 'status_zlecenia', 'Nie ma')).toBeNull();
+    expect(groupOf(deps.db, 'status_zlecenia', 'Do rozliczenia')).toBe('aktualne'); // zawsze aktywne, nawet gdy w słowniku „zamknięte”
   });
 
   it('pracownik czyta, ale nie zapisuje (403)', async () => {

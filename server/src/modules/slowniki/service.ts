@@ -1,5 +1,5 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
-import { newId, type DictGrupa, type DictPut, type DictRodzaj } from '@etner/shared';
+import { doRozliczenia, newId, type DictGrupa, type DictPut, type DictRodzaj } from '@etner/shared';
 import { HTTPException } from 'hono/http-exception';
 import { recordChange } from '../../core/changes.js';
 import type { DictRefs } from '../../core/dict-refs.js';
@@ -14,8 +14,9 @@ export const list = (db: Db, rodzaj: DictRodzaj): DictRow[] =>
 export const listAll = (db: Db): DictRow[] =>
   db.select().from(dict).where(isNull(dict.deletedAt)).orderBy(asc(dict.rodzaj), asc(dict.kolejnosc)).all();
 
+// „Do rozliczenia” zawsze aktywne: na produkcji status ma grupę „zamknięte”, a słownika statusów nie da się edytować (decyzja właściciela 2026-11-11)
 export const groupOf = (db: Db, rodzaj: DictRodzaj, wartosc: string): DictGrupa | null =>
-  list(db, rodzaj).find((r) => r.wartosc === wartosc)?.grupa ?? null;
+  rodzaj === 'status_zlecenia' && doRozliczenia(wartosc) ? 'aktualne' : list(db, rodzaj).find((r) => r.wartosc === wartosc)?.grupa ?? null;
 
 /** Klucz unikalności wartości: czynność serwisowa jest unikalna w swojej kategorii (ta sama nazwa może być w dwóch kategoriach). */
 export const dictKey = (rodzaj: string) => (r: { wartosc: string; kategoria?: string | null }): string =>
