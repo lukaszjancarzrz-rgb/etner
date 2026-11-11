@@ -8,11 +8,11 @@ import { ZAPLECZE, zapamietaj } from './Zaplecze.js';
 export default function ZapleczeTabs({ screen, badges }: { screen: string; badges: Record<string, number> }) {
   const desk = useDesk();
   zapamietaj(screen);
-  const opts = ZAPLECZE.map((k) => ({ v: k as string, label: `${screens[k]!.title}${badges[k] ? ` (${badges[k]})` : ''}` }));
+  const opts = ZAPLECZE.map((k) => ({ v: k as string, label: screens[k]!.title, count: badges[k] ?? 0 }));
   return (
     <nav aria-label="Zaplecze" className={desk ? 'mx-auto max-w-[1400px] px-8 pt-5' : 'mx-auto max-w-3xl px-4 pt-4'}>
       {desk ? <Segmented label="Zaplecze" value={screen} onChange={(k) => go(`#${k}`)} options={opts} className="max-w-3xl" />
-        : <Select aria-label="Zaplecze" value={screen} onValueChange={(k) => go(`#${k}`)} options={opts.map((o) => ({ value: o.v, label: o.label }))} />}
+        : <Select aria-label="Zaplecze" value={screen} onValueChange={(k) => go(`#${k}`)} options={opts.map((o) => ({ value: o.v, label: o.count ? `${o.label} (${o.count})` : o.label }))} />}
     </nav>
   );
 }
