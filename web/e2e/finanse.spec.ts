@@ -51,7 +51,10 @@ test('finanse: Rozliczone → przychód ze zlecenia, ponowne Rozliczone bez okie
     koszty: [1, 2].map((n) => ({ data: '2026-10-0' + n, nrDokumentu: `${tag}/${n}`, kontrahent: `${tag} dostawca ${n}`, nip: '', opis: 'Materiały', kategoria: 'Materiały i towary', netto: 100 * n, kolumnaKpir: 12, doWyniku: true, uwagi: '' })),
   };
   const file = { name: 'kpir-2026-10.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(plik)) };
-  await page.getByRole('radio', { name: 'Koszty' }).click();
+  // komputer: przełącznik zakładek, telefon: lista wyboru
+  const tabs = page.getByRole('radio', { name: 'Koszty' });
+  if (await tabs.isVisible()) await tabs.click();
+  else { await page.getByRole('combobox', { name: 'Widok' }).click(); await page.getByRole('option', { name: 'Koszty' }).click(); }
   const importuj = async () => {
     await page.getByRole('button', { name: 'Importuj miesiąc z KPiR' }).click();
     await page.getByTestId('kpir-file').setInputFiles(file);

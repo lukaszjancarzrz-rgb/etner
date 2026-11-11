@@ -15,6 +15,7 @@ import { RevenueForm } from './RevenueForm.js';
 import { KontrolaKpir } from './KontrolaKpir.js';
 import { Statystyki } from './Statystyki.js';
 import { Wynik } from './Wynik.js';
+import { Wykresy } from './Wykresy.js';
 import { useEntities } from '../../core/store.js';
 
 const ALL = '';
@@ -22,7 +23,8 @@ const ALL = '';
 /** Finanse (admin): przychody i koszty wybranego miesiąca albo całego roku, import miesiąca z KPiR. */
 export function Finanse() {
   const desk = useDesk();
-  type Tab = 'przychody' | 'koszty' | 'wynik' | 'kpir' | 'stat';
+  type Tab = 'przychody' | 'koszty' | 'wynik' | 'wykresy' | 'kpir' | 'stat';
+  const TABS: { v: Tab; label: string }[] = [{ v: 'przychody', label: 'Przychody' }, { v: 'koszty', label: 'Koszty' }, { v: 'wynik', label: 'Wynik' }, { v: 'wykresy', label: 'Wykresy' }, { v: 'kpir', label: 'KPiR' }, { v: 'stat', label: 'Statystyki' }];
   const [tab, setTab] = useState<Tab>('przychody');
   const [rok, setRok] = useState(today().slice(0, 4));
   const revenues = useEntities('revenues');
@@ -38,8 +40,10 @@ export function Finanse() {
   const okres = mies || today().slice(0, 4);
 
   return (
-    <section className={cn('mx-auto grid gap-4', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')} aria-label="Finanse">
-      <Segmented label="Widok" value={tab} onChange={setTab} options={[{ v: 'przychody', label: 'Przychody' }, { v: 'koszty', label: 'Koszty' }, { v: 'wynik', label: 'Wynik' }, { v: 'kpir', label: 'KPiR' }, { v: 'stat', label: 'Statystyki' }]} className="max-w-2xl" />
+    <section className={cn('mx-auto grid grid-cols-[minmax(0,1fr)] gap-4', desk ? 'max-w-[1400px] px-8 py-5' : 'max-w-3xl px-4 py-4')} aria-label="Finanse">
+      {/* telefon: 6 zakładek nie mieści się w jednym rzędzie – lista wyboru */}
+      {desk ? <Segmented label="Widok" value={tab} onChange={setTab} options={TABS} className="max-w-3xl" />
+        : <Select aria-label="Widok" value={tab} onValueChange={(v) => setTab(v as Tab)} options={TABS.map((o) => ({ value: o.v, label: o.label }))} />}
       {!lista && <div className="w-40"><Select aria-label="Rok" value={rok} onValueChange={setRok} options={lata.map((y) => ({ value: y, label: y }))} /></div>}
       {lista && <div className="flex flex-wrap items-center gap-3">
         <div className="w-full desk:w-[24rem]"><Search value={q} onChange={setQ} label="Szukaj" placeholder="Klient, opis, kontrahent" /></div>
@@ -53,7 +57,7 @@ export function Finanse() {
         </div>
       </div>}
       {tab === 'przychody' ? <Przychody q={q} okres={okres} filtr={filtr.przychody} /> : tab === 'koszty' ? <Koszty q={q} okres={okres} filtr={filtr.koszty} />
-        : tab === 'wynik' ? <Wynik rok={rok} /> : tab === 'kpir' ? <KontrolaKpir rok={rok} /> : <Statystyki rok={rok} />}
+        : tab === 'wynik' ? <Wynik rok={rok} /> : tab === 'wykresy' ? <Wykresy rok={rok} /> : tab === 'kpir' ? <KontrolaKpir rok={rok} /> : <Statystyki rok={rok} />}
       {nowy && <RevenueForm onClose={() => setNowy(false)} />}
       {imp && <KpirImport onClose={() => setImp(false)} />}
     </section>
