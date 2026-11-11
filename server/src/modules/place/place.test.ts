@@ -5,7 +5,7 @@ import { createApp } from '../../app.js';
 import { addUser, loginCookie, testDeps } from '../../test-utils.js';
 import { modules } from '../index.js';
 import { seedBase } from '../slowniki/seed.js';
-import { createPerson as addPerson } from '../uzytkownicy/service.js';
+import { createPerson as addPerson, deletePerson } from '../uzytkownicy/service.js';
 import { payrollEntries, payrollMonths, payrollPeople, payrollRates } from './schema.js';
 
 async function setup() {
@@ -15,7 +15,7 @@ async function setup() {
   const a = addUser(deps, { role: 'admin', name: 'Admin' });
   const w = addUser(deps, { name: 'Pracownik' });
   const jan = addPerson(deps.db, a.user.id, { nazwa: 'Jan Kowalski' });
-  return { deps, app, jan, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
+  return { deps, app, jan, adminId: a.user.id, admin: await loginCookie(app, a.login), worker: await loginCookie(app, w.login) };
 }
 const req = (cookie: string, method: string, body?: unknown) =>
   ({ method, headers: { cookie, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -27,6 +27,15 @@ describe('płace – API', () => {
     expect((await app.request(`/api/payroll/people/${jan.id}`, req(worker, 'PUT', osoba))).status).toBe(403);
     expect((await app.request('/api/settings/place', req(worker, 'GET'))).status).toBe(403);
     expect((await app.request('/api/payroll/people/nie-ma', req(admin, 'PUT', osoba))).status).toBe(404);
+  });
+
+  it('osoba usunięta z harmonogramu: płace dalej edytowalne, imię w /api/payroll/byli (tylko z danymi płac)', async () => {
+    const { deps, app, admin, adminId, jan } = await setup();
+    await app.request(`/api/payroll/people/${jan.id}`, req(admin, 'PUT', osoba));
+    expect(await (await app.request('/api/payroll/byli', req(admin, 'GET'))).json()).toEqual([]);
+    deletePerson(deps.db, adminId, jan.id);
+    expect((await app.request(`/api/payroll/people/${jan.id}`, req(admin, 'PUT', { ...osoba, uwagi: 'praktyki' }))).status).toBe(200);
+    expect(await (await app.request('/api/payroll/byli', req(admin, 'GET'))).json()).toEqual([{ id: jan.id, nazwa: jan.nazwa, kolejnosc: jan.kolejnosc }]);
   });
 
   it('osoba: upsert nie dubluje, miesiąc: upsert i usunięcie przy dwóch null', async () => {

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 import { newId, type Parametry, type PayrollEntryCreate, type PayrollEntryUpdate, type PayrollMonth, type PayrollPerson, type PayrollRateCreate, type PayrollRateUpdate } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
@@ -13,7 +13,12 @@ type Tab = typeof payrollRates | typeof payrollEntries;
 const NAZWA = new Map<Tab, string>([[payrollRates, 'payroll_rates'], [payrollEntries, 'payroll_entries']]);
 
 export const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
-export const personExists = (db: Db, id: string) => !!db.select({ id: schedulePeople.id }).from(schedulePeople).where(and(eq(schedulePeople.id, id), isNull(schedulePeople.deletedAt))).get();
+// także osoba usunięta z harmonogramu (np. praktykant po rozliczeniu) – jej płace dalej da się poprawiać
+export const personExists = (db: Db, id: string) => !!db.select({ id: schedulePeople.id }).from(schedulePeople).where(eq(schedulePeople.id, id)).get();
+
+/** Osoby usunięte z harmonogramu, które mają dane w Płacach (imiona do zestawień; synchronizacja usuniętych nie przesyła). */
+export const byli = (db: Db) => db.select({ id: schedulePeople.id, nazwa: schedulePeople.nazwa, kolejnosc: schedulePeople.kolejnosc }).from(schedulePeople)
+  .innerJoin(payrollPeople, and(eq(payrollPeople.personId, schedulePeople.id), isNull(payrollPeople.deletedAt))).where(isNotNull(schedulePeople.deletedAt)).all();
 
 // ---------- wspólne: stawki i wpisy (create / update / usunięcie miękkie) ----------
 const get = <T extends Tab>(db: Db, t: T, id: string) => db.select().from(t as Tab).where(and(eq(t.id, id), isNull(t.deletedAt))).get() as T['$inferSelect'] | undefined;

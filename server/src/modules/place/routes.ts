@@ -20,6 +20,7 @@ export function routes(app: Hono, deps: AppDeps): void {
   const admin = requireAdmin(db);
   const me = (c: Context) => c.get('user');
 
+  app.get('/api/payroll/byli', admin, (c) => c.json(svc.byli(db)));
   app.put('/api/payroll/people/:personId', admin, async (c) => {
     const personId = c.req.param('personId');
     if (!svc.personExists(db, personId)) throw svc.notFound();
