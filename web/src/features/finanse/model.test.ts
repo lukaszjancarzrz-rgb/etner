@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kontrolaKpir, rozliczoneBezPrzychodu, statystyki, sumaMiesiaca, wynikiZlecen, wynikRoku, wynikZlecenia } from './model.js';
+import { kontrolaKpir, rozliczoneBezPrzychodu, statystyki, sumaMiesiaca, sumaOkresu, wynikiZlecen, wynikRoku, wynikZlecenia } from './model.js';
 
 describe('rozliczoneBezPrzychodu', () => {
   it('zwraca „Rozliczone” bez przychodu, pomija z przychodem, „Zakończone” i usunięte przychody nie liczą się', () => {
@@ -34,6 +34,8 @@ describe('3b: wynik, kontrola KPiR, statystyki', () => {
     expect(w[2]).toMatchObject({ zFaktura: 5000, bezFaktury: 1000, przychod: 6000, kosztyFirmy: 1500, kosztyPracownikow: 500, wynik: 4000, zlecen: 1, srednia: 6000, zwrotVat: 300, wynikZeZwrotem: 4300 });
     expect(w[3]).toMatchObject({ przychod: 2000, wynik: 2000, narastajaco: 6000 });
     expect(w[12]).toMatchObject({ miesiac: '2026', przychod: 8000, wynik: 6000, zlecen: 2, zwrotVat: 300 });
+    // wybrany okres marzec–kwiecień = suma tych miesięcy, marża z sum
+    expect(sumaOkresu(w.slice(2, 4), 'okres')).toMatchObject({ przychod: 8000, koszty: 2000, wynik: 6000, marza: 0.75, zlecen: 2, srednia: 4000 });
   });
   it('kontrolaKpir: księga vs aplikacja wg kolumn, puste miesiące pominięte', () => {
     const k = kontrolaKpir([{ id: 'k', miesiac: '2026-03', przychodGr: 5000, towaryGr: 1000, uboczneGr: 0, wynagrodzeniaGr: 0, pozostaleGr: 200 }],

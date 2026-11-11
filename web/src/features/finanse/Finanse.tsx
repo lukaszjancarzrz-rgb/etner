@@ -20,14 +20,18 @@ import { WynikiZlecen } from './WynikiZlecen.js';
 import { useEntities } from '../../core/store.js';
 
 const ALL = '';
+// zakładka i rok zostają po powrocie z karty zlecenia („Wróć” z Wyników zleceń)
+const pamiec: { tab?: string; rok?: string } = {};
 
 /** Finanse (admin): przychody i koszty wybranego miesiąca albo całego roku, import miesiąca z KPiR. */
 export function Finanse() {
   const desk = useDesk();
   type Tab = 'przychody' | 'koszty' | 'wynik' | 'zlecenia' | 'wykresy' | 'kpir' | 'stat';
   const TABS: { v: Tab; label: string }[] = [{ v: 'przychody', label: 'Przychody' }, { v: 'koszty', label: 'Koszty' }, { v: 'wynik', label: 'Wynik' }, { v: 'zlecenia', label: 'Wyniki zleceń' }, { v: 'wykresy', label: 'Wykresy' }, { v: 'kpir', label: 'KPiR' }, { v: 'stat', label: 'Statystyki' }];
-  const [tab, setTab] = useState<Tab>('przychody');
-  const [rok, setRok] = useState(today().slice(0, 4));
+  const [tab, setTabState] = useState<Tab>(() => (pamiec.tab as Tab) ?? 'przychody');
+  const setTab = (t: Tab) => { pamiec.tab = t; setTabState(t); };
+  const [rok, setRokState] = useState(pamiec.rok ?? today().slice(0, 4));
+  const setRok = (r: string) => { pamiec.rok = r; setRokState(r); };
   const revenues = useEntities('revenues');
   // lata z danymi + bieżący (wybór roku dla Wyniku, KPiR i Statystyk)
   const lata = [...new Set([today().slice(0, 4), ...revenues.map((r) => String(r.miesiac ?? r.dzien ?? '').slice(0, 4)).filter((y) => /^\d{4}$/.test(y))])].sort().reverse();

@@ -1,4 +1,4 @@
-import { CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
+import { ArrowLeft, CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api.js';
 import { useDesk, useSynced } from '../../core/layout/status.js';
@@ -7,7 +7,7 @@ import { useEntities, useEntity } from '../../core/store.js';
 import { BackLink, Badge, Empty, NewMark } from '../../core/ui/bits.js';
 import { outbox } from '../../core/outbox.js';
 import { toast } from '../../core/ui/toast.js';
-import { go } from '../../routes.js';
+import { fromScreen, go, parseHash } from '../../routes.js';
 import { Button } from '../../core/ui/button.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import { cn } from '../../core/ui/cn.js';
@@ -100,6 +100,8 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   return (
     <article className="grid gap-4 px-4 py-4 desk:px-0 desk:py-0">
       <BackLink fallback="#zl" className="desk:hidden" />
+      {/* komputer: karta otwarta z innego ekranu (Finanse, Do serwisu…) – powrót tam, skąd przyszliśmy */}
+      {desk && fromScreen() && parseHash(fromScreen()).screen !== 'zl' && <a href={fromScreen()} className="inline-flex h-9 items-center gap-2 justify-self-start font-semibold text-action"><ArrowLeft className="h-4 w-4" />Wróć</a>}
       <div className="overflow-hidden rounded-[4px] border border-line bg-card">
         <div className="grid gap-4 p-5">
           <div className="flex items-start justify-between gap-3">

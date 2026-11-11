@@ -109,4 +109,10 @@ test('Finanse 3b: Wynik z kosztami pracowników, Kontrola KPiR, Statystyki', asy
   await expect(page.getByRole('region', { name: /^KPiR / }).first()).toBeVisible();
   await page.getByRole('radio', { name: 'Statystyki' }).click();
   await expect(page.getByRole('region', { name: 'Czas pracy wg branży' })).toBeVisible();
+  // karta zlecenia otwarta z Finansów (komputer): „Wróć” do Finansów, zakładka zapamiętana
+  const jobId = await page.evaluate(async () => ((await (await fetch('/api/jobs')).json()) as { id: string }[])[0]!.id);
+  await page.evaluate((id) => { location.hash = `#zl/${id}`; }, jobId);
+  await page.getByRole('link', { name: 'Wróć' }).click();
+  await expect(page).toHaveURL(/#fin$/);
+  await expect(page.getByRole('radio', { name: 'Statystyki' })).toHaveAttribute('aria-checked', 'true');
 });

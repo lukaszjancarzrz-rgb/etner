@@ -87,7 +87,14 @@ export const navKey = (screen: string): string => (screen === 'ld' ? 'leady' : s
 
 // poprzedni adres w aplikacji (np. po zapisie wpisu: „wstecz”, gdy przyszliśmy z teczki – bez podwójnego wpisu historii)
 let prevHash = '';
-if (typeof addEventListener === 'function') addEventListener('hashchange', (e) => { prevHash = new URL(e.oldURL).hash; });
+// adres ekranu, z którego weszliśmy na obecny ekran (np. Finanse → karta zlecenia); kliknięcia w obrębie ekranu go nie zmieniają
+let enteredFrom = '';
+if (typeof addEventListener === 'function') addEventListener('hashchange', (e) => {
+  prevHash = new URL(e.oldURL).hash;
+  if (parseHash(prevHash).screen !== parseHash(new URL(e.newURL).hash).screen) enteredFrom = prevHash;
+});
+/** Adres poprzedniego ekranu (inny ekran niż obecny), np. do „Wróć” w panelu na komputerze. */
+export const fromScreen = (): string => enteredFrom;
 /** Czy poprzedni ekran to `hash` (porównanie po odkodowaniu). */
 export const cameFrom = (hash: string): boolean => !!prevHash && JSON.stringify(parseHash(prevHash)) === JSON.stringify(parseHash(hash));
 

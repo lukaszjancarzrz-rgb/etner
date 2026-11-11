@@ -45,12 +45,17 @@ export function wynikRoku(revenues: Rec[], costs: Rec[], place: Record<string, n
     return { miesiac: m, zFaktura, bezFaktury, przychod, kosztyFirmy, kosztyPracownikow, koszty, wynik, narastajaco: nar, marza: przychod ? wynik / przychod : null,
       zlecen, srednia: zlecen ? Math.round(przychod / zlecen) : null, zwrotVat, wynikZeZwrotem: wynik + zwrotVat };
   });
+  rows.push(sumaOkresu(rows, rok));
+  return rows;
+}
+
+/** Suma miesięcy (wybrany okres albo cały rok): kwoty i zlecenia sumowane, marża i średnia liczone z sum. */
+export function sumaOkresu(rows: MiesiacWyniku[], miesiac: string): MiesiacWyniku {
   const t = (k: keyof MiesiacWyniku) => rows.reduce((s, r) => s + (r[k] as number), 0);
   const przychod = t('przychod'), wynik = t('wynik'), zlecen = t('zlecen');
-  rows.push({ miesiac: rok, zFaktura: t('zFaktura'), bezFaktury: t('bezFaktury'), przychod, kosztyFirmy: t('kosztyFirmy'), kosztyPracownikow: t('kosztyPracownikow'),
+  return { miesiac, zFaktura: t('zFaktura'), bezFaktury: t('bezFaktury'), przychod, kosztyFirmy: t('kosztyFirmy'), kosztyPracownikow: t('kosztyPracownikow'),
     koszty: t('koszty'), wynik, narastajaco: wynik, marza: przychod ? wynik / przychod : null, zlecen, srednia: zlecen ? Math.round(przychod / zlecen) : null,
-    zwrotVat: t('zwrotVat'), wynikZeZwrotem: t('wynikZeZwrotem') });
-  return rows;
+    zwrotVat: t('zwrotVat'), wynikZeZwrotem: t('wynikZeZwrotem') };
 }
 
 export const KPIR_KOL = [['przychod', 'Przychód (kol. 9)'], ['towary', 'Towary (kol. 12)'], ['uboczne', 'Koszty uboczne (kol. 13)'], ['wynagrodzenia', 'Wynagrodzenia (kol. 14)'], ['pozostale', 'Pozostałe (kol. 15)']] as const;
