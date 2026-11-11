@@ -115,7 +115,7 @@ describe('leady', () => {
     await mk('2026-03-09'); await mk('2026-03-10'); await mk('2026-03-11'); await mk('2026-03-01', 'Odrzucona'); await mk('');
     await def.run(deps);
     expect(push).toHaveBeenCalledTimes(1);
-    expect(JSON.parse((push.mock.calls[0] as any)[1])).toMatchObject({ title: '📞 Kontakt z klientem: 2 zaległych', url: '#leady', tag: 'leady-przypomnienia' });
+    expect(JSON.parse((push.mock.calls[0] as any)[1])).toMatchObject({ title: '📞 Kontakt z klientem: 2 zaległych', url: '#leady~zalegle', tag: 'leady-przypomnienia' });
   });
   it('usunięcie kontaktu: miękkie, zmiana w feedzie, pola leada bez zmian; zły lead 404', async () => {
     const { app, admin, k } = await setup();

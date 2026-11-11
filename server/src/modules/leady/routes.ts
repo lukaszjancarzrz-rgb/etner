@@ -61,7 +61,7 @@ export function routes(app: Hono, deps: AppDeps): void {
   app.post('/api/settings/leady-email/test', guard, async (c) => {
     const day = dayOf((deps.now ?? (() => new Date()))());
     const n = svc.overdue(db, day).length;
-    const push = await notify(deps, [uid(c)], { title: `📞 Kontakt z klientem: ${n} zaległych (test)`, body: 'Leady z terminem kontaktu na dziś lub wcześniej', url: '#leady', tag: 'leady-przypomnienia' });
+    const push = await notify(deps, [uid(c)], { title: `📞 Kontakt z klientem: ${n} zaległych (test)`, body: 'Leady z terminem kontaktu na dziś lub wcześniej', url: '#leady~zalegle', tag: 'leady-przypomnienia' });
     if (!deps.mailer) throw new HTTPException(422, { message: `Brak konfiguracji SMTP (SMTP_HOST, MAIL_FROM w Render) – e-mail nie wysłany. Powiadomień push: ${push}.` });
     const to = svc.leadyEmail(db);
     // brak zaległych: i tak e-mail, żeby sprawdzić skrzynkę i SMTP

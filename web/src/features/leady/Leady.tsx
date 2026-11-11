@@ -21,6 +21,13 @@ import { leadSections } from './model.js';
 export function Leady({ route }: { route: Route }) {
   const id = route.screen === 'ld' ? route.param : undefined;
   const desk = useDesk();
+  // `#leady~zalegle` (powiadomienie o zaległych kontaktach): przewiń do sekcji „Zaległe kontakty” (lista może się jeszcze wczytywać)
+  useEffect(() => {
+    if (route.screen !== 'leady' || route.highlight !== 'zalegle') return;
+    let n = 0;
+    const t = setInterval(() => { const el = document.getElementById('leady-zalegle'); if (el || ++n > 20) { clearInterval(t); el?.scrollIntoView({ block: 'start' }); } }, 100);
+    return () => clearInterval(t);
+  }, [route.screen, route.highlight]);
   if (desk) return (
     <div className={cn('mx-auto grid max-w-[1600px] items-start gap-6 px-8 py-5', id && 'grid-cols-[minmax(0,30rem)_minmax(0,1fr)]')}>
       <LeadList selected={id} />
@@ -90,7 +97,7 @@ function LeadList({ selected }: { selected?: string }) {
       ) : (
         <>
         {sec.zalegle.length > 0 && (
-          <div className="grid gap-2">
+          <div id="leady-zalegle" className="grid scroll-mt-24 gap-2">
             <SectionTitle count={sec.zalegle.length} className="border-danger text-danger">Zaległe kontakty</SectionTitle>
             <ul className="grid gap-2">{sec.zalegle.map((l) => <LeadRow key={l.id} l={l} on={l.id === selected} overdue={day} />)}</ul>
           </div>
@@ -152,7 +159,7 @@ function LeadTable({ groups, selected, open }: { groups: Grupa[]; selected?: str
       {groups.map((g, i) => {
         const label = <>{g.title}<span className="font-sans font-semibold text-ink-2">{g.list.length}</span></>;
         return (
-        <tbody key={g.k}>
+        <tbody key={g.k} id={`leady-${g.k}`} className="scroll-mt-24">
           <tr>
             <th colSpan={open ? 4 : 8} scope="rowgroup" className={cn('border-b border-line bg-bg/60 px-2.5 text-left', i > 0 && 'border-t')}>
               <h2 className={cn('flex h-[var(--row-h)] items-center font-bold', g.overdue && 'text-danger')}>

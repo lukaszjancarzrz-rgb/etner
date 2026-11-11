@@ -20,7 +20,7 @@ export const leady: ModuleDef = {
     async run(deps) {
       const n = overdue(deps.db, dayOf((deps.now ?? (() => new Date()))())).length;
       if (!n) return;
-      await notify(deps, users.admins(deps.db), { title: `📞 Kontakt z klientem: ${n} zaległych`, body: 'Leady z terminem kontaktu na dziś lub wcześniej', url: '#leady', tag: 'leady-przypomnienia' });
+      await notify(deps, users.admins(deps.db), { title: `📞 Kontakt z klientem: ${n} zaległych`, body: 'Leady z terminem kontaktu na dziś lub wcześniej', url: '#leady~zalegle', tag: 'leady-przypomnienia' });
     },
   }, {
     // R38: codziennie 07:00 (Warszawa) e-mail z listą zaległych; brak zaległych = brak e-maila.

@@ -10,6 +10,8 @@ export function smtpMailerFromEnv(env: NodeJS.ProcessEnv): Mailer | undefined {
   const t = nodemailer.createTransport({
     host: env.SMTP_HOST, port, secure: port === 465,
     auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS ?? '' } : undefined,
+    // krótkie limity: zły host/port albo zablokowane połączenie = czytelny błąd w kilkanaście sekund, nie 2 minuty ciszy
+    connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 20_000,
   });
   return async (m) => { await t.sendMail({ from: env.MAIL_FROM, ...m }); };
 }
