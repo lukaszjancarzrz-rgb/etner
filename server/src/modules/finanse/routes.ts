@@ -1,15 +1,22 @@
 import { costCreateSchema, costUpdateSchema, kpirFileSchema, kpirMonthSchema, revenueCreateSchema, revenueUpdateSchema, SPOSOBY } from '@etner/shared';
 import type { Context, Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
+import { HTTPException } from 'hono/http-exception';
+import { count } from 'drizzle-orm';
 import { z } from 'zod';
 import type { AppDeps } from '../../app.js';
 import { requireAdmin } from '../../core/auth.js';
 import { body } from '../../core/body.js';
 import { tx } from '../../core/db.js';
 import { runOp } from '../../core/ops.js';
+import { applyFinanse, readFinanse, znaneKategorieKosztu, type XlsImportResult } from './import-xlsx.js';
+import { costs, revenues } from './schema.js';
 import * as svc from './service.js';
 
+const XLSX_MAX = 10 * 1024 * 1024;
+
 const settingsSchema = z.object({ autoPrzychod: z.boolean(), domyslnySposob: z.enum(SPOSOBY) });
-class Rollback { constructor(readonly result: svc.KpirImportResult) {} }
+class Rollback { constructor(readonly result: svc.KpirImportResult | XlsImportResult) {} }
 
 export function routes(app: Hono, deps: AppDeps): void {
   const { db } = deps;
@@ -80,6 +87,36 @@ export function routes(app: Hono, deps: AppDeps): void {
     if (!/^\d{4}-\d{2}$/.test(miesiac)) throw svc.notFound();
     const { opId, ...d } = await body(c, kpirMonthSchema);
     return c.json(runOp(db, opId, me(c).id, () => svc.setKpirMonth(db, me(c).id, miesiac, d)).result);
+  });
+
+  // Jednorazowe przeniesienie z arkusza (tylko puste tabele); bez ?naprawde=1 próba (zapis wycofany w transakcji).
+  const limit = bodyLimit({ maxSize: XLSX_MAX + 64 * 1024, onError: (c) => c.json({ error: 'Plik jest za duży (max 10 MB).' }, 413) });
+  app.post('/api/finanse/import-xlsx', admin, limit, async (c) => {
+    const niepuste = () => db.select({ n: count() }).from(revenues).get()!.n + db.select({ n: count() }).from(costs).get()!.n > 0;
+    const zajete = () => new HTTPException(409, { message: 'Finanse mają już dane – przeniesienie tylko do pustych tabel' });
+    if (niepuste()) throw zajete();
+    const f = ((await c.req.parseBody().catch(() => ({}))) as Record<string, unknown>)['plik'];
+    if (!(f instanceof File)) throw new HTTPException(400, { message: 'Brak pliku' });
+    if (f.size > XLSX_MAX) throw new HTTPException(413, { message: 'Plik jest za duży (max 10 MB).' });
+    const buf = Buffer.from(await f.arrayBuffer());
+    if (!buf.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))) throw new HTTPException(415, { message: 'To nie jest plik .xlsx.' });
+    let data;
+    try { data = await readFinanse(buf, znaneKategorieKosztu(db)); } catch (e) {
+      throw new HTTPException(422, { message: `${e instanceof Error && /^(Brak karty|Nie ustalono)/.test(e.message) ? e.message : 'Nie udało się odczytać arkusza'}. Wgraj arkusz firmy (.xlsx).` });
+    }
+    const naprawde = c.req.query('naprawde') === '1';
+    try {
+      const result = tx(db, () => {
+        if (niepuste()) throw zajete(); // wyścig dwóch importów
+        const r = applyFinanse(db, me(c).id, data);
+        if (!naprawde) throw new Rollback(r);
+        return r;
+      });
+      return c.json(result);
+    } catch (e) {
+      if (e instanceof Rollback) return c.json(e.result);
+      throw e;
+    }
   });
 
   app.get('/api/settings/finanse', admin, (c) => c.json(svc.getSettings(db)));

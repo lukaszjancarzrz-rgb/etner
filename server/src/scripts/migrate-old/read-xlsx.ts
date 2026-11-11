@@ -2,10 +2,10 @@ import ExcelJS from 'exceljs';
 import { COLS, HARM, HEADER_ROW, PARAM, SHEETS, sectionName, type Cols } from './layout.js';
 import { oldDataSchema, type OldData } from './old-data.js';
 
-type V = string | number | boolean | Date | null;
+export type V = string | number | boolean | Date | null;
 
 /** Wartość komórki: wynik formuły, tekst z formatowania, błąd = puste. */
-function raw(c: ExcelJS.Cell): V {
+export function raw(c: ExcelJS.Cell): V {
   const v = c.value as unknown;
   if (v === null || v === undefined) return null;
   if (v instanceof Date || typeof v !== 'object') return v as V;
@@ -16,17 +16,17 @@ function raw(c: ExcelJS.Cell): V {
   return null;
 }
 
-const text = (v: V): string => (v === null || typeof v === 'boolean' ? '' : v instanceof Date ? v.toISOString().slice(0, 10) : String(v).trim());
+export const text = (v: V): string => (v === null || typeof v === 'boolean' ? '' : v instanceof Date ? v.toISOString().slice(0, 10) : String(v).trim());
 
 /** Data z komórki: data Excela, numer seryjny albo tekst „dd.mm.rrrr”. */
-function day(v: V): string | null {
+export function day(v: V): string | null {
   if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v.toISOString().slice(0, 10);
   if (typeof v === 'number' && v > 36526 && v < 73051) return new Date(Math.round((v - 25569) * 86_400_000)).toISOString().slice(0, 10);
   const m = typeof v === 'string' ? /^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(v.trim()) : null;
   return m ? `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}` : null;
 }
 
-function num(v: V): number | null {
+export function num(v: V): number | null {
   if (typeof v === 'number') return v;
   const n = typeof v === 'string' && v.trim() ? Number(v.replace(/\s|zł/g, '').replace(',', '.')) : NaN;
   return Number.isFinite(n) ? n : null;
