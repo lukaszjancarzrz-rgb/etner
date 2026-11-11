@@ -8,7 +8,7 @@ import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
 
 type Wynik = {
-  dodane: number; duplikaty: number; sumy: Record<12 | 13 | 14 | 15, number>;
+  dodane: number; duplikaty: number; sumy: Record<12 | 13 | 14 | 15, number>; zapisane: Record<12 | 13 | 14 | 15, number>;
   kpir: { towary: number; uboczne: number; wynagrodzenia: number; pozostale: number };
   roznice: { towary: number; uboczne: number; wynagrodzenia: number; pozostale: number };
 };
@@ -52,17 +52,18 @@ export function KpirImport({ onClose }: { onClose: () => void }) {
           {w && (
             <>
               <p className="text-sm font-semibold" role="status">Nowe pozycje: {w.dodane}, pominięte duplikaty: {w.duplikaty}.</p>
-              <table className="w-full text-sm tabular-nums" aria-label="Sumy kolumn KPiR">
-                <thead className="text-xs text-ink-2"><tr><th className="py-1 pr-2 text-left font-semibold">Kolumna</th><th className="px-1.5 text-right font-semibold">Plik</th><th className="px-1.5 text-right font-semibold">KPiR</th><th className="pl-1.5 text-right font-semibold">Różnica</th></tr></thead>
+              <p className="text-xs text-ink-2">„W aplikacji” = wszystkie koszty tego miesiąca po imporcie. Różnica = w aplikacji − KPiR.</p>
+              <div className="overflow-x-auto"><table className="w-full text-sm tabular-nums" aria-label="Sumy kolumn KPiR">
+                <thead className="text-xs text-ink-2"><tr><th className="py-1 pr-2 text-left font-semibold">Kolumna</th><th className="px-1.5 text-right font-semibold">Plik</th><th className="px-1.5 text-right font-semibold">W aplikacji</th><th className="px-1.5 text-right font-semibold">KPiR</th><th className="pl-1.5 text-right font-semibold">Różnica</th></tr></thead>
                 <tbody>
                   {KOLUMNY.map(([n, k, label]) => (
                     <tr key={n} className={cn('border-t border-line', w.roznice[k] !== 0 && 'font-semibold text-danger')}>
-                      <td className="py-1 pr-2">{n}. {label}</td><td className="px-1.5 text-right">{fmtZl(w.sumy[n])}</td><td className="px-1.5 text-right">{fmtZl(w.kpir[k])}</td><td className="pl-1.5 text-right">{fmtZl(w.roznice[k])}</td>
+                      <td className="py-1 pr-2">{n}. {label}</td><td className="px-1.5 text-right">{fmtZl(w.sumy[n])}</td><td className="px-1.5 text-right">{fmtZl(w.zapisane[n])}</td><td className="px-1.5 text-right">{fmtZl(w.kpir[k])}</td><td className="pl-1.5 text-right">{fmtZl(w.roznice[k])}</td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
-              {bad > 0 && <p className="flex items-start gap-2 text-sm text-danger"><Warning className="mt-0.5 h-4 w-4 shrink-0" />Różnica w {bad} {bad === 1 ? 'kolumnie' : 'kolumnach'}: suma pozycji z pliku nie zgadza się z KPiR.</p>}
+              </table></div>
+              {bad > 0 && <p className="flex items-start gap-2 text-sm text-danger"><Warning className="mt-0.5 h-4 w-4 shrink-0" />Różnica w {bad} {bad === 1 ? 'kolumnie' : 'kolumnach'}: koszty miesiąca w aplikacji (po imporcie) nie zgadzają się z KPiR. Sprawdź pominięte duplikaty i koszty dodane ręcznie.</p>}
               <div className="flex justify-end gap-3 border-t border-line pt-4">
                 <Button variant="secondary" onClick={onClose}>Anuluj</Button>
                 <Button disabled={busy} onClick={() => void send(json, true)}>{busy ? 'Zapisywanie…' : 'Zapisz'}</Button>

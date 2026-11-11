@@ -3,6 +3,7 @@ import { createApp } from '../../app.js';
 import { addUser, loginCookie, testDeps } from '../../test-utils.js';
 import { modules } from '../index.js';
 import { seedBase } from '../slowniki/seed.js';
+import { createCost } from './service.js';
 
 async function setup() {
   const deps = testDeps();
@@ -55,13 +56,32 @@ describe('finanse', () => {
     expect(proba).toMatchObject({ dodane: 2, duplikaty: 0 });
     expect(await count()).toHaveLength(0);
     expect(await (await app.request('/api/kpir', req(admin, 'GET'))).json()).toEqual([]);
-    expect(await imp('?naprawde=1')).toMatchObject({ dodane: 2, sumy: { 12: 10010, 13: 3030, 14: 0, 15: 0 }, roznice: { towary: 10010 - 15050, uboczne: 3030 - 2000, wynagrodzenia: 0, pozostale: 0 } });
+    expect(await imp('?naprawde=1')).toMatchObject({ dodane: 2, sumy: { 12: 10010, 13: 3030, 14: 0, 15: 0 }, zapisane: { 12: 10010, 13: 3030, 14: 0, 15: 0 }, roznice: { towary: 10010 - 15050, uboczne: 3030 - 2000, wynagrodzenia: 0, pozostale: 0 } });
     const koszty = (await count()) as { kategoria: string; uwagi: string }[];
     expect(koszty).toHaveLength(2);
     expect(koszty.find((k) => k.kategoria === 'Inne')!.uwagi).toContain('kategoria z pliku: Nieznana');
     expect(await (await app.request('/api/kpir', req(admin, 'GET'))).json()).toMatchObject([{ miesiac: '2026-10', towaryGr: 15050 }]);
     expect(await imp('?naprawde=1')).toMatchObject({ dodane: 0, duplikaty: 2 });
     expect(await count()).toHaveLength(2);
+  });
+
+  it('import KPiR: identyczne pozycje w pliku wszystkie dodane, ponowny import 0, różnice liczone z zapisanych', async () => {
+    const { app, admin } = await setup();
+    const dwa = { ...plik, koszty: [plik.koszty[0], plik.koszty[0]] };
+    const imp = async (f: unknown) => (await app.request('/api/costs/kpir-import?naprawde=1', req(admin, 'POST', f))).json();
+    expect(await imp(dwa)).toMatchObject({ dodane: 2, duplikaty: 0, zapisane: { 12: 20020 } });
+    expect(await imp(dwa)).toMatchObject({ dodane: 0, duplikaty: 2, sumy: { 12: 20020 }, zapisane: { 12: 20020 }, roznice: { towary: 20020 - 15050 } });
+    // multizbiór: w pliku 3 takie same, w bazie 2 → 1 dodana
+    expect(await imp({ ...plik, koszty: [plik.koszty[0], plik.koszty[0], plik.koszty[0]] })).toMatchObject({ dodane: 1, duplikaty: 2, zapisane: { 12: 30030 } });
+  });
+
+  it('import KPiR: koszt dodany ręcznie (nr „fv/1 ”) = pozycja „FV/1” z pliku → duplikat; inny ręczny koszt widać w różnicach', async () => {
+    const { deps, app, admin } = await setup();
+    const reczny = { dzien: '2026-10-03', miesiac: '2026-10', nrDokumentu: 'fv/1 ', kontrahent: '', nip: '', opis: '', kategoria: 'Materiały i towary', nettoGr: 10010, kolumnaKpir: 12 as const, doWyniku: true, uwagi: '' };
+    createCost(deps.db, 'u', reczny);
+    createCost(deps.db, 'u', { ...reczny, nrDokumentu: '', dzien: '2026-10-20', nettoGr: 500 });
+    const r = await (await app.request('/api/costs/kpir-import?naprawde=1', req(admin, 'POST', plik))).json();
+    expect(r).toMatchObject({ dodane: 1, duplikaty: 1, sumy: { 12: 10010, 13: 3030 }, zapisane: { 12: 10510, 13: 3030 }, roznice: { towary: 10510 - 15050, uboczne: 3030 - 2000 } });
   });
 
   it('zmiana nazwy wartości słownika kategoria_kosztu zmienia costs.kategoria', async () => {

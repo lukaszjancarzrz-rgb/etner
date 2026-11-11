@@ -65,4 +65,6 @@ Pola:
 - `doWyniku` – czy koszt liczy się do wyniku firmy (domyślnie `true`).
 - Kosztów **nie** przypisujemy do zleceń (materiały zlecenia admin wpisuje szacunkowo na karcie zlecenia).
 
-Duplikaty: aplikacja pomija pozycję o tym samym miesiącu, numerze dokumentu, dacie i kwocie netto (ponowne wgranie tego samego pliku nic nie dubluje).
+Duplikaty: aplikacja porównuje plik **tylko z kosztami już zapisanymi** (nieusuniętymi) w tym miesiącu: ten sam numer dokumentu (bez spacji na brzegach, wielkość liter bez znaczenia), data i kwota netto. Jeden zapisany koszt „zużywa” jedną pozycję pliku – dwie identyczne pozycje w pliku przy jednej w aplikacji: jedna pominięta, druga dodana. Identyczne pozycje w samym pliku są wszystkie dodawane (prawdziwe podwójne wpisy w KPiR zostają). Ponowne wgranie tego samego pliku nic nie dubluje.
+
+Kontrola sum: okno importu pokazuje dla kolumn 12–15 sumę z pliku, sumę wszystkich kosztów miesiąca w aplikacji po imporcie i sumę z KPiR. Różnica = w aplikacji − KPiR, więc widać w niej i pominięty duplikat, i koszt dodany wcześniej ręcznie.

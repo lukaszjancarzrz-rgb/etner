@@ -112,24 +112,33 @@ const zero = () => ({ 12: 0, 13: 0, 14: 0, 15: 0 });
 export interface KpirImportResult {
   dodane: number;
   duplikaty: number;
+  /** sumy kolumn z pliku */
   sumy: Record<12 | 13 | 14 | 15, number>;
+  /** sumy zapisanych (nieusuniętych) kosztów miesiąca po imporcie */
+  zapisane: Record<12 | 13 | 14 | 15, number>;
   kpir: { przychod: number; towary: number; uboczne: number; wynagrodzenia: number; pozostale: number };
+  /** zapisane − KPiR (pominięty duplikat albo koszt dodany ręcznie widać tutaj) */
   roznice: { towary: number; uboczne: number; wynagrodzenia: number; pozostale: number };
 }
 
-/** Import miesiąca z KPiR. Duplikat = ten sam miesiąc + nr dokumentu + dzień + netto wśród nieusuniętych kosztów (także w obrębie pliku). Wywołuj w transakcji. */
+const kluczKosztu = (nr: string, dzien: string, netto: number) => `${nr.trim().replace(/\s+/g, ' ').toUpperCase()}|${dzien}|${netto}`;
+const kosztyMiesiaca = (db: Db, miesiac: string) => db.select().from(costs).where(and(eq(costs.miesiac, miesiac), live(costs))).all();
+
+/** Import miesiąca z KPiR. Duplikat = pozycja pliku, która ma odpowiednik wśród nieusuniętych kosztów miesiąca w bazie
+ * (nr dokumentu bez spacji na brzegach i wielkości liter, dzień, netto); każdy koszt w bazie pasuje do jednej pozycji pliku,
+ * identyczne pozycje w samym pliku są wszystkie dodawane. Wywołuj w transakcji. */
 export function importKpir(db: Db, userId: string, f: KpirFile): KpirImportResult {
   const znane = new Set(slowniki.list(db, 'kategoria_kosztu').map((s) => s.wartosc));
-  const klucz = (nr: string, dzien: string, netto: number) => `${nr}|${dzien}|${netto}`;
-  const istniejace = new Set(db.select().from(costs).where(and(eq(costs.miesiac, f.miesiac), live(costs))).all().map((c) => klucz(c.nrDokumentu, c.dzien, c.nettoGr)));
+  const wBazie = new Map<string, number>();
+  for (const c of kosztyMiesiaca(db, f.miesiac)) { const k = kluczKosztu(c.nrDokumentu, c.dzien, c.nettoGr); wBazie.set(k, (wBazie.get(k) ?? 0) + 1); }
   const sumy = zero();
   let dodane = 0, duplikaty = 0;
   for (const k of f.koszty) {
     const netto = toGr(k.netto);
     sumy[k.kolumnaKpir] += netto;
-    const key = klucz(k.nrDokumentu, k.data, netto);
-    if (istniejace.has(key)) { duplikaty++; continue; }
-    istniejace.add(key);
+    const key = kluczKosztu(k.nrDokumentu, k.data, netto);
+    const n = wBazie.get(key) ?? 0;
+    if (n > 0) { wBazie.set(key, n - 1); duplikaty++; continue; }
     const znana = znane.has(k.kategoria);
     createCost(db, userId, {
       dzien: k.data, miesiac: f.miesiac, nrDokumentu: k.nrDokumentu, kontrahent: k.kontrahent, nip: k.nip, opis: k.opis,
@@ -138,11 +147,13 @@ export function importKpir(db: Db, userId: string, f: KpirFile): KpirImportResul
     });
     dodane++;
   }
+  const zapisane = zero();
+  for (const c of kosztyMiesiaca(db, f.miesiac)) zapisane[c.kolumnaKpir as 12 | 13 | 14 | 15] += c.nettoGr;
   const kpir = { przychod: toGr(f.kpir.przychod), towary: toGr(f.kpir.towary), uboczne: toGr(f.kpir.uboczne), wynagrodzenia: toGr(f.kpir.wynagrodzenia), pozostale: toGr(f.kpir.pozostale) };
   setKpirMonth(db, userId, f.miesiac, { przychodGr: kpir.przychod, towaryGr: kpir.towary, uboczneGr: kpir.uboczne, wynagrodzeniaGr: kpir.wynagrodzenia, pozostaleGr: kpir.pozostale });
   return {
-    dodane, duplikaty, sumy, kpir,
-    roznice: { towary: sumy[12] - kpir.towary, uboczne: sumy[13] - kpir.uboczne, wynagrodzenia: sumy[14] - kpir.wynagrodzenia, pozostale: sumy[15] - kpir.pozostale },
+    dodane, duplikaty, sumy, zapisane, kpir,
+    roznice: { towary: zapisane[12] - kpir.towary, uboczne: zapisane[13] - kpir.uboczne, wynagrodzenia: zapisane[14] - kpir.wynagrodzenia, pozostale: zapisane[15] - kpir.pozostale },
   };
 }
 
