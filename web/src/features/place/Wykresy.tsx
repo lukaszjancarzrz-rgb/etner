@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import { Tips } from '../../core/ui/tip.js';
 import { SectionTitle } from '../../core/ui/bits.js';
 import { zl } from '../finanse/Wynik.js';
 import { useDane } from './dane.js';
@@ -23,7 +24,7 @@ function Wykres({ title, children, legend, opis }: { title: string; children: Re
   return (
     <figure className="grid gap-2 rounded-[4px] border border-line bg-card p-4" aria-label={title}>
       <figcaption className="grid gap-1"><SectionTitle>{title}</SectionTitle>{legend}</figcaption>
-      <div role="img" aria-label={opis}>{children}</div>
+      <div role="img" aria-label={opis}><Tips>{children}</Tips></div>
     </figure>
   );
 }
@@ -53,7 +54,7 @@ function Slupki({ s, f, stacked, line, h = 220 }: { s: Seria[]; f: F; stacked?: 
               const x0 = L + i * slot + (stacked ? slot * 0.2 : slot * 0.15 + j * bw);
               const y0 = stacked ? y(acc + v) : y(v), y1 = stacked ? y(acc) : y(0);
               if (stacked) acc += v;
-              return <rect key={x.name} x={x0 + 1} y={y0} width={Math.max(bw - 2, 2)} height={Math.max(y1 - y0 - (stacked ? 2 : 0), 1)} rx="2" fill={x.color}><title>{`${m}: ${x.name} ${f.tip(v)}`}</title></rect>;
+              return <rect key={x.name} x={x0 + 1} y={y0} width={Math.max(bw - 2, 2)} height={Math.max(y1 - y0 - (stacked ? 2 : 0), 1)} rx="2" fill={x.color} data-tip={`${m}\n${x.name}: ${f.tip(v)}`} />;
             })}
             <text x={L + i * slot + slot / 2} y={h - 6} textAnchor="middle" fontSize="14" fill="currentColor">{m}</text>
           </g>
@@ -61,7 +62,7 @@ function Slupki({ s, f, stacked, line, h = 220 }: { s: Seria[]; f: F; stacked?: 
       })}
       {line && <>
         <polyline fill="none" stroke={line.color} strokeWidth="2" points={pkt.map((v, i) => `${L + i * slot + slot / 2},${ly(v)}`).join(' ')} />
-        {pkt.map((v, i) => <circle key={i} cx={L + i * slot + slot / 2} cy={ly(v)} r="4" fill={line.color} stroke="var(--card)" strokeWidth="2"><title>{`${MIES[i]}: ${line.name} ${(line.f ?? f).tip(v)}`}</title></circle>)}
+        {pkt.map((v, i) => <circle key={i} cx={L + i * slot + slot / 2} cy={ly(v)} r="4" fill={line.color} stroke="var(--card)" strokeWidth="2" data-tip={`${MIES[i]}\n${line.name}: ${(line.f ?? f).tip(v)}`} />)}
       </>}
     </svg>
   );
@@ -76,7 +77,7 @@ function Poziome({ rows, f }: { rows: { name: string; parts: { color: string; v:
         <li key={r.name} className="grid grid-cols-[minmax(6rem,10rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm">
           <span className="truncate font-semibold">{r.name}</span>
           <span className="flex h-4 gap-0.5" style={{ width: `${(sum(r.parts.map((p) => p.v)) / max) * 100}%`, minWidth: 2 }}>
-            {r.parts.map((p, i) => (p.v > 0 ? <span key={i} title={`${p.label ?? r.name}: ${f.tip(p.v)}`} className="h-full first:rounded-l-[2px] last:rounded-r-[4px]" style={{ flexGrow: p.v, background: p.color }} /> : null))}
+            {r.parts.map((p, i) => (p.v > 0 ? <span key={i} data-tip={`${r.name}\n${p.label ?? r.name}: ${f.tip(p.v)}`} className="h-full first:rounded-l-[2px] last:rounded-r-[4px]" style={{ flexGrow: p.v, background: p.color }} /> : null))}
           </span>
           <span className="tabular-nums text-ink-2">{f.tip(sum(r.parts.map((p) => p.v)))}</span>
         </li>

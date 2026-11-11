@@ -20,3 +20,4 @@ Owner 2026-11-11: status „Do rozliczenia” counts as active (groupOf override
 Owner 2026-11-11: phone layout — Finanse Przychody/Koszty no longer wider than the screen (grid minmax(0,1fr) on list/form); Płace phone: Godziny one month at a time with large fields per person, TabelaSum (Urlopy, Podsumowanie) as cards on phone; verified by Pixel 7 screenshots on the local copy. Released (R86).
 Owner 2026-11-11: Zaplecze tabs show red count badges (Segmented option count; phone Select keeps „(n)”). Released (R86).
 Owner 2026-11-11: phone — Select options support red count badges (Zaplecze list + trigger); admin bottom „Więcej” badge = Zaplecze sum. Released (R86).
+Owner 2026-11-11: chart tooltips (core/ui/tip.tsx Tips: data-tip on bars/points/horizontal bars, hover highlight, tap on phone) in Finanse and Płace charts; pencil edit icon in Płace → Pracownicy rows. Released (R86).

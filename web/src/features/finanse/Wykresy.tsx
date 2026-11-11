@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from '../../core/api.js';
 import { today, useCrewColor } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
+import { Tips } from '../../core/ui/tip.js';
 import { SectionTitle } from '../../core/ui/bits.js';
 import { useCatColor } from '../../core/ui/category.js';
 import { miesiacWiersza, statystyki, wynikRoku } from './model.js';
@@ -25,7 +26,7 @@ function Wykres({ title, children, legend, opis }: { title: string; children: Re
   return (
     <figure className="grid gap-2 rounded-[4px] border border-line bg-card p-4" aria-label={title}>
       <figcaption className="grid gap-1"><SectionTitle>{title}</SectionTitle>{legend}</figcaption>
-      <div role="img" aria-label={opis}>{children}</div>
+      <div role="img" aria-label={opis}><Tips>{children}</Tips></div>
     </figure>
   );
 }
@@ -53,7 +54,7 @@ function Slupki({ s, stacked, line, upto = 12, h = 220 }: { s: Seria[]; stacked?
               const x0 = L + i * slot + (stacked ? slot * 0.2 : slot * 0.15 + j * bw);
               const y0 = stacked ? y(acc + Math.max(v, 0)) : y(Math.max(v, 0)), y1 = stacked ? y(acc) : y(Math.min(v, 0));
               if (stacked) acc += Math.max(v, 0);
-              return <rect key={x.name} x={x0 + 1} y={y0} width={Math.max(bw - 2, 2)} height={Math.max(y1 - y0 - (stacked ? 2 : 0), 1)} rx="2" fill={x.color}><title>{`${m}: ${x.name} ${zl(v)} zł`}</title></rect>;
+              return <rect key={x.name} x={x0 + 1} y={y0} width={Math.max(bw - 2, 2)} height={Math.max(y1 - y0 - (stacked ? 2 : 0), 1)} rx="2" fill={x.color} data-tip={`${m}\n${x.name}: ${zl(v)} zł`} />;
             })}
             <text x={L + i * slot + slot / 2} y={h - 6} textAnchor="middle" fontSize="14" fill="currentColor">{m}</text>
           </g>
@@ -61,7 +62,7 @@ function Slupki({ s, stacked, line, upto = 12, h = 220 }: { s: Seria[]; stacked?
       })}
       {line && <>
         <polyline fill="none" stroke={line.color} strokeWidth="2" points={line.values.slice(0, upto).map((v, i) => `${L + i * slot + slot / 2},${y(v)}`).join(' ')} />
-        {line.values.slice(0, upto).map((v, i) => <circle key={i} cx={L + i * slot + slot / 2} cy={y(v)} r="4" fill={line.color} stroke="var(--card)" strokeWidth="2"><title>{`${MIES[i]}: ${line.name} ${zl(v)} zł`}</title></circle>)}
+        {line.values.slice(0, upto).map((v, i) => <circle key={i} cx={L + i * slot + slot / 2} cy={y(v)} r="4" fill={line.color} stroke="var(--card)" strokeWidth="2" data-tip={`${MIES[i]}\n${line.name}: ${zl(v)} zł`} />)}
       </>}
     </svg>
   );
@@ -75,7 +76,7 @@ function Poziome({ rows, fmt }: { rows: { name: string; v: number; color: string
       {rows.map((r) => (
         <li key={r.name} className="grid grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm">
           <span className="truncate font-semibold">{r.name}</span>
-          <span className="h-4 rounded-r-[4px]" style={{ width: `${(r.v / max) * 100}%`, minWidth: 2, background: r.color }} />
+          <span className="h-4 rounded-r-[4px]" data-tip={`${r.name}\n${fmt(r.v)}`} style={{ width: `${(r.v / max) * 100}%`, minWidth: 2, background: r.color }} />
           <span className="tabular-nums text-ink-2">{fmt(r.v)}</span>
         </li>
       ))}
@@ -149,7 +150,7 @@ export function Wykresy({ rok }: { rok: string }) {
             <li key={kk.nazwa} className="grid grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm">
               <span className="truncate font-semibold">{kk.nazwa}</span>
               <span className="flex h-4 gap-0.5" style={{ width: `${(kk.dni / (d.s.kategorie[0]?.dni || 1)) * 100}%` }}>
-                {ekipy.map((e) => { const v = d.s.krzyz.get(`${kk.nazwa}\u0000${e.name}`) ?? 0; return v ? <span key={e.name} title={`${e.name}: ${v}`} className="h-full first:rounded-l-[2px] last:rounded-r-[4px]" style={{ flexGrow: v, background: e.color }} /> : null; })}
+                {ekipy.map((e) => { const v = d.s.krzyz.get(`${kk.nazwa}\u0000${e.name}`) ?? 0; return v ? <span key={e.name} data-tip={`${kk.nazwa}\n${e.name}: ${v}`} className="h-full first:rounded-l-[2px] last:rounded-r-[4px]" style={{ flexGrow: v, background: e.color }} /> : null; })}
               </span>
               <span className="tabular-nums text-ink-2">{kk.dni.toLocaleString('pl-PL', { maximumFractionDigits: 1 })}</span>
             </li>

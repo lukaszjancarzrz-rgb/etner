@@ -1,10 +1,11 @@
 import { FORMA_LABEL, type Forma } from '@etner/shared';
-import { UsersThree } from '@phosphor-icons/react';
+import { PencilSimple, UsersThree } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { useDesk } from '../../core/layout/status.js';
 import type { Rec } from '../../core/store.js';
 import { Empty, SectionTitle } from '../../core/ui/bits.js';
 import { Table, Td, Th, Tr } from '../../core/ui/table.js';
+import { Button } from '../../core/ui/button.js';
 import { useDane } from './dane.js';
 import { kw, lb } from './fmt.js';
 import { przygotuj } from './model.js';
@@ -28,11 +29,12 @@ export function Pracownicy() {
   const wybrana = [...ludzie, ...byli].find((p) => p.id === edit);
   const lista = (osoby: Rec[], label: string) => desk ? (
     <Table aria-label={label}>
-      <thead><tr><Th className="w-[12rem]">Osoba</Th><Th className="w-[13rem]">Forma</Th><Th className="w-[13rem]">Umowa</Th><Th num className="w-[8rem]">Brutto</Th><Th num className="w-[8rem]">Stawka / h</Th><Th num className="w-[7rem]">Limit urlopu</Th><Th>Uwagi</Th></tr></thead>
+      <thead><tr><Th className="w-[12rem]">Osoba</Th><Th className="w-[13rem]">Forma</Th><Th className="w-[13rem]">Umowa</Th><Th num className="w-[8rem]">Brutto</Th><Th num className="w-[8rem]">Stawka / h</Th><Th num className="w-[7rem]">Limit urlopu</Th><Th>Uwagi</Th><Th className="w-12"><span className="sr-only">Edycja</span></Th></tr></thead>
       <tbody>{osoby.map((p) => (
         <Tr key={p.id} onOpen={() => setEdit(p.id)}>
           <Td className="font-semibold"><button type="button" className="text-left hover:text-action" onClick={() => setEdit(p.id)}>{p.nazwa}</button></Td><Td>{forma(p)}</Td><Td className="tabular-nums">{okres(o(p))}</Td>
           <Td num>{kw(o(p)?.bruttoGr)}</Td><Td num>{kw(P.stawka(p.id, m))}</Td><Td num>{o(p) ? lb(o(p)!.urlopDni) : '—'}</Td><Td title={o(p)?.uwagi} className="text-sm text-ink-2">{o(p)?.uwagi}</Td>
+          <Td className="text-right"><Button variant="ghost" size="icon" aria-label={`Edytuj: ${p.nazwa}`} onClick={() => setEdit(p.id)}><PencilSimple className="h-4 w-4" /></Button></Td>
         </Tr>))}
       </tbody>
     </Table>
@@ -40,7 +42,7 @@ export function Pracownicy() {
     <ul className="grid gap-3" aria-label={label}>{osoby.map((p) => (
       <li key={p.id}>
         <button type="button" onClick={() => setEdit(p.id)} className="grid min-h-11 w-full gap-0.5 rounded-[4px] border border-line bg-card px-4 py-3 text-left">
-          <span className="font-semibold">{p.nazwa}</span>
+          <span className="flex items-center justify-between gap-2 font-semibold">{p.nazwa}<PencilSimple className="h-5 w-5 shrink-0 text-ink-2" aria-hidden /></span>
           <span className="text-sm text-ink-2">{[forma(p), okres(o(p)), P.stawka(p.id, m) ? `${kw(P.stawka(p.id, m))} zł/h` : '', o(p) ? `urlop ${lb(o(p)!.urlopDni)} dni` : ''].filter(Boolean).join(' · ')}</span>
         </button>
       </li>))}
