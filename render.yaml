@@ -1,0 +1,88 @@
+# Render Blueprint ETNER: jeden plik, jedna usługa (produkcja). Tworzy się go raz (New → Blueprint); kolejne zmiany tego pliku Render stosuje sam.
+# etner – produkcja z prawdziwymi danymi (gałąź produkcja). Wersja demo usunięta 2026-10-30 (właściciel: niepotrzebna, zjadała minuty budowania).
+# Sekrety (sync: false) wkleja właściciel w panelu Render; w tym pliku nie ma żadnych kluczy ani haseł.
+services:
+  # Produkcja: instancja 0,5 CPU / 512 MB (dawniej „Starter”, ok. 7 USD/mies.) + dysk 1 GB na bazę. Wdraża się po każdym pushu na gałąź produkcja (robi to Claude na polecenie właściciela).
+  # Polecenia budowania i startu (oraz cały ten plik) Render bierze z gałęzi Blueprintu (modul-1), kod aplikacji z gałęzi produkcja.
+  # Usługa z dyskiem nie ma wdrożeń bez przerwy: przy nowej wersji aplikacja jest niedostępna przez około minutę.
+  - type: web
+    name: etner
+    runtime: node
+    plan: 0.5c-512mb
+    region: frankfurt
+    branch: produkcja
+    # Zmiany samych dokumentów (plan, dziennik, README) nie uruchamiają budowania – oszczędza minuty budowania Render.
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - "**/*.md"
+    autoDeployTrigger: commit
+    # Litestream (ciągła kopia bazy do R2) jako jeden plik wykonywalny w bin/ – runtime node go nie ma; suma SHA-256 przypięta.
+    buildCommand: >-
+      corepack enable && pnpm install --frozen-lockfile && pnpm build && mkdir -p bin &&
+      curl -fsSL -o bin/litestream.tar.gz https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz &&
+      echo "eb75a3de5cab03875cdae9f5f539e6aedadd66607003d9b1e7a9077948818ba0  bin/litestream.tar.gz" | sha256sum -c - &&
+      tar -xzf bin/litestream.tar.gz -C bin litestream && rm bin/litestream.tar.gz
+    # Najpierw ewentualna podmiana odtworzonej bazy (restore.db). Z R2_BUCKET aplikacja startuje pod Litestream (kopia każdej zmiany bazy do R2_BUCKET/db); bez niego sama, z ostrzeżeniem w logu.
+    startCommand: >-
+      export NODE_ENV=production; node server/dist/scripts/restore-swap-cli.js;
+      if [ -n "$R2_BUCKET" ]; then exec ./bin/litestream replicate -config deploy/litestream.yml -exec "node server/dist/main.js";
+      else echo "Ciągła kopia bazy wyłączona: brak R2_BUCKET."; exec node server/dist/main.js; fi
+    healthCheckPath: /api/health
+    disk:
+      name: etner-dane
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /var/data
+      # glibc: mniej rozdrobnionej pamięci przy przetwarzaniu zdjęć (sharp) na instancji 512 MB
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      - key: APP_SECRET
+        generateValue: true
+      # Pierwszy administrator: zakładany przy starcie tylko na pustej bazie (potem zmienne są pomijane).
+      - key: ADMIN_LOGIN
+        sync: false
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Produkcyjny bucket R2 (osobny od testowego): zdjęcia i ciągła kopia bazy pod db/.
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_KEY
+        sync: false
+      - key: R2_SECRET
+        sync: false
+      # Opcjonalnie: drugi bucket na nocną kopię zdjęć (prefiks files/).
+      - key: R2_BACKUP_BUCKET
+        sync: false
+      # Push: klucze VAPID powstają same przy pierwszym starcie i leżą na dysku (DATA_DIR/vapid.json).
+      - key: VAPID_SUBJECT
+        value: mailto:etner@etner-instalacje.pl
+      - key: PUMBLE_API_KEY
+        sync: false
+      # E-mail (np. zaległe kontakty z leadami); puste SMTP_HOST lub MAIL_FROM = e-maile wyłączone.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # Własna domena (np. https://app.etner-instalacje.pl); puste = adres onrender.com.
+      - key: BASE_URL
+        sync: false
+      # Opcjonalnie: nocny eksport tabel do arkusza Google.
+      - key: SHEETS_ID
+        sync: false
+      - key: GOOGLE_SA_JSON
+        sync: false

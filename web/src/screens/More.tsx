@@ -1,0 +1,71 @@
+import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
+import { badgeLabel, badgeText } from '../core/badges.js';
+import { useBadges } from '../core/layout/useBadges.js';
+import { logout, useSession } from '../core/session.js';
+import { Button } from '../core/ui/button.js';
+import { useDesk } from '../core/layout/status.js';
+import { Empty, Panel } from '../core/ui/bits.js';
+import { inBottomBar, inSideNav } from '../routes.js';
+
+const Tile = ({ href, icon: I, title, hint, count = 0, sr = ' bez terminu naprawy' }: { href: string; icon: Icon; title: string; hint: string; count?: number; sr?: string }) => (
+  <a href={href} className="flex min-h-16 items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-action/6 focus-visible:outline-offset-[-2px]">
+    <I className="h-6 w-6 shrink-0 text-action" />
+    <span className="min-w-0 flex-1"><span className="block text-lg font-bold leading-tight">{title}</span><span className="mt-0.5 block text-sm text-ink-2">{hint}</span></span>
+    {count > 0 && <span className="min-w-6 rounded-[3px] bg-new px-1.5 py-0.5 text-center text-xs font-bold tabular-nums text-white">{badgeText(count)}<span className="sr-only">{sr}</span></span>}
+    <CaretRight className="h-5 w-5 shrink-0 text-ink-2" />
+  </a>
+);
+
+type T = { k: string; icon: Icon; title: string; hint: string | ((admin: boolean) => string) };
+/** Kafelki w grupach; `admin`: grupa tylko dla admina. Klucz = ekran (`#k`). */
+const GROUPS: { admin?: true; tiles: T[] }[] = [
+  { tiles: [
+    { k: 'paszporty', icon: IdentificationCard, title: 'Paszporty', hint: 'Teczki obiektów, terminy serwisów' },
+    { k: 'auta', icon: Van, title: 'Samochody', hint: 'Usterki aut, terminy napraw' },
+    { k: 'narz', icon: Wrench, title: 'Narzędzia', hint: 'Gdzie leży narzędzie: samochody i Magazyn' },
+    { k: 'mag', icon: Package, title: 'Rzeczy nietypowe', hint: 'Co leży na magazynie, kto zabrał' },
+  ] },
+  { admin: true, tiles: [
+    { k: 'leady', icon: Handshake, title: 'Leady', hint: 'Zapytania klientów, kontakty, zlecenie z leada' },
+    { k: 'serwis', icon: BellRinging, title: 'Do serwisu', hint: 'Serwisy w 30 dni i zaległe, zlecenie serwisowe' },
+    { k: 'zad', icon: ListChecks, title: 'Zadania', hint: 'Sprawy biura: grupy, terminy, cykliczne' },
+    { k: 'fin', icon: Coins, title: 'Finanse', hint: 'Przychody, koszty, import z KPiR' },
+    { k: 'kl', icon: UsersThree, title: 'Klienci', hint: 'Kontakty, obiekty, leady i zlecenia klienta' },
+    { k: 'uz', icon: UserGear, title: 'Użytkownicy', hint: 'Konta, hasła, kolumny harmonogramu' },
+  ] },
+  { tiles: [{ k: 'ust', icon: GearSix, title: 'Ustawienia', hint: (a) => (a ? 'Motyw, powiadomienia, hasło, słowniki, log błędów, kopie' : 'Motyw, powiadomienia, zmiana hasła') }] },
+  { admin: true, tiles: [{ k: 'jutro', icon: SunHorizon, title: 'Na jutro', hint: 'Co ekipy biorą na następny dzień roboczy' }] },
+];
+
+/** Kafelki Więcej bez ekranów, które już są w menu: na komputerze w menu bocznym, na telefonie w dolnym pasku. */
+export const moreGroups = (admin: boolean, desk: boolean): T[][] =>
+  GROUPS.filter((g) => !g.admin || admin).map((g) => g.tiles.filter((t) => !(desk ? inSideNav(t.k, admin) : inBottomBar(t.k, admin)))).filter((g) => g.length);
+
+/** Więcej: Paszporty, Samochody, Narzędzia, Rzeczy nietypowe; Leady, Do serwisu, Zadania, Klienci, Użytkownicy (admin); Ustawienia; Na jutro (admin); wylogowanie. */
+export function More() {
+  const { me } = useSession();
+  const badges = useBadges();
+  const desk = useDesk();
+  const admin = me?.role === 'admin';
+  const groups = moreGroups(admin, desk);
+  return (
+    <section className="mx-auto grid max-w-2xl gap-4 px-4 py-5">
+      {groups.map((g) => (
+        <Panel key={g[0]!.k} className="divide-y divide-rule overflow-hidden">
+          {g.map((t) => <Tile key={t.k} href={`#${t.k}`} icon={t.icon} title={t.title} hint={typeof t.hint === 'string' ? t.hint : t.hint(admin)}
+            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'zad' && { count: badges.zad, sr: badgeLabel('zad', badges.zad ?? 0).replace(',', '') })} {...(t.k === 'leady' && { count: badges.leady, sr: badgeLabel('leady', badges.leady ?? 0).replace(',', '') })} {...(t.k === 'serwis' && { count: badges.serwis, sr: badgeLabel('serwis', badges.serwis ?? 0).replace(',', '') })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
+        </Panel>
+      ))}
+      {!desk && (
+        <Panel className="flex items-center justify-between gap-4 px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{me?.name}</p>
+            <p className="text-sm text-ink-2">{me?.role === 'admin' ? 'Administrator' : 'Pracownik'}</p>
+          </div>
+          <Button variant="secondary" onClick={() => void logout()}><SignOut className="h-5 w-5" />Wyloguj</Button>
+        </Panel>
+      )}{/* komputer: konto i wylogowanie w menu bocznym */}
+      {desk && !groups.length && <Empty icon={DotsThreeCircle} title="Wszystkie ekrany są w menu po lewej" />}
+    </section>
+  );
+}

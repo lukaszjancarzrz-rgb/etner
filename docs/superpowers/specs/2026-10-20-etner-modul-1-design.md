@@ -6,7 +6,7 @@ Projekt całości (ustalenia, fundament danych, usługi wspólne, technika, wygl
 ## 1. Zakres
 
 **Fundament** (`server/core`, `web/src/core`, `shared`) – w całości, jak w projekcie całości:
-- logowanie linkiem i sesje, uprawnienia (z miejscem na `finanse` i linki publiczne),
+- logowanie loginem i hasłem i sesje, uprawnienia (z miejscem na `finanse` i linki publiczne),
 - baza i migracje, dziennik zmian, synchronizacja (zmiany + SSE),
 - kolejka zapisów `opId`, pliki w R2, `notify` (push),
 - zadania w tle, kopie i eksport do arkusza, format kwot i dat.
@@ -15,7 +15,7 @@ Projekt całości (ustalenia, fundament danych, usługi wspólne, technika, wygl
 
 | Moduł | Co robi |
 |---|---|
-| `uzytkownicy` | osoby, role, ekipy, kolumny harmonogramu, nowy link, wyłączenie |
+| `uzytkownicy` | osoby, role, ekipy, kolumny harmonogramu, login i hasło (reset przez admina), wyłączenie |
 | `slowniki` | statusy z grupą, kategorie, ekipy, źródła, kody nieobecności (z polem „płatne”), grupy zadań, rodzaje zleceń |
 | `klienci` | karta klienta i obiekty (adresy); wybór albo utworzenie w locie z leada i zlecenia; lista z wyszukiwaniem |
 | `leady` | lead (klient, opcjonalnie obiekt), kontakty z klientem, przypomnienie o następnym kontakcie, zamiana w zlecenie |
@@ -115,13 +115,13 @@ Wyliczane, nie zapisywane:
   - nieprzypisane idą do przejrzenia.
 - **Załączniki:** wszystkie ze znacznikiem `dla_klienta = nie`.
 - **Raport:** liczba rekordów w źródle i w bazie dla każdej tabeli oraz różnice.
-- **Linki:** zostają te same tokeny. Telefony trzeba otworzyć raz pod nowym adresem i włączyć push.
+- **Logowanie:** stare linki przestają działać (zmiana 2026-10-21: login i hasło zamiast linków). Każdy dostaje login i hasło startowe od admina. Telefony trzeba otworzyć raz pod nowym adresem, zalogować się i włączyć push.
 
 ## 6. Testy i odbiór
 
 - **Vitest:** uprawnienia (pracownik, admin), sekcje ze statusów, szkice i zatwierdzanie, idempotencja `opId`, wyliczanie dni zlecenia, łączenie klientów przy przeniesieniu (na danych przykładowych), filtrowanie zmian SSE wg uprawnień.
 - **Playwright** (telefon i komputer):
-  - logowanie linkiem,
+  - logowanie loginem i hasłem,
   - nowy klient i zlecenie w locie,
   - wpis ze zdjęciem bez sieci i po powrocie,
   - zatwierdzenie harmonogramu z push,

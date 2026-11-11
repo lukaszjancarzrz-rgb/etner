@@ -1,0 +1,1 @@
+ALTER TABLE `pumble_messages` ADD `files` text;

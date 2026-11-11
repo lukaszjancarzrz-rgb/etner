@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* Czcionki z własnego serwera (RODO: bez zapytań do Google). Pliki zmienne, podzbiory latin i latin-ext; licencja OFL w public/fonts/OFL.txt. */
+@font-face { font-family: "Sofia Sans"; font-style: normal; font-weight: 400 800; font-display: swap; src: url("/fonts/sofia-sans-latin-ext.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Sofia Sans"; font-style: normal; font-weight: 400 800; font-display: swap; src: url("/fonts/sofia-sans-latin.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Sofia Sans Condensed"; font-style: normal; font-weight: 600 800; font-display: swap; src: url("/fonts/sofia-sans-condensed-latin-ext.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Sofia Sans Condensed"; font-style: normal; font-weight: 600 800; font-display: swap; src: url("/fonts/sofia-sans-condensed-latin.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+/* Tokeny ETNER (Global Constraints). Tryb: html[data-theme] = light | dark, brak = systemowy. */
+:root {
+  --bg: #eef2f5;
+  --card: #ffffff;
+  --ink: #0a2240;
+  --ink-2: #4a5d70;
+  --ink-3: #5d6f80; /* podpowiedzi w polach: jaśniej niż wartość, kontrast ≥4.5:1 */
+  --line: #c9d4de; /* obrys paneli */
+  --field: #74879a; /* obrys pól formularza: kontrast ≥3:1 do tła */
+  --rule: #e3e9ee; /* linie między wierszami */
+  --action: #0070ab;
+  --action-ink: #ffffff;
+  --ok: #00736b;
+  --danger: #b3261e;
+  --ok-ink: #ffffff; /* tekst na tle ok / danger */
+  --danger-ink: #ffffff;
+  --new: #c62828; /* znaczniki „nowe”, biały tekst */
+  --rail: #0a2240; /* szyna menu na komputerze */
+  --rail-on: #17396a;
+  --rail-ink: #c9d6e3;
+  --grid: rgb(10 34 64 / 0.045);
+  --shadow: 0 2px 4px rgb(10 34 64 / 0.08), 0 12px 32px rgb(10 34 64 / 0.16);
+  --crew-mix: 0%;
+  --th-h: 2.5rem; /* tabela: nagłówek i wiersz (dotyk 44 px) */
+  --row-h: 2.75rem;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a2240;
+    --card: #102e52;
+    --ink: #eef3f8;
+    --ink-2: #b4c4d4;
+    --ink-3: #93a7bb;
+    --line: #2f5384;
+    --field: #6688b3;
+    --rule: #1f4270;
+    --action: #5cbcf0;
+    --action-ink: #0a2240;
+    --ok: #45cdbb;
+    --danger: #ff8a80;
+    --ok-ink: #0a2240;
+    --danger-ink: #0a2240;
+    --new: #d32f2f;
+    --rail: #051427;
+    --rail-on: #133159;
+    --rail-ink: #b4c4d4;
+    --grid: rgb(255 255 255 / 0.03);
+    --shadow: 0 2px 4px rgb(0 8 20 / 0.3), 0 12px 32px rgb(0 8 20 / 0.45);
+    --crew-mix: 50%;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a2240;
+  --card: #102e52;
+  --ink: #eef3f8;
+  --ink-2: #b4c4d4;
+  --ink-3: #93a7bb;
+  --line: #2f5384;
+  --field: #6688b3;
+  --rule: #1f4270;
+  --action: #5cbcf0;
+  --action-ink: #0a2240;
+  --ok: #45cdbb;
+  --danger: #ff8a80;
+  --ok-ink: #0a2240;
+  --danger-ink: #0a2240;
+  --new: #d32f2f;
+  --rail: #051427;
+  --rail-on: #133159;
+  --rail-ink: #b4c4d4;
+  --grid: rgb(255 255 255 / 0.03);
+  --shadow: 0 2px 4px rgb(0 8 20 / 0.3), 0 12px 32px rgb(0 8 20 / 0.45);
+  --crew-mix: 50%;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-field: var(--field);
+  --color-rule: var(--rule);
+  --color-action: var(--action);
+  --color-action-ink: var(--action-ink);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --color-ok-ink: var(--ok-ink);
+  --color-danger-ink: var(--danger-ink);
+  --color-new: var(--new);
+  --color-rail: var(--rail);
+  --color-rail-on: var(--rail-on);
+  --color-rail-ink: var(--rail-ink);
+  --shadow-overlay: var(--shadow); /* tylko okna, menu rozwijane, powiadomienia */
+  --font-sans: "Sofia Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-cond: "Sofia Sans Condensed", "Sofia Sans", ui-sans-serif, system-ui, sans-serif;
+  --breakpoint-desk: 1100px;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    /* delikatna siatka 32 px w tle */
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection { background: color-mix(in srgb, var(--action) 28%, transparent); color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+  input, textarea { caret-color: var(--action); }
+}
+
+/* Komputer (≥1100 px, mysz; iPad poziomo zostaje dotykowy): wyraźnie gęściej. Rozmiary w rem i odstępy Tailwind (--spacing) maleją razem; telefon bez zmian (16 px, cele dotyku 44–48 px). */
+@media (min-width: 1100px) and (pointer: fine) {
+  html { font-size: 87.5%; }
+  :root { --spacing: 3px; --th-h: 40px; --row-h: 32px; } /* całe piksele: wymiary trafiają w kratkę (16 × 3 = 48, 32 = 4 × 8) */
+}
+
+/* Komputer: każdy ekran zaczyna się na tej samej krawędzi treści, na linii kratki 32 px (szyna 224 + 32 = 256; pasek 48 + 16 = 64).
+   Szerokości czytelnego tekstu (max-w-*) zostają, ale od lewej, nie na środku. Poza warstwami, żeby wygrać z klasami ekranów. */
+@media (min-width: 1100px) {
+  #content > * { margin-inline: 0; padding-inline: 32px; padding-block: 16px; row-gap: 16px; column-gap: 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
