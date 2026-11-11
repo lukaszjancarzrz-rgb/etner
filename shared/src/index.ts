@@ -18,3 +18,5 @@ export * from './schemas/samochody.js';
 export * from './schemas/narzedzia.js';
 export * from './schemas/magazyn.js';
 export * from './schemas/paszport.js';
+export * from './finanse.js';
+export * from './schemas/finanse.js';

@@ -276,6 +276,7 @@ const DICT_LABEL: Record<string, string> = {
   status_zlecenia: 'Statusy zleceń', status_leada: 'Statusy leadów', kategoria: 'Kategorie', ekipa: 'Ekipy', zrodlo: 'Źródła leadów',
   kod_nieobecnosci: 'Kody nieobecności', grupa_zadan: 'Grupy zadań', status_zadania: 'Statusy zadań', rodzaj_zlecenia: 'Rodzaje zleceń',
   status_zakupu: 'Statusy zakupów', dzien_wolny: 'Dni wolne (RRRR-MM-DD)', czynnosc_serwisowa: 'Czynności serwisowe',
+  kategoria_kosztu: 'Kategorie kosztów',
 };
 // Wartości, na których polega aplikacja (pozycja albo nazwa).
 const DICT_HINT: Record<string, string> = {

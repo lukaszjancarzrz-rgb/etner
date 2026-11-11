@@ -4,6 +4,7 @@ import { addDays, addMonths } from './dates.js';
 export const DICT_RODZAJE = [
   'status_zlecenia', 'status_leada', 'kategoria', 'ekipa', 'zrodlo', 'kod_nieobecnosci',
   'grupa_zadan', 'status_zadania', 'rodzaj_zlecenia', 'status_zakupu', 'dzien_wolny', 'czynnosc_serwisowa',
+  'kategoria_kosztu',
 ] as const;
 export type DictRodzaj = (typeof DICT_RODZAJE)[number];
 

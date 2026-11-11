@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
 import { addUser, loginCookie, testDeps } from '../../test-utils.js';
-import { firmy } from '../../core/schema-base.js';
+import { changes, firmy } from '../../core/schema-base.js';
 import { modules } from '../index.js';
 import { seedBase } from './seed.js';
 import { groupOf, list } from './service.js';
@@ -11,6 +11,7 @@ import { save as saveJob, get as getJob } from '../zlecenia/service.js';
 import { save as saveLead, get as getLead } from '../leady/service.js';
 import { get as getUser, createPerson } from '../uzytkownicy/service.js';
 import { scheduleEntries } from '../harmonogram/schema.js';
+import { dict } from './schema.js';
 import { eq } from 'drizzle-orm';
 
 async function setup() {
@@ -38,6 +39,21 @@ describe('seed', () => {
     expect(list(deps.db, 'kategoria').map((r) => [r.wartosc, r.kolor])).toEqual([
       ['Elektryka', '#0070ab'], ['Fotowoltaika', '#c4501b'], ['Rekuperacja', '#2e7d32'], ['Klimatyzacja', '#7b1fa2'],
       ['Alarmy i monitoring', '#455a64'], ['Smart home', '#00838f'], ['Sprzedaż', '#6d4c41'], ['Inne', '#f9a825']]);
+  });
+});
+
+describe('seedModul3', () => {
+  const KAT = ['Materiały i towary', 'Narzędzia i wyposażenie', 'Paliwo', 'Samochody (części, serwis, opłaty)', 'Księgowość i biuro', 'Telefon i internet',
+    'Szkolenia', 'Badania i BHP pracowników', 'Amortyzacja', 'Płace z listy płac (w arkuszach pracowników)', 'Inne', 'Do wyjaśnienia – błąd w KPiR (nie liczone)'];
+  it('istniejąca baza bez kategorii kosztu dostaje 12 wartości raz, z wpisami w changes', async () => {
+    const { deps } = await setup();
+    deps.db.delete(dict).where(eq(dict.rodzaj, 'kategoria_kosztu')).run();
+    expect(list(deps.db, 'kategoria_kosztu')).toHaveLength(0);
+    seedBase(deps.db);
+    expect(list(deps.db, 'kategoria_kosztu').map((r) => r.wartosc)).toEqual(KAT);
+    expect(deps.db.select().from(changes).where(eq(changes.entity, 'dict')).all().length).toBeGreaterThanOrEqual(12);
+    seedBase(deps.db);
+    expect(list(deps.db, 'kategoria_kosztu')).toHaveLength(12);
   });
 });
 
