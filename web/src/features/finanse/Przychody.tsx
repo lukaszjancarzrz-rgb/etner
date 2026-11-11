@@ -30,7 +30,7 @@ export function Przychody({ q, okres, filtr }: Filtry) {
     .sort((a, b) => String(b.dzien ?? b.innyMiesiac).localeCompare(String(a.dzien ?? a.innyMiesiac))), [revenues, okres, filtr, q, numer]);
   const { rows, by } = useSort(list, {
     kat: (r) => r.kategoria, nr: (r) => numer.get(r.jobId), klient: (r) => r.klient, miejsc: (r) => r.miejscowosc, sposob: (r) => SPOSOB_LABEL[r.sposob as Sposob],
-    kwota: (r) => r.kwotaGr, netto: (r) => r.nettoGr, faktura: (r) => r.nrFaktury, mies: (r) => miesiacWiersza(r),
+    kwota: (r) => r.kwotaGr, netto: (r) => r.nettoGr, faktura: (r) => r.nrFaktury, mat: (r) => r.materialyGr, mies: (r) => miesiacWiersza(r),
   });
   const bez = useMemo(() => rozliczoneBezPrzychodu(jobs, revenues), [jobs, revenues]);
   const prefill = (j: Rec): Partial<Rec> => {
@@ -63,15 +63,15 @@ export function Przychody({ q, okres, filtr }: Filtry) {
       {!rows.length ? <Empty icon={Coins} title="Brak przychodów w tym okresie" hint="Dodaj przychód przyciskiem u góry albo ze zlecenia „Rozliczone”." /> : desk ? (
         <Table aria-label="Przychody">
           <thead><tr>
-            <Th sort={by('kat')} className="w-14" pad="px-0">Br.</Th><Th sort={by('nr')} className="w-[7rem]">Zlecenie</Th><Th sort={by('klient')}>Klient</Th><Th sort={by('miejsc')} className="w-[9rem]">Miejscowość</Th>
-            <Th sort={by('sposob')} className="w-[9.5rem]">Sposób</Th><Th sort={by('kwota')} num className="w-[7.5rem]">Kwota</Th><Th sort={by('netto')} num className="w-[7.5rem]">Netto</Th>
-            <Th sort={by('faktura')} className="w-[8rem]">Nr faktury</Th><Th sort={by('mies')} className="w-[6rem]">Miesiąc</Th>
+            <Th sort={by('kat')} className="w-14" pad="pl-2 pr-2.5">Br.</Th><Th sort={by('nr')} className="w-[7rem]">Zlecenie</Th><Th sort={by('klient')} className="w-[15rem]">Klient</Th><Th sort={by('miejsc')} className="w-[9rem]">Miejscowość</Th>
+            <Th sort={by('sposob')} className="w-[9.5rem]">Sposób</Th><Th sort={by('kwota')} num className="w-[7.5rem]">Kwota</Th><Th sort={by('netto')} num className="w-[7.5rem]">Netto</Th><Th sort={by('mat')} num className="w-[7.5rem]" title="Materiały – szacunek">Materiały</Th>
+            <Th sort={by('faktura')} className="w-[12rem]">Nr faktury</Th><Th sort={by('mies')} className="w-[6rem]">Miesiąc</Th>
           </tr></thead>
           <tbody>{rows.map((r) => (
             <Tr key={r.id} onOpen={r._tmp ? undefined : () => setForm({ revenue: r })}>
               <Td pad="pr-2.5 py-1.5">{r.kategoria ? <CatTab name={r.kategoria} flush /> : null}</Td>
               <Td>{zlecenie(r)}</Td><Td title={r.opis}>{r.klient}</Td><Td>{r.miejscowosc}</Td><Td className="text-sm text-ink-2">{SPOSOB_LABEL[r.sposob as Sposob]}</Td>
-              <Td num>{fmtZl(r.kwotaGr)}</Td><Td num className="font-semibold">{fmtZl(r.nettoGr)}</Td><Td>{r.nrFaktury}</Td><Td>{miesiacWiersza(r)}</Td>
+              <Td num>{fmtZl(r.kwotaGr)}</Td><Td num className="font-semibold">{fmtZl(r.nettoGr)}</Td><Td num className="text-ink-2">{r.materialyGr != null ? fmtZl(r.materialyGr) : '—'}</Td><Td>{r.nrFaktury}</Td><Td>{miesiacWiersza(r)}</Td>
             </Tr>))}
           </tbody>
         </Table>
@@ -83,7 +83,7 @@ export function Przychody({ q, okres, filtr }: Filtry) {
                 <span className="min-w-0"><span className="block truncate font-extrabold">{r.klient || 'Przychód'}</span><span className="block truncate text-sm text-ink-2">{[r.miejscowosc, r.opis].filter(Boolean).join(' · ')}</span></span>
                 <span className="shrink-0 text-right tabular-nums"><span className="block font-extrabold">{fmtZl(r.nettoGr)}</span><span className="block text-xs text-ink-2">netto</span></span>
               </span>
-              <span className="flex flex-wrap items-center gap-x-3 text-sm text-ink-2">{r.kategoria && <CatTab name={r.kategoria} />}<span>{SPOSOB_LABEL[r.sposob as Sposob]}</span>{r.dzien && <span>{fmtDay(r.dzien)}</span>}{r.nrFaktury && <span>{r.nrFaktury}</span>}</span>
+              <span className="flex flex-wrap items-center gap-x-3 text-sm text-ink-2">{r.kategoria && <CatTab name={r.kategoria} />}<span>{SPOSOB_LABEL[r.sposob as Sposob]}</span>{r.dzien && <span>{fmtDay(r.dzien)}</span>}{r.nrFaktury && <span>{r.nrFaktury}</span>}{r.materialyGr != null && <span>materiały {fmtZl(r.materialyGr)}</span>}</span>
             </button>
             {r.jobId && numer.get(r.jobId) && <a href={`#zl/${r.jobId}`} className="mx-4 mb-1 inline-flex min-h-11 items-center text-sm font-semibold text-action">Zlecenie {numer.get(r.jobId)}</a>}
           </li>))}

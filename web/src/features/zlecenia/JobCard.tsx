@@ -1,4 +1,4 @@
-import { CalendarCheck, ClipboardText, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
+import { CalendarCheck, ClipboardText, Coins, IdentificationCard, MapPin, NavigationArrow, PencilSimple, Phone, Plus, Trash, User } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api.js';
 import { useDesk, useSynced } from '../../core/layout/status.js';
@@ -17,6 +17,8 @@ import { pszHash, siteHash } from '../paszport/Paszport.js';
 import { JobForm } from './JobForm.js';
 import { Pumble } from './Pumble.js';
 import { Scope } from './Scope.js';
+import { fmtZl, SPOSOB_LABEL, type Sposob } from '@etner/shared';
+import { openRevenue } from '../finanse/RevenueHost.js';
 import { CLIENT_FIELDS, JOB_FIELDS, SITE_FIELDS, changedFields } from './changed.js';
 import { fmtDni, isSerwis, jobDays } from './jobs.js';
 
@@ -30,6 +32,7 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const client = useEntity('clients', job?.clientId);
   const site = useEntity('sites', job?.siteId ?? undefined);
   const sched = useEntities('schedule_entries');
+  const przychody = useEntities('revenues').filter((r) => r.jobId === id && !r.deletedAt); // tylko admin dostaje przychody w synchronizacji
   const admin = useIsAdmin();
   const loading = useLoading();
   const crew = useCrewColor();
@@ -134,16 +137,28 @@ export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
           {admin && job.uwagiAdmin && (
             <div className="grid gap-1 rounded-[4px] bg-bg/70 p-3"><p className="flex items-center gap-1.5 text-sm font-semibold text-ink-2"><User className="h-4 w-4" />Uwagi admina (pracownicy nie widzą){fj.has('uwagiAdmin') && <NewMark sr="zmienione uwagi admina" />}</p><p className="whitespace-pre-wrap">{job.uwagiAdmin}</p></div>
           )}
+          {job.krotkiOpis && <p className="border-t border-line pt-3 text-sm"><span className="block font-semibold text-ink-2">Krótki opis</span>{job.krotkiOpis}</p>}
         </div>
       </div>
       {serwis && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[4px] border border-action/40 bg-action/8 px-4 py-3">
           <ClipboardText className="h-6 w-6 shrink-0 text-action" weight="duotone" aria-hidden />
-          <p className="min-w-0 flex-1">{wpis
+          <p className="min-w-0 flex-1 basis-56">{wpis
             ? <>Wpis w karcie serwisowej z <span className="font-semibold tabular-nums">{fmtDay(wpis.dzien)}</span>, teczka <span className="font-semibold">{job.kategoria}</span>.</>
             : <>To zlecenie jest w teczce <span className="font-semibold">{job.kategoria}</span>. Po serwisie dodaj wpis do karty serwisowej.</>}</p>
           {!wpis && <a href={`${psz}/wpis~${id}`} className="inline-flex h-10 items-center gap-2 rounded-[4px] bg-action px-4 text-sm font-semibold text-action-ink hover:brightness-110"><Plus className="h-4 w-4" weight="bold" />Dodaj wpis do karty serwisowej</a>}
         </div>
+      )}
+      {admin && przychody.length > 0 && (
+        <section aria-label="Przychód ze zlecenia" className="flex flex-wrap items-center gap-2 rounded-[4px] border border-line bg-card px-4 py-3">
+          <Coins className="h-6 w-6 shrink-0 text-ok" weight="duotone" aria-hidden />
+          <span className="font-semibold">Przychód:</span>
+          {przychody.map((r) => (
+            <button key={r.id} type="button" onClick={() => openRevenue({ revenue: r })} className="inline-flex min-h-11 items-center gap-2 rounded-[4px] border border-line px-3 text-sm font-semibold hover:border-ink-2 desk:min-h-9">
+              {r.nrFaktury || SPOSOB_LABEL[r.sposob as Sposob]} · <span className="tabular-nums">{fmtZl(r.kwotaGr)}</span>
+            </button>
+          ))}
+        </section>
       )}
       <Scope jobId={id} disabled={!!job._tmp} since={since} />
       <Pumble job={job} since={since} />
