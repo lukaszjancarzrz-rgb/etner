@@ -11,3 +11,4 @@ Owner hotfix bundle (Do serwisu link, Serwis badge/filter, job delete, krótki o
 Verification at 3be298f: shared 21, web 111, server 310; build ok; size 134.06/150, 362.08/500 kB; full e2e 95 passed / 5 skipped / 0 failed.
 Deferred minors: auto-add path untested (lead value treated as brutto); no server guard vs second revenue per job; dialog only on job edit (not on create with Rozliczone); negative invoice (credit note) rows skipped in sheet import; hotfix minors (empty number on optimistic link, delete confirm never expires, first not newest open service job).
 Release pending owner OK (new module + migration 0026). After deploy: owner runs Ustawienia → „Finanse z arkusza” (trial, then save) before using Finanse.
+Owner 2026-11-11: „tak” — Finanse 3a released to produkcja + modul-1 (6ddfdd4, migration 0026 additive). Owner runs sheet import next.
