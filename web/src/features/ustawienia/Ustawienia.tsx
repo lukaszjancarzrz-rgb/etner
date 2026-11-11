@@ -246,11 +246,14 @@ function ErrorLog() {
   const text = (e: Rec) => `${e.at} ${e.where}\n${e.message}`;
   const copy = (t: string) => navigator.clipboard.writeText(t).then(() => toast('Skopiowano', { tone: 'ok' }), () => toast('Nie udało się skopiować', { tone: 'error' }));
   const shown = list && (all ? list : list.slice(0, 10));
+  const [sure, setSure] = useState(false);
+  const wyczysc = () => api('/api/errors', { method: 'DELETE' }).then(() => { setList([]); setSure(false); toast('Log wyczyszczony', { tone: 'ok' }); }, (e) => setErr(msg(e)));
   return (
     <Card title="Log błędów" icon={Bug} hint="Najnowsze na górze. Skopiuj i wyślij, gdy coś nie działa.">
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" onClick={() => void load()}>Odśwież</Button>
         {!!list?.length && <Button size="sm" variant="secondary" onClick={() => void copy(list.map(text).join('\n\n'))}><Copy className="h-4 w-4" />Kopiuj wszystko</Button>}
+        {!!list?.length && <Button size="sm" variant={sure ? 'danger' : 'ghost'} className={cn(!sure && 'text-danger')} onClick={() => (sure ? void wyczysc() : setSure(true))}><Trash className="h-4 w-4" />{sure ? 'Na pewno wyczyścić?' : 'Wyczyść log'}</Button>}
       </div>
       {err && <p className="text-sm text-danger">{err}</p>}
       {list === null && !err ? <Skeleton className="h-24" /> : list?.length === 0 ? <p className="text-sm text-ink-2">Brak błędów.</p> : (

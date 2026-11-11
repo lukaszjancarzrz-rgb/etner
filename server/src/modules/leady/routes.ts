@@ -57,6 +57,21 @@ export function routes(app: Hono, deps: AppDeps): void {
     svc.setLeadyEmail(db, email);
     return c.json({ email });
   });
+  // Test (Ustawienia): to samo co o 7:00 – powiadomienie push do klikającego i e-mail na adres z ustawień; bez blokady „raz dziennie”.
+  app.post('/api/settings/leady-email/test', guard, async (c) => {
+    const day = dayOf((deps.now ?? (() => new Date()))());
+    const n = svc.overdue(db, day).length;
+    const push = await notify(deps, [uid(c)], { title: `📞 Kontakt z klientem: ${n} zaległych (test)`, body: 'Leady z terminem kontaktu na dziś lub wcześniej', url: '#leady', tag: 'leady-przypomnienia' });
+    if (!deps.mailer) throw new HTTPException(422, { message: `Brak konfiguracji SMTP (SMTP_HOST, MAIL_FROM w Render) – e-mail nie wysłany. Powiadomień push: ${push}.` });
+    const to = svc.leadyEmail(db);
+    // brak zaległych: i tak e-mail, żeby sprawdzić skrzynkę i SMTP
+    const m = svc.overdueMail(db, day, deps.baseUrl) ?? { subject: 'Zaległe kontakty z klientami: 0 (test)', text: 'Test: dziś nie ma zaległych kontaktów.', html: '<p>Test: dziś nie ma zaległych kontaktów.</p>' };
+    try { await deps.mailer({ ...m, subject: `${m.subject} – test`, to }); } catch (e) {
+      logError(db, 'test:leady-email', e, uid(c));
+      throw new HTTPException(422, { message: `Serwer poczty odrzucił wysyłkę: ${e instanceof Error ? e.message : String(e)}` });
+    }
+    return c.json({ zalegle: n, push, email: to });
+  });
   app.post('/api/leads/:id/to-job', guard, async (c) => {
     const b = await body(c, leadToJobSchema);
     const out: import('../zlecenia/service.js').Outbox = [];

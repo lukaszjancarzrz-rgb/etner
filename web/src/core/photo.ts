@@ -13,6 +13,7 @@ export async function resizePhoto(file: Blob): Promise<Blob> {
     const k = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
     // małe JPEG/PNG/WebP bez zmian; inne formaty (np. HEIC) i tak na JPEG
     if (k === 1 && /^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+    if (typeof OffscreenCanvas === 'undefined') return file; // starsze iPhone'y (przed iOS 16.4): oryginał, serwer przyjmie
     const w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
     const c = new OffscreenCanvas(w, h);
     c.getContext('2d')!.drawImage(bmp, 0, 0, w, h);
@@ -24,6 +25,7 @@ export async function resizePhoto(file: Blob): Promise<Blob> {
 
 /** Zdjęcie profilowe: środek kadru do kwadratu `px`, JPEG 0.85 (serwer i tak robi 256 px WebP). Nieznany format idzie bez zmian. */
 export async function squarePhoto(file: Blob, px = 512): Promise<Blob> {
+  if (typeof OffscreenCanvas === 'undefined') return file; // serwer i tak przycina do 256 px
   let bmp: ImageBitmap;
   try {
     bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });

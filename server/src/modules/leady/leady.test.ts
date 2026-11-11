@@ -87,6 +87,24 @@ describe('leady', () => {
     expect(feed.filter((c) => c.entity === 'leads' || c.entity === 'lead_contacts')).toEqual([]);
   });
 
+  it('test z Ustawień: push do klikającego i e-mail (także bez zaległych); bez SMTP 422; pracownik 403; czyszczenie logu', async () => {
+    const { app, admin, worker, push, deps } = await setup();
+    const t = (c: string) => app.request('/api/settings/leady-email/test', req(c, 'POST'));
+    expect((await t(worker)).status).toBe(403);
+    expect((await t(admin)).status).toBe(422); // brak mailera w testDeps
+    expect(push).toHaveBeenCalledTimes(1);
+    const mailer = vi.fn(async () => {});
+    Object.assign(deps, { mailer });
+    expect(await (await t(admin)).json()).toMatchObject({ zalegle: 0, push: 1, email: 'etner@etner-instalacje.pl' });
+    expect((mailer.mock.calls[0] as any)[0].subject).toContain('test');
+    mailer.mockRejectedValueOnce(new Error('535 auth'));
+    expect((await t(admin)).status).toBe(422); // komunikat poczty widoczny dla admina
+    expect((await (await app.request('/api/errors', req(admin, 'GET'))).json()).length).toBeGreaterThan(0);
+    expect((await app.request('/api/errors', req(worker, 'DELETE'))).status).toBe(403);
+    expect((await app.request('/api/errors', req(admin, 'DELETE'))).status).toBe(200);
+    expect(await (await app.request('/api/errors', req(admin, 'GET'))).json()).toEqual([]);
+  });
+
   it('cron: jedno powiadomienie z liczbą zaległych, nic gdy zero', async () => {
     const { app, admin, k, deps, push } = await setup();
     const def = modules.find((m) => m.name === 'leady')!.cron![0]!;

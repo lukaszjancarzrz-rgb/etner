@@ -27,3 +27,10 @@ it('duże zdjęcie: dłuższy bok 2560, JPEG 0.85', async () => {
   expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 2560, 1920);
   expect(conv).toHaveBeenCalledWith({ type: 'image/jpeg', quality: 0.85 });
 });
+
+it('bez OffscreenCanvas (starszy iPhone): duże zdjęcie idzie w oryginale', async () => {
+  vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 4000, height: 3000, close() {} })));
+  vi.stubGlobal('OffscreenCanvas', undefined);
+  const f = new Blob(['x'], { type: 'image/jpeg' });
+  expect(await resizePhoto(f)).toBe(f);
+});

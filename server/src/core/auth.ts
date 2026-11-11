@@ -11,7 +11,7 @@ import { rankoGodzina } from './cron.js';
 import { recentErrors } from './errors.js';
 import { MAX_PASSWORD, dummyVerify, hashPassword, verifyPassword } from './password.js';
 import { can } from './permissions.js';
-import { pushSubscriptions, sessions, settings, users } from './schema-base.js';
+import { errors, pushSubscriptions, sessions, settings, users } from './schema-base.js';
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -164,6 +164,7 @@ export function mountAuth(app: Hono, deps: AppDeps): void {
 
   app.get('/api/me', requireUser(db), (c) => c.json(toMe(c.get('user'))));
   app.get('/api/errors', requireAdmin(db), (c) => c.json(recentErrors(db, 200)));
+  app.delete('/api/errors', requireAdmin(db), (c) => { db.delete(errors).run(); return c.json({ ok: true }); });
 
   // Ustawienia firmy (admin): godzina porannego przypomnienia i stan nocnych kopii.
   const setting = (key: string) => db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? null;

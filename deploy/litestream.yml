@@ -12,3 +12,5 @@ dbs:
         endpoint: ${R2_ENDPOINT}
         region: auto
         retention: 720h
+        # pełna migawka codziennie: odtworzenie nie musi doczytywać do 30 dni zmian
+        snapshot-interval: 24h

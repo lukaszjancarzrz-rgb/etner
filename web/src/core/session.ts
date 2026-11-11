@@ -90,6 +90,9 @@ export async function login(login: string, haslo: string): Promise<string | null
 }
 
 export async function logout(): Promise<void> {
+  // wylogowanie czyści kolejkę: niewysłane wpisy i zdjęcia przepadłyby po cichu
+  const n = outbox.pending();
+  if (n && !confirm(`Masz ${n} niewysłanych zapisów (np. wpisy, zdjęcia). Po wylogowaniu przepadną. Poczekaj na zasięg, aż się wyślą.\n\nWylogować mimo to?`)) return;
   await forgetPushOnServer().catch(() => {}); // powiadomienia tej osoby nie trafiają już na urządzenie, które opuściła
   await api('/api/logout', { method: 'POST' }).catch(() => {});
   sync.stop();

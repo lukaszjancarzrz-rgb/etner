@@ -88,7 +88,8 @@ export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
     return c.json({ error: 'Błąd serwera – spróbuj ponownie.' }, 500);
   });
 
-  app.get('/api/health', (c) => c.json({ ok: true, version: deps.version }));
+  // z zapytaniem do bazy: uszkodzona/niedostępna baza = 500 (monitoring, np. UptimeRobot, to zauważy)
+  app.get('/api/health', (c) => { deps.db.$client.prepare('select 1').get(); return c.json({ ok: true, version: deps.version }); });
 
   // Dane JSON najwyżej 1 MB; wysyłka plików (multipart) ma własne limity w trasach.
   const jsonLimit = bodyLimit({ maxSize: 1024 * 1024, onError: (c) => c.json({ error: 'Za dużo danych naraz (max 1 MB).' }, 413) });
