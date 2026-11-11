@@ -120,6 +120,13 @@ export function routes(app: Hono, deps: AppDeps): void {
     }
   });
 
+  app.get('/api/finanse/place', admin, (c) => c.json(svc.getPlace(db)));
+  app.put('/api/finanse/place/:miesiac', admin, async (c) => {
+    const m = c.req.param('miesiac');
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(m)) throw new HTTPException(400, { message: 'Zły miesiąc (RRRR-MM)' });
+    const { kwotaGr } = await body(c, z.object({ kwotaGr: z.number().int().min(0).nullable() }));
+    return c.json(svc.setPlace(db, m, kwotaGr));
+  });
   app.get('/api/settings/finanse', admin, (c) => c.json(svc.getSettings(db)));
   app.put('/api/settings/finanse', admin, async (c) => c.json(svc.setSettings(db, await body(c, settingsSchema))));
 }

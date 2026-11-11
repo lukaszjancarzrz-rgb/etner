@@ -37,6 +37,16 @@ describe('finanse', () => {
     expect((await app.request('/api/revenues/nie-ma', req(admin, 'DELETE'))).status).toBe(404);
   });
 
+  it('koszty pracowników: miesiąc → kwota, usunięcie null, zły miesiąc 400, pracownik 403', async () => {
+    const { app, admin, worker } = await setup();
+    expect(await (await app.request('/api/finanse/place/2026-10', req(admin, 'PUT', { kwotaGr: 1689000 }))).json()).toEqual({ '2026-10': 1689000 });
+    await app.request('/api/finanse/place/2026-11', req(admin, 'PUT', { kwotaGr: 100 }));
+    expect(await (await app.request('/api/finanse/place/2026-11', req(admin, 'PUT', { kwotaGr: null }))).json()).toEqual({ '2026-10': 1689000 });
+    expect(await (await app.request('/api/finanse/place', req(admin, 'GET'))).json()).toEqual({ '2026-10': 1689000 });
+    expect((await app.request('/api/finanse/place/2026-13', req(admin, 'PUT', { kwotaGr: 1 }))).status).toBe(400);
+    expect((await app.request('/api/finanse/place', req(worker, 'GET'))).status).toBe(403);
+  });
+
   it('pracownik: 403 i brak encji w changes', async () => {
     const { app, admin, worker } = await setup();
     await app.request('/api/revenues', req(admin, 'POST', { sposob: 'bez', kwotaGr: 100, dzien: '2026-10-01' }));

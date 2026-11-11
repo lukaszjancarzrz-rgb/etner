@@ -88,3 +88,22 @@ test('finanse: pracownik nie widzi Finanse w menu, #fin → „Brak dostępu”'
   await page.goto('/#fin');
   await expect(page.getByRole('heading', { name: 'Brak dostępu', level: 1 })).toBeVisible();
 });
+
+test('Finanse 3b: Wynik z kosztami pracowników, Kontrola KPiR, Statystyki', async ({ page }, info) => {
+  test.skip(info.project.name.startsWith('iPhone'), 'tabela miesięcy tylko na komputerze');
+  await page.goto('/');
+  await page.getByRole('button', { name: /Tomasz Wrona/ }).click();
+  await expect(page.getByRole('heading', { name: 'Harmonogram', level: 1 })).toBeVisible();
+  await page.goto('/#fin');
+  await page.getByRole('radio', { name: 'Wynik' }).click();
+  const tabela = page.getByRole('table', { name: /Wynik firmy/ });
+  await expect(tabela).toBeVisible();
+  await tabela.getByRole('button', { name: /Koszty pracowników .*-01/ }).click();
+  await page.getByRole('dialog').getByLabel('Kwota (zł)').fill('1 234');
+  await page.getByRole('dialog').getByRole('button', { name: 'Zapisz' }).click();
+  await expect(tabela.getByRole('button', { name: /Koszty pracowników .*-01: 1234 zł/ })).toBeVisible();
+  await page.getByRole('radio', { name: 'KPiR' }).click();
+  await expect(page.getByRole('region', { name: /^KPiR / }).first()).toBeVisible();
+  await page.getByRole('radio', { name: 'Statystyki' }).click();
+  await expect(page.getByRole('region', { name: 'Czas pracy wg branży' })).toBeVisible();
+});

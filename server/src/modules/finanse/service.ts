@@ -166,6 +166,16 @@ export function getSettings(db: Db): FinanseSettings {
   return { autoPrzychod: setting(db, 'finanse_auto_przychod') === '1', domyslnySposob: s && SPOSOBY.includes(s) ? s : 'vat8' };
 }
 
+/** Koszty pracowników na miesiąc (gr, RRRR-MM → kwota), wpisywane ręcznie do czasu modułu Płace. */
+export const getPlace = (db: Db): Record<string, number> => JSON.parse(setting(db, 'finanse_place') ?? '{}') as Record<string, number>;
+export function setPlace(db: Db, miesiac: string, gr: number | null): Record<string, number> {
+  const v = getPlace(db);
+  if (gr === null) delete v[miesiac]; else v[miesiac] = gr;
+  const value = JSON.stringify(v), t = now();
+  db.insert(settings).values({ key: 'finanse_place', value, updatedAt: t }).onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: t } }).run();
+  return v;
+}
+
 export function setSettings(db: Db, v: FinanseSettings): FinanseSettings {
   const t = now();
   for (const [key, value] of [['finanse_auto_przychod', v.autoPrzychod ? '1' : '0'], ['finanse_domyslny_sposob', v.domyslnySposob]] as const) {
