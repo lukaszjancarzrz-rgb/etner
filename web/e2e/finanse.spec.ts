@@ -66,6 +66,17 @@ test('finanse: Rozliczone → przychód ze zlecenia, ponowne Rozliczone bez okie
 
   await importuj();
   await expect(imp.getByRole('status')).toHaveText('Nowe pozycje: 0, pominięte duplikaty: 2.');
+  await imp.getByRole('button', { name: 'Anuluj' }).click();
+
+  // edycja kosztu: klik w wiersz/kartę
+  await page.getByText(`${tag} dostawca 1`).click();
+  const kf = page.getByRole('dialog', { name: 'Koszt' });
+  await kf.getByLabel('Kontrahent').fill(`${tag} hurtownia`);
+  await kf.getByRole('radio', { name: 'Poza wynikiem' }).click();
+  await kf.getByRole('button', { name: 'Zapisz koszt' }).click();
+  await expect(kf).toBeHidden();
+  await expect(page.getByText(`${tag} hurtownia`)).toHaveCount(1);
+  await expect(page.getByText(`${tag} dostawca`)).toHaveCount(1);
 });
 
 test('finanse: pracownik nie widzi Finanse w menu, #fin → „Brak dostępu”', async ({ page }) => {
