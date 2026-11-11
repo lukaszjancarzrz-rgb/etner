@@ -15,6 +15,7 @@ import { magazyn } from './magazyn/index.js';
 import { przeniesienie } from './przeniesienie/index.js';
 import { paszport } from './paszport/index.js';
 import { finanse } from './finanse/index.js';
+import { place } from './place/index.js';
 
 /** Jedyne miejsce rejestracji modułów (createApp w main.ts i w testach). */
-export const modules: ModuleDef[] = [slowniki, uzytkownicy, klienci, zlecenia, leady, dziennik, naJutro, zakupy, zadania, harmonogram, samochody, narzedzia, magazyn, przeniesienie, paszport, finanse];
+export const modules: ModuleDef[] = [slowniki, uzytkownicy, klienci, zlecenia, leady, dziennik, naJutro, zakupy, zadania, harmonogram, samochody, narzedzia, magazyn, przeniesienie, paszport, finanse, place];
