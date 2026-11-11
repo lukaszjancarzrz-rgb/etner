@@ -243,12 +243,12 @@ function JobTable({ list, q, setQ, serwisowe, setSerwisowe, selected, highlight,
                 const nowe = fresh.get(j.id) ?? 0;
                 const on = j.id === selected;
                 return (
-                  <Tr key={j.id} href={`#zl/${j.id}`} selected={on} className="scroll-mt-28">
+                  <Tr key={j.id} href={on ? '#zl' : `#zl/${j.id}`} selected={on} className="scroll-mt-28">
                     <Td pad="py-1.5 pr-2.5">{j.kategoria && <><CatTab name={j.kategoria} flush /><span className="sr-only">{j.kategoria}</span></>}</Td>
                     <Td className={cn(opisZlecenia(j).fallback ? 'text-ink-2' : 'font-semibold')} title={opisZlecenia(j).text}>{j._tmp ? 'zapisywanie' : opisZlecenia(j).text}</Td>
                     <Td>
                       {/* tekst dla czytnika na końcu linku: pierwszy fragment linku musi być widoczny (cel kliknięcia) */}
-                      <a href={`#zl/${j.id}`} aria-current={on ? 'page' : undefined} className="font-bold hover:text-action">
+                      <a href={on ? '#zl' : `#zl/${j.id}`} aria-current={on ? 'page' : undefined} className="font-bold hover:text-action">
                         {nazwa(j)}<span className="sr-only">, {j.numer}{nowe > 0 && `, ${nowe} ${nowe === 1 ? 'nowy' : 'nowe'}`}</span>
                       </a>
                       {open && j.site?.miejscowosc && <span className="text-ink-2">, {j.site.miejscowosc}</span>}

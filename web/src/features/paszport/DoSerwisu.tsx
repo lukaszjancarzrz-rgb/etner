@@ -15,6 +15,7 @@ import { createVia } from '../../core/write.js';
 import { go } from '../../routes.js';
 import { doSerwisu, type DoSerwisuRow } from './model.js';
 import { pszHash, SerwisBadge, siteHash } from './Paszport.js';
+import { jobDays } from '../zlecenia/jobs.js';
 import { FolderForm } from './Teczka.js';
 
 type Wiersz = DoSerwisuRow;
@@ -88,6 +89,10 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
   // otwarte zlecenie serwisowe tej teczki: zamiast przycisku link do niego
   const open = jobs.find((j) => !j.deletedAt && j.siteId === site.id && j.kategoria === f.kategoria && /serwis/i.test(j.rodzaj ?? '') && group(j.status) !== 'zamkniete');
   const [busy, setBusy] = useState(() => ordered.has(f.id));
+  const sched = useEntities('schedule_entries');
+  // termin otwartego zlecenia z harmonogramu (termin serwisu w teczce jest tylko orientacyjny)
+  const dni = open ? jobDays(sched.filter((e) => !e.deletedAt), open.id) : undefined;
+  const kiedy = dni && (dni.od ? <span className="text-sm text-ink-2">w harmonogramie {fmtDay(dni.od)}{dni.do !== dni.od && ` – ${fmtDay(dni.do!)}`}</span> : <span className="text-sm font-semibold text-danger">brak w harmonogramie</span>);
   const tel = (client?.telefony as string[] | undefined)?.[0];
   const where = [site.miejscowosc, [site.nazwa, site.adres].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
   const note = [!f.przypomnienia ? 'przypomnienia e-mail wyłączone' : !(client?.emaile as string[] | undefined)?.length && 'klient bez e-maila – przypomnienie nie pójdzie'].filter(Boolean)[0];
@@ -125,6 +130,7 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
       <Td pad="px-2.5">
         <span className="flex items-center gap-1.5">
           {open ? <a href={`#zl/${open.id}`} className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold hover:border-ink-2"><Briefcase className="h-4 w-4" weight="bold" />Zlecenie {open.numer}</a> : <Button size="sm" disabled={busy} onClick={() => void zlecenie()}><Briefcase className="h-4 w-4" weight="bold" />Zrób zlecenie serwisowe</Button>}
+          {kiedy}
           <Button size="sm" variant="secondary" onClick={() => setMove(true)}><CalendarBlank className="h-4 w-4" />Przesuń termin</Button>
           {tel && <a href={telHref(tel)} aria-label={`Zadzwoń: ${tel}`} title={tel} className="inline-flex h-10 w-10 items-center justify-center rounded-[4px] border border-line hover:border-ink-2"><Phone className="h-4 w-4" /></a>}
         </span>
@@ -153,6 +159,7 @@ function Row({ f, site, client, desk }: Wiersz & { desk?: boolean }) {
       </div>
       <div className="flex flex-wrap gap-2">
         {open ? <a href={`#zl/${open.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold hover:border-ink-2"><Briefcase className="h-4 w-4" weight="bold" />Zlecenie {open.numer}</a> : <Button size="sm" disabled={busy} onClick={() => void zlecenie()}><Briefcase className="h-4 w-4" weight="bold" />Zrób zlecenie serwisowe</Button>}
+          {kiedy}
         <Button size="sm" variant="secondary" onClick={() => setMove(true)}><CalendarBlank className="h-4 w-4" />Przesuń termin</Button>
         {tel && <a href={telHref(tel)} aria-label={`Zadzwoń: ${tel}`} className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold hover:border-ink-2"><Phone className="h-4 w-4" />Zadzwoń</a>}
       </div>
