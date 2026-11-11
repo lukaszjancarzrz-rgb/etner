@@ -1,4 +1,4 @@
-import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
 import { badgeLabel, badgeText } from '../core/badges.js';
 import { useBadges } from '../core/layout/useBadges.js';
 import { logout, useSession } from '../core/session.js';
@@ -30,6 +30,7 @@ const GROUPS: { admin?: true; tiles: T[] }[] = [
     { k: 'serwis', icon: BellRinging, title: 'Do serwisu', hint: 'Serwisy w 30 dni i zaległe, zlecenie serwisowe' },
     { k: 'zad', icon: ListChecks, title: 'Zadania', hint: 'Sprawy biura: grupy, terminy, cykliczne' },
     { k: 'fin', icon: Coins, title: 'Finanse', hint: 'Przychody, koszty, import z KPiR' },
+    { k: 'place', icon: Wallet, title: 'Płace', hint: 'Godziny, wypłaty, urlopy, koszty pracowników' },
     { k: 'kl', icon: UsersThree, title: 'Klienci', hint: 'Kontakty, obiekty, leady i zlecenia klienta' },
     { k: 'uz', icon: UserGear, title: 'Użytkownicy', hint: 'Konta, hasła, kolumny harmonogramu' },
   ] },
