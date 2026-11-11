@@ -1,5 +1,5 @@
 import { fmtZl, SPOSOB_LABEL, type Sposob } from '@etner/shared';
-import { CaretDown, CaretRight, Coins, Plus } from '@phosphor-icons/react';
+import { CaretDown, CaretRight, Coins } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { fmtDay, matches } from '../../core/data.js';
 import { useDesk } from '../../core/layout/status.js';
@@ -43,7 +43,6 @@ export function Przychody({ q, okres, filtr }: Filtry) {
   return (
     <div className="grid gap-4">
       <TitleCount n={list.length} />
-      <div className="flex justify-end"><Button onClick={() => setForm({})}><Plus className="h-5 w-5" weight="bold" />Przychód</Button></div>
       {bez.length > 0 && (
         <div className="rounded-[4px] border border-line bg-card">
           <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm font-semibold">
@@ -86,7 +85,7 @@ export function Przychody({ q, okres, filtr }: Filtry) {
               </span>
               <span className="flex flex-wrap items-center gap-x-3 text-sm text-ink-2">{r.kategoria && <CatTab name={r.kategoria} />}<span>{SPOSOB_LABEL[r.sposob as Sposob]}</span>{r.dzien && <span>{fmtDay(r.dzien)}</span>}{r.nrFaktury && <span>{r.nrFaktury}</span>}</span>
             </button>
-            {r.jobId && numer.get(r.jobId) && <a href={`#zl/${r.jobId}`} className="mx-4 mb-3 inline-flex min-h-8 items-center text-sm font-semibold text-action">Zlecenie {numer.get(r.jobId)}</a>}
+            {r.jobId && numer.get(r.jobId) && <a href={`#zl/${r.jobId}`} className="mx-4 mb-1 inline-flex min-h-11 items-center text-sm font-semibold text-action">Zlecenie {numer.get(r.jobId)}</a>}
           </li>))}
         </ul>
       )}

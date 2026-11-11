@@ -25,7 +25,7 @@ function Usun({ c }: { c: Rec }) {
   const [sure, setSure] = useState(false);
   return (
     <Button variant={sure ? 'danger' : 'ghost'} size="sm" aria-label={sure ? 'Na pewno usunąć koszt?' : `Usuń koszt: ${c.opis || c.kontrahent}`} disabled={!!c._tmp}
-      className={cn(!sure && 'w-9 px-0 text-danger')}
+      className={cn('min-h-11 min-w-11 desk:min-h-0 desk:min-w-0', !sure && 'w-11 px-0 text-danger desk:w-9')}
       onClick={() => sure
         ? void outbox.enqueue({ kind: 'koszt', url: `/api/costs/${c.id}`, method: 'DELETE', optimistic: (s) => s.remove('costs', c.id) }).catch(fail('Nie usunięto kosztu'))
         : setSure(true)}>
@@ -78,7 +78,7 @@ export function Koszty({ q, okres, filtr }: Filtry) {
       {!rows.length ? <Empty icon={Coins} title="Brak kosztów w tym okresie" hint="Dodaj koszt powyżej albo zaimportuj miesiąc z KPiR." /> : desk ? (
         <Table aria-label="Koszty">
           <thead><tr>
-            <Th sort={by('dzien')} className="w-[6.5rem]">Data</Th><Th sort={by('nr')} className="w-[9rem]">Nr dok.</Th><Th sort={by('kontr')} className="w-[12rem]">Kontrahent</Th><Th sort={by('opis')}>Opis</Th>
+            <Th sort={by('dzien')} className="w-[7.5rem]">Data</Th><Th sort={by('nr')} className="w-[9rem]">Nr dok.</Th><Th sort={by('kontr')} className="w-[12rem]">Kontrahent</Th><Th sort={by('opis')}>Opis</Th>
             <Th sort={by('kat')} className="w-[11rem]">Kategoria</Th><Th sort={by('netto')} num className="w-[7.5rem]">Netto</Th><Th sort={by('kol')} num className="w-[5.5rem]">Kol. KPiR</Th>
             <Th sort={by('wynik')} className="w-[6.5rem]">Do wyniku</Th><Th className="w-12"><span className="sr-only">Usuń</span></Th>
           </tr></thead>
@@ -101,7 +101,10 @@ export function Koszty({ q, okres, filtr }: Filtry) {
           </li>))}
         </ul>
       )}
-      <p className="text-right text-lg font-extrabold tabular-nums">Razem netto: {fmtZl(sumaMiesiaca(list, okres))}</p>
+      <div className="text-right tabular-nums">
+        <p className="text-lg font-extrabold">Razem netto: {fmtZl(sumaMiesiaca(list, okres))}</p>
+        {list.some((c) => !c.doWyniku) && <p className="text-sm text-ink-2">w tym do wyniku: {fmtZl(sumaMiesiaca(list.filter((c) => c.doWyniku), okres))}</p>}
+      </div>
     </div>
   );
 }
