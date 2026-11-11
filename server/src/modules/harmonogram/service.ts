@@ -126,6 +126,21 @@ const dayLabel = (dzien: string, today: string): string =>
   dzien === today ? 'dziś' : dzien === addDays(today, 1) ? 'jutro'
     : `${WD[new Date(`${dzien}T12:00:00Z`).getUTCDay()]} ${dzien.slice(8, 10)}.${dzien.slice(5, 7)}`;
 
+// shortcut: dopasowanie po nazwie statusu (bez wyboru w słowniku); po zmianie nazw statusów przestaje działać – przejść na flagę w słowniku
+const statusNamed = (db: Db, name: string): string | undefined =>
+  slowniki.list(db, 'status_zlecenia').find((r) => r.wartosc.trim().toLowerCase() === name)?.wartosc;
+
+/** Status zlecenia z harmonogramu: pierwszy dzień → „Zaplanowane” (z Nowe/Do wyceny), brak dni → z powrotem „Nowe”. Inne statusy bez zmian. */
+function syncJobStatus(db: Db, by: string, jobId: string): void {
+  const job = zlecenia.get(db, jobId);
+  if (!job || job.deletedAt) return;
+  const cur = job.status.trim().toLowerCase();
+  const has = jobEntries(db, jobId).length > 0;
+  const to = has && (cur === 'nowe' || cur === 'do wyceny') ? 'zaplanowane' : !has && cur === 'zaplanowane' ? 'nowe' : undefined;
+  const status = to && statusNamed(db, to);
+  if (status) zlecenia.save(db, by, { id: jobId, status } as never);
+}
+
 /**
  * Wywołuj w runOp. Zatwierdza szkice o zgodnym hashu (bez `items` – wszystkie bieżące).
  * Szkic zmieniony w międzyczasie przez innego admina zostaje. Powiadomienia trafiają do `out`.
@@ -137,6 +152,7 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
   const changed = new Map<string, { dzien: string; personId: string; line: string }[]>();
   const ts = new Date().toISOString();
   const today = dayOf(now);
+  const jobIds = new Set<string>();
   for (const d of db.select().from(scheduleDrafts).where(isNull(scheduleDrafts.deletedAt)).orderBy(asc(scheduleDrafts.dzien)).all()) {
     const key = keyOf(d.dzien, d.personId);
     if (seen && !seen.has(key)) continue;
@@ -146,12 +162,13 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
     } else if (d.personId) {
       const old = cellRows(db, d.dzien, d.personId);
       for (const e of old) {
+        if (e.jobId) jobIds.add(e.jobId);
         const row = db.update(scheduleEntries).set({ deletedAt: ts, updatedAt: ts }).where(eq(scheduleEntries.id, e.id)).returning().get();
         recordChange(db, by, 'schedule_entries', e.id, 'delete', e, row);
       }
       const slots = d.proposal as ScheduleSlot[];
       slots.forEach((s, slot) => {
-        if (s.rodzaj === 'zlecenie') jobsTouched.add(s.jobId);
+        if (s.rodzaj === 'zlecenie') { jobsTouched.add(s.jobId); jobIds.add(s.jobId); }
         const row = db.insert(scheduleEntries).values({ id: newId(), dzien: d.dzien, personId: d.personId!, rodzaj: s.rodzaj,
           jobId: s.rodzaj === 'zlecenie' ? s.jobId : null, kod: s.rodzaj === 'kod' ? s.kod : null, tekst: s.rodzaj === 'tekst' ? s.tekst : null,
           polDnia: s.polDnia, slot, createdAt: ts, createdBy: by, updatedAt: ts }).returning().get();
@@ -174,6 +191,7 @@ export function approve(db: Db, by: string, items: { key: string; proposalHash: 
     removeDraft(db, by, d);
     applied.push(key);
   }
+  for (const id of jobIds) syncJobStatus(db, by, id);
   for (const [uid, list] of changed) {
     out.push({ userIds: [uid], n: {
       title: list.length === 1 ? '📅 Zmiana w Twoim harmonogramie' : `📅 Zmiany w Twoim harmonogramie (${list.length})`,

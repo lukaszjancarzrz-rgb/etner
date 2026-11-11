@@ -195,4 +195,33 @@ describe('harmonogram', () => {
     expect(r.days.find((d: { dzien: string }) => d.dzien === '2026-12-24')).toMatchObject({ wd: 2, info: 'Wigilia (dzień wolny od 2025 r.)' });
     expect((await s.app.request('/api/schedule?from=2026-12-01&to=2028-12-01', req(s.worker, 'GET'))).status).toBe(400);
   });
+  describe('status zlecenia z harmonogramu', () => {
+    const approve = (s: S) => s.app.request('/api/schedule/approve', req(s.admin, 'POST', {}));
+    const put = async (s: S, day: string, value: unknown[]) => { await draft(s, s.admin, { from: day, to: day, people: [s.pw.id], value }); await approve(s); };
+    const status = (s: S, id = s.job.id) => zlecenia.get(s.deps.db, id)!.status;
+    const jobChanges = (s: S) => s.deps.db.select().from(changes).all().filter((c) => c.entity === 'jobs').length;
+
+    it('Nowe + pierwszy dzień → Zaplanowane; drugi dzień bez dodatkowej zmiany; usunięcie wszystkich dni → Nowe', async () => {
+      const s = await setup();
+      await put(s, '2026-10-23', [zl(s.job.id)]);
+      expect(status(s)).toBe('Zaplanowane');
+      const n = jobChanges(s);
+      await put(s, '2026-10-26', [zl(s.job.id)]);
+      expect(jobChanges(s)).toBe(n);
+      await put(s, '2026-10-23', []);
+      expect(status(s)).toBe('Zaplanowane');
+      await put(s, '2026-10-26', []);
+      expect(status(s)).toBe('Nowe');
+      expect(status(s, s.job2.id)).toBe('Nowe');
+    });
+
+    it('inne statusy bez zmian', async () => {
+      const s = await setup();
+      zlecenia.save(s.deps.db, s.a.user.id, { id: s.job.id, status: 'W realizacji' } as never);
+      await put(s, '2026-10-23', [zl(s.job.id)]);
+      expect(status(s)).toBe('W realizacji');
+      await put(s, '2026-10-23', []);
+      expect(status(s)).toBe('W realizacji');
+    });
+  });
 });

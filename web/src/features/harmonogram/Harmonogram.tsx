@@ -12,7 +12,7 @@ import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import type { Route } from '../../routes.js';
-import { useJobs, type JobView } from '../zlecenia/jobs.js';
+import { isSerwis, useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
 import { cellKey, cellsOf, cellText, monthDays, whereDay, whereFrom, type Slot } from './model.js';
@@ -324,7 +324,7 @@ function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: '
       <span className={cn('grid min-w-0 leading-tight', compact ? 'text-sm' : 'text-[15px]')}>
         <span className="sr-only">{j ? `Zlecenie ${j.numer} ` : 'zlecenie '}{j?.kategoria ? `${j.kategoria}, ` : ''}</span>
         <span className="line-clamp-2 font-semibold [overflow-wrap:anywhere]">
-          {j?.client?.nazwa ?? ''}{slot.polDnia && <span className="ml-1 font-bold text-ink-2"><span aria-hidden>½</span><span className="sr-only">, pół dnia</span></span>}
+          {j?.client?.nazwa ?? ''}{j && isSerwis(j) && <><Wrench className="ml-1 inline h-3.5 w-3.5 align-[-2px] text-ink-2" aria-hidden /><span className="sr-only">, serwis</span></>}{slot.polDnia && <span className="ml-1 font-bold text-ink-2"><span aria-hidden>½</span><span className="sr-only">, pół dnia</span></span>}
         </span>
         {j?.site?.miejscowosc && <span className="text-ink-2 [overflow-wrap:anywhere]"><span className="sr-only">, </span>{j.site.miejscowosc}</span>}
       </span>
