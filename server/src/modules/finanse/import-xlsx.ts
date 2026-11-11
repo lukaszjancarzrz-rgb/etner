@@ -17,7 +17,7 @@ const gr = (zl: number) => Math.round(zl * 100);
 const mm = (i: number) => String(i + 1).padStart(2, '0');
 
 export interface XlsRevenue { wiersz: number; kategoria: string | null; dzien: string | null; innyMiesiac: string | null; lokalizacja: string; inwestor: string; opis: string; sposob: Sposob; kwotaGr: number; nrFaktury: string; uwagi: string }
-export interface XlsCost { dzien: string; miesiac: string; nrDokumentu: string; kontrahent: string; opis: string; kategoria: string; nettoGr: number; kolumnaKpir: 12 | 13 | 14 | 15; doWyniku: boolean }
+export interface XlsCost { dzien: string; miesiac: string; nrDokumentu: string; kontrahent: string; opis: string; kategoria: string; nettoGr: number; kolumnaKpir: 12 | 13 | 14 | 15; doWyniku: boolean; uwagi: string }
 export interface XlsKpir { miesiac: string; przychodGr: number; towaryGr: number; uboczneGr: number; wynagrodzeniaGr: number; pozostaleGr: number }
 export interface XlsData { przychody: XlsRevenue[]; koszty: XlsCost[]; kpir: XlsKpir[] }
 
@@ -48,16 +48,22 @@ export async function readFinanse(buf: Buffer, znaneKategorie: Set<string>): Pro
     const bez = num(cell(prz, r, 11)), brutto = num(cell(prz, r, 12));
     if (typeof cell(prz, r, 16) !== 'number' && !bez && !brutto) continue;
     const kat = text(cell(prz, r, 3)).toUpperCase();
-    const kwota = bez && bez > 0 ? bez : brutto;
-    if (!kwota) continue;
     const stawka = text(cell(prz, r, 13));
-    const sposob: Sposob = kat === 'V' ? 'zwrot' : bez && bez > 0 ? 'bez' : stawka.includes('23') ? 'vat23' : 'vat8';
-    surowyInny.push(cell(prz, r, 7));
-    przychody.push({
-      wiersz: r, kategoria: KATEGORIE[kat] ?? null, dzien: day(cell(prz, r, 5)), innyMiesiac: null,
-      lokalizacja: text(cell(prz, r, 8)), inwestor: text(cell(prz, r, 9)), opis: text(cell(prz, r, 10)),
-      sposob, kwotaGr: gr(kwota), nrFaktury: text(cell(prz, r, 18)), uwagi: text(cell(prz, r, 21)),
-    });
+    const faktura: Sposob = stawka.includes('23') ? 'vat23' : 'vat8';
+    // wiersz z obiema kwotami (część bez faktury, część z fakturą) = dwa przychody
+    const czesci: [Sposob, number, string][] = kat === 'V'
+      ? [['zwrot', bez && bez > 0 ? bez : brutto ?? 0, text(cell(prz, r, 18))]]
+      : [...(bez && bez > 0 ? [['bez', bez, ''] as [Sposob, number, string]] : []), ...(brutto && brutto > 0 ? [[faktura, brutto, text(cell(prz, r, 18))] as [Sposob, number, string]] : [])];
+    const uwagi = [text(cell(prz, r, 21)), kat === 'H' ? 'hydraulika' : ''].filter(Boolean).join('; ');
+    for (const [sposob, kwota, nrFaktury] of czesci) {
+      if (!kwota) continue;
+      surowyInny.push(cell(prz, r, 7));
+      przychody.push({
+        wiersz: r, kategoria: KATEGORIE[kat] ?? null, dzien: day(cell(prz, r, 5)), innyMiesiac: null,
+        lokalizacja: text(cell(prz, r, 8)), inwestor: text(cell(prz, r, 9)), opis: text(cell(prz, r, 10)),
+        sposob, kwotaGr: gr(kwota), nrFaktury, uwagi,
+      });
+    }
   }
 
   const kosztyRaw: (Omit<XlsCost, 'miesiac'> & { rzym: V })[] = [];
@@ -69,7 +75,7 @@ export async function readFinanse(buf: Buffer, znaneKategorie: Set<string>): Pro
     const kol = parseInt(text(cell(kos, r, 10)), 10);
     kosztyRaw.push({
       dzien, rzym: cell(kos, r, 4), nrDokumentu: text(cell(kos, r, 5)), kontrahent: text(cell(kos, r, 6)), opis: text(cell(kos, r, 7)),
-      kategoria: znaneKategorie.has(kat) ? kat : 'Inne', nettoGr: gr(netto), kolumnaKpir: kol >= 12 && kol <= 15 ? (kol as 12 | 13 | 14 | 15) : 15,
+      kategoria: znaneKategorie.has(kat) ? kat : 'Inne', uwagi: znaneKategorie.has(kat) ? '' : `kategoria z pliku: ${kat}`, nettoGr: gr(netto), kolumnaKpir: kol >= 12 && kol <= 15 ? (kol as 12 | 13 | 14 | 15) : 15,
       doWyniku: text(cell(kos, r, 13)).toLowerCase() !== 'nie',
     });
   }
@@ -98,14 +104,16 @@ export interface XlsImportResult { przychody: number; dopasowane: number; doPrze
 
 /** Zapis w bieżącej transakcji (wywołuj w tx). */
 export function applyFinanse(db: Db, userId: string, d: XlsData): XlsImportResult {
-  const klienci = db.select().from(clients).where(isNull(clients.deletedAt)).all();
-  const zlecenia = db.select().from(jobs).where(isNull(jobs.deletedAt)).all();
+  const kliencie = new Map<string, string[]>(); // znormalizowana nazwa -> id klientów
+  for (const k of db.select().from(clients).where(isNull(clients.deletedAt)).all()) kliencie.set(norm(k.nazwa), [...(kliencie.get(norm(k.nazwa)) ?? []), k.id]);
+  const zleceniaKlienta = new Map<string, (typeof jobs.$inferSelect)[]>();
+  for (const j of db.select().from(jobs).where(isNull(jobs.deletedAt)).all()) zleceniaKlienta.set(j.clientId, [...(zleceniaKlienta.get(j.clientId) ?? []), j]);
   const miejscowosc = new Map(db.select().from(sites).where(isNull(sites.deletedAt)).all().map((s) => [s.id, norm(s.miejscowosc)]));
   const review: przeniesienie.ReviewInput[] = [];
   let dopasowane = 0;
   for (const p of d.przychody) {
     const inw = norm(p.inwestor);
-    const jego = inw ? zlecenia.filter((j) => klienci.some((k) => k.id === j.clientId && norm(k.nazwa) === inw)) : [];
+    const jego = inw ? (kliencie.get(inw) ?? []).flatMap((id) => zleceniaKlienta.get(id) ?? []) : [];
     const wKat = jego.filter((j) => j.kategoria === p.kategoria);
     const loc = norm(p.lokalizacja);
     const job = wKat.length === 1 ? wKat[0] : wKat.find((j) => loc && j.siteId && miejscowosc.get(j.siteId) === loc);
@@ -117,7 +125,7 @@ export function applyFinanse(db: Db, userId: string, d: XlsData): XlsImportResul
     review.push({ co: 'przychody', arkusz: 'Przychody', wiersz: p.wiersz, dzien: p.dzien, osoba: p.inwestor, tekst: p.opis, opis: `Przychód bez zlecenia: ${p.inwestor}, ${row.miesiac ?? ''}`, ile: 1, pominiete: false });
   }
   przeniesienie.add(db, userId, review);
-  for (const k of d.koszty) createCost(db, userId, { ...k, nip: '', uwagi: '' });
+  for (const k of d.koszty) createCost(db, userId, { ...k, nip: '' });
   for (const { miesiac, ...k } of d.kpir) setKpirMonth(db, userId, miesiac, k);
   return { przychody: d.przychody.length, dopasowane, doPrzejrzenia: review.length, koszty: d.koszty.length, kpirMiesiace: d.kpir.length };
 }

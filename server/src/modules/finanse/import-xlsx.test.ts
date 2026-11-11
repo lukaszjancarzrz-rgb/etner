@@ -19,6 +19,7 @@ async function skoroszyt(): Promise<Buffer> {
   prz(7, { 3: 'RW', 5: new Date('2026-03-10T00:00:00Z'), 8: 'Zawoja', 9: 'Kowalski', 10: 'rekuperacja', 11: 1000, 16: 1000 });
   prz(8, { 3: 'E', 5: new Date('2026-03-20T00:00:00Z'), 7: 'Maj', 9: 'Nieznany', 12: 1080, 13: 'VAT 8%', 16: { formula: 'L8/1.08', result: 1000 }, 18: 'FV/1' });
   prz(9, { 3: 'V', 5: new Date('2026-04-02T00:00:00Z'), 9: 'Urząd', 11: 300, 16: 300 });
+  prz(10, { 3: 'H', 5: new Date('2026-04-12T00:00:00Z'), 9: 'Mieszany', 11: 1500, 12: 16550, 13: 'VAT 8%', 16: 16824.07, 18: 'FV/2' });
   const k = wb.addWorksheet('Koszty');
   const kos = (r: number, v: Record<number, ExcelJS.CellValue>) => Object.entries(v).forEach(([c, x]) => { k.getCell(r, Number(c)).value = x; });
   kos(7, { 3: new Date('2026-03-05T00:00:00Z'), 4: 'III', 5: 'FV/A', 6: 'Hurtownia', 7: 'kable', 8: 'Materiały i towary', 9: 100.1, 10: '12 towary', 13: 'tak' });
@@ -55,11 +56,11 @@ describe('przeniesienie finansów z arkusza', () => {
     expect((await post(app, worker)).status).toBe(403);
 
     const proba = await post(app, admin);
-    expect(await proba.json()).toEqual({ przychody: 3, dopasowane: 1, doPrzejrzenia: 2, koszty: 2, kpirMiesiace: 1 });
+    expect(await proba.json()).toEqual({ przychody: 5, dopasowane: 1, doPrzejrzenia: 4, koszty: 2, kpirMiesiace: 1 });
     expect(n()).toEqual([0, 0, 0]);
 
-    expect(await (await post(app, admin, '?naprawde=1')).json()).toMatchObject({ przychody: 3, koszty: 2 });
-    expect(n()).toEqual([3, 2, 1]);
+    expect(await (await post(app, admin, '?naprawde=1')).json()).toMatchObject({ przychody: 5, koszty: 2 });
+    expect(n()).toEqual([5, 2, 1]);
     const r = deps.db.select().from(revenues).all();
     const rw = r.find((x) => x.kategoria === 'Rekuperacja')!;
     expect(rw).toMatchObject({ sposob: 'bez', nettoGr: 100000, miesiac: '2026-03' });
@@ -67,11 +68,13 @@ describe('przeniesienie finansów z arkusza', () => {
     expect(r.find((x) => x.klient === 'Nieznany')).toMatchObject({ jobId: null, sposob: 'vat8', kwotaGr: 108000, nettoGr: 100000, vatGr: 8000, innyMiesiac: '2026-05', miesiac: '2026-05', nrFaktury: 'FV/1' });
     expect(r.find((x) => x.klient === 'Urząd')).toMatchObject({ sposob: 'zwrot', kwotaGr: 30000 });
     const c = deps.db.select().from(costs).all();
-    expect(c.find((x) => x.nrDokumentu === 'FV/B')).toMatchObject({ kategoria: 'Inne', kolumnaKpir: 13, doWyniku: false, miesiac: '2026-04', nettoGr: 5000 });
+    expect(c.find((x) => x.nrDokumentu === 'FV/B')).toMatchObject({ kategoria: 'Inne', kolumnaKpir: 13, doWyniku: false, uwagi: 'kategoria z pliku: Wymyślona', miesiac: '2026-04', nettoGr: 5000 });
     expect(deps.db.select().from(kpirMonths).get()).toMatchObject({ miesiac: '2026-03', przychodGr: 200050, towaryGr: 10010, uboczneGr: 0 });
 
     const drugi = await post(app, admin, '?naprawde=1');
     expect(drugi.status).toBe(409);
-    expect(n()).toEqual([3, 2, 1]);
+    expect(n()).toEqual([5, 2, 1]);
+    const m = r.filter((x) => x.klient === 'Mieszany').sort((x, y) => x.nettoGr - y.nettoGr);
+    expect(m.map((x) => [x.sposob, x.nettoGr, x.nrFaktury, x.uwagi])).toEqual([['bez', 150000, '', 'hydraulika'], ['vat8', 1532407, 'FV/2', 'hydraulika']]);
   });
 });
