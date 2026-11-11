@@ -17,8 +17,11 @@ export const notFound = () => new HTTPException(404, { message: 'Nie znaleziono'
 export const personExists = (db: Db, id: string) => !!db.select({ id: schedulePeople.id }).from(schedulePeople).where(eq(schedulePeople.id, id)).get();
 
 /** Osoby usunięte z harmonogramu, które mają dane w Płacach (imiona do zestawień; synchronizacja usuniętych nie przesyła). */
-export const byli = (db: Db) => db.select({ id: schedulePeople.id, nazwa: schedulePeople.nazwa, kolejnosc: schedulePeople.kolejnosc }).from(schedulePeople)
-  .innerJoin(payrollPeople, and(eq(payrollPeople.personId, schedulePeople.id), isNull(payrollPeople.deletedAt))).where(isNotNull(schedulePeople.deletedAt)).all();
+export function byli(db: Db) {
+  // każde dane płac (osoba, stawka, miesiąc, wpis) – np. stawka dodana bez „Zapisz dane”
+  const ids = new Set([payrollPeople, payrollRates, payrollMonths, payrollEntries].flatMap((t) => db.select({ id: t.personId }).from(t).where(isNull(t.deletedAt)).all().map((r) => r.id)));
+  return db.select({ id: schedulePeople.id, nazwa: schedulePeople.nazwa, kolejnosc: schedulePeople.kolejnosc }).from(schedulePeople).where(isNotNull(schedulePeople.deletedAt)).all().filter((p) => ids.has(p.id));
+}
 
 // ---------- wspólne: stawki i wpisy (create / update / usunięcie miękkie) ----------
 const get = <T extends Tab>(db: Db, t: T, id: string) => db.select().from(t as Tab).where(and(eq(t.id, id), isNull(t.deletedAt))).get() as T['$inferSelect'] | undefined;

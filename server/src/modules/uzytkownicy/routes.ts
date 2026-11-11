@@ -63,7 +63,9 @@ export function routes(app: Hono, { db, files }: AppDeps): void {
   app.post('/api/schedule-people', admin, async (c) => {
     const { opId, ...d } = await body(c, schedulePersonSchema);
     checkUser(d.userId);
-    return c.json(runOp(db, opId, me(c), () => svc.createPerson(db, me(c), d)).result);
+    // konto, które miało już wiersz (usunięty): ta sama osoba wraca zamiast nowej (harmonogram i płace ciągną się dalej)
+    const dawny = d.userId ? svc.listRemovedPeople(db).find((p) => p.userId === d.userId) : undefined;
+    return c.json(runOp(db, opId, me(c), () => (dawny && svc.restorePerson(db, me(c), dawny.id)) || svc.createPerson(db, me(c), d)).result);
   });
 
   app.put('/api/schedule-people/:id', admin, async (c) => {
@@ -79,6 +81,7 @@ export function routes(app: Hono, { db, files }: AppDeps): void {
     return c.json({ ok: true });
   });
 
+  app.get('/api/schedule-people/usuniete', admin, (c) => c.json(svc.listRemovedPeople(db)));
   app.post('/api/schedule-people/:id/restore', admin, (c) => {
     const row = svc.restorePerson(db, me(c), c.req.param('id'));
     if (!row) throw notFound();

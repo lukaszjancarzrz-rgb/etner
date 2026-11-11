@@ -43,6 +43,21 @@ describe('płace – API', () => {
     expect((await app.request(`/api/schedule-people/${jan.id}/restore`, req(admin, 'POST'))).status).toBe(404);
   });
 
+  it('usunięta osoba z samą stawką (bez „Zapisz dane”) też jest w byłych; lista usuniętych kolumn do przywrócenia', async () => {
+    const { deps, app, admin, adminId, jan } = await setup();
+    await app.request('/api/payroll/rates', req(admin, 'POST', { personId: jan.id, odMiesiaca: '2026-01', stawkaGr: 3000 }));
+    const ola = addPerson(deps.db, adminId, { nazwa: 'Ola bez płac' });
+    deletePerson(deps.db, adminId, jan.id);
+    deletePerson(deps.db, adminId, ola.id);
+    expect((await (await app.request('/api/payroll/byli', req(admin, 'GET'))).json()).map((p: { id: string }) => p.id)).toEqual([jan.id]);
+    expect((await (await app.request('/api/schedule-people/usuniete', req(admin, 'GET'))).json()).map((p: { id: string }) => p.id).sort()).toEqual([jan.id, ola.id].sort());
+    // ponowne zaznaczenie „Wiersz w harmonogramie” w koncie przywraca tę samą osobę
+    const kon = addPerson(deps.db, adminId, { nazwa: 'Kon', userId: adminId });
+    deletePerson(deps.db, adminId, kon.id);
+    const r = await (await app.request('/api/schedule-people', req(admin, 'POST', { nazwa: 'Kon', userId: adminId }))).json();
+    expect(r.id).toBe(kon.id);
+  });
+
   it('osoba: upsert nie dubluje, miesiąc: upsert i usunięcie przy dwóch null', async () => {
     const { deps, app, admin, jan } = await setup();
     await app.request(`/api/payroll/people/${jan.id}`, req(admin, 'PUT', osoba));

@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { newId } from '@etner/shared';
 import { revokeUser } from '../../core/auth.js';
 import { recordChange } from '../../core/changes.js';
@@ -113,6 +113,10 @@ export function restorePerson(db: Db, by: string, id: string): SchedulePerson | 
   recordChange(db, by, 'schedule_people', id, 'update', old, row);
   return row;
 }
+
+/** Usunięte kolumny harmonogramu (do przywrócenia), najnowsze najpierw. */
+export const listRemovedPeople = (db: Db): SchedulePerson[] =>
+  db.select().from(schedulePeople).where(isNotNull(schedulePeople.deletedAt)).orderBy(desc(schedulePeople.deletedAt)).all();
 
 export const removedPerson = (db: Db, id: string): boolean => !!db.select({ d: schedulePeople.deletedAt }).from(schedulePeople).where(eq(schedulePeople.id, id)).get()?.d;
 

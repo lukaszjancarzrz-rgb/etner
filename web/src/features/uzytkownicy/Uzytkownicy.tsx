@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowUp, CalendarDots, CaretRight, Copy, EnvelopeSimple, Key, Plus, ShareNetwork, Trash, UserPlus, UsersThree } from '@phosphor-icons/react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { ArrowCounterClockwise, ArrowDown, ArrowUp, CalendarDots, CaretRight, Copy, EnvelopeSimple, Key, Plus, ShareNetwork, Trash, UserPlus, UsersThree } from '@phosphor-icons/react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { LOGIN_MSG, LOGIN_RE } from '@etner/shared';
 import { ApiError, api } from '../../core/api.js';
 import { useDict, useLoading, useMe } from '../../core/data.js';
@@ -169,7 +169,7 @@ function UserForm({ user, onClose, onShow }: { user?: Rec; onClose: () => void; 
           </div>
           <label className="flex min-h-11 cursor-pointer items-center gap-3 font-semibold">
             <Checkbox checked={f.row} onCheckedChange={(v) => { setRowTouched(true); set({ row: v === true }); }} aria-label="Wiersz w harmonogramie" />
-            <span>Wiersz w harmonogramie <span className="block text-sm font-normal text-ink-2">{user && linked && !f.row ? 'Wiersz zniknie z harmonogramu; jego wpisy zostają w bazie.' : 'Własny wiersz z jego pracą na każdy dzień.'}</span></span>
+            <span>Wiersz w harmonogramie <span className="block text-sm font-normal text-ink-2">{user && linked && !f.row ? 'Wiersz zniknie z harmonogramu; wpisy i płace zostają. Ponowne zaznaczenie przywróci tę samą osobę.' : 'Własny wiersz z jego pracą na każdy dzień.'}</span></span>
           </label>
           {user && (
             <label className={cn('flex min-h-11 items-center gap-3 font-semibold', self ? 'opacity-60' : 'cursor-pointer')}>
@@ -261,6 +261,11 @@ function ScheduleColumns() {
   const people = useMemo(() => [...raw].sort(byOrder), [raw]);
   const [nowa, setNowa] = useState('');
   const [confirm, setConfirm] = useState<string | null>(null);
+  // usunięte kolumny nie przychodzą w synchronizacji – pobierane osobno, po każdej zmianie listy
+  const [usuniete, setUsuniete] = useState<Rec[]>([]);
+  useEffect(() => { api<Rec[]>('/api/schedule-people/usuniete').then(setUsuniete, () => {}); }, [raw]);
+  const przywroc = (p: Rec) => void api<Rec>(`/api/schedule-people/${p.id}/restore`, { method: 'POST' })
+    .then((r) => { store.put('schedule_people', r); toast(`Przywrócono: ${p.nazwa}`, { tone: 'ok' }); }, fail('Nie przywrócono'));
   const userOpts = [{ value: NONE, label: 'Bez konta' }, ...users.filter((u) => u.active).map((u) => ({ value: u.id, label: u.name as string }))];
 
   const update = (p: Rec, patch: Record<string, unknown>) => {
@@ -310,6 +315,16 @@ function ScheduleColumns() {
         <Input aria-label="Nowa kolumna" value={nowa} onChange={(e) => setNowa(e.target.value)} placeholder="Nowa kolumna, np. Podwykonawca" />
         <Button type="submit" variant="secondary"><Plus className="h-5 w-5" weight="bold" />Dodaj</Button>
       </form>
+      {usuniete.length > 0 && <details className="rounded-[4px] border border-line bg-card">
+        <summary className="min-h-11 cursor-pointer px-3 py-2.5 font-semibold">Usunięte kolumny ({usuniete.length})</summary>
+        <p className="px-3 text-sm text-ink-2">Pracownik wraca? Przywróć tę samą osobę – jej harmonogram i płace liczą się dalej. Nie dodawaj go jako nowej kolumny.</p>
+        <ul className="divide-y divide-rule">{usuniete.map((p) => (
+          <li key={p.id} className="flex items-center gap-2 px-3 py-2">
+            <span className="min-w-0 flex-1 truncate">{p.nazwa}<span className="block text-sm text-ink-2">usunięta {String(p.deletedAt).slice(0, 10).split('-').reverse().join('.')}</span></span>
+            <Button variant="secondary" size="sm" onClick={() => przywroc(p)} aria-label={`Przywróć: ${p.nazwa}`}><ArrowCounterClockwise className="h-4 w-4" />Przywróć</Button>
+          </li>))}
+        </ul>
+      </details>}
     </div>
   );
 }
