@@ -12,8 +12,16 @@ export function smtpMailerFromEnv(env: NodeJS.ProcessEnv): Mailer | undefined {
     auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS ?? '' } : undefined,
     // krótkie limity: zły host/port albo zablokowane połączenie = czytelny błąd w kilkanaście sekund, nie 2 minuty ciszy
     connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 20_000,
+    // EHLO domeną nadawcy zamiast nazwy kontenera (srv-…): serwery poczty spowalniają/odrzucają nieznane nazwy z chmury
+    name: env.SMTP_NAME || env.MAIL_FROM.split('@')[1] || undefined,
   });
-  return async (m) => { await t.sendMail({ from: env.MAIL_FROM, ...m }); };
+  return async (m) => {
+    try { await t.sendMail({ from: env.MAIL_FROM, ...m }); } catch (e) {
+      // krok rozmowy z serwerem (CONN, EHLO, AUTH…, DATA) i jego odpowiedź – do logu błędów
+      const x = e as Error & { command?: string; response?: string; code?: string };
+      throw new Error(`${x.message}${x.code ? ` [${x.code}]` : ''}${x.command ? ` (krok: ${x.command})` : ''}${x.response ? ` – serwer: ${x.response}` : ''}`, { cause: e });
+    }
+  };
 }
 
 /** Brevo (HTTPS API, port 443 – nie blokowany jak SMTP na Render): BREVO_API_KEY + MAIL_FROM (nadawca potwierdzony w Brevo). */
