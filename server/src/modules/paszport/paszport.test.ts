@@ -613,6 +613,19 @@ describe('paszport – numer, link, dane firmy (2b)', () => {
     expect((await call(s, s.worker, 'GET', '/api/settings/firma')).body).toEqual(d);
     expect((await s.app.request('/api/settings/firma')).status).toBe(401);
   });
+
+  it('przykładowe przypomnienie: na e-mail firmy, szablon z logo; bez e-maila firmy 422; pracownik 403', async () => {
+    const sent: { to: string; subject: string; html: string }[] = [];
+    const s = await setup({ mailer: async (m) => { sent.push(m); }, baseUrl: 'https://app.example.com' });
+    const t = (who: string) => call(s, who, 'POST', '/api/settings/firma/test-przypomnienia');
+    expect((await t(s.worker)).status).toBe(403);
+    expect((await t(s.admin)).status).toBe(422);
+    await call(s, s.admin, 'PUT', '/api/settings/firma', { nazwa: 'ETNER', telefon: '600 100 200', email: 'serwis@example.com', www: '' });
+    expect((await t(s.admin)).body).toMatchObject({ email: 'serwis@example.com' });
+    expect(sent[0]).toMatchObject({ to: 'serwis@example.com', subject: expect.stringContaining('[Przykład] Przypomnienie: serwis rekuperacja') });
+    expect(sent[0]!.html).toContain('https://app.example.com/logo.png');
+    expect(sent[0]!.html).toContain('tel:600100200');
+  });
 });
 
 describe('paszport – przypomnienia i „Do serwisu” (P13, P15)', () => {
@@ -677,7 +690,8 @@ describe('paszport – przypomnienia i „Do serwisu” (P13, P15)', () => {
     const url = `https://app.example.com/p/${p.token}`;
     expect(r.sent[0]!.text).toContain(`instalacji (historia serwisów i dokumenty): ${url}\n`);
     expect(r.sent[0]!.text).not.toContain('#');
-    expect(r.sent[0]!.html).toContain(`<a href="${url}">${url}</a>`);
+    expect(r.sent[0]!.html).toContain(`href="${url}"`);
+    expect(r.sent[0]!.html).toContain('Otwórz paszport instalacji');
   });
 
   it('przypomnienia=0, brak terminu, brak e-maila klienta, brak SMTP: bez wysyłki; brak e-maila i SMTP w dzienniku błędów', async () => {

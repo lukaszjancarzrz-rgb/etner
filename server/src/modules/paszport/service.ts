@@ -6,6 +6,7 @@ import type { AppDeps } from '../../app.js';
 import { recordChange } from '../../core/changes.js';
 import { logError } from '../../core/errors.js';
 import type { Mail } from '../../core/mail.js';
+import { esc, mailLayout, MAIL } from '../../core/mail-layout.js';
 import { tx, type Db } from '../../core/db.js';
 import { can } from '../../core/permissions.js';
 import { settings } from '../../core/schema-base.js';
@@ -350,7 +351,7 @@ export function serviceJob(db: Db, by: string, folderId: string): zlecenia.JobRo
 const plDay = (d: string) => d.split('-').reverse().join('.');
 
 /** Treść przypomnienia o serwisie (R73: robocza, do przeredagowania przez właściciela – tylko tutaj). Bez nazwisk pracowników i kwot. */
-export function reminderMail(d: { firma: Firma; kategoria: string; adres: string; dzien: string; link?: string }): Omit<Mail, 'to'> {
+export function reminderMail(d: { firma: Firma; kategoria: string; adres: string; dzien: string; link?: string; baseUrl?: string }): Omit<Mail, 'to'> {
   const { firma: f } = d;
   const opt = (s: string | undefined, line = s) => (s ? [line!] : []);
   const text = [
@@ -369,10 +370,23 @@ export function reminderMail(d: { firma: Firma; kategoria: string; adres: string
     ...opt(f.email),
     ...opt(f.www),
   ].join('\n');
-  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-  const link = d.link && esc(d.link);
-  const body = link ? esc(text).split(link).join(`<a href="${link}">${link}</a>`) : esc(text);
-  const html = `<div style="font-family:sans-serif;line-height:1.5">${body.split('\n').join('<br>')}</div>`;
+  const { C } = MAIL;
+  const p = (t: string) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:${C.ink}">${t}</p>`;
+  const wiersz = (k: string, v: string) => `<tr><td style="padding:6px 0;font-size:14px;color:${C.ink2};width:150px">${k}</td><td style="padding:6px 0;font-size:15px;font-weight:700;color:${C.ink}">${v}</td></tr>`;
+  const kontakt = [f.telefon && `tel. <a href="tel:${esc(f.telefon.replace(/\s/g, ''))}" style="color:${C.action};text-decoration:none">${esc(f.telefon)}</a>`,
+    f.email && `<a href="mailto:${esc(f.email)}" style="color:${C.action};text-decoration:none">${esc(f.email)}</a>`,
+    f.www && `<a href="${esc(/^https?:/.test(f.www) ? f.www : `https://${f.www}`)}" style="color:${C.action};text-decoration:none">${esc(f.www)}</a>`].filter(Boolean).join(' · ');
+  const html = mailLayout({
+    tytul: `Zbliża się serwis: ${d.kategoria}`,
+    zajawka: `Planowany termin serwisu: ${plDay(d.dzien)}. Prosimy o kontakt, aby umówić wizytę.`,
+    tresc: p('Dzień dobry,') + p(`przypominamy o zbliżającym się terminie serwisu instalacji <b>${esc(d.kategoria)}</b>.`)
+      + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 18px;padding:10px 16px;background:#f4f7fa;border-left:4px solid ${C.action};border-radius:4px">${wiersz('Instalacja', esc(d.kategoria))}${d.adres ? wiersz('Adres', esc(d.adres)) : ''}${wiersz('Planowany termin', plDay(d.dzien))}</table>`
+      + p(`Aby umówić dogodny dzień wizyty, prosimy o telefon${f.telefon ? ` (<a href="tel:${esc(f.telefon.replace(/\s/g, ''))}" style="color:${C.action};font-weight:700;text-decoration:none">${esc(f.telefon)}</a>)` : ''} lub odpowiedź na tę wiadomość.`)
+      + (d.link ? p(`W paszporcie instalacji znajdziesz historię serwisów i dokumenty: <a href="${esc(d.link)}" style="color:${C.action}">${esc(d.link)}</a>`) : ''),
+    przycisk: d.link ? { tekst: 'Otwórz paszport instalacji', url: d.link } : undefined,
+    stopka: `<b style="color:${C.ink}">${esc(f.nazwa)}</b>${kontakt ? `<br>${kontakt}` : ''}<br>Wiadomość wysłana automatycznie przed terminem serwisu.`,
+    baseUrl: d.baseUrl,
+  });
   return { subject: `Przypomnienie: serwis ${d.kategoria.toLowerCase()} – ${plDay(d.dzien)}`, text, html, ...(f.email && { replyTo: f.email }) };
 }
 
@@ -415,7 +429,7 @@ export async function sendReminders(deps: AppDeps): Promise<number> {
     // link do całego paszportu, bez kotwicy teczki (decyzja właściciela)
     const link = p?.token && base ? `${base}/p/${p.token}` : undefined;
     try {
-      await deps.mailer({ to, ...reminderMail({ firma: firmaNow, kategoria: f.kategoria, adres: [site.adres, site.miejscowosc].filter(Boolean).join(', '), dzien: f.nastepnySerwis!, link }) });
+      await deps.mailer({ to, ...reminderMail({ firma: firmaNow, kategoria: f.kategoria, adres: [site.adres, site.miejscowosc].filter(Boolean).join(', '), dzien: f.nastepnySerwis!, link, baseUrl: base }) });
     } catch (e) { logError(db, 'cron:paszport-przypomnienia', e); continue; }
     // znacznik po wysyłce (błąd SMTP = ponowna próba jutro); termin mógł się zmienić w trakcie – zapis tylko dla tego terminu
     const old = getFolder(db, f.id);

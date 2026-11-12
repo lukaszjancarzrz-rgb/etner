@@ -181,7 +181,11 @@ function Firma() {
           <Field key={k} label={label} error={err[k]}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err[k]} type={type} value={v?.[k] ?? ''} disabled={!v} onChange={(e) => setV({ ...v!, [k]: e.target.value })} />}</Field>
         ))}
         {err.all && <p className="text-sm text-danger">{err.all}</p>}
-        <Button type="submit" variant="secondary" className="justify-self-start" disabled={!v}>Zapisz dane firmy</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="secondary" disabled={!v}>Zapisz dane firmy</Button>
+          <Button variant="ghost" disabled={!v?.email} onClick={() => void api<{ email: string; przez: string }>('/api/settings/firma/test-przypomnienia', { method: 'POST', timeout: 60_000 })
+            .then((r) => toast('Wysłano przykład', { body: `Przypomnienie o serwisie (jak do klienta) na ${r.email} przez ${r.przez}.`, tone: 'ok' }), (x) => toast('Nie wysłano', { body: msg(x), tone: 'error' }))}>Wyślij przykładowe przypomnienie</Button>
+        </div>
       </form>
     </Card>
   );

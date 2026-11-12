@@ -36,6 +36,18 @@ export function routes(app: Hono, deps: AppDeps): void {
   });
   app.get('/api/settings/firma', auth, (c) => c.json(svc.firma(db)));
   app.put('/api/settings/firma', admin, async (c) => c.json(svc.setFirma(db, await body(c, firmaSchema))));
+  // przykładowe przypomnienie o serwisie (jak do klienta) na e-mail firmy – podgląd i test poczty bez czekania do 7:00
+  app.post('/api/settings/firma/test-przypomnienia', admin, async (c) => {
+    const f = svc.firma(db), base = (deps.baseUrl ?? '').replace(/\/$/, '');
+    if (!f.email) throw new HTTPException(422, { message: 'Wpisz e-mail firmy (Dane firmy) – na ten adres pójdzie przykład.' });
+    if (!deps.mailer) throw new HTTPException(422, { message: 'Brak konfiguracji poczty (BREVO_API_KEY albo SMTP_HOST oraz MAIL_FROM w Render).' });
+    const dzien = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+    const m = svc.reminderMail({ firma: f, kategoria: 'Rekuperacja', adres: 'ul. Przykładowa 1, Zawoja', dzien, link: base ? `${base}/p/przyklad` : undefined, baseUrl: base });
+    try { await deps.mailer({ ...m, subject: `[Przykład] ${m.subject}`, to: f.email }); } catch (e) {
+      throw new HTTPException(422, { message: `${deps.mailer.przez ?? 'Poczta'} – wysyłka nieudana: ${e instanceof Error ? e.message : String(e)}` });
+    }
+    return c.json({ email: f.email, przez: deps.mailer.przez ?? 'SMTP' });
+  });
 
   app.get('/api/sites/:id/teczki', auth, (c) => {
     if (!klienci.getSite(db, c.req.param('id'))) throw notFound();
