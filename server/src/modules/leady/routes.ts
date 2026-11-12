@@ -10,6 +10,7 @@ import { runOp } from '../../core/ops.js';
 import { can } from '../../core/permissions.js';
 import { z } from 'zod';
 import * as svc from './service.js';
+import { mailLayout } from '../../core/mail-layout.js';
 
 const notFound = () => new HTTPException(404, { message: 'Nie znaleziono' });
 
@@ -65,7 +66,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     if (!deps.mailer) throw new HTTPException(422, { message: `Brak konfiguracji poczty (BREVO_API_KEY albo SMTP_HOST oraz MAIL_FROM w Render) – e-mail nie wysłany. Powiadomień push: ${push}.` });
     const to = svc.leadyEmail(db);
     // brak zaległych: i tak e-mail, żeby sprawdzić skrzynkę i SMTP
-    const m = svc.overdueMail(db, day, deps.baseUrl) ?? { subject: 'Zaległe kontakty z klientami: 0 (test)', text: 'Test: dziś nie ma zaległych kontaktów.', html: '<p>Test: dziś nie ma zaległych kontaktów.</p>' };
+    const m = svc.overdueMail(db, day, deps.baseUrl) ?? { subject: 'Zaległe kontakty z klientami: 0', text: 'Test: dziś nie ma zaległych kontaktów.', html: mailLayout({ tytul: 'Brak zaległych kontaktów', zajawka: 'Test wysyłki z aplikacji ETNER', tresc: '<p style="margin:0;font-size:15px;line-height:1.5">To test wysyłki: dziś nie ma zaległych kontaktów z klientami. Gdy będą, o 7:00 przyjdzie tu ich lista.</p>', stopka: 'ETNER · Inteligentny wybór<br>Wiadomość testowa z aplikacji ETNER.', baseUrl: deps.baseUrl }) };
     try { await deps.mailer({ ...m, subject: `${m.subject} – test`, to }); } catch (e) {
       logError(db, 'test:leady-email', e, uid(c));
       throw new HTTPException(422, { message: `${deps.mailer.przez ?? 'Poczta'} – wysyłka nieudana: ${e instanceof Error ? e.message : String(e)}` });

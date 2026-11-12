@@ -7,6 +7,7 @@ import type { Db } from '../../core/db.js';
 import { defaultFirmaId } from '../../core/firma.js';
 import { firmy, settings } from '../../core/schema-base.js';
 import type { Mail } from '../../core/mail.js';
+import { esc, mailLayout, MAIL } from '../../core/mail-layout.js';
 import * as klienci from '../klienci/service.js';
 import * as slowniki from '../slowniki/service.js';
 import * as zlecenia from '../zlecenia/service.js';
@@ -121,19 +122,36 @@ export function setSetting(db: Db, key: string, value: string): void {
 export const leadyEmail = (db: Db): string => setting(db, 'leady_email') || LEADY_EMAIL_DEFAULT;
 export const setLeadyEmail = (db: Db, value: string): void => setSetting(db, 'leady_email', value);
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const pl = (d: string) => d.split('-').reverse().join('.');
+const dniPo = (od: string, dzis: string) => Math.round((Date.parse(dzis) - Date.parse(od)) / 86_400_000);
 /** E-mail z listą zaległych kontaktów albo null, gdy nie ma zaległych. */
 export function overdueMail(db: Db, today: string, baseUrl = ''): Omit<Mail, 'to'> | null {
+  const base = baseUrl.replace(/\/$/, '');
   const rows = overdue(db, today).sort((a, b) => a.nastepny.localeCompare(b.nastepny)).map((l) => {
     const k = l.clientId ? klienci.get(db, l.clientId) : undefined;
-    return { klient: k?.nazwa ?? 'Bez klienta', temat: l.temat, termin: pl(l.nastepny), tel: k?.telefony.join(', ') ?? '', link: `${baseUrl.replace(/\/$/, '')}/#ld/${l.id}` };
+    return { klient: k?.nazwa ?? 'Bez klienta', temat: l.temat, termin: pl(l.nastepny), dni: dniPo(l.nastepny, today), tel: k?.telefony.join(', ') ?? '', tel1: k?.telefony[0] ?? '', link: `${base}/#ld/${l.id}` };
   });
   if (!rows.length) return null;
+  const { C, FONT } = MAIL;
+  const kiedy = (d: number) => (d <= 0 ? 'dziś' : d === 1 ? 'od wczoraj' : `od ${d} dni`);
+  const karta = (r: (typeof rows)[number]) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;border:1px solid ${C.line};border-left:4px solid #c0392b;border-radius:4px"><tr><td style="padding:12px 14px;${FONT}">
+<p style="margin:0;font-size:16px;font-weight:700;color:${C.ink}">${esc(r.klient)}</p>
+<p style="margin:2px 0 6px;font-size:14px;color:${C.ink}">${esc(r.temat)}</p>
+<p style="margin:0;font-size:13px;color:${C.ink2}"><span style="color:#c0392b;font-weight:700">Termin ${r.termin} · ${kiedy(r.dni)}</span>${r.tel ? ` · tel. ${esc(r.tel)}` : ''}</p>
+<p style="margin:8px 0 0;font-size:14px">${r.tel1 ? `<a href="tel:${esc(r.tel1.replace(/\s/g, ''))}" style="color:${C.action};font-weight:700;text-decoration:none">Zadzwoń</a> &nbsp;·&nbsp; ` : ''}<a href="${esc(r.link)}" style="color:${C.action};font-weight:700;text-decoration:none">Otwórz w aplikacji</a></p>
+</td></tr></table>`;
+  const n = rows.length, slowo = n === 1 ? 'kontakt czeka' : n < 5 ? 'kontakty czekają' : 'kontaktów czeka';
   return {
-    subject: `Zaległe kontakty z klientami: ${rows.length}`,
-    text: rows.map((r) => `- ${r.klient} – ${r.temat}, termin ${r.termin}${r.tel ? `, tel. ${r.tel}` : ''}\n  ${r.link}`).join('\n'),
-    html: `<ul>${rows.map((r) => `<li><a href="${esc(r.link)}"><b>${esc(r.klient)}</b> – ${esc(r.temat)}</a>, termin ${r.termin}${r.tel ? `, tel. ${esc(r.tel)}` : ''}</li>`).join('')}</ul>`,
+    subject: `Zaległe kontakty z klientami: ${n}`,
+    text: `Dzień dobry,\n\n${n} ${slowo} na telefon do klienta:\n\n${rows.map((r) => `- ${r.klient} – ${r.temat}, termin ${r.termin}${r.tel ? `, tel. ${r.tel}` : ''}\n  ${r.link}`).join('\n')}\n\nETNER – wiadomość automatyczna z aplikacji.`,
+    html: mailLayout({
+      tytul: `Zaległe kontakty z klientami: ${n}`,
+      zajawka: `${n} ${slowo} na telefon: ${rows.slice(0, 3).map((r) => r.klient).join(', ')}`,
+      tresc: `<p style="margin:0 0 18px;font-size:15px;line-height:1.5;color:${C.ink2}">Dzień dobry! ${n} ${slowo} na telefon – termin kontaktu minął albo przypada dziś.</p>${rows.map(karta).join('')}`,
+      przycisk: base ? { tekst: 'Otwórz zaległe w aplikacji', url: `${base}/#leady~zalegle` } : undefined,
+      stopka: 'ETNER · Inteligentny wybór<br>Wiadomość automatyczna z aplikacji ETNER, wysyłana codziennie o 7:00, gdy są zaległe kontakty. Adres odbiorcy zmienisz w Ustawieniach.',
+      baseUrl: base,
+    }),
   };
 }
 
