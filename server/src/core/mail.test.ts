@@ -14,7 +14,8 @@ describe('Brevo', () => {
     await expect(brevoMailerFromEnv({ BREVO_API_KEY: 'k', MAIL_FROM: 'x@y.pl' }, zle as typeof fetch)!(m)).rejects.toThrow('Brevo 400: {"message":"sender not valid"}');
   });
   it('bez klucza SMTP; bez nadawcy nic', () => {
-    expect(mailerFromEnv({ SMTP_HOST: 'smtp.x', MAIL_FROM: 'a@b.pl' })).toBeTypeOf('function');
+    expect(mailerFromEnv({ SMTP_HOST: 'smtp.x', SMTP_PORT: '465', MAIL_FROM: 'a@b.pl' })?.przez).toBe('SMTP smtp.x:465');
+    expect(mailerFromEnv({ BREVO_API_KEY: 'k', SMTP_HOST: 'smtp.x', MAIL_FROM: 'a@b.pl' })?.przez).toBe('Brevo');
     expect(brevoMailerFromEnv({ BREVO_API_KEY: 'k' })).toBeUndefined();
     expect(mailerFromEnv({})).toBeUndefined();
   });

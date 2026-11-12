@@ -25,8 +25,8 @@ export function LeadyEmail() {
   async function test() {
     setBusy(true);
     try {
-      const r = await api<{ zalegle: number; push: number; email: string }>('/api/settings/leady-email/test', { method: 'POST', timeout: 60_000 });
-      toast('Wysłano test', { body: `E-mail na ${r.email} (zaległych: ${r.zalegle}). Powiadomień push: ${r.push}${r.push ? '' : ' – włącz powiadomienia w Ustawieniach na tym urządzeniu'}.`, tone: 'ok' });
+      const r = await api<{ zalegle: number; push: number; email: string; przez?: string }>('/api/settings/leady-email/test', { method: 'POST', timeout: 60_000 });
+      toast('Wysłano test', { body: `E-mail na ${r.email}${r.przez ? ` przez ${r.przez}` : ''} (zaległych: ${r.zalegle}). Powiadomień push: ${r.push}${r.push ? '' : ' – włącz powiadomienia w Ustawieniach na tym urządzeniu'}.`, tone: 'ok' });
     } catch (x) { toast('Test nie wyszedł', { body: (x as Error).message, tone: 'error' }); }
     finally { setBusy(false); }
   }

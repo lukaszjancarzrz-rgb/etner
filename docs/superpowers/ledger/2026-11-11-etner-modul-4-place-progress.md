@@ -26,3 +26,4 @@ Owner 2026-11-11: Ustawienia → Stan kopii shows disk usage (statfs of DB dir, 
 Owner 2026-11-11: overdue push → #leady~zalegle scrolls to „Zaległe kontakty”; SMTP transport timeouts 10/10/20 s so the test button returns the real mail error (owner saw client „signal timed out”); test call timeout 60 s. Released (R86).
 Owner 2026-11-11: SMTP from Render times out (Render limits SMTP ports) → Brevo HTTPS mailer (BREVO_API_KEY + MAIL_FROM; preferred over SMTP when set; core/mail.ts mailerFromEnv). Released (R86); owner sets the key.
 Owner 2026-11-12: SMTP stalled after greeting from Render → EHLO name = MAIL_FROM domain (or SMTP_NAME), SMTP errors include code/step/server response; owner found wrong address in Brevo. Released (R86).
+Owner 2026-11-12: test button shows mail route (Mailer.przez: 'Brevo' / 'SMTP host:port'). Released (R86).

@@ -68,9 +68,9 @@ export function routes(app: Hono, deps: AppDeps): void {
     const m = svc.overdueMail(db, day, deps.baseUrl) ?? { subject: 'Zaległe kontakty z klientami: 0 (test)', text: 'Test: dziś nie ma zaległych kontaktów.', html: '<p>Test: dziś nie ma zaległych kontaktów.</p>' };
     try { await deps.mailer({ ...m, subject: `${m.subject} – test`, to }); } catch (e) {
       logError(db, 'test:leady-email', e, uid(c));
-      throw new HTTPException(422, { message: `Serwer poczty odrzucił wysyłkę: ${e instanceof Error ? e.message : String(e)}` });
+      throw new HTTPException(422, { message: `${deps.mailer.przez ?? 'Poczta'} – wysyłka nieudana: ${e instanceof Error ? e.message : String(e)}` });
     }
-    return c.json({ zalegle: n, push, email: to });
+    return c.json({ zalegle: n, push, email: to, przez: deps.mailer.przez ?? 'SMTP' });
   });
   app.post('/api/leads/:id/to-job', guard, async (c) => {
     const b = await body(c, leadToJobSchema);
