@@ -33,3 +33,4 @@ Owner 2026-11-14: client edit includes sites (edit fields, add; no delete; passp
 Owner 2026-11-14: Nawiguj ignored map links without https / coordinates → mapsUrl accepts schemeless links, coordinates, text; job without site: ClientPicker really selects the client's first site (saved with the form), JobCard falls back to the client's only site; demo e2e updated to edit site address in the client dialog. Released (R86).
 Owner 2026-11-14: revenue form field „Zlecenie” (searchable job combobox; fills empty klient/miejscowość/branża/opis; hint when the job already has another revenue); e2e finanse added. Released (R86).
 Owner 2026-11-14: schedule — job colour stripe (by job number, 12-colour palette) + highlight of all entries of a job on hover/focus/long-press; Combobox search ignores Polish diacritics (dabrowa → Dąbrowa) everywhere. Released (R86).
+Owner 2026-11-14: schedule job highlight after 2 s hover (leave clears at once). Released (R86).

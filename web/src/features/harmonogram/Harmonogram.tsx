@@ -335,13 +335,17 @@ function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: '
   // wyjątek od „kolor branży tylko w zakładkach” (decyzja właściciela): komórka harmonogramu zostaje z odcieniem branży
   // A+C (właściciel 2026-11-14): pasek w kolorze zlecenia z lewej i podświetlenie wszystkich wpisów zlecenia
   const style = { background: catTint(c), borderLeft: `4px solid ${jobColor(j?.numer)}` };
-  const hl = { 'data-job': slot.jobId, onMouseEnter: () => highlightJob(slot.jobId), onMouseLeave: () => highlightJob(null), onFocus: () => highlightJob(slot.jobId), onBlur: () => highlightJob(null) };
+  const hl = { 'data-job': slot.jobId, onMouseEnter: () => highlightLater(slot.jobId), onMouseLeave: () => highlightLater(null), onFocus: () => highlightLater(slot.jobId), onBlur: () => highlightLater(null) };
   if (!link) return <span className={cls} style={style} {...hl}>{body}</span>;
   return (
     <a href={`#zl/${slot.jobId}`} style={style} {...hl} {...longPress(slot.jobId)}
       className={cn(cls, 'decoration-1 underline-offset-2 transition-[outline-color] duration-200 outline-1 outline-transparent hover:underline hover:outline-ink-2/50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action')}>{body}</a>
   );
 }
+
+// komputer: podświetlenie dopiero po 2 s na kafelku (właściciel 2026-11-14), zejście z kafelka gasi od razu
+let hlTimer: ReturnType<typeof setTimeout> | undefined;
+const highlightLater = (jobId: string | null) => { clearTimeout(hlTimer); if (!jobId) return highlightJob(null); hlTimer = setTimeout(() => highlightJob(jobId), 2000); };
 
 /** Telefon: przytrzymanie kafelka podświetla zlecenie (zamiast otwierać kartę); dotknięcie gdzie indziej gasi. */
 let lpTimer: ReturnType<typeof setTimeout> | undefined, lpDone = false;
