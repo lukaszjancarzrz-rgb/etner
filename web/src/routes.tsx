@@ -1,4 +1,4 @@
-import { BellRinging, Briefcase, CalendarDots, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, Toolbox, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, Briefcase, CalendarDots, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SunHorizon, Timer, Toolbox, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
 import { lazy, useSyncExternalStore, type ComponentType } from 'react';
 import { More } from './screens/More.js';
 import { Zaplecze } from './screens/Zaplecze.js';
@@ -30,6 +30,7 @@ export type Screen = { title: string; icon: Icon; component: ComponentType<{ rou
 const lazyScreen = (f: () => Promise<{ default: ComponentType<{ route: Route }> }>) => Object.assign(lazy(f), { preload: f });
 const Harmonogram = lazyScreen(() => import('./features/harmonogram/Harmonogram.js').then((m) => ({ default: m.Harmonogram })));
 const Zlecenia = lazyScreen(() => import('./features/zlecenia/Zlecenia.js').then((m) => ({ default: m.Zlecenia })));
+const Czas = lazyScreen(() => import('./features/czas/Czas.js').then((m) => ({ default: m.Czas })));
 const Zakupy = lazyScreen(() => import('./features/zakupy/Zakupy.js').then((m) => ({ default: m.Zakupy })));
 const NaJutro = lazyScreen(() => import('./features/na-jutro/NaJutro.js').then((m) => ({ default: m.NaJutro })));
 const Leady = lazyScreen(() => import('./features/leady/Leady.js').then((m) => ({ default: m.Leady })));
@@ -49,8 +50,9 @@ const Klienci = lazyScreen(() => import('./features/klienci/Klienci.js').then((m
 /** Ekrany w kolejności menu. */
 export const screens: Record<string, Screen> = {
   harm: { title: 'Harmonogram', icon: CalendarDots, component: Harmonogram },
-  jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true, zaplecze: true }, // admin rzadko: koniec menu
+  jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, nav: 'side', adminEnd: true, zaplecze: true }, // admin rzadko: koniec menu; pracownik: w Więcej
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
+  czas: { title: 'Czasomierz', icon: Timer, component: Czas },
   leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
   serwis: { title: 'Do serwisu', icon: BellRinging, component: DoSerwisu, nav: 'side', admin: true },
   paszporty: { title: 'Paszporty', icon: IdentificationCard, component: Paszporty, nav: 'side', moreOnly: true, adminSide: true },

@@ -13,7 +13,7 @@ export function BottomNav({ route, badges }: { route: Route; badges: Record<stri
         {items.map(([k, s]) => {
           const on = route.screen === k || (k === 'wiecej' && !!screens[route.screen] && !inBottomBar(route.screen, admin)); // ekrany spoza paska są w Więcej
           const I = s.icon;
-          const n = (k === 'wiecej' ? (admin ? zapleczeBadge(badges) : badges.auta) : badges[k]) ?? 0; // telefon: Samochody (u admina całe Zaplecze) są w Więcej
+          const n = (k === 'wiecej' ? (admin ? zapleczeBadge(badges) : (badges.auta ?? 0) + (badges.jutro ?? 0)) : badges[k]) ?? 0; // telefon: Samochody (u admina całe Zaplecze) są w Więcej
           return (
             <li key={k}>
               <a href={`#${k}`} aria-current={on ? 'page' : undefined}

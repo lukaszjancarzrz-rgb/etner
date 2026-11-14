@@ -17,6 +17,7 @@ import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
 import { cellKey, cellsOf, cellText, highlightJob, jobColor, monthDays, whereDay, whereFrom, type Slot } from './model.js';
 import { Avatar } from '../../core/ui/avatar.js';
+import { CzasBanner } from '../czas/Banner.js';
 import { useRepairMarks, type RepairMark } from '../samochody/repairs.js';
 
 export type Ctx = {
@@ -128,6 +129,7 @@ export function Harmonogram({ route }: { route: Route }) {
 
   return (
     <section className="mx-auto grid max-w-[1400px] gap-4 px-4 py-4 desk:px-8 desk:py-6">
+      <CzasBanner />
       {mine && <WhereNext person={mine} entries={entries} ctx={ctx} />}
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">{month ? <MonthNav day={anchor} today={t} /> : <WeekNav monday={monday} today={t} />}</div>

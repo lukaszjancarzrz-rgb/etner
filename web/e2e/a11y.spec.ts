@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 /** Ekrany z menu (hash → nagłówek h1); karta zlecenia i leada otwierane z listy. */
 const SCREENS: [string, string][] = [
-  ['#harm', 'Harmonogram'], ['#jutro', 'Na jutro'], ['#zl', 'Zlecenia'], ['#zakupy', 'Zakupy'], ['#auta', 'Samochody'],
+  ['#harm', 'Harmonogram'], ['#jutro', 'Na jutro'], ['#zl', 'Zlecenia'], ['#czas', 'Czasomierz'], ['#zakupy', 'Zakupy'], ['#auta', 'Samochody'],
   ['#narz', 'Narzędzia'], ['#mag', 'Rzeczy nietypowe'], ['#paszporty', 'Paszporty'], ['#leady', 'Leady'], ['#serwis', 'Do serwisu'], ['#zad', 'Zadania'], ['#uz', 'Użytkownicy'], ['#ust', 'Ustawienia'],
 ];
 
@@ -95,6 +95,9 @@ for (const theme of ['light', 'dark'] as const) {
     await w.goto('/#jutro');
     await expect(w.getByRole('heading', { name: 'Na jutro', level: 1 })).toBeVisible();
     found.push(...(await audit(w, 'pracownik #jutro')));
+    await w.goto('/#czas');
+    await expect(w.getByRole('heading', { name: 'Czasomierz', level: 1 })).toBeVisible();
+    found.push(...(await audit(w, 'pracownik #czas')));
     await ctx.close();
 
     expect(found).toEqual([]);

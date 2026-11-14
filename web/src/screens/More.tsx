@@ -37,7 +37,7 @@ const GROUPS: { admin?: true; tiles: T[] }[] = [
     { k: 'uz', icon: UserGear, title: 'Użytkownicy', hint: 'Konta, hasła, kolumny harmonogramu' },
   ] },
   { tiles: [{ k: 'ust', icon: GearSix, title: 'Ustawienia', hint: (a) => (a ? 'Motyw, powiadomienia, hasło, słowniki, log błędów, kopie' : 'Motyw, powiadomienia, zmiana hasła') }] },
-  { admin: true, tiles: [{ k: 'jutro', icon: SunHorizon, title: 'Na jutro', hint: 'Co ekipy biorą na następny dzień roboczy' }] },
+  { tiles: [{ k: 'jutro', icon: SunHorizon, title: 'Na jutro', hint: 'Co ekipy biorą na następny dzień roboczy' }] },
 ];
 
 /** Kafelki Więcej bez ekranów, które już są w menu: na komputerze w menu bocznym, na telefonie w dolnym pasku. */
