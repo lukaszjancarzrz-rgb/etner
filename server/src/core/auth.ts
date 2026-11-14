@@ -190,7 +190,7 @@ export function mountAuth(app: Hono, deps: AppDeps): void {
       return { calyB: s.blocks * s.bsize, wolneB: s.bavail * s.bsize, bazaB: size(f) + size(`${f}-wal`) + size(`${f}-shm`) };
     } catch { return null; }
   };
-  app.get('/api/settings/kopie', requireAdmin(db), (c) => c.json({ eksport: setting('kopia_eksport_at'), zdjecia: setting('kopia_zdjec_at'), dysk: dysk(), baza: ostatniaKopia(db) }));
+  app.get('/api/settings/kopie', requireAdmin(db), (c) => c.json({ zdjecia: setting('kopia_zdjec_at'), dysk: dysk(), baza: ostatniaKopia(db) }));
   // pełna kopia bazy teraz (jak nocna 03:45), np. przed większą zmianą
   app.post('/api/settings/kopie/baza', requireAdmin(db), async (c) => {
     const m = magazynR2(process.env);

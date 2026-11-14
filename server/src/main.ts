@@ -84,7 +84,7 @@ const deps = {
 };
 const app = createApp(deps, modules);
 const stopPumble = pumble ? startPoll(deps) : () => {};
-const stopCron = registerCron(deps, [...modulesOf(app).flatMap((m) => m.cron ?? []), ...kopieCrons(process.env, modules), pruneCron]);
+const stopCron = registerCron(deps, [...modulesOf(app).flatMap((m) => m.cron ?? []), ...kopieCrons(process.env), pruneCron]);
 
 const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`ETNER nasłuchuje na :${port}`);

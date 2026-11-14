@@ -83,8 +83,3 @@ services:
       # Własna domena (np. https://app.etner-instalacje.pl); puste = adres onrender.com.
       - key: BASE_URL
         sync: false
-      # Opcjonalnie: nocny eksport tabel do arkusza Google.
-      - key: SHEETS_ID
-        sync: false
-      - key: GOOGLE_SA_JSON
-        sync: false

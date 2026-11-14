@@ -17,7 +17,7 @@ describe('render.yaml', () => {
     expect(e.DEMO).toBeUndefined();
     expect(e.APP_SECRET?.generateValue).toBe(true);
     const secrets = ['ADMIN_LOGIN', 'ADMIN_NAME', 'ADMIN_PASSWORD', 'R2_BUCKET', 'R2_ENDPOINT', 'R2_KEY', 'R2_SECRET', 'R2_BACKUP_BUCKET',
-      'PUMBLE_API_KEY', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'MAIL_FROM', 'BASE_URL', 'SHEETS_ID', 'GOOGLE_SA_JSON'];
+      'PUMBLE_API_KEY', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'MAIL_FROM', 'BASE_URL'];
     for (const k of secrets) expect(e[k], k).toEqual({ key: k, sync: false });
     expect(e.VAPID_PUBLIC).toBeUndefined(); // klucze VAPID powstają same na dysku
     expect(Object.keys(e).filter((k) => k.startsWith('LITESTREAM'))).toEqual([]);

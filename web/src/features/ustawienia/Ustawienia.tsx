@@ -214,7 +214,7 @@ function Morning() {
 
 const DAY_MS = 86_400_000;
 function Backups() {
-  type K = { eksport: string | null; zdjecia: string | null; dysk?: { calyB: number; wolneB: number; bazaB: number } | null; baza?: { at: string | null; rozmiar: number | null } };
+  type K = { zdjecia: string | null; dysk?: { calyB: number; wolneB: number; bazaB: number } | null; baza?: { at: string | null; rozmiar: number | null } };
   const [k, setK] = useState<K | null>(null);
   const [teraz, setTeraz] = useState(false);
   const [err, setErr] = useState('');
@@ -237,9 +237,7 @@ function Backups() {
     <Card title="Stan kopii" icon={Database} hint="Kopie robią się w nocy same.">
       {err ? <p className="text-sm text-danger">{err}</p> : (
         <dl className="grid gap-3">
-          {row('Eksport do arkusza Google', k?.eksport, 'Codziennie o 2:30, wszystkie tabele.')}
           {row('Pełna kopia bazy', k?.baza?.at, `Codziennie o 3:45 do magazynu R2 (kopie z 30 dni i z 1. dnia każdego miesiąca przez rok)${k?.baza?.rozmiar ? `, ostatnia ${mb(k.baza.rozmiar)}` : ''}.`)}
-          <div><Button size="sm" variant="secondary" disabled={teraz} onClick={() => { setTeraz(true); void api<{ rozmiar: number }>('/api/settings/kopie/baza', { method: 'POST', timeout: 120_000 }).then((r) => { toast('Kopia bazy zrobiona', { body: `Rozmiar ${mb(r.rozmiar)}.`, tone: 'ok' }); return api<K>('/api/settings/kopie').then(setK); }, (e) => toast('Kopia nie powstała', { body: msg(e), tone: 'error' })).finally(() => setTeraz(false)); }}>{teraz ? 'Robię kopię…' : 'Zrób kopię bazy teraz'}</Button></div>
           {row('Kopia zdjęć', k?.zdjecia, 'Codziennie o 3:00, nowe pliki do zapasowego magazynu.')}
           {d && (
             <div className="grid gap-1 border-t border-line pt-3">
@@ -251,6 +249,7 @@ function Backups() {
           )}
         </dl>
       )}
+      <div><Button size="sm" variant="secondary" disabled={teraz} onClick={() => { setTeraz(true); void api<{ rozmiar: number }>('/api/settings/kopie/baza', { method: 'POST', timeout: 120_000 }).then((r) => { toast('Kopia bazy zrobiona', { body: `Rozmiar ${mb(r.rozmiar)}.`, tone: 'ok' }); return api<K>('/api/settings/kopie').then(setK); }, (e) => toast('Kopia nie powstała', { body: msg(e), tone: 'error' })).finally(() => setTeraz(false)); }}>{teraz ? 'Robię kopię…' : 'Zrób kopię bazy teraz'}</Button></div>
     </Card>
   );
 }

@@ -242,10 +242,10 @@ describe('uprawnienia', () => {
     expect((await put('24:00', a)).status).toBe(400);
     expect((await put('06:30', a)).status).toBe(200);
     expect(await (await get(app, '/api/settings/rano', a)).json()).toEqual({ godzina: '06:30' });
-    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ eksport: null, zdjecia: null, dysk: null, baza: { at: null, rozmiar: null } });
+    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ zdjecia: null, dysk: null, baza: { at: null, rozmiar: null } });
     const at = '2026-10-21T01:30:00.000Z';
-    deps.db.insert(settings).values({ key: 'kopia_eksport_at', value: at, updatedAt: at }).run();
-    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ eksport: at, zdjecia: null, dysk: null, baza: { at: null, rozmiar: null } });
+    deps.db.insert(settings).values({ key: 'kopia_zdjec_at', value: at, updatedAt: at }).run();
+    expect(await (await get(app, '/api/settings/kopie', a)).json()).toEqual({ zdjecia: at, dysk: null, baza: { at: null, rozmiar: null } });
     expect((await app.request('/api/settings/kopie/baza', { method: 'POST', headers: { cookie: a } })).status).toBe(process.env.R2_BUCKET ? 200 : 422); // bez R2: czytelny komunikat
   });
 });

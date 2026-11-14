@@ -3,10 +3,9 @@ import { and, eq, gt, isNotNull } from 'drizzle-orm';
 import type { AppDeps } from '../app.js';
 import type { Db } from '../core/db.js';
 import { logError } from '../core/errors.js';
-import type { CronDef, ModuleDef } from '../core/registry.js';
+import type { CronDef } from '../core/registry.js';
 import { settings, users } from '../core/schema-base.js';
 import { attachments } from '../modules/dziennik/schema.js';
-import { exportToSheets, googleSheets, tablesForExport, type SheetsClient } from './export-sheets.js';
 import { kopiaBazy, magazynR2 } from './kopia-bazy.js';
 import { dayOf } from '@etner/shared';
 
@@ -43,20 +42,9 @@ export async function copyPhotos(db: Db, copy: (key: string) => Promise<void>, s
   return keys.length;
 }
 
-/** Zadania nocne: eksport do arkusza 02:30, kopia zdjęć 03:00, pełna kopia bazy 03:45 (brak konfiguracji = pominięcie z komunikatem). */
-export function kopieCrons(env: Env, defs: ModuleDef[], sheets?: SheetsClient): CronDef[] {
+/** Zadania nocne: kopia zdjęć 03:00, pełna kopia bazy 03:45 (brak konfiguracji = pominięcie z komunikatem). */
+export function kopieCrons(env: Env): CronDef[] {
   return [
-    {
-      name: 'eksport', schedule: '30 2 * * *',
-      async run(deps: AppDeps) {
-        if (!env.GOOGLE_SA_JSON || !env.SHEETS_ID) {
-          console.warn('Eksport do arkusza pominięty: brak GOOGLE_SA_JSON / SHEETS_ID.');
-          return;
-        }
-        await exportToSheets(deps.db, sheets ?? googleSheets(env.GOOGLE_SA_JSON), env.SHEETS_ID, tablesForExport(defs));
-        stamp(deps.db, 'kopia_eksport_at');
-      },
-    },
     {
       name: 'kopia-zdjec', schedule: '0 3 * * *',
       async run(deps: AppDeps) {

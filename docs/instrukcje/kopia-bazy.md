@@ -5,7 +5,6 @@
 |---|---|---|
 | Ciągła kopia bazy (Litestream) | na bieżąco | Cloudflare R2, katalog `db/` |
 | **Pełna kopia bazy** | codziennie 3:45 | R2 (bucket kopii albo zdjęć), katalog `kopie-bazy/`, plik `etner-RRRR-MM-DD.db.gz` |
-| Eksport do arkusza Google | codziennie 2:30 | arkusz z `SHEETS_ID` |
 | Kopia zdjęć | codziennie 3:00 | bucket `R2_BACKUP_BUCKET` |
 
 Pełne kopie bazy: zostają z ostatnich 30 dni oraz z 1. dnia każdego miesiąca przez rok. Stan i przycisk „Zrób kopię bazy teraz”: **Ustawienia → Stan kopii**.

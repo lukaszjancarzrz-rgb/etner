@@ -4,7 +4,7 @@ Kopie powstają trzema drogami:
 
 - **Baza, na bieżąco:** Litestream replikuje `etner.db` do bucketu zdjęć `R2_BUCKET` pod prefiks `db/` (przechowywanie 720 h = 30 dni), tym samym kluczem `R2_KEY` / `R2_SECRET`. Aplikacja nie zapisuje ani nie kasuje plików pod `db/`. Konfiguracja: `deploy/litestream.yml`. Na Render usługa `etner` startuje pod Litestream, gdy ustawiony jest `R2_BUCKET` (`render.yaml`, `startCommand`); program leży w `./bin/litestream`. Render robi też codzienną migawkę dysku `/var/data`.
 - **Zdjęcia, co noc o 03:00 (opcjonalnie):** nowe pliki (załączniki dziennika i zdjęcia osób) z bucketu roboczego (`R2_BUCKET`) trafiają do `R2_BACKUP_BUCKET` (np. `etner-backup`) pod prefiks `files/`.
-- **Tabele, co noc o 02:30:** eksport wszystkich tabel do arkusza Google (`SHEETS_ID`), do wglądu i jako ostatnia deska ratunku. Arkusz nie zawiera tokenów logowania.
+- **Pełna kopia bazy, co noc o 03:45:** spójna kopia `etner.db` (gzip) do `R2_BACKUP_BUCKET` (bez niego do `R2_BUCKET`) pod `kopie-bazy/etner-RRRR-MM-DD.db.gz`; zostają kopie z 30 dni i z 1. dnia miesiąca przez rok. Przywrócenie: `docs/instrukcje/kopia-bazy.md`.
 
 ## Zmienne środowiska
 
@@ -14,11 +14,9 @@ Kopie powstają trzema drogami:
 | `R2_ENDPOINT` | adres S3 konta R2 (`https://<konto>.r2.cloudflarestorage.com`) |
 | `R2_BUCKET`, `R2_KEY`, `R2_SECRET` | bucket roboczy ze zdjęciami i ciągłą kopią bazy (`db/`) oraz jego klucz; bez `R2_BUCKET` ciągła kopia bazy jest wyłączona (komunikat w logu przy starcie) |
 | `R2_BACKUP_BUCKET` | opcjonalny bucket nocnej kopii zdjęć (`files/`); bez niego kopia zdjęć jest pomijana |
-| `GOOGLE_SA_JSON` | klucz konta usługi Google (cały JSON); arkusz musi być udostępniony temu kontu do edycji |
-| `SHEETS_ID` | identyfikator arkusza z adresu URL |
 | `APP_SECRET` | sekret aplikacji |
 
-Klucze wkleja właściciel jako sekrety środowiska. Brak `GOOGLE_SA_JSON` / `SHEETS_ID` lub `R2_BACKUP_BUCKET` nie psuje aplikacji: zadanie jest pomijane, a ostrzeżenie widać w dzienniku błędów (miejsce `eksport` lub `kopia-zdjec`).
+Klucze wkleja właściciel jako sekrety środowiska. Brak `R2_BACKUP_BUCKET` nie psuje aplikacji: kopia zdjęć jest pomijana (ostrzeżenie w konsoli), a pełna kopia bazy idzie do `R2_BUCKET`.
 
 ## Odtworzenie bazy
 
