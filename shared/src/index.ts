@@ -22,3 +22,5 @@ export * from './finanse.js';
 export * from './schemas/finanse.js';
 export * from './place.js';
 export * from './schemas/place.js';
+export * from './czas.js';
+export * from './schemas/czas.js';

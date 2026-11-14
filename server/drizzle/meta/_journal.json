@@ -197,6 +197,13 @@
       "when": 1794409209846,
       "tag": "0027_place",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1794691807768,
+      "tag": "0028_czasomierz",
+      "breakpoints": true
     }
   ]
 }
