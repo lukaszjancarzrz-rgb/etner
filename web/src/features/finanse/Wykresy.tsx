@@ -3,6 +3,9 @@ import { api } from '../../core/api.js';
 import { today, useCrewColor } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Tips } from '../../core/ui/tip.js';
+import { MagnifyingGlassPlus } from '@phosphor-icons/react';
+import { Button } from '../../core/ui/button.js';
+import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { SectionTitle } from '../../core/ui/bits.js';
 import { useCatColor } from '../../core/ui/category.js';
 import { miesiacWiersza, statystyki, wynikRoku } from './model.js';
@@ -23,26 +26,37 @@ function Legenda({ s }: { s: { name: string; color: string; line?: boolean }[] }
 }
 
 function Wykres({ title, children, legend, opis }: { title: string; children: ReactNode; legend?: ReactNode; opis: string }) {
+  const [duzy, setDuzy] = useState(false);
   return (
     <figure className="grid gap-2 rounded-[4px] border border-line bg-card p-4" aria-label={title}>
-      <figcaption className="grid gap-1"><SectionTitle>{title}</SectionTitle>{legend}</figcaption>
+      <figcaption className="grid gap-1">
+        <span className="flex items-start justify-between gap-2"><SectionTitle>{title}</SectionTitle>
+          <Button variant="ghost" size="icon" className="-mt-1 shrink-0 text-ink-2" aria-label={`Powiększ wykres: ${title}`} onClick={() => setDuzy(true)}><MagnifyingGlassPlus className="h-5 w-5" /></Button></span>
+        {legend}
+      </figcaption>
       <div role="img" aria-label={opis}><Tips>{children}</Tips></div>
+      {/* przybliżenie: ten sam wykres na całą szerokość okna (SVG skaluje się bez utraty jakości) */}
+      {duzy && <Dialog open onOpenChange={(o) => !o && setDuzy(false)}><Sheet title={title} className="desk:w-[min(1400px,96vw)]">
+        <div className="grid gap-3">{legend}<div role="img" aria-label={opis} className="wykres-duzy"><Tips>{children}</Tips></div></div>
+      </Sheet></Dialog>}
     </figure>
   );
 }
 
 /** Słupki w miesiącach (jedna oś zł): obok siebie albo skumulowane, opcjonalnie linia. Podpowiedź po najechaniu (title). */
 function Slupki({ s, stacked, line, upto = 12, h = 220 }: { s: Seria[]; stacked?: boolean; line?: Seria; upto?: number; h?: number }) {
-  const W = 720, L = 56, B = 22, T = 8, n = 12, slot = (W - L) / n;
+  // pod miesiącem wartość słupka: skumulowany – suma, obok siebie – wartość każdej serii w jej kolorze
+  const rows = stacked ? 1 : s.length, ex = rows * 16, H = h + ex;
+  const W = 720, L = 56, B = 22 + ex, T = 8, n = 12, slot = (W - L) / n;
   const tops = Array.from({ length: n }, (_, i) => stacked ? s.reduce((a, x) => a + Math.max(0, x.values[i]!), 0) : Math.max(0, ...s.map((x) => x.values[i]!)));
   const all = [...tops, ...(line?.values ?? []), ...s.flatMap((x) => x.values), 0];
   const max = Math.max(...all) || 1, min = Math.min(...all);
-  const y = (v: number) => T + (h - T - B) * (max - v) / (max - min || 1);
+  const y = (v: number) => T + (H - T - B) * (max - v) / (max - min || 1);
   // podpis minimum tylko gdy strata jest wyraźna (inaczej nachodzi na „0”)
   const ticks = [max, (max + Math.max(min, 0)) / 2, Math.max(min, 0), ...(min < -0.15 * max ? [min] : [])];
   const bw = stacked ? slot * 0.6 : (slot * 0.7) / s.length;
   return (
-    <svg viewBox={`0 0 ${W} ${h}`} className="w-full text-ink-2" style={{ maxHeight: h }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-ink-2" style={{ maxHeight: H }}>
       {ticks.map((t, i) => <g key={i}><line x1={L} x2={W} y1={y(t)} y2={y(t)} stroke="var(--rule)" /><text x={L - 6} y={y(t) + 4} textAnchor="end" fontSize="14" fill="currentColor">{k(t)}</text></g>)}
       {MIES.map((m, i) => {
         let acc = 0;
@@ -57,6 +71,8 @@ function Slupki({ s, stacked, line, upto = 12, h = 220 }: { s: Seria[]; stacked?
               return <rect key={x.name} x={x0 + 1} y={y0} width={Math.max(bw - 2, 2)} height={Math.max(y1 - y0 - (stacked ? 2 : 0), 1)} rx="2" fill={x.color} data-tip={`${m}\n${x.name}: ${zl(v)} zł`} />;
             })}
             <text x={L + i * slot + slot / 2} y={h - 6} textAnchor="middle" fontSize="14" fill="currentColor">{m}</text>
+            {stacked ? (tops[i]! > 0 && <text x={L + i * slot + slot / 2} y={h + 10} textAnchor="middle" fontSize="12" fontWeight="700" fill="var(--ink)">{k(tops[i]!)}</text>)
+              : s.map((x, j) => x.values[i] ? <text key={x.name} x={L + i * slot + slot / 2} y={h + 10 + j * 16} textAnchor="middle" fontSize="12" fontWeight="700" fill={x.color}>{k(x.values[i]!)}</text> : null)}
           </g>
         );
       })}

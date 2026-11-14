@@ -35,3 +35,4 @@ Owner 2026-11-14: revenue form field „Zlecenie” (searchable job combobox; fi
 Owner 2026-11-14: schedule — job colour stripe (by job number, 12-colour palette) + highlight of all entries of a job on hover/focus/long-press; Combobox search ignores Polish diacritics (dabrowa → Dąbrowa) everywhere. Released (R86).
 Owner 2026-11-14: schedule job highlight after 2 s hover (leave clears at once). Released (R86).
 Owner 2026-11-14: schedule highlight delay 1 s. Released (R86).
+Owner 2026-11-14: charts (Finanse, Płace) — zoom button (magnifier → dialog, full width, .wykres-duzy lifts SVG max-height) and values under bars (stacked: total; grouped: each series in its colour). Released (R86).
