@@ -209,7 +209,8 @@ export function kosztyPracownikowMiesiecy(d: Dane, rok: string, P = przygotuj(d)
 }
 
 // ---------- robocizna zlecenia (pełny koszt firmy, decyzja D4) ----------
-/** Koszt 1 dnia osoby w miesiącu (gr): koszt całkowity ÷ dni pracy z harmonogramu; bez godzin: (stawka + koszt umowy ÷ wymiar) × godziny dnia; bez stawki: stawka osobodnia. */
+/** Koszt 1 dnia osoby w miesiącu (gr): koszt całkowity ÷ dni pracy z harmonogramu; bez godzin: (stawka + koszt umowy ÷ wymiar) × godziny dnia; bez stawki: stawka osobodnia.
+ *  Urlop (decyzja właściciela 2026-11-14): zamiast urlopu wziętego w miesiącu – 1/12 rocznego limitu urlopu × godziny dnia urlopu × stawka. */
 export function kosztDnia(d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) {
   const memo = new Map<string, number>();
   return (personId: string, m: string): number => {
@@ -218,10 +219,11 @@ export function kosztDnia(d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) 
     if (v !== undefined) return v;
     const r = P.osoby.has(personId) ? wierszRozliczenia(P, d, personId, m) : null;
     const p = parametryMiesiaca(d.parametry, m);
-    if (r && r.stawka > 0 && r.godziny > 0 && r.dniPracy > 0) v = Math.round(r.koszt / r.dniPracy);
+    const urlop12 = r ? Number(P.osoby.get(personId)?.urlopDni ?? 0) * p.godzUrlop * r.stawka / 12 : 0;
+    if (r && r.stawka > 0 && r.godziny > 0 && r.dniPracy > 0) v = Math.round((r.koszt - r.urlop + urlop12) / r.dniPracy);
     else if (r && r.stawka > 0) {
       const wymiar = p.godzDnia * dniRobocze(m, d.dniWolne) * Number(P.osoby.get(personId)?.etat ?? 1);
-      v = Math.round((r.stawka + (wymiar ? r.kosztUmowy / wymiar : 0)) * p.godzDnia);
+      v = Math.round((r.stawka + (wymiar ? (r.kosztUmowy + urlop12) / wymiar : 0)) * p.godzDnia);
     } else v = stawkaOsobodniaGr;
     memo.set(k, v);
     return v;

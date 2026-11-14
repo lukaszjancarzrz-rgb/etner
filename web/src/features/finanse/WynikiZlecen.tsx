@@ -28,7 +28,7 @@ export function WynikiZlecen({ rok }: { rok: string }) {
   if (!list.length) return <Empty icon={Briefcase} title="Brak zleceń z przychodem w tym roku" hint="Przychody z importu arkusza nie są powiązane ze zleceniami – wynik zlecenia liczy się dla przychodów dodanych przy zleceniu." />;
   return (
     <div className="grid gap-4">
-      <p className="text-sm text-ink-2">Materiały i robocizna to szacunki: materiały wpisane przy przychodzie, robocizna = dni z harmonogramu × koszt dnia osoby z Płac (koszt całkowity osoby w miesiącu ÷ jej dni pracy; bez danych płac – stawka osobodnia z Ustawień).</p>
+      <p className="text-sm text-ink-2">Materiały i robocizna to szacunki: materiały wpisane przy przychodzie, robocizna = dni z harmonogramu × koszt dnia osoby z Płac (koszt całkowity osoby w miesiącu ÷ jej dni pracy, urlop rozłożony po równo na 12 miesięcy; bez danych płac – stawka osobodnia z Ustawień).</p>
       <section aria-label="Średnia marża wg branży" className="grid gap-2">
         <SectionTitle>Średnia marża wg branży</SectionTitle>
         <ul className="flex flex-wrap gap-2">{branze.map((b) => <li key={b.k} className="inline-flex items-center gap-2 rounded-[4px] border border-line bg-card px-3 py-1.5 text-sm"><CatTab name={b.k} /><span className="font-semibold">{b.k}</span><span className="tabular-nums">{proc(b.marza)}</span><span className="text-ink-2">({b.n})</span></li>)}</ul>

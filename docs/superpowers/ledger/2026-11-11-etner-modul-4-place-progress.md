@@ -39,3 +39,4 @@ Owner 2026-11-14: charts (Finanse, Płace) — zoom button (magnifier → dialog
 Owner 2026-11-14: schedule tiles — branch badge removed, short description (krótki opis; fallback rodzaj+branża in grey) shown; job stripe and branch tint stay. Released (R86).
 Owner 2026-11-14: Leady desktop — clicking the open lead row closes the card (like Zlecenia). Released (R86).
 Owner 2026-11-14: new client block (lead/job forms) has „Link do mapy” (newSite.mapa); lead card shows Nawiguj (own site or client's only site). Released (R86).
+Owner 2026-11-14: robocizna — leave cost spread evenly: day cost uses 1/12 of the yearly leave limit × godzUrlop × rate instead of leave taken that month (Wynik firmy and payroll month totals unchanged = real payouts). Released (R86).

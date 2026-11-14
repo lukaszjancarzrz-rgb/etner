@@ -85,14 +85,16 @@ describe('podsumowanie i Wynik firmy', () => {
 });
 
 describe('robocizna zlecenia', () => {
-  it('koszt dnia = koszt osoby ÷ dni pracy; bez godzin ze stawki i kosztu umowy; bez płac – stawka osobodnia', () => {
+  it('koszt dnia = koszt osoby (urlop jako 1/12 limitu) ÷ dni pracy; bez godzin ze stawki i kosztu umowy; bez płac – stawka osobodnia', () => {
     const praca = (id: string, personId: string, dzien: string, jobId: string, polDnia = false) => ({ id, personId, dzien, rodzaj: 'zlecenie', jobId, polDnia });
-    const entries = [praca('1', 'a', '2026-04-01', 'J'), praca('2', 'a', '2026-04-02', 'J', true), praca('3', 'a', '2026-04-03', 'K'), praca('4', 'a', '2026-05-04', 'J'), praca('5', 'x', '2026-04-01', 'J')];
+    const entries = [praca('1', 'a', '2026-04-01', 'J'), praca('2', 'a', '2026-04-02', 'J', true), praca('3', 'a', '2026-04-03', 'K'), praca('4', 'a', '2026-05-04', 'J'), praca('5', 'x', '2026-04-01', 'J'), { id: '6', personId: 'a', dzien: '2026-04-07', rodzaj: 'kod', kod: 'urlop', polDnia: false }];
     const d = dane({ entries });
     const koszt = kosztDnia(d, 40_000);
-    const kwiecien = rozliczenieMiesiaca(d, '2026-04').wiersze[0]!.koszt;
-    expect(koszt('a', '2026-04')).toBe(Math.round(kwiecien / 2.5));
-    expect(koszt('a', '2026-05')).toBe(Math.round((3500 + 218_443 / (8 * dniRobocze('2026-05', []))) * 8));
+    const kw = rozliczenieMiesiaca(d, '2026-04').wiersze[0]!;
+    const urlop12 = (2 * 8 * 3500) / 12; // 1/12 limitu urlopu (2 dni) zamiast urlopu wziętego w kwietniu
+    expect(kw.urlop).toBeGreaterThan(0);
+    expect(koszt('a', '2026-04')).toBe(Math.round((kw.koszt - kw.urlop + urlop12) / 2.5));
+    expect(koszt('a', '2026-05')).toBe(Math.round((3500 + (218_443 + urlop12) / (8 * dniRobocze('2026-05', []))) * 8));
     expect(koszt('x', '2026-04')).toBe(40_000);
     expect(koszt('b', '2026-06')).toBe(Math.round(2000 * 8)); // bez godzin: stawka × godziny dnia
     expect(robociznaZlecenia('J', entries, koszt)).toBe(Math.round(1.5 * koszt('a', '2026-04') + koszt('a', '2026-05') + 40_000));
