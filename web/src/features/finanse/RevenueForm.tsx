@@ -1,9 +1,11 @@
 import { fmtZl, rozbij, SPOSOBY, SPOSOB_LABEL, type Sposob } from '@etner/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../core/api.js';
 import { outbox } from '../../core/outbox.js';
 import { today, useDict } from '../../core/data.js';
-import type { Rec } from '../../core/store.js';
+import { store, useEntities, type Rec } from '../../core/store.js';
+import { Combobox } from '../../core/ui/combobox.js';
+import { prefillZlecenia } from './przychodZeZlecenia.js';
 import { Segmented, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
@@ -24,8 +26,23 @@ export function RevenueForm({ revenue, prefill, fromJob, onClose }: { revenue?: 
   const [f, setF] = useState({
     kwota: zlText(src.kwotaGr), sposob: (revenue?.sposob ?? 'bez') as Sposob, dzien: (revenue ? revenue.dzien : today()) ?? '', innyMiesiac: revenue?.innyMiesiac ?? '',
     nrFaktury: revenue?.nrFaktury ?? '', materialy: zlText(revenue?.materialyGr), kategoria: src.kategoria ?? '', klient: src.klient ?? '', miejscowosc: src.miejscowosc ?? '',
-    opis: src.opis ?? '', uwagi: revenue?.uwagi ?? '',
+    opis: src.opis ?? '', uwagi: revenue?.uwagi ?? '', jobId: (src.jobId as string | null | undefined) ?? '',
   });
+  const jobs = useEntities('jobs'), clients = useEntities('clients'), sites = useEntities('sites'), revenues = useEntities('revenues');
+  const jobOpts = useMemo(() => {
+    const kl = new Map(clients.map((c) => [c.id, c.nazwa as string])), mi = new Map(sites.map((x) => [x.id, x.miejscowosc as string]));
+    return [{ value: NONE, label: 'Bez zlecenia' }, ...[...jobs].sort((a, b) => String(b.numer).localeCompare(String(a.numer), 'pl', { numeric: true }))
+      .map((j) => ({ value: j.id as string, label: [j.numer, kl.get(j.clientId), mi.get(j.siteId)].filter(Boolean).join(' · ') }))];
+  }, [jobs, clients, sites]);
+  // to zlecenie ma już inny przychód (np. gotówka + faktura – wtedy w porządku, ale łatwo o pomyłkę)
+  const inny = f.jobId && revenues.some((r) => !r.deletedAt && r.jobId === f.jobId && r.id !== revenue?.id);
+  /** Wybór zlecenia: puste pola (klient, miejscowość, branża, opis) uzupełniane z niego, wpisane zostają. */
+  const wybierzZlecenie = (v: string) => {
+    if (v === NONE) return set({ jobId: '' });
+    const job = store.get('jobs', v);
+    const p = job ? prefillZlecenia(job) : {};
+    setF((x) => ({ ...x, jobId: v, klient: x.klient || (p.klient as string) || '', miejscowosc: x.miejscowosc || (p.miejscowosc as string) || '', kategoria: x.kategoria || (p.kategoria as string) || '', opis: x.opis || (p.opis as string) || '' }));
+  };
   const touched = useRef(!!revenue);
   const [err, setErr] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState(false);
@@ -49,7 +66,7 @@ export function RevenueForm({ revenue, prefill, fromJob, onClose }: { revenue?: 
     setErr(er);
     if (Object.keys(er).length || !kw || 'error' in kw) return;
     const body = {
-      jobId: (src.jobId as string | null | undefined) ?? null, kategoria: f.kategoria || null, klient: f.klient.trim(), miejscowosc: f.miejscowosc.trim(), opis: f.opis.trim(),
+      jobId: f.jobId || null, kategoria: f.kategoria || null, klient: f.klient.trim(), miejscowosc: f.miejscowosc.trim(), opis: f.opis.trim(),
       sposob: f.sposob, kwotaGr: kw.gr, dzien: f.dzien || null, innyMiesiac: f.innyMiesiac || null, nrFaktury: f.nrFaktury.trim(), materialyGr, uwagi: f.uwagi.trim(),
     };
     const fail = (x: Error) => toast('Przychód nie został zapisany', { body: x.message, tone: 'error' });
@@ -86,6 +103,9 @@ export function RevenueForm({ revenue, prefill, fromJob, onClose }: { revenue?: 
             <Field label="Miejscowość">{(id) => <Input id={id} value={f.miejscowosc} onChange={(e) => set({ miejscowosc: e.target.value })} />}</Field>
             <Field label="Opis">{(id) => <Input id={id} value={f.opis} onChange={(e) => set({ opis: e.target.value })} />}</Field>
           </div>
+          <Field label="Zlecenie" hint={inny ? 'To zlecenie ma już inny przychód – sprawdź, czy to nie dubel (gotówka + faktura to dwa przychody, to w porządku).' : 'Powiązanie liczy wynik zlecenia (przychód − materiały − robocizna).'}>
+            {(id, d) => <span aria-describedby={d}><Combobox id={id} value={f.jobId || NONE} onValueChange={wybierzZlecenie} options={jobOpts} placeholder="Bez zlecenia" search="Numer, klient, miejscowość" empty="Nie ma takiego zlecenia." /></span>}
+          </Field>
           <Field label="Uwagi">{(id) => <Textarea id={id} value={f.uwagi} onChange={(e) => set({ uwagi: e.target.value })} />}</Field>
           <div className="flex flex-wrap justify-between gap-3 border-t border-line pt-4">
             {revenue ? <Button variant={confirm ? 'danger' : 'ghost'} onClick={remove} className={cn(!confirm && 'text-danger')}>{confirm ? 'Na pewno usunąć?' : 'Usuń przychód'}</Button> : <span />}

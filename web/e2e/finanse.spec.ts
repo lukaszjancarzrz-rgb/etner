@@ -116,3 +116,21 @@ test('Finanse 3b: Wynik z kosztami pracowników, Kontrola KPiR, Statystyki', asy
   await expect(page).toHaveURL(/#fin$/);
   await expect(page.getByRole('radio', { name: 'Statystyki' })).toHaveAttribute('aria-checked', 'true');
 });
+
+test('finanse: przychód bez zlecenia → „Zlecenie” w formularzu wiąże go ze zleceniem i uzupełnia puste pola', async ({ page }, info) => {
+  const tag = `E2E pz ${info.project.name.replace(/\W/g, '')} ${Date.now() % 100000}`;
+  await login(page, 'Tomasz Wrona');
+  const job = (await (await page.request.post('/api/jobs', { data: { newClient: { typ: 'osoba', nazwa: tag }, status: 'Zaplanowane', rodzaj: 'Montaż', kategoria: 'Klimatyzacja' } })).json()) as { id: string; numer: string };
+  const rev = (await (await page.request.post('/api/revenues', { data: { sposob: 'bez', kwotaGr: 50_000, dzien: '2026-11-10', opis: tag } })).json()) as { id: string };
+  await page.goto('/#fin');
+  await page.getByRole('button', { name: 'Cały rok' }).click();
+  await page.getByLabel('Szukaj').fill(tag);
+  await page.getByRole('cell', { name: tag }).or(page.getByText(tag, { exact: true }).filter({ visible: true })).first().click(); // komputer: tabela, telefon: karta
+  const f = page.getByRole('dialog', { name: 'Przychód' });
+  await f.getByRole('button', { name: 'Zlecenie' }).click();
+  await page.getByPlaceholder('Numer, klient, miejscowość').fill(job.numer);
+  await page.getByRole('option', { name: new RegExp(`^${job.numer}`) }).click();
+  await f.getByRole('button', { name: 'Zapisz przychód' }).click();
+  await expect(f).toBeHidden();
+  await expect.poll(async () => ((await (await page.request.get('/api/revenues')).json()) as { id: string; jobId: string; klient: string }[]).find((r) => r.id === rev.id)).toMatchObject({ jobId: job.id, klient: tag });
+});
