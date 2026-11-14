@@ -1,6 +1,6 @@
 import { PARAMETRY_2026 } from '@etner/shared';
 import { describe, expect, it } from 'vitest';
-import { czyDzienPracy, dniRobocze, kalkulatorUmowy, kosztDnia, kosztyPracownikowMiesiecy, podsumowanieRoku, robociznaZlecenia, rodzajNieobecnosci, rozliczenieMiesiaca, type Dane } from './model.js';
+import { czyDzienPracy, dniRobocze, kalkulatorUmowy, kosztDnia, kosztGodziny, minutyCzasu, kosztyPracownikowMiesiecy, podsumowanieRoku, robociznaZlecenia, rodzajNieobecnosci, rozliczenieMiesiaca, type Dane } from './model.js';
 
 const p = PARAMETRY_2026;
 const dane = (x: Partial<Dane> = {}): Dane => ({
@@ -98,5 +98,20 @@ describe('robocizna zlecenia', () => {
     expect(koszt('x', '2026-04')).toBe(40_000);
     expect(koszt('b', '2026-06')).toBe(Math.round(2000 * 8)); // bez godzin: stawka × godziny dnia
     expect(robociznaZlecenia('J', entries, koszt)).toBe(Math.round(1.5 * koszt('a', '2026-04') + koszt('a', '2026-05') + 40_000));
+  });
+  it('koszt godziny (Czasomierz) = koszt osoby ÷ godziny z czasomierza; bez godzin w Płacach – stawka + koszt umowy ÷ wymiar', () => {
+    const czas = [
+      { id: 't1', personId: 'a', dzien: '2026-04-01', od: '2026-04-01T05:00:00Z', do: '2026-04-01T13:00:00Z' },
+      { id: 't2', personId: 'a', dzien: '2026-04-02', od: '2026-04-02T05:00:00Z', do: '2026-04-02T07:00:00Z' },
+      { id: 't3', personId: 'a', dzien: '2026-04-03', od: '2026-04-03T05:00:00Z', do: '2026-04-03T07:00:00Z', deletedAt: 'x' },
+    ];
+    expect(minutyCzasu(czas).get('a|2026-04')).toBe(600);
+    const d = dane({ czas });
+    const kw = rozliczenieMiesiaca(d, '2026-04').wiersze[0]!;
+    const urlop12 = (2 * 8 * 3500) / 12;
+    const k = kosztGodziny(d, 40_000);
+    expect(k('a', '2026-04')).toBe(Math.round((kw.koszt - kw.urlop + urlop12) / 10));
+    expect(k('a', '2026-05')).toBe(Math.round(3500 + (218_443 + urlop12) / (8 * dniRobocze('2026-05', []))));
+    expect(k('x', '2026-04')).toBe(5_000); // stawka osobodnia ÷ 8 h
   });
 });

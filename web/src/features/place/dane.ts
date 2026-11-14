@@ -3,9 +3,9 @@ import type { Parametry } from '@etner/shared';
 import { api } from '../../core/api.js';
 import { today, useDict } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
-import type { KosztDnia } from '../finanse/model.js';
+import type { CzasRobocizny, KosztDnia } from '../finanse/model.js';
 import { useStawka } from '../finanse/stawka.js';
-import { kosztDnia, kosztyPracownikowMiesiecy, type Dane } from './model.js';
+import { kosztDnia, kosztGodziny, kosztyPracownikowMiesiecy, type Dane } from './model.js';
 
 // parametry płac z ustawień (RRRR → Parametry); jedno pobranie na sesję, zmiana w Ustawieniach odświeża przez setParametry
 let cache: Record<string, Parametry> | undefined;
@@ -24,20 +24,26 @@ export function useParametry(): Record<string, Parametry> | undefined {
 /** Dane do liczenia płac (model.ts): synchronizowane tabele, parametry, dni wolne firmy i dzisiejsza data. */
 export function useDane(): Dane {
   const people = useEntities('schedule_people'), osoby = useEntities('payroll_people'), stawki = useEntities('payroll_rates'), miesiace = useEntities('payroll_months');
-  const wpisy = useEntities('payroll_entries'), entries = useEntities('schedule_entries');
+  const wpisy = useEntities('payroll_entries'), entries = useEntities('schedule_entries'), czas = useEntities('time_entries');
   const wolne = useDict('dzien_wolny'), parametry = useParametry() ?? {};
   // osoby usunięte z harmonogramu nie przychodzą w synchronizacji – ich imiona osobno (odświeżane po zmianie listy osób)
   const [byli, setByli] = useState<Rec[]>([]);
   useEffect(() => { api<Rec[]>('/api/payroll/byli').then((r) => setByli(r.map((b) => ({ ...b, nazwa: `${b.nazwa} (usunięty)`, deletedAt: 'byly' }))), () => {}); }, [people]);
   const wszyscy = useMemo(() => [...people, ...byli.filter((b) => !people.some((p) => p.id === b.id))], [people, byli]);
-  return useMemo(() => ({ people: wszyscy, osoby, stawki, miesiace, wpisy, entries, parametry, dzis: today(), dniWolne: wolne.map((d) => d.wartosc as string) }),
-    [wszyscy, osoby, stawki, miesiace, wpisy, entries, parametry, wolne]);
+  return useMemo(() => ({ people: wszyscy, osoby, stawki, miesiace, wpisy, entries, czas, parametry, dzis: today(), dniWolne: wolne.map((d) => d.wartosc as string) }),
+    [wszyscy, osoby, stawki, miesiace, wpisy, entries, czas, parametry, wolne]);
 }
 
 /** Koszt 1 dnia osoby (gr) do robocizny zleceń – pełny koszt firmy z Płac (decyzja D4). */
 export function useKosztDnia(): KosztDnia {
   const d = useDane(), stawka = useStawka() ?? 0;
   return useMemo(() => kosztDnia(d, stawka), [d, stawka]);
+}
+
+/** Czasomierz do robocizny zleceń (C7): wpisy czasu i koszt godziny osoby z Płac. */
+export function useCzasRobocizny(): CzasRobocizny {
+  const d = useDane(), stawka = useStawka() ?? 0;
+  return useMemo(() => ({ wpisy: d.czas ?? [], godzina: kosztGodziny(d, stawka) }), [d, stawka]);
 }
 
 /** Koszty pracowników do Wyniku firmy: ręczne kwoty, nadpisane kosztem z Płac w miesiącach z danymi płac; `zPlac` = te miesiące. */

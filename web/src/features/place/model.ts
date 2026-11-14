@@ -15,6 +15,7 @@ export interface Dane {
   miesiace: Rec[]; // payroll_months
   wpisy: Rec[]; // payroll_entries
   entries: Rec[]; // schedule_entries
+  czas?: Rec[]; // time_entries (Czasomierz)
   parametry: Record<string, Parametry>;
   dzis: string; // RRRR-MM-DD
   dniWolne: string[]; // dodatkowe dni wolne firmy
@@ -209,10 +210,25 @@ export function kosztyPracownikowMiesiecy(d: Dane, rok: string, P = przygotuj(d)
 }
 
 // ---------- robocizna zlecenia (pełny koszt firmy, decyzja D4) ----------
-/** Koszt 1 dnia osoby w miesiącu (gr): koszt całkowity ÷ dni pracy z harmonogramu; bez godzin: (stawka + koszt umowy ÷ wymiar) × godziny dnia; bez stawki: stawka osobodnia.
- *  Urlop (decyzja właściciela 2026-11-14): zamiast urlopu wziętego w miesiącu – 1/12 rocznego limitu urlopu × godziny dnia urlopu × stawka. */
-export function kosztDnia(d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) {
+/** Minuty z Czasomierza (zakończone wpisy) na osobę i miesiąc: klucz `personId|RRRR-MM`. */
+export function minutyCzasu(czas: Rec[] = []): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const e of czas) {
+    if (!live(e) || !e.do) continue;
+    const k = `${e.personId}|${String(e.dzien).slice(0, 7)}`;
+    out.set(k, (out.get(k) ?? 0) + (Date.parse(e.do) - Date.parse(e.od)) / 60_000);
+  }
+  return out;
+}
+
+/**
+ * Koszt jednostki pracy osoby w miesiącu (gr): koszt całkowity ÷ dni pracy z harmonogramu (dzień) albo ÷ godziny z Czasomierza (godzina, decyzja C7);
+ * bez godzin w Płacach: stawka + koszt umowy ÷ wymiar (× godziny dnia dla dnia); bez stawki: stawka osobodnia (÷ godziny dnia dla godziny).
+ * Urlop (decyzja właściciela 2026-11-14): zamiast urlopu wziętego w miesiącu – 1/12 rocznego limitu urlopu × godziny dnia urlopu × stawka.
+ */
+function kosztJednostki(d: Dane, stawkaOsobodniaGr: number, P: Przygotowane, godzina: boolean) {
   const memo = new Map<string, number>();
+  const czasMin = godzina ? minutyCzasu(d.czas) : null;
   return (personId: string, m: string): number => {
     const k = `${personId}|${m}`;
     let v = memo.get(k);
@@ -220,15 +236,18 @@ export function kosztDnia(d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) 
     const r = P.osoby.has(personId) ? wierszRozliczenia(P, d, personId, m) : null;
     const p = parametryMiesiaca(d.parametry, m);
     const urlop12 = r ? Number(P.osoby.get(personId)?.urlopDni ?? 0) * p.godzUrlop * r.stawka / 12 : 0;
-    if (r && r.stawka > 0 && r.godziny > 0 && r.dniPracy > 0) v = Math.round((r.koszt - r.urlop + urlop12) / r.dniPracy);
+    const jednostek = czasMin ? (czasMin.get(k) ?? 0) / 60 : r?.dniPracy ?? 0;
+    if (r && r.stawka > 0 && r.godziny > 0 && jednostek > 0) v = Math.round((r.koszt - r.urlop + urlop12) / jednostek);
     else if (r && r.stawka > 0) {
       const wymiar = p.godzDnia * dniRobocze(m, d.dniWolne) * Number(P.osoby.get(personId)?.etat ?? 1);
-      v = Math.round((r.stawka + (wymiar ? (r.kosztUmowy + urlop12) / wymiar : 0)) * p.godzDnia);
-    } else v = stawkaOsobodniaGr;
+      v = Math.round((r.stawka + (wymiar ? (r.kosztUmowy + urlop12) / wymiar : 0)) * (godzina ? 1 : p.godzDnia));
+    } else v = Math.round(godzina ? stawkaOsobodniaGr / p.godzDnia : stawkaOsobodniaGr);
     memo.set(k, v);
     return v;
   };
 }
+export const kosztDnia = (d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) => kosztJednostki(d, stawkaOsobodniaGr, P, false);
+export const kosztGodziny = (d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) => kosztJednostki(d, stawkaOsobodniaGr, P, true);
 
 /** Robocizna zlecenia (gr): Σ wpisów harmonogramu (½ dnia = 0,5) × koszt dnia osoby w danym miesiącu. */
 export const robociznaZlecenia = (jobId: string, entries: Rec[], koszt: (personId: string, m: string) => number): number =>

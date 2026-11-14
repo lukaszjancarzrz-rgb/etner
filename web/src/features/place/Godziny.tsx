@@ -10,7 +10,8 @@ import { useDane } from './dane.js';
 import { kw, lb, MIES, MIES_PELNE, parseH, poprzedniMiesiac, zlText } from './fmt.js';
 import { useDesk } from '../../core/layout/status.js';
 import { Select } from '../../core/ui/select.js';
-import { MIESIACE, przygotuj } from './model.js';
+import { fmtMinuty } from '@etner/shared';
+import { MIESIACE, minutyCzasu, przygotuj } from './model.js';
 import { zapiszMiesiac } from './zapis.js';
 
 /** Pole w komórce tabeli: lokalny tekst, zapis przy opuszczeniu pola; Enter przechodzi do osoby poniżej. */
@@ -37,6 +38,10 @@ const th = 'px-1.5 py-2 text-right font-cond font-semibold text-ink-2';
 export function Godziny({ rok }: { rok: string }) {
   const d = useDane();
   const P = useMemo(() => przygotuj(d), [d]);
+  const czasMin = useMemo(() => minutyCzasu(d.czas), [d.czas]);
+  /** Godziny z Czasomierza (C6): tylko podpowiedź, wstawienie przyciskiem. */
+  const zCzasu = (id: string, m: string) => czasMin.get(`${id}|${m}`) ?? 0;
+  const wstaw = (id: string, m: string) => zapiszMiesiac(id, m, { godziny: Math.round(zCzasu(id, m) / 60 * 100) / 100 });
   const desk = useDesk();
   const u = P.urlopyRoku(rok);
   const [mi, setMi] = useState(() => { const p = poprzedniMiesiac(d.dzis); return p.startsWith(rok) ? Number(p.slice(5)) - 1 : 0; });
@@ -58,6 +63,8 @@ export function Godziny({ rok }: { rok: string }) {
                 <label className="grid grid-cols-[minmax(0,1fr)_8rem] items-center gap-3"><span>Godziny</span>
                   <Komorka className="h-12 w-full px-3 text-right text-base" label={`Godziny ${P.nazwa(id)}, ${MIES_PELNE[mi]} ${rok}`} pos={`t-${mi}`} value={rec?.godziny != null ? String(rec.godziny).replace('.', ',') : ''}
                     onSave={(t) => { const h = parseH(t); if (h === 'error') return 'Wpisz godziny, np. 168 albo 160,5 (do 744)'; zapiszMiesiac(id, mm, { godziny: h }); }} /></label>
+                {zCzasu(id, mm) > 0 && <p className="flex items-center justify-between gap-2 text-sm text-ink-2"><span>Czasomierz: <b className="text-ink">{fmtMinuty(zCzasu(id, mm))}</b></span>
+                  <Button variant="secondary" size="sm" onClick={() => wstaw(id, mm)} aria-label={`Wstaw godziny z czasomierza: ${P.nazwa(id)}, ${MIES_PELNE[mi]} ${rok}`}>Wstaw</Button></p>}
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_8rem] items-center gap-2"><span>Koszt umowy (zł)</span>
                   {nad ? <Button variant="ghost" size="sm" aria-label={`Przywróć obliczony koszt umowy: ${P.nazwa(id)}`} className="h-11 w-11 px-0" onClick={() => zapiszMiesiac(id, mm, { kosztUmowyGr: null })}><ArrowCounterClockwise className="h-5 w-5" /></Button> : <span />}
                   <Komorka hi={nad} className="h-12 w-full px-3 text-right text-base" label={`Koszt umowy ${P.nazwa(id)}, ${MIES_PELNE[mi]} ${rok}`} pos={`k-${mi}`} value={zlText(P.kosztUmowy(id, mm))}
@@ -89,7 +96,7 @@ export function Godziny({ rok }: { rok: string }) {
     <div className="grid gap-6">
       <section className="grid gap-2" aria-label="Godziny">
         <SectionTitle>Godziny do wypłaty w {rok}</SectionTitle>
-        <p className="text-sm text-ink-2">Wpisz godziny i wyjdź z pola (Enter – osoba niżej, Tab – następny miesiąc). Szare: dni pracy z harmonogramu, tylko podpowiedź.</p>
+        <p className="text-sm text-ink-2">Wpisz godziny i wyjdź z pola (Enter – osoba niżej, Tab – następny miesiąc). Szare: dni pracy z harmonogramu, tylko podpowiedź. ⏱ godziny z Czasomierza – kliknij, aby wstawić.</p>
         <div className="overflow-x-auto rounded-[4px] border border-line bg-card">
           <table className="w-full text-sm tabular-nums">
             <Glowa razem="Razem" />
@@ -104,6 +111,8 @@ export function Godziny({ rok }: { rok: string }) {
                         <Komorka label={`Godziny ${P.nazwa(id)}, ${m} ${rok}`} pos={`${r}-${i}`} value={mies(id, i)?.godziny != null ? String(mies(id, i)!.godziny).replace('.', ',') : ''}
                           onSave={(t) => { const h = parseH(t); if (h === 'error') return 'Wpisz godziny, np. 168 albo 160,5 (do 744)'; zapiszMiesiac(id, `${rok}-${MIESIACE[i]}`, { godziny: h }); }} />
                         <span className="block text-xs text-ink-2" title="dni pracy w harmonogramie">{u.get(id)?.dniPracy[i] ? `${lb(u.get(id)!.dniPracy[i])} dni` : '—'}</span>
+                        {zCzasu(id, `${rok}-${MIESIACE[i]}`) > 0 && <button type="button" onClick={() => wstaw(id, `${rok}-${MIESIACE[i]}`)} title={`Czasomierz: ${fmtMinuty(zCzasu(id, `${rok}-${MIESIACE[i]}`))} – kliknij, aby wstawić`}
+                          aria-label={`Wstaw godziny z czasomierza: ${P.nazwa(id)}, ${m} ${rok}`} className="block w-full text-right text-xs font-semibold text-action hover:underline">⏱ {lb(Math.round(zCzasu(id, `${rok}-${MIESIACE[i]}`) / 60 * 10) / 10)} h</button>}
                       </td>
                     ))}
                     <td className="px-2.5 py-1 text-right font-bold">{lb(MIESIACE.reduce((s, _, i) => s + Number(mies(id, i)?.godziny ?? 0), 0))}</td>
