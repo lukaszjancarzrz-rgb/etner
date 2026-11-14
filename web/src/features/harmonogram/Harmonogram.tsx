@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { dayLong, dayShort, mapsUrl, markDaySeen, telHref, today, useCrewColor, useDict, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { ViewedDays } from '../../core/badges.js';
 import { useUnseenDays } from '../../core/layout/useBadges.js';
-import { CategoryLegend, CatTab, catTint, useCatColor } from '../../core/ui/category.js';
+import { CategoryLegend, catTint, useCatColor } from '../../core/ui/category.js';
 import { useDesk } from '../../core/layout/status.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Badge, Empty, Segmented } from '../../core/ui/bits.js';
@@ -12,7 +12,7 @@ import { Button } from '../../core/ui/button.js';
 import { cn } from '../../core/ui/cn.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import type { Route } from '../../routes.js';
-import { isSerwis, useJobs, type JobView } from '../zlecenia/jobs.js';
+import { isSerwis, opisZlecenia, useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
 import { cellKey, cellsOf, cellText, highlightJob, jobColor, monthDays, whereDay, whereFrom, type Slot } from './model.js';
@@ -314,18 +314,19 @@ export function CellView({ slots, ctx, compact, link }: { slots: Slot[]; ctx: Ct
   );
 }
 
-/** Zlecenie w komórce: zakładka branży (skrót) z lewej, klient pogrubiony, pod nim miejscowość (zawijana, bez ucinania); tło w odcieniu kategorii. */
+/** Zlecenie w komórce: pasek w kolorze zlecenia, klient pogrubiony, krótki opis, miejscowość; tło w odcieniu branży. */
 function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx; compact?: boolean; link?: boolean }) {
   const j = ctx.jobs.get(slot.jobId);
   const c = ctx.cat(j?.kategoria);
   const body = (
     <>
-      {j?.kategoria ? <CatTab name={j.kategoria} className="self-start" /> : <span className="w-10 shrink-0" aria-hidden />}
       <span className={cn('grid min-w-0 leading-tight', compact ? 'text-sm' : 'text-[15px]')}>
         <span className="sr-only">{j ? `Zlecenie ${j.numer} ` : 'zlecenie '}{j?.kategoria ? `${j.kategoria}, ` : ''}</span>
         <span className="line-clamp-2 font-semibold [overflow-wrap:anywhere]">
           {j?.client?.nazwa ?? ''}{j && isSerwis(j) && <><Wrench className="ml-1 inline h-3.5 w-3.5 align-[-2px] text-ink-2" aria-hidden /><span className="sr-only">, serwis</span></>}{slot.polDnia && <span className="ml-1 font-bold text-ink-2"><span aria-hidden>½</span><span className="sr-only">, pół dnia</span></span>}
         </span>
+        {/* krótki opis zamiast znaczka branży (właściciel 2026-11-14); bez opisu: rodzaj i branża na szaro */}
+        {j && opisZlecenia(j).text && <span className={cn('line-clamp-1 [overflow-wrap:anywhere]', opisZlecenia(j).fallback ? 'text-ink-2' : 'font-medium')}><span className="sr-only">, </span>{opisZlecenia(j).text}</span>}
         {j?.site?.miejscowosc && <span className="text-ink-2 [overflow-wrap:anywhere]"><span className="sr-only">, </span>{j.site.miejscowosc}</span>}
       </span>
     </>
