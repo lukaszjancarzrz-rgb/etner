@@ -343,9 +343,9 @@ function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: '
   );
 }
 
-// komputer: podświetlenie dopiero po 2 s na kafelku (właściciel 2026-11-14), zejście z kafelka gasi od razu
+// komputer: podświetlenie dopiero po 1 s na kafelku (właściciel 2026-11-14), zejście z kafelka gasi od razu
 let hlTimer: ReturnType<typeof setTimeout> | undefined;
-const highlightLater = (jobId: string | null) => { clearTimeout(hlTimer); if (!jobId) return highlightJob(null); hlTimer = setTimeout(() => highlightJob(jobId), 2000); };
+const highlightLater = (jobId: string | null) => { clearTimeout(hlTimer); if (!jobId) return highlightJob(null); hlTimer = setTimeout(() => highlightJob(jobId), 1000); };
 
 /** Telefon: przytrzymanie kafelka podświetla zlecenie (zamiast otwierać kartę); dotknięcie gdzie indziej gasi. */
 let lpTimer: ReturnType<typeof setTimeout> | undefined, lpDone = false;

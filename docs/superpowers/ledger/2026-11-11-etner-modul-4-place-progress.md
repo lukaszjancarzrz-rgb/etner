@@ -34,3 +34,4 @@ Owner 2026-11-14: Nawiguj ignored map links without https / coordinates → maps
 Owner 2026-11-14: revenue form field „Zlecenie” (searchable job combobox; fills empty klient/miejscowość/branża/opis; hint when the job already has another revenue); e2e finanse added. Released (R86).
 Owner 2026-11-14: schedule — job colour stripe (by job number, 12-colour palette) + highlight of all entries of a job on hover/focus/long-press; Combobox search ignores Polish diacritics (dabrowa → Dąbrowa) everywhere. Released (R86).
 Owner 2026-11-14: schedule job highlight after 2 s hover (leave clears at once). Released (R86).
+Owner 2026-11-14: schedule highlight delay 1 s. Released (R86).
