@@ -30,7 +30,10 @@ type Zmiany = { jobs: string[]; clients: string[]; sites: string[] };
 export function JobCard({ id, highlight }: { id: string; highlight?: string }) {
   const job = useEntity('jobs', id);
   const client = useEntity('clients', job?.clientId);
-  const site = useEntity('sites', job?.siteId ?? undefined);
+  const ownSite = useEntity('sites', job?.siteId ?? undefined);
+  // zlecenie bez obiektu, a klient ma dokładnie jeden: adres i Nawiguj z niego (zapis obiektu przy najbliższej edycji zlecenia)
+  const clientSites = useEntities('sites', (s) => !!job && !job.siteId && s.clientId === job.clientId);
+  const site = ownSite ?? (clientSites.length === 1 ? clientSites[0] : undefined);
   const sched = useEntities('schedule_entries');
   const admin = useIsAdmin();
   const loading = useLoading();

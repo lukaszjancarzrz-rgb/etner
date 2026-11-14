@@ -1,5 +1,5 @@
 import { PencilSimple, Plus, X } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useEntities, type Rec } from '../../core/store.js';
 import { Button } from '../../core/ui/button.js';
 import { Combobox } from '../../core/ui/combobox.js';
@@ -27,6 +27,11 @@ export function ClientPicker({ clientId, siteId, onChange, nowy, onNowy, err }: 
   const sites = useEntities('sites');
   const clientOpts = useMemo(() => [...clients].sort((a, b) => a.nazwa.localeCompare(b.nazwa, 'pl')).map((c) => ({ value: c.id, label: c.nazwa as string })), [clients]);
   const clientSites = useMemo(() => sites.filter((s) => s.clientId === clientId), [sites, clientId]);
+  // zlecenie/lead bez obiektu (albo z obiektem innego klienta): wybierz naprawdę pierwszy obiekt klienta – zapisze się z formularzem
+  const realSites = clientSites.filter((s) => !s._tmp);
+  useEffect(() => {
+    if (!nowy && clientId && realSites.length && !realSites.some((s) => s.id === siteId)) onChange({ clientId, siteId: realSites[0]!.id });
+  }, [nowy, clientId, siteId, realSites.map((s) => s.id).join()]); // eslint-disable-line react-hooks/exhaustive-deps
   const [editing, setEditing] = useState(false);
   const [newSite, setNewSite] = useState(false);
   const client = clients.find((c) => c.id === clientId);

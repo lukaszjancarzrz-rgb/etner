@@ -76,8 +76,15 @@ export function fmtWhen(iso: string): string {
 /** Link do nawigacji: zapisany link mapy albo wyszukiwanie adresu w Google Maps. */
 export function mapsUrl(site: Rec | undefined): string | undefined {
   if (!site) return undefined;
-  if (/^https?:\/\//.test(site.mapa ?? '')) return site.mapa;
-  const q = [site.adres, site.miejscowosc].filter(Boolean).join(', ');
+  const m = String(site.mapa ?? '').trim();
+  if (/^https?:\/\//i.test(m)) return m;
+  // link wklejony bez https:// (np. maps.app.goo.gl/…) albo współrzędne „49.62, 19.53”
+  if (/^(www\.)?[\w-]+(\.[\w-]+)+\/\S*$/.test(m)) return `https://${m}`;
+  if (/^-?\d{1,2}[.,]\d+\s*[,; ]\s*-?\d{1,3}[.,]\d+$/.test(m)) {
+    const [lat, lng] = m.split(/\s*[,; ]\s*(?=-?\d{1,3}[.,]\d+$)/).map((x) => x.replace(',', '.'));
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+  const q = [site.adres, site.miejscowosc].filter(Boolean).join(', ') || m; // sam opis miejsca w polu Mapa też wystarczy do szukania
   return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : undefined;
 }
 

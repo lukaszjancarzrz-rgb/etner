@@ -326,11 +326,11 @@ test('klienci: admin zmienia telefon i adres obiektu, zmiana na karcie zlecenia;
   await expect(form).toBeHidden();
   await expect(page.getByRole('link', { name: tel })).toBeVisible();
 
-  await page.getByRole('button', { name: /^Edytuj obiekt/ }).first().click();
-  const sf = page.getByRole('dialog', { name: 'Edycja obiektu' });
-  await sf.getByLabel('Adres', { exact: true }).fill(adres);
-  await sf.getByRole('button', { name: 'Zapisz' }).click();
-  await expect(sf).toBeHidden();
+  // adres obiektu zmienia się w oknie „Edycja klienta” (sekcja Obiekty)
+  await page.getByRole('button', { name: 'Edytuj klienta' }).click();
+  await form.getByRole('textbox', { name: /^Adres/ }).first().fill(adres);
+  await form.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(form).toBeHidden();
   await expect(page.getByText(adres)).toBeVisible();
 
   await page.getByRole('link', { name: /Z\d+/ }).first().click();
