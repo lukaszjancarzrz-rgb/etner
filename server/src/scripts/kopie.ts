@@ -7,6 +7,8 @@ import type { CronDef, ModuleDef } from '../core/registry.js';
 import { settings, users } from '../core/schema-base.js';
 import { attachments } from '../modules/dziennik/schema.js';
 import { exportToSheets, googleSheets, tablesForExport, type SheetsClient } from './export-sheets.js';
+import { kopiaBazy, magazynR2 } from './kopia-bazy.js';
+import { dayOf } from '@etner/shared';
 
 type Env = Record<string, string | undefined>;
 
@@ -41,7 +43,7 @@ export async function copyPhotos(db: Db, copy: (key: string) => Promise<void>, s
   return keys.length;
 }
 
-/** Zadania nocne: eksport do arkusza 02:30 i kopia zdjęć 03:00 (brak konfiguracji = pominięcie z wpisem w dzienniku błędów). */
+/** Zadania nocne: eksport do arkusza 02:30, kopia zdjęć 03:00, pełna kopia bazy 03:45 (brak konfiguracji = pominięcie z komunikatem). */
 export function kopieCrons(env: Env, defs: ModuleDef[], sheets?: SheetsClient): CronDef[] {
   return [
     {
@@ -67,6 +69,14 @@ export function kopieCrons(env: Env, defs: ModuleDef[], sheets?: SheetsClient): 
         await copyPhotos(deps.db, async (key) => {
           await s3.send(new CopyObjectCommand({ Bucket: to, CopySource: `${from}/${key}`, Key: `files/${key}` }));
         }, stamped(deps.db, 'kopia_zdjec_at'));
+      },
+    },
+    {
+      name: 'kopia-bazy', schedule: '45 3 * * *',
+      async run(deps: AppDeps) {
+        const m = magazynR2(env);
+        if (!m) throw new Error('Kopia bazy pominięta: brak R2_BUCKET (albo R2_BACKUP_BUCKET), R2_ENDPOINT, R2_KEY, R2_SECRET.');
+        await kopiaBazy(deps.db, m, dayOf((deps.now ?? (() => new Date()))()));
       },
     },
   ];

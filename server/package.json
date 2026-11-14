@@ -10,7 +10,8 @@
     "test": "vitest run",
     "create-admin": "node dist/scripts/create-admin-cli.js",
     "db:generate": "drizzle-kit generate",
-    "migrate-old": "tsx src/scripts/migrate-old/cli.ts"
+    "migrate-old": "tsx src/scripts/migrate-old/cli.ts",
+    "kopia:przywroc": "node dist/scripts/przywroc-kopie.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1154.0",
