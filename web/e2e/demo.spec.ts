@@ -400,13 +400,15 @@ test('zakres prac: admin dodaje punkt ze zdjęciem, pracownik go widzi bez edycj
   await ctx.close();
 });
 
-test('licznik „Na jutro” w menu pokazuje niezabrane rzeczy pracownika', async ({ page }) => {
+test('licznik „Na jutro” w menu pokazuje niezabrane rzeczy pracownika', async ({ page }, info) => {
   await page.goto('/');
   await page.getByRole('button', { name: /Bartek Gawlik/ }).click();
   await expect(page.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
   // demo: ekipa Bartka ma 2 rzeczy na dziś (jedna zabrana) i 2 na jutro; licznik liczy tylko jutro
-  await expect(page.getByRole('link', { name: 'Na jutro, 2 nowe' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Zakupy', exact: true })).toBeVisible(); // pracownik: bez licznika zakupów
+  await expect(page.getByRole('link', { name: 'Zakupy', exact: true }).filter({ visible: true })).toBeVisible(); // pracownik: bez licznika zakupów
+  // telefon: Na jutro w Więcej (dolny pasek: Czasomierz), licznik też na „Więcej”
+  if (info.project.name.startsWith('iPhone')) await page.getByRole('navigation', { name: 'Menu' }).filter({ visible: true }).getByRole('link', { name: /^Więcej, \d+ nowe/ }).click();
+  await expect(page.getByRole('link', { name: /^Na jutro.*2 nowe$/ }).filter({ visible: true })).toBeVisible();
 });
 
 test('admin: Samochody, Narzędzia, Rzeczy nietypowe i Na jutro w Zapleczu (zakładki); adres #jutro działa', async ({ page }, info) => {
@@ -415,7 +417,7 @@ test('admin: Samochody, Narzędzia, Rzeczy nietypowe i Na jutro w Zapleczu (zak�
   const nav = page.getByRole('navigation', { name: 'Menu' }).filter({ visible: true });
   await expect(nav.getByRole('link', { name: /^(Na jutro|Samochody|Narzędzia|Rzeczy nietypowe)/ })).toHaveCount(0);
   if (phone) {
-    await expect(nav.getByRole('listitem')).toHaveCount(4);
+    await expect(nav.getByRole('listitem')).toHaveCount(5); // Harmonogram, Zlecenia, Czasomierz, Zakupy, Więcej
     await nav.getByRole('link', { name: /^Więcej/ }).click();
     await page.getByRole('main').getByRole('link', { name: /^Zaplecze/ }).click();
   } else {

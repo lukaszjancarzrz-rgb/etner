@@ -39,9 +39,19 @@ function checkRange(db: Db, personId: string, od: string, doo: string, now: Date
   if (Date.parse(doo) <= Date.parse(od)) throw bad('Godzina zakończenia musi być późniejsza niż rozpoczęcia');
   if (Date.parse(doo) - Date.parse(od) > MAX_WPIS_H * 3_600_000) throw bad(`Wpis może mieć najwyżej ${MAX_WPIS_H} h`);
   if (Date.parse(doo) > now.getTime() + 5 * 60_000) throw bad('Godzina zakończenia jest w przyszłości');
+  if (kolizja(db, personId, od, doo, now, skipId)) throw bad('Te godziny nakładają się na inny wpis');
+}
+
+/** Czy [od, do) nachodzi na inny wpis tej osoby (trwający = do teraz). */
+function kolizja(db: Db, personId: string, od: string, doo: string, now: Date, skipId?: string): boolean {
   const inne = db.select().from(timeEntries).where(and(eq(timeEntries.personId, personId), live, skipId ? ne(timeEntries.id, skipId) : undefined)).all();
-  const kolizja = inne.find((e) => Date.parse(e.od) < Date.parse(doo) && Date.parse(e.do ?? now.toISOString()) > Date.parse(od));
-  if (kolizja) throw bad('Te godziny nakładają się na inny wpis');
+  return inne.some((e) => Date.parse(e.od) < Date.parse(doo) && Date.parse(e.do ?? now.toISOString()) > Date.parse(od));
+}
+
+/** Ostatni wpis zatrzymany automatycznie, w który trafia `at` (spóźniony zapis z kolejki offline). */
+function autoStoppedAt(db: Db, userId: string, at: string): TimeRow | undefined {
+  const last = db.select().from(timeEntries).where(and(eq(timeEntries.userId, userId), live)).orderBy(desc(timeEntries.od)).get();
+  return last?.autoStop && last.doCz && Date.parse(at) < Date.parse(last.doCz) && Date.parse(at) > Date.parse(last.od) ? last : undefined;
 }
 
 function insert(db: Db, by: string, v: Omit<typeof timeEntries.$inferInsert, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'dzien'>): TimeRow {
@@ -66,6 +76,11 @@ export function start(db: Db, userId: string, jobId: string | null, at: string):
     const doo = new Date(Math.max(Date.parse(at), Date.parse(r.od))).toISOString();
     patch(db, userId, r, { do: doo, doCz: doo });
     at = doo;
+  } else {
+    // zmiana zlecenia z kolejki offline po auto-stopie: poprzedni wpis kończy się o `at`
+    const auto = autoStoppedAt(db, userId, at);
+    if (auto) patch(db, userId, auto, { do: at, doCz: at, autoStop: false });
+    if (kolizja(db, personId, at, new Date(Date.parse(at) + 1).toISOString(), new Date(at))) throw bad('W tym czasie masz już inny wpis');
   }
   return insert(db, userId, { userId, personId, jobId, od: at, odCz: at, zrodlo: 'czasomierz' });
 }
@@ -74,9 +89,8 @@ export function start(db: Db, userId: string, jobId: string | null, at: string):
 export function stop(db: Db, userId: string, d: Omit<TimeStop, 'opId'> & { at: string }, now: Date): TimeRow | null {
   let r = running(db, userId);
   if (!r) {
-    const last = db.select().from(timeEntries).where(and(eq(timeEntries.userId, userId), live)).orderBy(desc(timeEntries.od)).get();
-    if (!last?.autoStop || !last.doCz || Date.parse(d.at) >= Date.parse(last.doCz) || Date.parse(d.at) <= Date.parse(last.od)) return null;
-    r = last;
+    r = autoStoppedAt(db, userId, d.at);
+    if (!r) return null;
   }
   const doCz = new Date(Math.max(Date.parse(d.at), Date.parse(r.od) + 60_000)).toISOString();
   const od = d.od ?? r.od, doo = d.do ?? doCz;
@@ -104,6 +118,7 @@ export function update(db: Db, by: string, old: TimeRow, d: Omit<TimeEntryUpdate
   const od = d.od ?? old.od, doo = d.do ?? old.do;
   if (doo) checkRange(db, old.personId, od, doo, now, old.id);
   else if (Date.parse(od) > now.getTime()) throw bad('Godzina rozpoczęcia jest w przyszłości');
+  else if (kolizja(db, old.personId, od, now.toISOString(), now, old.id)) throw bad('Te godziny nakładają się na inny wpis');
   const set = Object.fromEntries(Object.entries(d).filter(([, v]) => v !== undefined)) as Partial<typeof timeEntries.$inferInsert>;
   return patch(db, by, old, { ...set, edytowal: by, edytowalAt: now.toISOString() });
 }
@@ -115,4 +130,9 @@ export function remove(db: Db, by: string, old: TimeRow): void {
 }
 
 export const markReminded = (db: Db, r: TimeRow, now: Date): TimeRow => patch(db, null, r, { przypomnianoAt: now.toISOString() });
-export const autoStop = (db: Db, r: TimeRow, at: string): TimeRow => patch(db, null, r, { do: at, doCz: at, autoStop: true });
+/** Auto-stop tylko wpisu, który nadal trwa (Stop wysłany w trakcie tiku crona wygrywa). */
+export function autoStop(db: Db, r: TimeRow, at: string): TimeRow | undefined {
+  const row = db.update(timeEntries).set({ do: at, doCz: at, autoStop: true, updatedAt: new Date().toISOString() }).where(and(eq(timeEntries.id, r.id), isNull(timeEntries.do), live)).returning().get();
+  if (row) recordChange(db, null, 'time_entries', r.id, 'update', r, row);
+  return row;
+}

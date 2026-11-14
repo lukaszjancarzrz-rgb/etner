@@ -98,4 +98,35 @@ describe('czasomierz', () => {
     expect((await call(worker, 'POST', '/api/time/start', { at: pl('08:00'), jobId: null })).status).toBe(400);
     expect((await call(worker, 'POST', '/api/time/start', { at: pl('07:00'), jobId: 'nie-ma' })).status).toBe(400);
   });
+
+  it('kolejka offline: zmiana zlecenia i stop po auto-stopie nie dublują czasu; poprawka trwającego wpisu sprawdza nakładanie', async () => {
+    const { deps, call, worker, set, J, K } = await setup();
+    set('07:00');
+    const a = await call(worker, 'POST', '/api/time/start', { at: pl('07:00'), jobId: J });
+    await czasTick(deps, new Date(pl('18:00'))); // auto-stop o 18:00 (11 h)
+    set('19:00');
+    const k = await call(worker, 'POST', '/api/time/start', { at: pl('15:00'), jobId: K });
+    expect(k.status).toBe(200);
+    const s = await call(worker, 'POST', '/api/time/stop', { at: pl('17:00') });
+    expect(s.json).toMatchObject({ id: k.json.id, od: pl('15:00'), do: pl('17:00') });
+    const ch = (await call(worker, 'GET', '/api/changes?since=0')).json as { changes?: { id: string; data: Record<string, unknown> }[] };
+    const rows = new Map<string, Record<string, unknown>>();
+    for (const c of (Array.isArray(ch) ? ch : ch.changes ?? []) as { id: string; data: Record<string, unknown> }[]) if (c.data) rows.set(c.id, c.data);
+    expect(rows.get(a.json.id)).toMatchObject({ do: pl('15:00'), autoStop: false });
+    // trwający wpis: przesunięcie startu na czas innego wpisu odrzucone
+    set('20:30');
+    const t = await call(worker, 'POST', '/api/time/start', { at: pl('20:30'), jobId: null });
+    expect((await call(worker, 'PUT', `/api/time-entries/${t.json.id}`, { od: pl('16:00') })).status).toBe(400);
+  });
+
+  it('auto-stop nie nadpisuje stopu wysłanego w trakcie tiku', async () => {
+    const { deps, call, worker, set } = await setup();
+    set('07:00');
+    await call(worker, 'POST', '/api/time/start', { at: pl('07:00'), jobId: null });
+    const { runningAll, autoStop } = await import('./service.js');
+    const [r] = runningAll(deps.db);
+    set('17:00');
+    await call(worker, 'POST', '/api/time/stop', { at: pl('16:30') });
+    expect(autoStop(deps.db, r!, pl('18:00'))).toBeUndefined();
+  });
 });

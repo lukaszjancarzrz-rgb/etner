@@ -103,7 +103,7 @@ function Wpisy() {
           <thead><tr><Th>Dzień</Th><Th>Osoba</Th><Th>Zlecenie</Th><Th>Od – do</Th><Th num>Czas</Th><Th>Uwagi</Th></tr></thead>
           <tbody>
             {rows.map((e) => { const o = opis(e.jobId), r = roznica(e); return (
-              <Tr key={e.id} onOpen={() => setEdit(e)}>
+              <Tr key={e.id} onOpen={e._tmp ? undefined : () => setEdit(e)}>
                 <Td className="align-top">{dayShort(e.dzien)}</Td>
                 <Td className="align-top font-semibold">{nazwa(e.personId)}</Td>
                 <Td className="align-top">{o.numer ? `${o.numer} ${o.klient}` : o.klient}</Td>
@@ -116,7 +116,7 @@ function Wpisy() {
       ) : (
         <ul className="grid gap-2">
           {rows.map((e) => { const o = opis(e.jobId), r = roznica(e); return (
-            <li key={e.id}><Panel><button type="button" onClick={() => setEdit(e)} className="grid w-full gap-0.5 px-3 py-3 text-left">
+            <li key={e.id}><Panel><button type="button" disabled={!!e._tmp} onClick={() => setEdit(e)} className="grid w-full gap-0.5 px-3 py-3 text-left">
               <span className="flex items-baseline justify-between gap-3"><span className="font-bold">{nazwa(e.personId)} <span className="text-sm font-normal text-ink-2">{dayShort(e.dzien)}</span></span><span className="font-semibold tabular-nums">{e.do ? fmtMinuty(minuty(e, nowIso)) : 'trwa'}</span></span>
               <span className="truncate text-sm text-ink-2">{o.numer ? `${o.numer} ${o.klient}` : o.klient}</span>
               <span className="text-sm tabular-nums">{odDo(e)}{poprawione(e) && <span className="ml-2 text-xs text-ink-2 line-through">{godzinaPl(e.odCz)} – {godzinaPl(e.doCz)}</span>}{r !== 0 && <span className="ml-2 text-xs text-ink-2">{r > 0 ? '+' : '−'}{Math.abs(r)} min</span>}</span>

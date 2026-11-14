@@ -1,4 +1,4 @@
-import { chwilaPl, fmtMinuty, godzinaPl, minutyMiedzy } from '@etner/shared';
+import { addDays, chwilaPl, fmtMinuty, godzinaPl, MAX_WPIS_H, minutyMiedzy } from '@etner/shared';
 import { useState } from 'react';
 import { fmtDay, useMe } from '../../core/data.js';
 import type { Rec } from '../../core/store.js';
@@ -21,9 +21,10 @@ export default function StopDialog({ entry, onClose }: { entry: Rec; onClose: ()
   const [kom, setKom] = useState('');
   const zmiana = od !== od0 || doo !== do0;
   const odIso = od !== od0 ? chwilaPl(entry.dzien, od || od0) : entry.od;
-  const doIso = doo !== do0 ? chwilaPl(entry.dzien, doo || do0) : teraz;
+  const doDnia = (d: string) => chwilaPl(d, doo || do0);
+  const doIso = doo !== do0 ? (doDnia(entry.dzien) > odIso ? doDnia(entry.dzien) : doDnia(addDays(entry.dzien, 1))) : teraz; // koniec przed startem = następny dzień (praca przez północ)
   const min = minutyMiedzy(odIso, doIso);
-  const err = !od || !doo ? 'Wpisz obie godziny.' : zmiana && min <= 0 ? 'Godzina zakończenia musi być późniejsza niż rozpoczęcia (praca przez północ: biuro).' : '';
+  const err = !od || !doo ? 'Wpisz obie godziny.' : zmiana && (min <= 0 || min > MAX_WPIS_H * 60) ? `Sprawdź godziny – wpis może mieć najwyżej ${MAX_WPIS_H} h.` : '';
   const zapisz = () => {
     if (err || !me) return;
     stop(me.id, { ...(od !== od0 && { od: odIso }), ...(doo !== do0 && { do: doIso }), ...(zmiana && kom.trim() && { komentarz: kom.trim() }) });

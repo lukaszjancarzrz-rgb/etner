@@ -1,4 +1,4 @@
-import { chwilaPl, dayOf, MAX_WPIS_H, minutyMiedzy, oknoEdycjiOd } from '@etner/shared';
+import { addDays, chwilaPl, dayOf, MAX_WPIS_H, minutyMiedzy, oknoEdycjiOd } from '@etner/shared';
 import { useState } from 'react';
 import { today, useMe } from '../../core/data.js';
 import { useEntities, type Rec } from '../../core/store.js';
@@ -30,7 +30,8 @@ export function WpisForm({ entry, personId, admin, onClose }: { entry?: Rec; per
   const [sure, setSure] = useState(false);
   const trwa = !!entry && !entry.do;
   const opcje = [{ value: 'none', label: 'Bez zlecenia' }, ...useWybor(entry?.jobId)];
-  const odIso = od && dzien ? chwilaPl(dzien, od) : '', doIso = doo && dzien ? chwilaPl(dzien, doo) : '';
+  const odIso = od && dzien ? chwilaPl(dzien, od) : '';
+  const doIso = doo && dzien ? (chwilaPl(dzien, doo) > odIso ? chwilaPl(dzien, doo) : chwilaPl(addDays(dzien, 1), doo)) : ''; // koniec przed startem = następny dzień (praca przez północ)
   const min = odIso && doIso ? minutyMiedzy(odIso, doIso) : 0;
   const err = !dzien || !od || (!trwa && !doo) ? 'Wpisz dzień i obie godziny.' : !trwa && min <= 0 ? 'Godzina zakończenia musi być późniejsza niż rozpoczęcia.'
     : min > MAX_WPIS_H * 60 ? `Wpis może mieć najwyżej ${MAX_WPIS_H} h.` : !admin && (dzien > dzis || dzien < oknoEdycjiOd(dzis)) ? 'Poprawiać możesz wpisy z tego i poprzedniego tygodnia.' : admin && !entry && !osoba ? 'Wybierz osobę.' : '';

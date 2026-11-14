@@ -63,17 +63,18 @@ export const wybraneId = (w: Wybrane): string | null | undefined => (w.sel === '
 export function WyborZlecenia({ plan, w, onChange, name }: { plan: { jobId: string; polDnia: boolean }[]; w: Wybrane; onChange: (w: Wybrane) => void; name: string }) {
   const opis = useOpisZlecenia();
   const opcje = useWybor();
-  const Opt = ({ v, children }: { v: string; children: React.ReactNode }) => (
-    <label className={cn('flex min-h-14 cursor-pointer items-center gap-3 rounded-[4px] border px-3 py-2', w.sel === v ? 'border-action bg-action/8' : 'border-line')}>
+  // zwykła funkcja (nie komponent): licznik odświeża ekran co sekundę – komponent zdefiniowany tutaj montowałby radia od nowa (utrata fokusu)
+  const opt = (v: string, children: React.ReactNode) => (
+    <label key={v} className={cn('flex min-h-14 cursor-pointer items-center gap-3 rounded-[4px] border px-3 py-2', w.sel === v ? 'border-action bg-action/8' : 'border-line')}>
       <input type="radio" name={name} checked={w.sel === v} onChange={() => onChange({ ...w, sel: v })} className="h-5 w-5 shrink-0 accent-[var(--action)]" />
       <div className="min-w-0 flex-1">{children}</div>
     </label>
   );
   return (
     <div className="grid gap-2">
-      {plan.map((p) => <Opt key={p.jobId} v={p.jobId}><Linia o={opis(p.jobId)} extra={p.polDnia ? '½ dnia' : undefined} /></Opt>)}
-      <Opt v="none"><p className="font-semibold">Bez zlecenia</p><p className="text-sm text-ink-2">magazyn, dojazd, inne</p></Opt>
-      <Opt v="inne"><p className="font-semibold">Inne zlecenie…</p></Opt>
+      {plan.map((p) => opt(p.jobId, <Linia o={opis(p.jobId)} extra={p.polDnia ? '½ dnia' : undefined} />))}
+      {opt('none', <><p className="font-semibold">Bez zlecenia</p><p className="text-sm text-ink-2">magazyn, dojazd, inne</p></>)}
+      {opt('inne', <p className="font-semibold">Inne zlecenie…</p>)}
       {w.sel === 'inne' && <Combobox value={w.inne} onValueChange={(v) => onChange({ ...w, inne: v })} options={opcje} placeholder="Wybierz zlecenie" search="Numer, klient, miejscowość" empty="Nie ma takiego zlecenia." />}
     </div>
   );

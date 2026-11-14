@@ -45,10 +45,12 @@ export function routes(app: Hono, deps: AppDeps): void {
     const { opId, personId, ...d } = await body(c, timeEntryCreateSchema);
     const admin = can(me(c), 'admin');
     if (personId && !admin) throw forbidden();
-    if (!admin && !wOknieEdycji(dayOf(d.od), dayOf(now()))) throw forbidden(OKNO);
     const person = personId ? users.listPeople(db).find((p) => p.id === personId) : undefined;
     if (personId && !person) throw notFound();
-    const { result } = runOp(db, opId, me(c).id, () => svc.create(db, me(c).id, d, now(), person && { id: person.id, userId: person.userId ?? null }));
+    const { result } = runOp(db, opId, me(c).id, () => {
+      if (!admin && !wOknieEdycji(dayOf(d.od), dayOf(now()))) throw forbidden(OKNO); // w runOp: powtórka z kolejki po zmianie tygodnia dostaje zapisany wynik
+      return svc.create(db, me(c).id, d, now(), person && { id: person.id, userId: person.userId ?? null });
+    });
     return c.json(result);
   });
 
@@ -67,6 +69,7 @@ export function routes(app: Hono, deps: AppDeps): void {
     if (!r) throw notFound();
     mayEdit(c, r);
     if (!can(me(c), 'admin') && r.zrodlo !== 'reczny') throw forbidden('Wpisu z czasomierza nie usuniesz – popraw godziny.');
+    if (!can(me(c), 'admin') && r.createdBy !== me(c).id) throw forbidden('Ten wpis dodało biuro – usunąć może tylko biuro.');
     svc.remove(db, me(c).id, r);
     return c.json({ ok: true });
   });

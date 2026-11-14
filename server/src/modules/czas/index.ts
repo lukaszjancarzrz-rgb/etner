@@ -14,7 +14,7 @@ export async function czasTick(deps: AppDeps, now = (deps.now ?? (() => new Date
     const limit = limitStopu(r.od);
     const push = (title: string, body: string) => (r.userId ? notify(deps, [r.userId], { title, body, url: '#czas', tag: `czas-${r.id}` }).catch((e) => logError(deps.db, 'push', e)) : undefined);
     if (now.getTime() >= Date.parse(limit)) {
-      autoStop(deps.db, r, limit);
+      if (!autoStop(deps.db, r, limit)) continue;
       await push(`⏱ Czasomierz zatrzymany o ${godzinaPl(limit)}`, 'Zapomniałeś o Stop? Sprawdź godzinę zakończenia w Moich godzinach.');
     } else if (!r.przypomnianoAt && now.getTime() >= Date.parse(limit) - PRZYPOMNIENIE_MIN * 60_000) {
       markReminded(deps.db, r, now);
