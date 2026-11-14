@@ -7,4 +7,4 @@ Owner 2026-11-14: mockups approved („wdrażamy czasomierz”); answers C3 (aut
 - Ruling R98: worker may delete only manual entries they created themselves; office-added entries only by admin.
 Tasks: server + shared + migration 0028 (d7c5157), robocizna/Płace/job card (fb0236c, 4750cec), screens (0bdbb9e, Sonnet), review fixes (Opus review: late switch after auto-stop, running-entry overlap, radio remount each second, cron vs stop race, midnight entries, admin tmp rows, edit-window inside runOp, delete of office entries).
 Verification: shared 25, web 139, server 330; build ok; size 137.09/150, 418.27/500 kB; e2e full run 100 passed / 6 skipped / 4 failed → 2 caused by new bottom bar (fixed, rerun green), 2 known flaky (full.spec:12, paszport.spec:128); czas.spec + a11y green.
-Release pending owner „tak” (new module + migration 0028 additive).
+Owner 2026-11-14: „tak” — Czasomierz released to produkcja + modul-1 (migration 0028 additive).
