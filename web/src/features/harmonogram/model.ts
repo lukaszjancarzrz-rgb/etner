@@ -95,3 +95,22 @@ export function whereDay(days: Iterable<string>, from: string): string | undefin
   for (const d of days) if (d >= from && (!m || d < m)) m = d;
   return m;
 }
+
+/** Kolor zlecenia w harmonogramie (pasek z lewej): z numeru, więc kolejne zlecenia różne, a to samo zlecenie wszędzie takie samo. */
+export const JOB_COLORS = ['#2a78d6', '#e34948', '#1baf7a', '#eda100', '#7a3e9d', '#00a3b4', '#eb6834', '#3f5368', '#d6409f', '#6b8e23', '#8a5a00', '#0a2240'];
+export function jobColor(numer: string | null | undefined): string {
+  const n = Number(/\d+/.exec(String(numer ?? ''))?.[0] ?? NaN);
+  if (Number.isFinite(n)) return JOB_COLORS[n % JOB_COLORS.length]!;
+  let h = 0;
+  for (const ch of String(numer ?? '')) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return JOB_COLORS[Math.abs(h) % JOB_COLORS.length]!;
+}
+
+// podświetlenie wszystkich wpisów jednego zlecenia (najechanie / przytrzymanie): jeden <style>, bez przerysowania harmonogramu
+let hlStyle: HTMLStyleElement | null = null;
+export function highlightJob(jobId: string | null): void {
+  if (typeof document === 'undefined') return;
+  hlStyle ??= document.head.appendChild(document.createElement('style'));
+  const id = jobId && /^[\w-]+$/.test(jobId) ? jobId : null;
+  hlStyle.textContent = id ? `[data-job]:not([data-job="${id}"]){opacity:.35}[data-job="${id}"]{box-shadow:0 0 0 2px var(--ink)}` : '';
+}

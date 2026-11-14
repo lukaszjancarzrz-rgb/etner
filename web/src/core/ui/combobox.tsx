@@ -3,6 +3,7 @@ import { CaretUpDown, Check } from '@phosphor-icons/react';
 import { Command } from 'cmdk';
 import { useState } from 'react';
 import { cn } from './cn.js';
+import { matches } from '../data.js';
 import type { Option } from './select.js';
 
 /** Wybór z wyszukiwaniem (klienci, zlecenia). */
@@ -19,7 +20,8 @@ export function Combobox({ value, onValueChange, options, placeholder = 'Wybierz
       </P.Trigger>
       <P.Portal>
         <P.Content sideOffset={6} align="start" className="z-50 w-[var(--radix-popover-trigger-width)] min-w-64 rounded-[4px] border border-line bg-card shadow-overlay">
-          <Command>
+          {/* bez polskich znaków: „dabrowa” znajduje „Dąbrowa” */}
+          <Command filter={(v, q) => (matches(q, v) ? 1 : 0)}>
             <Command.Input placeholder={search} className="h-12 w-full border-b border-line bg-transparent px-3 text-base outline-none placeholder:text-ink-3" />
             <Command.List className="max-h-[min(18rem,calc(var(--radix-popover-content-available-height)-3.5rem))] overflow-y-auto p-1">
               <Command.Empty className="px-3 py-4 text-sm text-ink-2">{empty}</Command.Empty>

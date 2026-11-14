@@ -15,7 +15,7 @@ import type { Route } from '../../routes.js';
 import { isSerwis, useJobs, type JobView } from '../zlecenia/jobs.js';
 import { CellEditor } from './CellEditor.js';
 import { DraftBar } from './Drafts.js';
-import { cellKey, cellsOf, cellText, monthDays, whereDay, whereFrom, type Slot } from './model.js';
+import { cellKey, cellsOf, cellText, highlightJob, jobColor, monthDays, whereDay, whereFrom, type Slot } from './model.js';
 import { Avatar } from '../../core/ui/avatar.js';
 import { useRepairMarks, type RepairMark } from '../samochody/repairs.js';
 
@@ -333,13 +333,25 @@ function JobChip({ slot, ctx, compact, link }: { slot: Extract<Slot, { rodzaj: '
   // zakładka branży obok nazwy także na telefonie (właściciel 2026-11-11: niższe kafelki)
   const cls = cn('flex min-w-0 items-start gap-1.5 rounded-[3px] py-1 pr-1.5 pl-1 text-left text-ink', !compact && 'gap-2 px-2 py-1.5');
   // wyjątek od „kolor branży tylko w zakładkach” (decyzja właściciela): komórka harmonogramu zostaje z odcieniem branży
-  const style = { background: catTint(c) };
-  if (!link) return <span className={cls} style={style}>{body}</span>;
+  // A+C (właściciel 2026-11-14): pasek w kolorze zlecenia z lewej i podświetlenie wszystkich wpisów zlecenia
+  const style = { background: catTint(c), borderLeft: `4px solid ${jobColor(j?.numer)}` };
+  const hl = { 'data-job': slot.jobId, onMouseEnter: () => highlightJob(slot.jobId), onMouseLeave: () => highlightJob(null), onFocus: () => highlightJob(slot.jobId), onBlur: () => highlightJob(null) };
+  if (!link) return <span className={cls} style={style} {...hl}>{body}</span>;
   return (
-    <a href={`#zl/${slot.jobId}`} style={style}
+    <a href={`#zl/${slot.jobId}`} style={style} {...hl} {...longPress(slot.jobId)}
       className={cn(cls, 'decoration-1 underline-offset-2 transition-[outline-color] duration-200 outline-1 outline-transparent hover:underline hover:outline-ink-2/50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action')}>{body}</a>
   );
 }
+
+/** Telefon: przytrzymanie kafelka podświetla zlecenie (zamiast otwierać kartę); dotknięcie gdzie indziej gasi. */
+let lpTimer: ReturnType<typeof setTimeout> | undefined, lpDone = false;
+const longPress = (jobId: string) => ({
+  onTouchStart: () => { lpDone = false; clearTimeout(lpTimer); highlightJob(null); lpTimer = setTimeout(() => { lpDone = true; highlightJob(jobId); setTimeout(() => document.addEventListener('touchstart', () => highlightJob(null), { once: true }), 0); }, 450); },
+  onTouchEnd: () => clearTimeout(lpTimer),
+  onTouchMove: () => clearTimeout(lpTimer),
+  onClick: (e: React.MouseEvent) => { if (lpDone) { e.preventDefault(); lpDone = false; } },
+  onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+});
 
 function CodeChip({ slot, ctx }: { slot: Exclude<Slot, { rodzaj: 'zlecenie' }>; ctx: Ctx }) {
   const color = slot.rodzaj === 'kod' ? ctx.codes.get(slot.kod) ?? '#8896a5' : undefined;

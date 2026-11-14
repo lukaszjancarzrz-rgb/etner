@@ -72,3 +72,12 @@ it('whereFrom/whereDay: przed 16:00 od dziś, od 16:00 czasu polskiego od jutra 
   expect(whereDay([...days, '2026-10-31'], '2026-10-31')).toBe('2026-10-31'); // sobota z wpisem zostaje
   expect(whereDay(['2026-10-30'], '2026-10-31')).toBeUndefined();
 });
+
+describe('jobColor', () => {
+  it('kolejne numery różne, ten sam numer ten sam kolor, bez cyfr stabilnie', async () => {
+    const { jobColor } = await import('./model.js');
+    expect(jobColor('Z0047')).toBe(jobColor('Z0047'));
+    expect(new Set(['Z0047', 'Z0048', 'Z0049', 'Z0050'].map(jobColor)).size).toBe(4);
+    expect(jobColor('abc')).toBe(jobColor('abc'));
+  });
+});
