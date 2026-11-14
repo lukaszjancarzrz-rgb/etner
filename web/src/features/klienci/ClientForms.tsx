@@ -1,13 +1,13 @@
 import { Plus, Trash, WarningCircle } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { store, type Rec } from '../../core/store.js';
-import { Segmented, Textarea } from '../../core/ui/bits.js';
+import { store, useEntities, type Rec } from '../../core/store.js';
+import { Badge, Segmented, Textarea } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Field, Input } from '../../core/ui/input.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
 import { createVia, updateVia } from '../../core/write.js';
-import { clientBody, type ClientDraft } from './forms.js';
+import { clientBody, SITE_FIELDS, siteBody, siteChanged, type ClientDraft, type SiteDraft } from './forms.js';
 
 type Errs = Record<string, string>;
 
@@ -63,6 +63,8 @@ const Actions = ({ busy, onClose }: { busy: boolean; onClose: () => void }) => (
   </div>
 );
 
+const toDraft = (s?: Rec) => Object.fromEntries(SITE_FIELDS.map((k) => [k, s?.[k] ?? ''])) as SiteDraft;
+
 /** Edycja klienta (admin): typ, nazwa, telefony, e-maile, NIP, notatki. */
 export function ClientForm({ client, onClose }: { client: Rec; onClose: () => void }) {
   const [f, setF] = useState<ClientDraft>({
@@ -73,13 +75,26 @@ export function ClientForm({ client, onClose }: { client: Rec; onClose: () => vo
   const [busy, setBusy] = useState(false);
   const [dups, setDups] = useState<Rec[] | null>(null);
   const set = (p: Partial<ClientDraft>) => setF((x) => ({ ...x, ...p }));
+  const passports = useEntities('passports');
+  // istniejące obiekty klienta (bez nieprzesłanych jeszcze) + nowe bloki; `key` odróżnia bloki w liście
+  const [saved] = useState(() => store.all('sites').filter((s) => s.clientId === client.id && !s._tmp));
+  const [rows, setRows] = useState<{ key: string; id?: string; d: SiteDraft }[]>(() => saved.map((s) => ({ key: s.id, id: s.id, d: toDraft(s) })));
+  const setRow = (key: string, p: Partial<SiteDraft>) => setRows((xs) => xs.map((r) => (r.key === key ? { ...r, d: { ...r.d, ...p } } : r)));
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const { body, errors } = clientBody(f);
+    const todo = rows.filter((r) => (r.id ? siteChanged(r.d, saved.find((s) => s.id === r.id) as Partial<SiteDraft>) : SITE_FIELDS.some((k) => r.d[k].trim())));
+    for (const r of todo) { const e = siteBody(r.d).error; if (e) errors[`site.${r.key}`] = e; }
     setErr(errors);
     if (Object.keys(errors).length) return;
-    const p = updateVia('clients', client.id, body, { kind: 'klient', url: `/api/clients/${client.id}`, method: 'PUT', body }) as Promise<{ duplicates?: Rec[] }>;
+    const pc = updateVia('clients', client.id, body, { kind: 'klient', url: `/api/clients/${client.id}`, method: 'PUT', body }) as Promise<{ duplicates?: Rec[] }>;
+    const ps = todo.map((r) => {
+      const b = siteBody(r.d).body;
+      return r.id ? updateVia('sites', r.id, b, { kind: 'klient', url: `/api/sites/${r.id}`, method: 'PUT', body: b })
+        : createVia<Rec>('sites', { kind: 'klient', url: `/api/clients/${client.id}/sites`, method: 'POST', body: b }, { ...b, clientId: client.id });
+    });
+    const p = Promise.all([pc, ...ps]).then(([r]) => r);
     void send(p, 'Klient', setErr, setBusy, { 'Podaj nazwę klienta': 'nazwa' }, (r) => (r?.duplicates?.length ? setDups(r.duplicates) : onClose()), onClose);
   }
 
@@ -111,6 +126,33 @@ export function ClientForm({ client, onClose }: { client: Rec; onClose: () => vo
             </div>
             <Field label="NIP">{(id) => <Input id={id} inputMode="numeric" value={f.nip} onChange={(e) => set({ nip: e.target.value })} />}</Field>
             <Field label="Notatki" hint="Widzą je tylko administratorzy.">{(id, d) => <Textarea id={id} aria-describedby={d} value={f.notatki} onChange={(e) => set({ notatki: e.target.value })} />}</Field>
+            <fieldset className="grid gap-3">
+              <legend className="mb-1 text-sm font-semibold">Obiekty (lokalizacje)</legend>
+              {rows.map((r) => {
+                const label = r.d.nazwa || [r.d.adres, r.d.miejscowosc].filter(Boolean).join(', ') || 'nowy obiekt';
+                const paszport = r.id && passports.some((p) => p.siteId === r.id);
+                const txt = (k: keyof SiteDraft, name: string, hint?: string) => (
+                  <Field label={name} hint={hint}>
+                    {(id, d) => <Input id={id} aria-describedby={d} aria-label={`${name}: ${label}`} value={r.d[k]} onChange={(e) => setRow(r.key, { [k]: e.target.value })} />}
+                  </Field>
+                );
+                return (
+                  <div key={r.key} className="grid gap-3 rounded-[4px] border border-line p-3">
+                    <div className="flex min-h-11 items-center justify-between gap-2">
+                      <span className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold"><span className="truncate">{r.id ? label : 'Nowy obiekt'}</span>{paszport && <Badge tone="action">Paszport</Badge>}</span>
+                      {!r.id && <Button variant="ghost" size="icon" aria-label="Usuń nowy obiekt" onClick={() => setRows((xs) => xs.filter((x) => x.key !== r.key))}><Trash className="h-5 w-5" /></Button>}
+                    </div>
+                    {paszport && <p className="text-sm text-ink-2">Zmiana adresu zmieni adres w paszporcie klienta.</p>}
+                    {err[`site.${r.key}`] && <p role="alert" className="text-sm text-danger">{err[`site.${r.key}`]}</p>}
+                    {txt('nazwa', 'Nazwa', 'Np. Dom, Pensjonat, Hala. Można zostawić puste.')}
+                    <div className="grid gap-3 min-[560px]:grid-cols-2">{txt('adres', 'Adres')}{txt('miejscowosc', 'Miejscowość')}</div>
+                    {txt('mapa', 'Mapa', 'Link do mapy. Puste: nawigacja szuka po adresie.')}
+                    <Field label="Opis">{(id) => <Textarea id={id} aria-label={`Opis: ${label}`} value={r.d.opis} onChange={(e) => setRow(r.key, { opis: e.target.value })} placeholder="Dojazd, gdzie zaparkować, kod do bramy" />}</Field>
+                  </div>
+                );
+              })}
+              <Button variant="ghost" size="sm" className="justify-self-start text-action" onClick={() => setRows((xs) => [...xs, { key: `n${xs.length}-${Date.now()}`, d: toDraft() }])}><Plus className="h-4 w-4" weight="bold" />Dodaj obiekt</Button>
+            </fieldset>
             <Actions busy={busy} onClose={onClose} />
           </form>
         )}
@@ -119,20 +161,17 @@ export function ClientForm({ client, onClose }: { client: Rec; onClose: () => vo
   );
 }
 
-const SITE_FIELDS = ['nazwa', 'adres', 'miejscowosc', 'mapa', 'opis'] as const;
-type SiteDraft = Record<(typeof SITE_FIELDS)[number], string>;
-
 /** Nowy obiekt klienta albo edycja istniejącego (admin). */
-export function SiteForm({ clientId, site, onClose }: { clientId: string; site?: Rec; onClose: () => void }) {
-  const [f, setF] = useState<SiteDraft>(Object.fromEntries(SITE_FIELDS.map((k) => [k, site?.[k] ?? ''])) as SiteDraft);
+export function SiteForm({ clientId, site, onClose, onCreated }: { clientId: string; site?: Rec; onClose: () => void; onCreated?: (id: string) => void }) {
+  const [f, setF] = useState<SiteDraft>(toDraft(site));
   const [err, setErr] = useState<Errs>({});
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<SiteDraft>) => setF((x) => ({ ...x, ...p }));
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const body = Object.fromEntries(SITE_FIELDS.map((k) => [k, f[k].trim()])) as SiteDraft;
-    if (!body.nazwa && !body.adres && !body.miejscowosc) return setErr({ adres: 'Podaj adres, miejscowość albo nazwę obiektu' });
+    const { body, error } = siteBody(f);
+    if (error) return setErr({ adres: error });
     setErr({});
     const had = new Set(store.all('sites').filter((s) => s.clientId === clientId && !s._tmp).map((s) => s.id));
     const p = site
@@ -140,7 +179,7 @@ export function SiteForm({ clientId, site, onClose }: { clientId: string; site?:
       // R70: identyczny obiekt klienta – serwer zwraca istniejący
       : createVia<Rec>('sites', { kind: 'klient', url: `/api/clients/${clientId}/sites`, method: 'POST', body }, { ...body, clientId })
         .then((r) => { if (had.has(r?.id)) toast('Taki obiekt już jest – użyto istniejącego'); return r; });
-    void send(p, 'Obiekt', setErr, setBusy, {}, onClose, onClose);
+    void send(p, 'Obiekt', setErr, setBusy, {}, (r) => { const id = (r as Rec | undefined)?.id; if (id) onCreated?.(id); onClose(); }, onClose);
   }
 
   const text = (k: keyof SiteDraft, label: string, hint?: string) => (

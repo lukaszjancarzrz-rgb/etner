@@ -1,6 +1,6 @@
 import { fmtZl } from '@etner/shared';
 import { TitleCount } from '../../core/layout/TopBar.js';
-import { ArrowLeft, ArrowsMerge, Briefcase, EnvelopeSimple, MagnifyingGlass, MapPin, NavigationArrow, PencilSimple, Phone, Plus, UsersThree } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowsMerge, Briefcase, EnvelopeSimple, MagnifyingGlass, MapPin, NavigationArrow, PencilSimple, Phone, UsersThree } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { fmtDay, mapsUrl, matches, telHref, useIsAdmin, useLoading, useStatusGroup } from '../../core/data.js';
 import { useDesk } from '../../core/layout/status.js';
@@ -14,7 +14,7 @@ import { withoutEchoes } from '../../core/write.js';
 import { Skeleton } from '../../core/ui/skeleton.js';
 import type { Route } from '../../routes.js';
 import { fmtTermin } from '../zlecenia/JobCard.js';
-import { ClientForm, SiteForm } from './ClientForms.js';
+import { ClientForm } from './ClientForms.js';
 import { duplicatePairs, type DupPair } from './forms.js';
 import { MergeDialog, SiteMergeDialog } from './Merge.js';
 import { PaszportSekcja } from '../paszport/Paszport.js';
@@ -143,7 +143,7 @@ function ClientCard({ id }: { id: string }) {
   const allJobs = useEntities('jobs');
   const allLeads = useEntities('leads');
   const sites = useMemo(() => withoutEchoes(allSites.filter((s) => s.clientId === id), ['nazwa', 'adres', 'miejscowosc']), [allSites, id]);
-  const [form, setForm] = useState<null | { kind: 'client' } | { kind: 'site'; site?: Rec } | { kind: 'merge' } | { kind: 'site-merge'; site: Rec }>(null);
+  const [form, setForm] = useState<null | { kind: 'client' } | { kind: 'merge' } | { kind: 'site-merge'; site: Rec }>(null);
   const jobs = useMemo(() => allJobs.filter((j) => j.clientId === id).sort((a, b) => String(b.numer).localeCompare(String(a.numer), 'pl', { numeric: true })), [allJobs, id]);
   const leads = useMemo(() => allLeads.filter((l) => l.clientId === id), [allLeads, id]);
 
@@ -182,7 +182,6 @@ function ClientCard({ id }: { id: string }) {
                     <span className="min-w-0"><span className="block font-semibold">{s.nazwa || s.miejscowosc || 'Obiekt'}</span><span className="block text-sm text-ink-2">{[s.adres, s.miejscowosc].filter(Boolean).join(', ')}</span>{s.opis && <span className="block text-sm">{s.opis}</span>}</span>
                   </span>
                   <span className="flex shrink-0 flex-wrap gap-2 pl-7 min-[560px]:pl-0">
-                    {admin && <Button variant="ghost" size="sm" className="h-11" aria-label={`Edytuj obiekt ${s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ')}`} onClick={() => setForm({ kind: 'site', site: s })}><PencilSimple className="h-4 w-4" />Edytuj</Button>}
                     {admin && sites.length > 1 && !s._tmp && <Button variant="ghost" size="sm" className="h-11 text-ink-2" aria-label={`Połącz obiekt ${s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ')} z innym`} onClick={() => setForm({ kind: 'site-merge', site: s })}><ArrowsMerge className="h-4 w-4" />Połącz z…</Button>}
                     {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[4px] border border-line px-4 text-sm font-semibold"><NavigationArrow className="h-4 w-4" />Nawiguj</a>}
                   </span>
@@ -191,7 +190,6 @@ function ClientCard({ id }: { id: string }) {
             })}
           </ul>
         )}
-        {admin && <Button variant="ghost" size="sm" className="justify-self-start text-action" onClick={() => setForm({ kind: 'site' })}><Plus className="h-4 w-4" weight="bold" />Dodaj obiekt</Button>}
       </div>
 
       {sites.filter((s) => !s._tmp).map((s) => <PaszportSekcja key={s.id} site={s} label={sites.length > 1 ? s.nazwa || [s.adres, s.miejscowosc].filter(Boolean).join(', ') : undefined} />)}
@@ -199,7 +197,6 @@ function ClientCard({ id }: { id: string }) {
       {form?.kind === 'client' && <ClientForm client={c} onClose={() => setForm(null)} />}
       {form?.kind === 'merge' && <MergeDialog a={c} onClose={() => setForm(null)} />}
       {form?.kind === 'site-merge' && <SiteMergeDialog a={form.site} sites={sites} onClose={() => setForm(null)} />}
-      {form?.kind === 'site' && <SiteForm clientId={id} site={form.site} onClose={() => setForm(null)} />}
 
       {admin && (
         <div className="grid gap-2">

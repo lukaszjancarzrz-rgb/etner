@@ -14,6 +14,19 @@ export function clientBody(f: ClientDraft): { body: ClientDraft; errors: Record<
   return { body: { typ: f.typ, nazwa, telefony: clean(f.telefony), emaile: clean(f.emaile), nip: f.nip.trim(), notatki: f.notatki.trim() }, errors };
 }
 
+export const SITE_FIELDS = ['nazwa', 'adres', 'miejscowosc', 'mapa', 'opis'] as const;
+export type SiteDraft = Record<(typeof SITE_FIELDS)[number], string>;
+export const SITE_ERR = 'Podaj adres, miejscowość albo nazwę obiektu';
+
+/** Obiekt: przycięte pola i błąd, gdy nazwa, adres i miejscowość są puste. */
+export function siteBody(f: SiteDraft): { body: SiteDraft; error?: string } {
+  const body = Object.fromEntries(SITE_FIELDS.map((k) => [k, (f[k] ?? '').trim()])) as SiteDraft;
+  return { body, error: !body.nazwa && !body.adres && !body.miejscowosc ? SITE_ERR : undefined };
+}
+
+/** Czy edycja zmieniła obiekt względem zapisanego (po przycięciu pól). */
+export const siteChanged = (draft: SiteDraft, saved: Partial<SiteDraft>) => SITE_FIELDS.some((k) => (draft[k] ?? '').trim() !== (saved[k] ?? '').trim());
+
 type C = { id: string; nazwa: string; telefony?: string[]; emaile?: string[]; nip?: string; notatki?: string; createdAt?: string };
 
 /** Nazwa do porównania: bez wielkości liter, diakrytyków i interpunkcji, słowa w dowolnej kolejności („Kowalski Jan” = „jan kowalski”). */

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { clientBody, duplicatePairs, mergedClient, nameKey } from './forms.js';
+import { clientBody, duplicatePairs, mergedClient, nameKey, siteBody, siteChanged } from './forms.js';
 
 it('clientBody: przycina, pomija puste i powtórzone wiersze, błędy przy polach', () => {
   const ok = clientBody({ typ: 'osoba', nazwa: ' Jan ', telefony: [' 600 100 100 ', '', '600 100 100'], emaile: ['', 'a@b.pl '], nip: ' ', notatki: ' x ' });
@@ -28,4 +28,14 @@ it('mergedClient: uzupełnia puste pola, sumuje kontakty bez powtórek', () => {
   const m = mergedClient({ id: 'a', nazwa: 'A', telefony: ['727728903'], emaile: ['a@x.pl'], nip: '', notatki: 'x' },
     { id: 'b', nazwa: 'B', telefony: ['+48 727 728 903', '600100100'], emaile: ['A@x.pl', 'b@x.pl'], nip: '9', notatki: 'y' });
   expect(m).toMatchObject({ nazwa: 'A', telefony: ['727728903', '600100100'], emaile: ['a@x.pl', 'b@x.pl'], nip: '9', notatki: 'x\ny' });
+});
+
+it('siteBody / siteChanged: wymaga nazwy, adresu albo miejscowości; zmiana po przycięciu', () => {
+  const e = { nazwa: '', adres: '', miejscowosc: '', mapa: '', opis: ' x ' };
+  expect(siteBody(e).error).toBeTruthy();
+  const ok = siteBody({ ...e, adres: ' Leśna 1 ' });
+  expect(ok.error).toBeUndefined();
+  expect(ok.body.adres).toBe('Leśna 1');
+  expect(siteChanged({ ...e, adres: 'Leśna 1 ' }, { adres: 'Leśna 1', opis: 'x' })).toBe(false);
+  expect(siteChanged({ ...e, adres: 'Leśna 2' }, { adres: 'Leśna 1', opis: 'x' })).toBe(true);
 });

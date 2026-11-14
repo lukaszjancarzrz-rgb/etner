@@ -5,7 +5,7 @@ import { Button } from '../../core/ui/button.js';
 import { Combobox } from '../../core/ui/combobox.js';
 import { Field, Input } from '../../core/ui/input.js';
 import { Select } from '../../core/ui/select.js';
-import { ClientForm } from './ClientForms.js';
+import { ClientForm, SiteForm } from './ClientForms.js';
 
 export type NewClient = { nazwa: string; telefon: string; email: string; adres: string; miejscowosc: string };
 export const emptyClient = (): NewClient => ({ nazwa: '', telefon: '', email: '', adres: '', miejscowosc: '' });
@@ -28,6 +28,7 @@ export function ClientPicker({ clientId, siteId, onChange, nowy, onNowy, err }: 
   const clientOpts = useMemo(() => [...clients].sort((a, b) => a.nazwa.localeCompare(b.nazwa, 'pl')).map((c) => ({ value: c.id, label: c.nazwa as string })), [clients]);
   const clientSites = useMemo(() => sites.filter((s) => s.clientId === clientId), [sites, clientId]);
   const [editing, setEditing] = useState(false);
+  const [newSite, setNewSite] = useState(false);
   const client = clients.find((c) => c.id === clientId);
 
   if (nowy) {
@@ -57,10 +58,12 @@ export function ClientPicker({ clientId, siteId, onChange, nowy, onNowy, err }: 
       <div className="flex flex-wrap gap-2">
         <Button variant="ghost" size="sm" className="text-action" onClick={() => onNowy(emptyClient())}><Plus className="h-4 w-4" weight="bold" />Nowy klient</Button>
         {client && !client._tmp && <Button variant="ghost" size="sm" className="text-action" onClick={() => setEditing(true)}><PencilSimple className="h-4 w-4" />Edytuj klienta</Button>}
+        {client && !client._tmp && <Button variant="ghost" size="sm" className="text-action" onClick={() => setNewSite(true)}><Plus className="h-4 w-4" weight="bold" />Nowy obiekt</Button>}
       </div>
       {/* okno w portalu, ale zdarzenia Reacta idą w górę do formularza zlecenia: zapis klienta nie może wysłać zlecenia */}
       {editing && client && <span onSubmit={(e) => e.stopPropagation()}><ClientForm client={client} onClose={() => setEditing(false)} /></span>}
-      {clientSites.length > 1 && (
+      {newSite && client && <span onSubmit={(e) => e.stopPropagation()}><SiteForm clientId={client.id} onCreated={(id) => id && onChange({ clientId: client.id, siteId: id })} onClose={() => setNewSite(false)} /></span>}
+      {clientSites.length > 0 && (
         <Field label="Obiekt">{(id) => <Select id={id} value={siteId || clientSites[0]!.id} onValueChange={(s) => onChange({ clientId, siteId: s })} options={clientSites.map((s) => ({ value: s.id, label: siteLabel(s) }))} />}</Field>
       )}
     </div>
