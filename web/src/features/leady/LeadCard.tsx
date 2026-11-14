@@ -1,7 +1,7 @@
-import { ArrowLeft, Briefcase, EnvelopeSimple, Handshake, MapPin, PencilSimple, Phone, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, Briefcase, EnvelopeSimple, Handshake, MapPin, NavigationArrow, PencilSimple, Phone, Trash } from '@phosphor-icons/react';
 import { fmtZl } from '@etner/shared';
 import { useEffect, useMemo, useState } from 'react';
-import { fmtDay, fmtWhen, telHref, today, useDict, useLoading, useMe, useNames, useStatusGroup } from '../../core/data.js';
+import { fmtDay, fmtWhen, mapsUrl, telHref, today, useDict, useLoading, useMe, useNames, useStatusGroup } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { store, useEntities, useEntity, type Rec } from '../../core/store.js';
 import { Badge, Empty, SectionTitle, Textarea } from '../../core/ui/bits.js';
@@ -23,7 +23,11 @@ import { LeadForm, QuickDates } from './LeadForm.js';
 export function LeadCard({ id, highlight }: { id: string; highlight?: string }) {
   const lead = useEntity('leads', id);
   const client = useEntity('clients', lead?.clientId ?? undefined);
-  const site = useEntity('sites', lead?.siteId ?? undefined);
+  const ownSite = useEntity('sites', lead?.siteId ?? undefined);
+  // lead bez obiektu, a klient ma dokładnie jeden: adres i Nawiguj z niego (jak karta zlecenia)
+  const clientSites = useEntities('sites', (s) => !!lead && !lead.siteId && !!lead.clientId && s.clientId === lead.clientId);
+  const site = ownSite ?? (clientSites.length === 1 ? clientSites[0] : undefined);
+  const nav = mapsUrl(site);
   const jobs = useEntities('jobs');
   const loading = useLoading();
   const statusy = useDict('status_leada');
@@ -82,12 +86,13 @@ export function LeadCard({ id, highlight }: { id: string; highlight?: string }) 
             <Button onClick={() => setForm('job')} disabled={!!lead._tmp} className="justify-self-stretch min-[560px]:justify-self-start"><Briefcase className="h-5 w-5" weight="fill" />Zrób zlecenie</Button>
           )}
 
-          {phones.length + emails.length > 0 && (
+          {phones.length + emails.length > 0 || nav ? (
             <div className="flex flex-wrap gap-2">
+              {nav && <a href={nav} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-action px-5 font-bold text-action-ink hover:brightness-110"><NavigationArrow className="h-5 w-5" weight="fill" />Nawiguj</a>}
               {phones.map((t) => <a key={t} href={telHref(t)} className="inline-flex h-12 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold"><Phone className="h-5 w-5" />{t}</a>)}
               {emails.map((m) => <a key={m} href={`mailto:${m}`} className="inline-flex h-12 min-w-0 items-center gap-2 rounded-[4px] border border-line px-5 font-semibold"><EnvelopeSimple className="h-5 w-5 shrink-0" /><span className="truncate">{m}</span></a>)}
             </div>
-          )}
+          ) : null}
 
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4 text-sm min-[560px]:grid-cols-3">
             <div className="col-span-2 min-[560px]:col-span-1">

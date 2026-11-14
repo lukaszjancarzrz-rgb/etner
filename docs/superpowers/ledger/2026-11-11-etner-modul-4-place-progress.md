@@ -38,3 +38,4 @@ Owner 2026-11-14: schedule highlight delay 1 s. Released (R86).
 Owner 2026-11-14: charts (Finanse, Płace) — zoom button (magnifier → dialog, full width, .wykres-duzy lifts SVG max-height) and values under bars (stacked: total; grouped: each series in its colour). Released (R86).
 Owner 2026-11-14: schedule tiles — branch badge removed, short description (krótki opis; fallback rodzaj+branża in grey) shown; job stripe and branch tint stay. Released (R86).
 Owner 2026-11-14: Leady desktop — clicking the open lead row closes the card (like Zlecenia). Released (R86).
+Owner 2026-11-14: new client block (lead/job forms) has „Link do mapy” (newSite.mapa); lead card shows Nawiguj (own site or client's only site). Released (R86).

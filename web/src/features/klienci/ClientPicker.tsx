@@ -7,13 +7,13 @@ import { Field, Input } from '../../core/ui/input.js';
 import { Select } from '../../core/ui/select.js';
 import { ClientForm, SiteForm } from './ClientForms.js';
 
-export type NewClient = { nazwa: string; telefon: string; email: string; adres: string; miejscowosc: string };
-export const emptyClient = (): NewClient => ({ nazwa: '', telefon: '', email: '', adres: '', miejscowosc: '' });
+export type NewClient = { nazwa: string; telefon: string; email: string; adres: string; miejscowosc: string; mapa?: string };
+export const emptyClient = (): NewClient => ({ nazwa: '', telefon: '', email: '', adres: '', miejscowosc: '', mapa: '' });
 
 /** `newClient` + `newSite` do zapisu zlecenia albo leada. */
 export const newClientBody = (n: NewClient) => ({
   newClient: { typ: 'osoba', nazwa: n.nazwa.trim(), telefony: n.telefon.trim() ? [n.telefon.trim()] : [], emaile: n.email.trim() ? [n.email.trim()] : [], nip: '', notatki: '' },
-  newSite: { nazwa: '', adres: n.adres.trim(), miejscowosc: n.miejscowosc.trim(), mapa: '', opis: '' },
+  newSite: { nazwa: '', adres: n.adres.trim(), miejscowosc: n.miejscowosc.trim(), mapa: (n.mapa ?? '').trim(), opis: '' },
 });
 
 export const siteLabel = (s: Rec) => [s.nazwa, s.adres, s.miejscowosc].filter(Boolean).join(', ') || 'Obiekt';
@@ -52,6 +52,7 @@ export function ClientPicker({ clientId, siteId, onChange, nowy, onNowy, err }: 
           <Field label="Adres">{(id) => <Input id={id} value={nowy.adres} onChange={(e) => onNowy({ ...nowy, adres: e.target.value })} />}</Field>
           <Field label="Miejscowość">{(id) => <Input id={id} value={nowy.miejscowosc} onChange={(e) => onNowy({ ...nowy, miejscowosc: e.target.value })} />}</Field>
         </div>
+        <Field label="Link do mapy" hint="Opcjonalnie: link z Google Maps albo współrzędne. Puste – Nawiguj szuka po adresie.">{(id, d) => <Input id={id} aria-describedby={d} inputMode="url" value={nowy.mapa ?? ''} onChange={(e) => onNowy({ ...nowy, mapa: e.target.value })} />}</Field>
       </fieldset>
     );
   }
