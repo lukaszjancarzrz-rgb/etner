@@ -106,14 +106,14 @@ export type CzasRobocizny = { wpisy: Rec[]; godzina: KosztDnia };
 
 /**
  * Wynik zlecenia (gr): przychody netto (bez zwrotu VAT) − materiały (szacunek z przychodów) − robocizna.
- * Robocizna (C7): osoba-miesiąc z wpisami Czasomierza – godziny na zleceniu × koszt godziny; pozostałe – dni z harmonogramu × koszt dnia.
+ * Robocizna (C7): dni, w które osoba ma wpisy Czasomierza – godziny na zleceniu × koszt godziny; pozostałe dni – wpisy harmonogramu × koszt dnia.
  */
 export function wynikZlecenia(jobId: string, revenues: Rec[], entries: Rec[], koszt: KosztDnia, czas?: CzasRobocizny): WynikZlecenia {
   const rev = revenues.filter((r) => live(r) && r.jobId === jobId && r.sposob !== 'zwrot');
   const przychod = rev.reduce((s, r) => s + (r.nettoGr as number), 0);
   const materialy = rev.reduce((s, r) => s + ((r.materialyGr as number | null) ?? 0), 0);
-  const zCzasu = new Set((czas?.wpisy ?? []).filter((e) => live(e) && e.do).map((e) => `${e.personId}|${String(e.dzien).slice(0, 7)}`));
-  const wpisy = entries.filter((e) => live(e) && e.jobId === jobId && !zCzasu.has(`${e.personId}|${String(e.dzien).slice(0, 7)}`));
+  const zCzasu = new Set((czas?.wpisy ?? []).filter((e) => live(e) && e.do).map((e) => `${e.personId}|${e.dzien}`));
+  const wpisy = entries.filter((e) => live(e) && e.jobId === jobId && !zCzasu.has(`${e.personId}|${e.dzien}`));
   const dni = wpisy.reduce((s, e) => s + (e.polDnia ? 0.5 : 1), 0);
   const czasJob = (czas?.wpisy ?? []).filter((e) => live(e) && e.do && e.jobId === jobId);
   const h = (e: Rec) => (Date.parse(e.do) - Date.parse(e.od)) / 3_600_000;

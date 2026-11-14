@@ -113,5 +113,10 @@ describe('robocizna zlecenia', () => {
     expect(k('a', '2026-04')).toBe(Math.round((kw.koszt - kw.urlop + urlop12) / 10));
     expect(k('a', '2026-05')).toBe(Math.round(3500 + (218_443 + urlop12) / (8 * dniRobocze('2026-05', []))));
     expect(k('x', '2026-04')).toBe(5_000); // stawka osobodnia ÷ 8 h
+    // miesiąc mieszany: dzień z harmonogramu bez czasomierza liczy się jako 8 h (start czasomierza w połowie miesiąca)
+    const mix = dane({ czas, entries: [{ id: 'e1', personId: 'a', dzien: '2026-04-01', rodzaj: 'zlecenie', jobId: 'J' }, { id: 'e2', personId: 'a', dzien: '2026-04-09', rodzaj: 'zlecenie', jobId: 'J' }] });
+    const km = rozliczenieMiesiaca(mix, '2026-04').wiersze[0]!;
+    expect(kosztGodziny(mix, 40_000)('a', '2026-04')).toBe(Math.round((km.koszt - km.urlop + urlop12) / 18));
+    expect(kosztDnia(mix, 40_000)('a', '2026-04')).toBe(Math.round((km.koszt - km.urlop + urlop12) / 18 * 8));
   });
 });

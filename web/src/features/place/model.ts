@@ -222,13 +222,14 @@ export function minutyCzasu(czas: Rec[] = []): Map<string, number> {
 }
 
 /**
- * Koszt jednostki pracy osoby w miesiącu (gr): koszt całkowity ÷ dni pracy z harmonogramu (dzień) albo ÷ godziny z Czasomierza (godzina, decyzja C7);
- * bez godzin w Płacach: stawka + koszt umowy ÷ wymiar (× godziny dnia dla dnia); bez stawki: stawka osobodnia (÷ godziny dnia dla godziny).
- * Urlop (decyzja właściciela 2026-11-14): zamiast urlopu wziętego w miesiącu – 1/12 rocznego limitu urlopu × godziny dnia urlopu × stawka.
+ * Koszt pracy osoby w miesiącu (gr) za dzień albo godzinę. Godziny pracy w miesiącu = godziny z Czasomierza + dni z harmonogramu bez wpisów czasomierza × godziny dnia
+ * (bez Czasomierza: dni pracy × godziny dnia, czyli koszt dnia = koszt całkowity ÷ dni pracy). Bez godzin w Płacach: stawka + koszt umowy ÷ wymiar; bez stawki: stawka osobodnia.
+ * Urlop (decyzja właściciela 2026-11-14): zamiast urlopu wziętego w miesiącu – 1/12 rocznego limitu urlopu × godziny dnia urlopu × stawka. Czasomierz: decyzja C7.
  */
 function kosztJednostki(d: Dane, stawkaOsobodniaGr: number, P: Przygotowane, godzina: boolean) {
   const memo = new Map<string, number>();
-  const czasMin = godzina ? minutyCzasu(d.czas) : null;
+  const czasMin = minutyCzasu(d.czas);
+  const dniCzasu = new Set((d.czas ?? []).filter((e) => live(e) && e.do).map((e) => `${e.personId}|${e.dzien}`));
   return (personId: string, m: string): number => {
     const k = `${personId}|${m}`;
     let v = memo.get(k);
@@ -236,12 +237,16 @@ function kosztJednostki(d: Dane, stawkaOsobodniaGr: number, P: Przygotowane, god
     const r = P.osoby.has(personId) ? wierszRozliczenia(P, d, personId, m) : null;
     const p = parametryMiesiaca(d.parametry, m);
     const urlop12 = r ? Number(P.osoby.get(personId)?.urlopDni ?? 0) * p.godzUrlop * r.stawka / 12 : 0;
-    const jednostek = czasMin ? (czasMin.get(k) ?? 0) / 60 : r?.dniPracy ?? 0;
-    if (r && r.stawka > 0 && r.godziny > 0 && jednostek > 0) v = Math.round((r.koszt - r.urlop + urlop12) / jednostek);
+    const minT = czasMin.get(k) ?? 0;
+    const dniBez = minT ? P.entries.filter((e) => e.personId === personId && String(e.dzien).startsWith(m) && czyDzienPracy(e) && !dniCzasu.has(`${personId}|${e.dzien}`)).reduce((s, e) => s + waga(e), 0) : r?.dniPracy ?? 0;
+    const godzinPracy = minT / 60 + dniBez * p.godzDnia;
+    let naGodzine: number;
+    if (r && r.stawka > 0 && r.godziny > 0 && godzinPracy > 0) naGodzine = (r.koszt - r.urlop + urlop12) / godzinPracy;
     else if (r && r.stawka > 0) {
       const wymiar = p.godzDnia * dniRobocze(m, d.dniWolne) * Number(P.osoby.get(personId)?.etat ?? 1);
-      v = Math.round((r.stawka + (wymiar ? (r.kosztUmowy + urlop12) / wymiar : 0)) * (godzina ? 1 : p.godzDnia));
-    } else v = Math.round(godzina ? stawkaOsobodniaGr / p.godzDnia : stawkaOsobodniaGr);
+      naGodzine = r.stawka + (wymiar ? (r.kosztUmowy + urlop12) / wymiar : 0);
+    } else naGodzine = stawkaOsobodniaGr / p.godzDnia;
+    v = Math.round(godzina ? naGodzine : naGodzine * p.godzDnia);
     memo.set(k, v);
     return v;
   };
