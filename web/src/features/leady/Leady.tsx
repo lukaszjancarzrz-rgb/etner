@@ -141,7 +141,7 @@ function LeadTable({ groups, selected, open }: { groups: Grupa[]; selected?: str
     kat: (l) => (l.kategoria ? abbr(l.kategoria) : ''), nr: (l) => l.numer, klient: nazwaOf, temat: (l) => l.temat, miejsc: (l) => l.site?.miejscowosc,
     status: (l) => l.status, wartosc: (l) => l.wartoscGr, kontakt: (l) => l.nastepny,
   }, open ? ['nr', 'temat', 'miejsc', 'wartosc'] : []);
-  useEffect(() => { document.querySelector(`a[aria-current="page"][href="#ld/${selected}"]`)?.closest('tr')?.scrollIntoView({ block: 'nearest' }); }, [selected]);
+  useEffect(() => { document.querySelector('table a[aria-current="page"]')?.closest('tr')?.scrollIntoView({ block: 'nearest' }); }, [selected]);
   return (
     <Table aria-label="Leady">
       <thead>
@@ -175,12 +175,13 @@ function LeadTable({ groups, selected, open }: { groups: Grupa[]; selected?: str
           const on = l.id === selected;
           const overdue = g.overdue;
           return (
-            <Tr key={l.id} href={`#ld/${l.id}`} selected={on} className="scroll-mt-28">
+            <Tr key={l.id} href={on ? '#leady' : `#ld/${l.id}`} selected={on} className="scroll-mt-28">
               <Td pad="py-1.5 pr-2.5">{l.kategoria && <><CatTab name={l.kategoria} flush /><span className="sr-only">{l.kategoria}</span></>}</Td>
               {!open && <Td className="font-extrabold">{l.numer}</Td>}
               <Td>
                 {/* temat dla czytnika na końcu linku: pierwszy fragment linku musi być widoczny (cel kliknięcia) */}
-                <a href={`#ld/${l.id}`} aria-current={on ? 'page' : undefined} className="font-bold hover:text-action">
+                {/* ponowne kliknięcie otwartego leada zamyka kartę (jak w Zleceniach) */}
+                <a href={on ? '#leady' : `#ld/${l.id}`} aria-current={on ? 'page' : undefined} className="font-bold hover:text-action">
                   {nazwaOf(l)}{(open || l.temat) && <span className={cn(!open && 'sr-only', 'font-normal text-ink-2')}>{open ? `, ${[l.temat, l.site?.miejscowosc].filter(Boolean).join(', ')}` : `, ${l.temat}`}</span>}
                 </a>
                 {overdue && <Badge tone="warn" className="ml-2 h-5 px-2">zaległe</Badge>}
