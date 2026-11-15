@@ -10,7 +10,7 @@ import { TabelaSum, type Kol } from './ui.js';
 
 const KOL: Kol[] = [
   { k: 'godziny', label: 'Godziny', t: 'h' }, { k: 'stawka', label: 'Stawka / h' }, { k: 'wyplata', label: 'Wypłata' }, { k: 'urlopDni', label: 'Dni urlopu', t: 'h' }, { k: 'urlop', label: 'Urlop' },
-  { k: 'premie', label: 'Premie' }, { k: 'nalezne', label: 'Należne', b: true }, { k: 'zaliczki', label: 'Zaliczki' }, { k: 'przelewy', label: 'Przelewy' },
+  { k: 'premie', label: 'Premie' }, { k: 'nalezne', label: 'Należne', b: true }, { k: 'zaliczki', label: 'Zaliczki / wypłaty' },
   { k: 'doWyplaty', label: 'Do wypłaty', b: true }, { k: 'kosztUmowy', label: 'Koszt umowy' }, { k: 'inne', label: 'Inne koszty' }, { k: 'koszt', label: 'Koszt razem', b: true },
 ];
 
@@ -31,7 +31,7 @@ export function Rozliczenie({ rok, mies }: { rok: string; mies: string }) {
       </div>
       {sub && <p className="text-sm text-ink-2">{sub}</p>}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm tabular-nums">
-        {([['godziny', 'Godziny'], ['wyplata', 'Wypłata'], ['urlop', 'Urlop'], ['premie', 'Premie'], ['nalezne', 'Należne'], ['zaliczki', 'Zaliczki'], ['przelewy', 'Przelewy'], ['kosztUmowy', 'Koszt umowy'], ['inne', 'Inne koszty'], ['koszt', 'Koszt razem']] as const).map(([k, l]) => (
+        {([['godziny', 'Godziny'], ['wyplata', 'Wypłata'], ['urlop', 'Urlop'], ['premie', 'Premie'], ['nalezne', 'Należne'], ['zaliczki', 'Zaliczki / wypłaty'], ['kosztUmowy', 'Koszt umowy'], ['inne', 'Inne koszty'], ['koszt', 'Koszt razem']] as const).map(([k, l]) => (
           <div key={k}><dt className="text-ink-2">{l}</dt><dd className="font-semibold">{k === 'godziny' ? lb(r[k]) : kw(r[k])}</dd></div>
         ))}
       </dl>

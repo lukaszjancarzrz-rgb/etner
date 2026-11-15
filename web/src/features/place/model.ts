@@ -148,7 +148,7 @@ export type Przygotowane = ReturnType<typeof przygotuj>;
 // ---------- rozliczenie miesiąca ----------
 export interface WierszRozliczenia {
   personId: string; nazwa: string; forma: Forma; godziny: number; stawka: number; wyplata: number; urlopDni: number; urlop: number; premie: number;
-  nalezne: number; zaliczki: number; przelewy: number; doWyplaty: number; kosztUmowy: number; inne: number; koszt: number;
+  nalezne: number; zaliczki: number; doWyplaty: number; kosztUmowy: number; inne: number; koszt: number;
   darmoweDni: number; inneNieobecnosci: number; dniPracy: number;
 }
 
@@ -163,18 +163,18 @@ export function wierszRozliczenia(P: Przygotowane, d: Dane, personId: string, m:
   const wyplata = Math.round(godziny * stawka);
   const urlopDni = u?.platne[i] ?? 0;
   const urlop = Math.round(urlopDni * p.godzUrlop * stawka);
-  const premie = suma('premia'), zaliczki = suma('zaliczka'), przelewy = suma('przelew'), inne = suma('inny');
+  const premie = suma('premia'), zaliczki = suma('zaliczka') + suma('przelew'), inne = suma('inny'); // stare przelewy = wypłaty jak zaliczki
   const nalezne = wyplata + urlop + premie;
   const kosztUmowy = P.kosztUmowy(personId, m);
   const n = u?.mies[i] ?? zeroN();
   return {
-    personId, nazwa: P.nazwa(personId), forma: (o?.forma ?? 'brak') as Forma, godziny, stawka, wyplata, urlopDni, urlop, premie, nalezne, zaliczki, przelewy,
-    doWyplaty: nalezne - zaliczki - przelewy, kosztUmowy, inne, koszt: nalezne + kosztUmowy + inne,
+    personId, nazwa: P.nazwa(personId), forma: (o?.forma ?? 'brak') as Forma, godziny, stawka, wyplata, urlopDni, urlop, premie, nalezne, zaliczki,
+    doWyplaty: nalezne - zaliczki, kosztUmowy, inne, koszt: nalezne + kosztUmowy + inne,
     darmoweDni: n.wypoczynkowy + n.naZadanie - urlopDni, inneNieobecnosci: n.L4 + n.okolicznosciowy + n.bezplatny, dniPracy: u?.dniPracy[i] ?? 0,
   };
 }
 
-const SUMY = ['godziny', 'wyplata', 'urlopDni', 'urlop', 'premie', 'nalezne', 'zaliczki', 'przelewy', 'doWyplaty', 'kosztUmowy', 'inne', 'koszt', 'darmoweDni', 'inneNieobecnosci', 'dniPracy'] as const;
+const SUMY = ['godziny', 'wyplata', 'urlopDni', 'urlop', 'premie', 'nalezne', 'zaliczki', 'doWyplaty', 'kosztUmowy', 'inne', 'koszt', 'darmoweDni', 'inneNieobecnosci', 'dniPracy'] as const;
 export type Sumy = Record<(typeof SUMY)[number], number>;
 export const zsumuj = (rows: Pick<WierszRozliczenia, (typeof SUMY)[number]>[]): Sumy =>
   Object.fromEntries(SUMY.map((k) => [k, rows.reduce((s, r) => s + r[k], 0)])) as Sumy;

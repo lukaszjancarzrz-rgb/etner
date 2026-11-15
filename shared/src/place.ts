@@ -5,6 +5,8 @@ export type Forma = (typeof FORMY)[number];
 export const FORMA_LABEL: Record<Forma, string> = { uop: 'Umowa o pracę', zlecenie: 'Umowa zlecenie', inna: 'Inna umowa (koszt ręcznie)', brak: 'Bez umowy' };
 
 export const RODZAJE_WPISU = ['zaliczka', 'przelew', 'premia', 'inny'] as const;
+/** Do wyboru przy nowym wpisie (właściciel 2026-11-15: „przelew” mylił – stare przelewy liczą się jak zaliczki). */
+export const RODZAJE_NOWEGO_WPISU = ['zaliczka', 'premia', 'inny'] as const;
 export type RodzajWpisu = (typeof RODZAJE_WPISU)[number];
 export const RODZAJ_WPISU_LABEL: Record<RodzajWpisu, string> = { zaliczka: 'Zaliczka / wypłata', przelew: 'Przelew na konto', premia: 'Premia / dodatek', inny: 'Inny koszt firmy' };
 

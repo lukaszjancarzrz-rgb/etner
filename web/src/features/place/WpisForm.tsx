@@ -1,4 +1,4 @@
-import { RODZAJE_WPISU, RODZAJ_WPISU_LABEL, type RodzajWpisu } from '@etner/shared';
+import { RODZAJE_NOWEGO_WPISU, RODZAJ_WPISU_LABEL, type RodzajWpisu } from '@etner/shared';
 import { useState } from 'react';
 import type { Rec } from '../../core/store.js';
 import { Textarea } from '../../core/ui/bits.js';
@@ -10,7 +10,7 @@ import { parseZl } from '../leady/model.js';
 import { zlText } from './fmt.js';
 import { zapisz } from './zapis.js';
 
-/** Zaliczka, przelew, premia albo inny koszt osoby w miesiącu (nowy albo edycja po kliknięciu). */
+/** Zaliczka, premia albo inny koszt osoby w miesiącu (nowy albo edycja po kliknięciu). */
 export function WpisForm({ wpis, osoby, osoba, miesiac, onClose }: { wpis?: Rec; osoby: { id: string; nazwa: string }[]; osoba?: string; miesiac: string; onClose: () => void }) {
   const [f, setF] = useState({
     personId: (wpis?.personId as string) ?? osoba ?? osoby[0]?.id ?? '', miesiac: (wpis?.miesiac as string) ?? miesiac, dzien: (wpis?.dzien as string) ?? '',
@@ -39,7 +39,7 @@ export function WpisForm({ wpis, osoby, osoba, miesiac, onClose }: { wpis?: Rec;
         <form onSubmit={submit} noValidate className="grid gap-4">
           <div className="grid gap-4 min-[560px]:grid-cols-2">
             <Field label="Osoba" error={err.personId}>{(id, d) => wpis ? <Input id={id} value={osoby.find((o) => o.id === f.personId)?.nazwa ?? ''} readOnly /> : <Select id={id} aria-describedby={d} value={f.personId} onValueChange={(personId) => set({ personId })} options={osoby.map((o) => ({ value: o.id, label: o.nazwa }))} placeholder="Osoba" />}</Field>
-            <Field label="Rodzaj">{(id) => <Select id={id} value={f.rodzaj} onValueChange={(rodzaj) => set({ rodzaj: rodzaj as RodzajWpisu })} options={RODZAJE_WPISU.map((r) => ({ value: r, label: RODZAJ_WPISU_LABEL[r] }))} />}</Field>
+            <Field label="Rodzaj">{(id) => <Select id={id} value={f.rodzaj} onValueChange={(rodzaj) => set({ rodzaj: rodzaj as RodzajWpisu })} options={[...RODZAJE_NOWEGO_WPISU, ...(f.rodzaj === 'przelew' ? ['przelew' as const] : [])].map((r) => ({ value: r, label: RODZAJ_WPISU_LABEL[r] }))} />}</Field>
             <Field label="Miesiąc" error={err.miesiac}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.miesiac} type="month" value={f.miesiac} onChange={(e) => set({ miesiac: e.target.value })} />}</Field>
             <Field label="Data (nieobowiązkowa)" error={err.dzien}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.dzien} type="date" value={f.dzien} onChange={(e) => set({ dzien: e.target.value })} />}</Field>
             <Field label="Kwota (zł)" error={err.kwota}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.kwota} inputMode="decimal" value={f.kwota} onChange={(e) => set({ kwota: e.target.value })} />}</Field>

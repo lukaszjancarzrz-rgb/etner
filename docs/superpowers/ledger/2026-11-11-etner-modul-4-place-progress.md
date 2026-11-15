@@ -40,3 +40,4 @@ Owner 2026-11-14: schedule tiles — branch badge removed, short description (kr
 Owner 2026-11-14: Leady desktop — clicking the open lead row closes the card (like Zlecenia). Released (R86).
 Owner 2026-11-14: new client block (lead/job forms) has „Link do mapy” (newSite.mapa); lead card shows Nawiguj (own site or client's only site). Released (R86).
 Owner 2026-11-14: robocizna — leave cost spread evenly: day cost uses 1/12 of the yearly leave limit × godzUrlop × rate instead of leave taken that month (Wynik firmy and payroll month totals unchanged = real payouts). Released (R86).
+Owner 2026-11-15: payroll entry type „Przelew na konto” removed from choice (confusing); old przelew rows count as Zaliczki / wypłaty (model folds them; column Przelewy removed; xlsx import maps przelew → zaliczka). No data changed. Released (R86).

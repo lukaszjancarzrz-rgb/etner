@@ -6,7 +6,7 @@ import { TabelaSum, type Kol } from './ui.js';
 
 const KOL: Kol[] = [
   { k: 'godziny', label: 'Godziny', t: 'h' }, { k: 'wyplata', label: 'Wypłata' }, { k: 'urlop', label: 'Urlop' }, { k: 'premie', label: 'Premie' }, { k: 'nalezne', label: 'Należne', b: true },
-  { k: 'zaliczki', label: 'Zaliczki' }, { k: 'przelewy', label: 'Przelewy' }, { k: 'doWyplaty', label: 'Do wypłaty', b: true }, { k: 'kosztUmowy', label: 'Koszt umowy' },
+  { k: 'zaliczki', label: 'Zaliczki / wypłaty' }, { k: 'doWyplaty', label: 'Do wypłaty', b: true }, { k: 'kosztUmowy', label: 'Koszt umowy' },
   { k: 'inne', label: 'Inne koszty' }, { k: 'koszt', label: 'Koszt razem', b: true }, { k: 'koszt1h', label: 'Koszt 1 h' },
 ];
 

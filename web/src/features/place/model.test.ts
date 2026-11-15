@@ -52,7 +52,7 @@ describe('rozliczenieMiesiaca', () => {
     const d = dane({ entries: [urlop('2026-03-02'), urlop('2026-03-03', true), urlop('2026-03-07'), urlop('2026-04-07'), urlop('2026-04-08')] });
     const { wiersze, razem } = rozliczenieMiesiaca(d, '2026-04');
     const a = wiersze.find((w) => w.personId === 'a')!;
-    expect(a).toMatchObject({ godziny: 100, stawka: 3500, wyplata: 350_000, urlopDni: 0.5, urlop: 14_000, premie: 10_000, nalezne: 374_000, zaliczki: 50_000, przelewy: 100_000, doWyplaty: 224_000, kosztUmowy: 218_443, inne: 2_000, darmoweDni: 1.5 });
+    expect(a).toMatchObject({ godziny: 100, stawka: 3500, wyplata: 350_000, urlopDni: 0.5, urlop: 14_000, premie: 10_000, nalezne: 374_000, zaliczki: 150_000, doWyplaty: 224_000, kosztUmowy: 218_443, inne: 2_000, darmoweDni: 1.5 });
     expect(a.koszt).toBe(374_000 + 218_443 + 2_000);
     expect(razem.wyplata).toBe(350_000 + 20_000);
     expect(rozliczenieMiesiaca(d, '2026-03').wiersze[0]).toMatchObject({ stawka: 3000, urlopDni: 1.5 });

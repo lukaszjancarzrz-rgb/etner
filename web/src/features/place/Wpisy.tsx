@@ -1,4 +1,4 @@
-import { RODZAJ_WPISU_LABEL, RODZAJE_WPISU, type RodzajWpisu } from '@etner/shared';
+import { RODZAJ_WPISU_LABEL, RODZAJE_NOWEGO_WPISU, type RodzajWpisu } from '@etner/shared';
 import { Plus, Receipt } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { today } from '../../core/data.js';
@@ -18,7 +18,7 @@ import { WpisForm } from './WpisForm.js';
 const WSZ = '*';
 const dm = (w: Rec) => (w.dzien ? `${String(w.dzien).slice(8)}.${String(w.dzien).slice(5, 7)}` : '');
 
-/** Zaliczki, przelewy, premie i inne koszty: lista roku z filtrem osoby i miesiąca, dodawanie i edycja po kliknięciu. */
+/** Zaliczki, premie i inne koszty: lista roku z filtrem osoby i miesiąca, dodawanie i edycja po kliknięciu. */
 export function Wpisy({ rok }: { rok: string }) {
   const desk = useDesk();
   const d = useDane();
@@ -28,7 +28,7 @@ export function Wpisy({ rok }: { rok: string }) {
   const osoby = P.lista.map((o) => ({ id: o.personId as string, nazwa: P.nazwa(o.personId) }));
   const list = useMemo(() => P.wpisy.filter((w) => String(w.miesiac).startsWith(rok) && (osoba === WSZ || w.personId === osoba) && (mies === WSZ || w.miesiac === `${rok}-${mies}`))
     .sort((a, b) => String(b.miesiac).localeCompare(String(a.miesiac)) || String(b.dzien ?? '').localeCompare(String(a.dzien ?? ''))), [P, rok, osoba, mies]);
-  const razem = (r: RodzajWpisu) => list.filter((w) => w.rodzaj === r).reduce((s, w) => s + (w.kwotaGr as number), 0);
+  const razem = (r: RodzajWpisu) => list.filter((w) => w.rodzaj === r || (r === 'zaliczka' && w.rodzaj === 'przelew')).reduce((s, w) => s + (w.kwotaGr as number), 0);
   const mp = (w: Rec) => `${MIES_PELNE[Number(String(w.miesiac).slice(5)) - 1]}${dm(w) ? ` (${dm(w)})` : ''}`;
   const del = (w: Rec) => <Usun entity="payroll_entries" id={w.id} url={`/api/payroll/entries/${w.id}`} opis={`${RODZAJ_WPISU_LABEL[w.rodzaj as RodzajWpisu]} ${P.nazwa(w.personId)}`} tmp={!!w._tmp} />;
 
@@ -40,7 +40,7 @@ export function Wpisy({ rok }: { rok: string }) {
         <div className="w-48"><Select aria-label="Miesiąc" value={mies} onValueChange={setMies} options={[{ value: WSZ, label: 'Cały rok' }, ...MIES_PELNE.map((m, i) => ({ value: String(i + 1).padStart(2, '0'), label: m }))]} /></div>
         <Button className="desk:ml-auto" onClick={() => setEdit('nowy')} disabled={!osoby.length}><Plus className="h-5 w-5" weight="bold" />Wpis</Button>
       </div>
-      {!list.length ? <Empty icon={Receipt} title="Brak wpisów" hint="Dodaj zaliczkę, przelew, premię albo inny koszt." /> : desk ? (
+      {!list.length ? <Empty icon={Receipt} title="Brak wpisów" hint="Dodaj zaliczkę, premię albo inny koszt." /> : desk ? (
         <Table aria-label="Zaliczki i dodatki">
           <thead><tr><Th className="w-[11rem]">Miesiąc</Th><Th className="w-[12rem]">Osoba</Th><Th className="w-[13rem]">Rodzaj</Th><Th num className="w-[8rem]">Kwota</Th><Th>Opis</Th><Th className="w-12"><span className="sr-only">Usuń</span></Th></tr></thead>
           <tbody>{list.map((w) => (
@@ -61,7 +61,7 @@ export function Wpisy({ rok }: { rok: string }) {
           </li>))}
         </ul>
       )}
-      <p className="text-right text-sm text-ink-2 tabular-nums">{RODZAJE_WPISU.map((r) => `${RODZAJ_WPISU_LABEL[r]}: ${kw(razem(r)) === '—' ? '0,00' : kw(razem(r))} zł`).join(' · ')}</p>
+      <p className="text-right text-sm text-ink-2 tabular-nums">{RODZAJE_NOWEGO_WPISU.map((r) => `${RODZAJ_WPISU_LABEL[r]}: ${kw(razem(r)) === '—' ? '0,00' : kw(razem(r))} zł`).join(' · ')}</p>
       {edit && <WpisForm wpis={edit === 'nowy' ? undefined : edit} osoby={osoby} osoba={osoba === WSZ ? undefined : osoba} miesiac={mies === WSZ ? `${rok}-${today().slice(5, 7)}` : `${rok}-${mies}`} onClose={() => setEdit(null)} />}
     </div>
   );

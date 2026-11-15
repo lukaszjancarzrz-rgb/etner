@@ -8,7 +8,8 @@ import { createEntry, createRate, getParametry, setMonth, setParametry, setPerso
 /** Jednorazowe przeniesienie Płac z arkusza firmy: karty Pracownicy, Parametry, Godziny, Zaliczki i dodatki (rok z Pracownicy!D4). */
 const MIESIACE = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 const FORMA: Record<string, Forma> = { 'umowa o pracę': 'uop', 'umowa zlecenie': 'zlecenie', 'inna umowa (koszt ręcznie)': 'inna' };
-const RODZAJ: Record<string, RodzajWpisu> = { 'zaliczka / wypłata': 'zaliczka', 'przelew na konto': 'przelew', 'premia / dodatek': 'premia', 'inny koszt firmy': 'inny' };
+// przelew = wypłata, jak zaliczka (właściciel 2026-11-15)
+const RODZAJ: Record<string, RodzajWpisu> = { 'zaliczka / wypłata': 'zaliczka', 'przelew na konto': 'zaliczka', 'premia / dodatek': 'premia', 'inny koszt firmy': 'inny' };
 const gr = (zl: number | null) => (zl === null ? null : Math.round(zl * 100));
 const mm = (rok: number, i: number) => `${rok}-${String(i + 1).padStart(2, '0')}`;
 
