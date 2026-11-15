@@ -1,5 +1,5 @@
 import { addDays, fmtMinuty, godzinaPl } from '@etner/shared';
-import { CaretLeft, CaretRight, Plus } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, PencilSimple, Plus } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { dayShort, today } from '../../core/data.js';
 import { useDesk } from '../../core/layout/status.js';
@@ -16,11 +16,18 @@ import { WpisForm } from './WpisForm.js';
 
 type Tab = 'teraz' | 'wpisy' | 'sumy' | 'moj';
 
+// zakładka i filtry przetrwają wyjście do karty zlecenia i „Wróć” (ekran montuje się od nowa); do odświeżenia strony
+const pamiec = new Map<string, unknown>();
+function usePamiec<T>(k: string, init: T) {
+  const [v, set] = useState<T>(() => (pamiec.has(k) ? pamiec.get(k) as T : init));
+  return [v, (x: T) => { pamiec.set(k, x); set(x); }] as const;
+}
+
 /** Czasomierz u admina: Teraz / Wpisy / Sumy (+ Mój czas, gdy admin ma kolumnę w harmonogramie). */
 export function Admin({ moj }: { moj: React.ReactNode }) {
   const desk = useDesk();
   const osoba = useMojaOsoba();
-  const [tab, setTab] = useState<Tab>('teraz');
+  const [tab, setTab] = usePamiec<Tab>('tab', 'teraz');
   const TABS: { v: Tab; label: string }[] = [{ v: 'teraz', label: 'Teraz' }, { v: 'wpisy', label: 'Wpisy' }, { v: 'sumy', label: 'Sumy' }, ...(osoba ? [{ v: 'moj' as Tab, label: 'Mój czas' }] : [])];
   return (
     <section aria-label="Czasomierz" className="mx-auto grid max-w-[1400px] grid-cols-[minmax(0,1fr)] gap-4 px-4 py-4 desk:px-8 desk:py-5">
@@ -79,10 +86,10 @@ function Wpisy() {
   const opis = useOpisZlecenia();
   const opcje = useWybor();
   const nowIso = new Date(useNow(30_000)).toISOString();
-  const [dzien, setDzien] = useState(today());
-  const [osoba, setOsoba] = useState('');
-  const [zl, setZl] = useState('');
-  const [rodzaj, setRodzaj] = useState<Rodzaj>('wszystkie');
+  const [dzien, setDzien] = usePamiec('w-dzien', today());
+  const [osoba, setOsoba] = usePamiec('w-osoba', '');
+  const [zl, setZl] = usePamiec('w-zl', '');
+  const [rodzaj, setRodzaj] = usePamiec<Rodzaj>('w-rodzaj', 'wszystkie');
   const [edit, setEdit] = useState<Rec | null>(null);
   const [dodaj, setDodaj] = useState(false);
   const nazwa = (id: string) => people.find((p) => p.id === id)?.nazwa ?? 'Osoba';
@@ -99,29 +106,40 @@ function Wpisy() {
       </div>
       {!rows.length ? <Panel><Empty icon={Plus} title="Brak wpisów" hint="W tym tygodniu, dla tych filtrów." /></Panel> : desk ? (
         <Table aria-label="Wpisy czasu">
-          <colgroup><col className="w-[9%]" /><col className="w-[10%]" /><col className="w-[22%]" /><col className="w-[19%]" /><col className="w-[9%]" /><col /></colgroup>
-          <thead><tr><Th>Dzień</Th><Th>Osoba</Th><Th>Zlecenie</Th><Th>Od – do</Th><Th num>Czas</Th><Th>Uwagi</Th></tr></thead>
+          <colgroup><col className="w-[9%]" /><col className="w-[10%]" /><col className="w-[22%]" /><col className="w-[19%]" /><col className="w-[9%]" /><col /><col className="w-12" /></colgroup>
+          <thead><tr><Th>Dzień</Th><Th>Osoba</Th><Th>Zlecenie</Th><Th>Od – do</Th><Th num>Czas</Th><Th>Uwagi</Th><Th><span className="sr-only">Edycja</span></Th></tr></thead>
           <tbody>
             {rows.map((e) => { const o = opis(e.jobId), r = roznica(e); return (
-              <Tr key={e.id} onOpen={e._tmp ? undefined : () => setEdit(e)}>
+              <Tr key={e.id} href={e.jobId ? `#zl/${e.jobId}` : undefined} onOpen={e.jobId || e._tmp ? undefined : () => setEdit(e)}>
                 <Td className="align-top">{dayShort(e.dzien)}</Td>
                 <Td className="align-top font-semibold">{nazwa(e.personId)}</Td>
-                <Td className="align-top">{o.numer ? `${o.numer} ${o.klient}` : o.klient}</Td>
+                <Td className="align-top">{e.jobId ? <a href={`#zl/${e.jobId}`} className="font-semibold hover:text-action">{o.numer} {o.klient}</a> : o.klient}</Td>
                 <Td className="align-top"><div className="whitespace-normal">{odDo(e)}{poprawione(e) && <div className="text-xs text-ink-2 line-through">{godzinaPl(e.odCz)} – {godzinaPl(e.doCz)}</div>}</div></Td>
                 <Td num className="align-top font-semibold">{e.do ? fmtMinuty(minuty(e, nowIso)) : 'trwa'}{r !== 0 && <div className="text-xs font-normal text-ink-2">{r > 0 ? '+' : '−'}{Math.abs(r)} min</div>}</Td>
                 <Td className="align-top"><div className="whitespace-normal"><Uwagi e={e} admin /></div></Td>
+                <Td pad="px-1 py-1" className="align-top">{!e._tmp && <Olowek e={e} onClick={() => setEdit(e)} />}</Td>
               </Tr>); })}
           </tbody>
         </Table>
       ) : (
         <ul className="grid gap-2">
           {rows.map((e) => { const o = opis(e.jobId), r = roznica(e); return (
-            <li key={e.id}><Panel><button type="button" disabled={!!e._tmp} onClick={() => setEdit(e)} className="grid w-full gap-0.5 px-3 py-3 text-left">
+            <li key={e.id}><Panel className="grid grid-cols-[minmax(0,1fr)_auto] items-start">
+              {/* środek: karta zlecenia (Wróć – tu z powrotem); bez zlecenia: edycja; ołówek: edycja */}
+              {e.jobId ? <a href={`#zl/${e.jobId}`} className="grid min-w-0 gap-0.5 py-3 pl-3 text-left">
               <span className="flex items-baseline justify-between gap-3"><span className="font-bold">{nazwa(e.personId)} <span className="text-sm font-normal text-ink-2">{dayShort(e.dzien)}</span></span><span className="font-semibold tabular-nums">{e.do ? fmtMinuty(minuty(e, nowIso)) : 'trwa'}</span></span>
               <span className="truncate text-sm text-ink-2">{o.numer ? `${o.numer} ${o.klient}` : o.klient}</span>
               <span className="text-sm tabular-nums">{odDo(e)}{poprawione(e) && <span className="ml-2 text-xs text-ink-2 line-through">{godzinaPl(e.odCz)} – {godzinaPl(e.doCz)}</span>}{r !== 0 && <span className="ml-2 text-xs text-ink-2">{r > 0 ? '+' : '−'}{Math.abs(r)} min</span>}</span>
               <Uwagi e={e} admin />
-            </button></Panel></li>); })}
+</a>
+                : <button type="button" disabled={!!e._tmp} onClick={() => setEdit(e)} className="grid min-w-0 gap-0.5 py-3 pl-3 text-left">
+              <span className="flex items-baseline justify-between gap-3"><span className="font-bold">{nazwa(e.personId)} <span className="text-sm font-normal text-ink-2">{dayShort(e.dzien)}</span></span><span className="font-semibold tabular-nums">{e.do ? fmtMinuty(minuty(e, nowIso)) : 'trwa'}</span></span>
+              <span className="truncate text-sm text-ink-2">{o.numer ? `${o.numer} ${o.klient}` : o.klient}</span>
+              <span className="text-sm tabular-nums">{odDo(e)}{poprawione(e) && <span className="ml-2 text-xs text-ink-2 line-through">{godzinaPl(e.odCz)} – {godzinaPl(e.doCz)}</span>}{r !== 0 && <span className="ml-2 text-xs text-ink-2">{r > 0 ? '+' : '−'}{Math.abs(r)} min</span>}</span>
+              <Uwagi e={e} admin />
+</button>}
+              {!e._tmp && <Olowek e={e} onClick={() => setEdit(e)} className="m-1.5" />}
+            </Panel></li>); })}
         </ul>
       )}
       {edit && <WpisForm entry={edit} admin onClose={() => setEdit(null)} />}
@@ -137,9 +155,9 @@ function Sumy() {
   const wpisy = useWpisy();
   const people = useEntities('schedule_people');
   const nowIso = new Date(useNow(60_000)).toISOString();
-  const [tryb, setTryb] = useState<'tydzien' | 'miesiac'>('tydzien');
-  const [dzien, setDzien] = useState(today());
-  const [ym, setYm] = useState(today().slice(0, 7));
+  const [tryb, setTryb] = usePamiec<'tydzien' | 'miesiac'>('s-tryb', 'tydzien');
+  const [dzien, setDzien] = usePamiec('s-dzien', today());
+  const [ym, setYm] = usePamiec('s-ym', today().slice(0, 7));
   const dni = tydzien(dzien);
   const ludzie = [...people].sort((a, b) => a.kolejnosc - b.kolejnosc || a.nazwa.localeCompare(b.nazwa, 'pl'));
   const tyg = useMemo(() => sumyDni(wpisy, dni, nowIso), [wpisy, dzien, nowIso]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -171,3 +189,11 @@ function Sumy() {
   );
 }
 
+function Olowek({ e, onClick, className }: { e: Rec; onClick: () => void; className?: string }) {
+  return (
+    <button type="button" aria-label={`Edytuj wpis ${dayShort(e.dzien)} ${godzinaPl(e.od)}`} onClick={onClick}
+      className={`grid h-11 w-11 place-items-center rounded-[3px] text-ink-2 hover:bg-action/10 hover:text-action focus-visible:outline-2 focus-visible:outline-action desk:h-8 desk:w-8 ${className ?? ''}`}>
+      <PencilSimple className="h-5 w-5 desk:h-4 desk:w-4" aria-hidden />
+    </button>
+  );
+}

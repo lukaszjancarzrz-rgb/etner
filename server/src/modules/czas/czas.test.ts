@@ -129,4 +129,13 @@ describe('czasomierz', () => {
     await call(worker, 'POST', '/api/time/stop', { at: pl('16:30') });
     expect(autoStop(deps.db, r!, pl('18:00'))).toBeUndefined();
   });
+
+  it('Stop i od razu Start (w tej samej minucie) – bez błędu nakładania', async () => {
+    const { call, worker, set } = await setup();
+    set('07:00');
+    await call(worker, 'POST', '/api/time/start', { at: pl('07:00'), jobId: null });
+    expect((await call(worker, 'POST', '/api/time/stop', { at: pl('07:00') })).status).toBe(200);
+    set('07:01');
+    expect((await call(worker, 'POST', '/api/time/start', { at: new Date(Date.parse(pl('07:00')) + 5000).toISOString(), jobId: null })).status).toBe(200);
+  });
 });

@@ -29,5 +29,13 @@ test('czasomierz: pracownik Start/Stop, wpis w „Moje godziny”, admin widzi g
   if (phone) { await a.getByLabel('Widok').click(); await a.getByRole('option', { name: 'Wpisy' }).click(); }
   else await a.getByRole('radio', { name: 'Wpisy' }).click();
   await expect(a.getByText('Bartek').first()).toBeVisible();
+  // ołówek otwiera edycję wpisu
+  await a.getByRole('button', { name: /^Edytuj wpis/ }).first().click();
+  await expect(a.getByRole('dialog')).toBeVisible();
+  await a.keyboard.press('Escape');
+  // zakładka zostaje po wyjściu z ekranu i powrocie (np. karta zlecenia → Wróć)
+  await a.goto('/#zl');
+  await a.goto('/#czas');
+  await expect(a.getByRole('button', { name: /^Edytuj wpis/ }).first()).toBeVisible();
   await ctx.close();
 });

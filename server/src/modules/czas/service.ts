@@ -92,7 +92,7 @@ export function stop(db: Db, userId: string, d: Omit<TimeStop, 'opId'> & { at: s
     r = autoStoppedAt(db, userId, d.at);
     if (!r) return null;
   }
-  const doCz = new Date(Math.max(Date.parse(d.at), Date.parse(r.od) + 60_000)).toISOString();
+  const doCz = new Date(Math.max(Date.parse(d.at), Date.parse(r.od) + 1000)).toISOString(); // najmniej 1 s (od < do); nie więcej – Start zaraz po Stop nie może nachodzić na ten wpis
   const od = d.od ?? r.od, doo = d.do ?? doCz;
   checkRange(db, r.personId, od, doo, now, r.id);
   const zmiana = od !== r.odCz || doo !== doCz;
