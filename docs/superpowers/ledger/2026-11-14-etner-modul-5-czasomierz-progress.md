@@ -12,3 +12,4 @@ Owner 2026-11-15: Czasomierz → Wpisy: pencil edit button on each entry, tap on
 Owner 2026-11-15: worker bottom bar — Na jutro back, Zakupy moved to Więcej (R97 changed). Released (R86).
 Owner 2026-11-15: admin phone bar Harmonogram, Zlecenia, Finanse, Płace (Czasomierz, Zakupy tiles in Więcej). Full e2e 103 passed / 6 skipped / 1 failed → test matcher fixed, rerun green. Released (R86).
 Owner 2026-11-15: Wpisy filter „Z czasomierza, bez poprawek” (unedited timer entries had no filter of their own). Released (R86).
+Owner 2026-11-15: Sumy on phone hid the first person (Th sticky top-48px inside overflow-x-auto container covered row 1) → [&_th]:static on that wrapper; e2e checks row 1 not covered (fails before fix). Released (R86).

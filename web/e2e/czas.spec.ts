@@ -37,5 +37,11 @@ test('czasomierz: pracownik Start/Stop, wpis w „Moje godziny”, admin widzi g
   await a.goto('/#zl');
   await a.goto('/#czas');
   await expect(a.getByRole('button', { name: /^Edytuj wpis/ }).first()).toBeVisible();
+  // Sumy: pierwszy wiersz nie jest zasłonięty przyklejonym nagłówkiem (telefon: tabela przewijana w bok)
+  if (phone) { await a.getByLabel('Widok').click(); await a.getByRole('option', { name: 'Sumy' }).click(); }
+  else await a.getByRole('radio', { name: 'Sumy' }).click();
+  const cell = a.getByRole('table', { name: 'Sumy tygodnia' }).locator('tbody tr').first().locator('td').first();
+  const box = (await cell.boundingBox())!;
+  expect(await a.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.closest('td,th')?.tagName, [box.x + 5, box.y + box.height / 2])).toBe('TD');
   await ctx.close();
 });

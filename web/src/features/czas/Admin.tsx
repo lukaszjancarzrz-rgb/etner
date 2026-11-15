@@ -170,7 +170,8 @@ function Sumy() {
         {tryb === 'tydzien' ? <Strzalki label={tydzienTekst(dzien)} onPrev={() => setDzien(addDays(dzien, -7))} onNext={() => setDzien(addDays(dzien, 7))} />
           : <Strzalki label={`${MIES[Number(ym.slice(5)) - 1]} ${ym.slice(0, 4)}`} onPrev={() => setYm(shiftMies(ym, -1))} onNext={() => setYm(shiftMies(ym, 1))} />}
       </div>
-      <div className="overflow-x-auto">
+      {/* przewijana w bok tabela: nagłówek nie przykleja się (sticky top-48px w tym pojemniku przesuwał go na pierwszy wiersz) */}
+      <div className="overflow-x-auto [&_th]:static">
         {tryb === 'tydzien' ? (
           <Table aria-label="Sumy tygodnia" className="min-w-[44rem]">
             <thead><tr><Th>Osoba</Th>{dni.map((d) => <Th key={d} num>{dayShort(d).replace(/ \d.*/, '')} {dm(d)}</Th>)}<Th num>Razem</Th></tr></thead>
