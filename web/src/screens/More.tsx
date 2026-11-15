@@ -1,4 +1,4 @@
-import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SignOut, SunHorizon, Toolbox, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SignOut, SunHorizon, Timer, Toolbox, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
 import { badgeLabel, badgeText } from '../core/badges.js';
 import { useBadges } from '../core/layout/useBadges.js';
 import { logout, useSession } from '../core/session.js';
@@ -21,6 +21,7 @@ type T = { k: string; icon: Icon; title: string; hint: string | ((admin: boolean
 /** Kafelki w grupach; `admin`: grupa tylko dla admina. Klucz = ekran (`#k`). */
 const GROUPS: { admin?: true; tiles: T[] }[] = [
   { tiles: [
+    { k: 'czas', icon: Timer, title: 'Czasomierz', hint: 'Start i stop pracy, godziny ekip' },
     { k: 'zakupy', icon: ShoppingCart, title: 'Zakupy', hint: 'Czego brakuje na budowie' },
     { k: 'paszporty', icon: IdentificationCard, title: 'Paszporty', hint: 'Teczki obiektów, terminy serwisów' },
     { k: 'auta', icon: Van, title: 'Samochody', hint: 'Usterki aut, terminy napraw' },
@@ -57,7 +58,7 @@ export function More() {
       {groups.map((g) => (
         <Panel key={g[0]!.k} className="divide-y divide-rule overflow-hidden">
           {g.map((t) => <Tile key={t.k} href={`#${t.k}`} icon={t.icon} title={t.title} hint={typeof t.hint === 'string' ? t.hint : t.hint(admin)}
-            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'zap' && { count: zapleczeBadge(badges), sr: ' – nowe' })} {...(t.k === 'zad' && { count: badges.zad, sr: badgeLabel('zad', badges.zad ?? 0).replace(',', '') })} {...(t.k === 'leady' && { count: badges.leady, sr: badgeLabel('leady', badges.leady ?? 0).replace(',', '') })} {...(t.k === 'serwis' && { count: badges.serwis, sr: badgeLabel('serwis', badges.serwis ?? 0).replace(',', '') })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
+            {...(t.k === 'auta' && { count: badges.auta })} {...(t.k === 'zakupy' && { count: badges.zakupy, sr: ' – nowe' })} {...(t.k === 'zap' && { count: zapleczeBadge(badges), sr: ' – nowe' })} {...(t.k === 'zad' && { count: badges.zad, sr: badgeLabel('zad', badges.zad ?? 0).replace(',', '') })} {...(t.k === 'leady' && { count: badges.leady, sr: badgeLabel('leady', badges.leady ?? 0).replace(',', '') })} {...(t.k === 'serwis' && { count: badges.serwis, sr: badgeLabel('serwis', badges.serwis ?? 0).replace(',', '') })} {...(t.k === 'jutro' && { count: badges.jutro, sr: badgeLabel('jutro', badges.jutro ?? 0).replace(',', '') })} />)}
         </Panel>
       ))}
       {!desk && (

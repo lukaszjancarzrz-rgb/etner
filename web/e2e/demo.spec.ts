@@ -421,7 +421,8 @@ test('admin: Samochody, Narzędzia, Rzeczy nietypowe i Na jutro w Zapleczu (zak�
   const nav = page.getByRole('navigation', { name: 'Menu' }).filter({ visible: true });
   await expect(nav.getByRole('link', { name: /^(Na jutro|Samochody|Narzędzia|Rzeczy nietypowe)/ })).toHaveCount(0);
   if (phone) {
-    await expect(nav.getByRole('listitem')).toHaveCount(5); // Harmonogram, Zlecenia, Czasomierz, Zakupy, Więcej
+    await expect(nav.getByRole('listitem')).toHaveCount(5);
+    await expect(nav.getByRole('link')).toHaveText([/Harmonogram/, /Zlecenia/, /Finanse/, /Płace/, /Więcej/]); // admin: pasek wg właściciela
     await nav.getByRole('link', { name: /^Więcej/ }).click();
     await page.getByRole('main').getByRole('link', { name: /^Zaplecze/ }).click();
   } else {
