@@ -38,6 +38,7 @@ describe('czas model', () => {
   it('filtry i etykiety', () => {
     const es = [e({ id: 'a' }), e({ id: 'b', autoStop: true, jobId: null }), e({ id: 'c', zrodlo: 'reczny', personId: 'p2' })];
     expect(filtruj(es, { rodzaj: 'auto' }).map((x) => x.id)).toEqual(['b']);
+    expect(filtruj(es, { rodzaj: 'zwykle' }).map((x) => x.id)).toEqual(['a']); // z czasomierza, bez poprawek
     expect(filtruj(es, { rodzaj: 'reczne', personId: 'p2' }).map((x) => x.id)).toEqual(['c']);
     expect(filtruj(es, { rodzaj: 'wszystkie', jobId: 'none' }).map((x) => x.id)).toEqual(['b']);
     expect(tydzienTekst('2026-11-14')).toBe('09.11 – 15.11.2026');

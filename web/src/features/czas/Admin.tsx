@@ -77,7 +77,7 @@ function Teraz() {
   );
 }
 
-const RODZAJE: { value: Rodzaj; label: string }[] = [{ value: 'wszystkie', label: 'Wszystkie wpisy' }, { value: 'poprawione', label: 'Tylko poprawione' }, { value: 'auto', label: 'Tylko automatyczne' }, { value: 'reczne', label: 'Tylko ręczne' }];
+const RODZAJE: { value: Rodzaj; label: string }[] = [{ value: 'wszystkie', label: 'Wszystkie wpisy' }, { value: 'zwykle', label: 'Z czasomierza, bez poprawek' }, { value: 'poprawione', label: 'Tylko poprawione' }, { value: 'auto', label: 'Tylko automatyczne' }, { value: 'reczne', label: 'Tylko ręczne' }];
 
 function Wpisy() {
   const desk = useDesk();

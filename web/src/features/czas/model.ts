@@ -63,11 +63,11 @@ export function sumyMiesiac(es: Rec[], ym: string, now: Date | string): Map<stri
   return new Map([...m].map(([k, v]) => [k, { razem: v.razem, dni: v.dni.size }]));
 }
 
-export type Rodzaj = 'wszystkie' | 'poprawione' | 'auto' | 'reczne';
+export type Rodzaj = 'wszystkie' | 'zwykle' | 'poprawione' | 'auto' | 'reczne';
 export function filtruj(es: Rec[], f: { personId?: string; jobId?: string; rodzaj: Rodzaj }): Rec[] {
   return es.filter((e) => (!f.personId || e.personId === f.personId)
     && (!f.jobId || (f.jobId === 'none' ? !e.jobId : e.jobId === f.jobId))
-    && (f.rodzaj === 'wszystkie' || (f.rodzaj === 'poprawione' ? poprawione(e) : f.rodzaj === 'auto' ? !!e.autoStop : reczny(e))));
+    && (f.rodzaj === 'wszystkie' || (f.rodzaj === 'zwykle' ? !poprawione(e) && !e.autoStop && !reczny(e) : f.rodzaj === 'poprawione' ? poprawione(e) : f.rodzaj === 'auto' ? !!e.autoStop : reczny(e))));
 }
 
 /** Licznik H:MM:SS. */

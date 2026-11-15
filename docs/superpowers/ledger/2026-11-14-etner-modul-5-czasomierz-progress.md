@@ -11,3 +11,4 @@ Owner 2026-11-14: „tak” — Czasomierz released to produkcja + modul-1 (migr
 Owner 2026-11-15: Czasomierz → Wpisy: pencil edit button on each entry, tap on entry opens job card (Wróć returns: tab, filters, week remembered in session); fix: Start right after Stop was rejected (stop padded end to +1 min → now +1 s). Released (R86).
 Owner 2026-11-15: worker bottom bar — Na jutro back, Zakupy moved to Więcej (R97 changed). Released (R86).
 Owner 2026-11-15: admin phone bar Harmonogram, Zlecenia, Finanse, Płace (Czasomierz, Zakupy tiles in Więcej). Full e2e 103 passed / 6 skipped / 1 failed → test matcher fixed, rerun green. Released (R86).
+Owner 2026-11-15: Wpisy filter „Z czasomierza, bez poprawek” (unedited timer entries had no filter of their own). Released (R86).
