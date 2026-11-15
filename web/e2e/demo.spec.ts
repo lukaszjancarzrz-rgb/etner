@@ -405,10 +405,14 @@ test('licznik „Na jutro” w menu pokazuje niezabrane rzeczy pracownika', asyn
   await page.getByRole('button', { name: /Bartek Gawlik/ }).click();
   await expect(page.getByRole('heading', { name: 'Gdzie jedziesz' })).toBeVisible();
   // demo: ekipa Bartka ma 2 rzeczy na dziś (jedna zabrana) i 2 na jutro; licznik liczy tylko jutro
-  await expect(page.getByRole('link', { name: 'Zakupy', exact: true }).filter({ visible: true })).toBeVisible(); // pracownik: bez licznika zakupów
-  // telefon: Na jutro w Więcej (dolny pasek: Czasomierz), licznik też na „Więcej”
-  if (info.project.name.startsWith('iPhone')) await page.getByRole('navigation', { name: 'Menu' }).filter({ visible: true }).getByRole('link', { name: /^Więcej, \d+ nowe/ }).click();
-  await expect(page.getByRole('link', { name: /^Na jutro.*2 nowe$/ }).filter({ visible: true })).toBeVisible();
+  const nav = page.getByRole('navigation', { name: 'Menu' }).filter({ visible: true });
+  await expect(nav.getByRole('link', { name: 'Na jutro, 2 nowe' })).toBeVisible();
+  // pracownik: Zakupy bez licznika; na telefonie w Więcej (dolny pasek: Harmonogram, Na jutro, Zlecenia, Czasomierz, Więcej)
+  if (info.project.name.startsWith('iPhone')) {
+    await expect(nav.getByRole('listitem')).toHaveCount(5);
+    await nav.getByRole('link', { name: /^Więcej/ }).click();
+    await expect(page.getByRole('main').getByRole('link', { name: /^Zakupy/ })).toBeVisible();
+  } else await expect(nav.getByRole('link', { name: 'Zakupy', exact: true })).toBeVisible();
 });
 
 test('admin: Samochody, Narzędzia, Rzeczy nietypowe i Na jutro w Zapleczu (zakładki); adres #jutro działa', async ({ page }, info) => {

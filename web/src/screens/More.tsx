@@ -1,4 +1,4 @@
-import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, SignOut, SunHorizon, Toolbox, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
+import { BellRinging, CaretRight, Coins, DotsThreeCircle, GearSix, Handshake, IdentificationCard, ListChecks, Package, ShoppingCart, SignOut, SunHorizon, Toolbox, UserGear, UsersThree, Van, Wallet, Wrench, type Icon } from '@phosphor-icons/react';
 import { badgeLabel, badgeText } from '../core/badges.js';
 import { useBadges } from '../core/layout/useBadges.js';
 import { logout, useSession } from '../core/session.js';
@@ -21,6 +21,7 @@ type T = { k: string; icon: Icon; title: string; hint: string | ((admin: boolean
 /** Kafelki w grupach; `admin`: grupa tylko dla admina. Klucz = ekran (`#k`). */
 const GROUPS: { admin?: true; tiles: T[] }[] = [
   { tiles: [
+    { k: 'zakupy', icon: ShoppingCart, title: 'Zakupy', hint: 'Czego brakuje na budowie' },
     { k: 'paszporty', icon: IdentificationCard, title: 'Paszporty', hint: 'Teczki obiektów, terminy serwisów' },
     { k: 'auta', icon: Van, title: 'Samochody', hint: 'Usterki aut, terminy napraw' },
     { k: 'narz', icon: Wrench, title: 'Narzędzia', hint: 'Gdzie leży narzędzie: samochody i Magazyn' },
@@ -37,7 +38,7 @@ const GROUPS: { admin?: true; tiles: T[] }[] = [
     { k: 'uz', icon: UserGear, title: 'Użytkownicy', hint: 'Konta, hasła, kolumny harmonogramu' },
   ] },
   { tiles: [{ k: 'ust', icon: GearSix, title: 'Ustawienia', hint: (a) => (a ? 'Motyw, powiadomienia, hasło, słowniki, log błędów, kopie' : 'Motyw, powiadomienia, zmiana hasła') }] },
-  { tiles: [{ k: 'jutro', icon: SunHorizon, title: 'Na jutro', hint: 'Co ekipy biorą na następny dzień roboczy' }] },
+  { admin: true, tiles: [{ k: 'jutro', icon: SunHorizon, title: 'Na jutro', hint: 'Co ekipy biorą na następny dzień roboczy' }] },
 ];
 
 /** Kafelki Więcej bez ekranów, które już są w menu: na komputerze w menu bocznym, na telefonie w dolnym pasku. */

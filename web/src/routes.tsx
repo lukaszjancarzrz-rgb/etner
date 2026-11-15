@@ -23,8 +23,8 @@ export function parseHash(hash: string): Route {
  * `nav`: brak = dolny pasek i menu boczne; 'side' = tylko menu boczne i kafelek w Więcej; false = poza menu. `admin` = tylko admin (inni: „Brak dostępu”).
  * `adminEnd`: u admina poza dolnym paskiem, na końcu menu bocznego i kafelków Więcej (pracownik bez zmian).
  */
-export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true; adminEnd?: true; moreOnly?: true; zaplecze?: true; adminSide?: true };
-/** `adminSide`: ekran z Więcej, który u admina jest w menu bocznym komputera. `zaplecze`: u admina zamiast osobnej pozycji w menu – zakładka ekranu „Zaplecze” (pracownik bez zmian; adresy ekranów te same). */
+export type Screen = { title: string; icon: Icon; component: ComponentType<{ route: Route }>; nav?: false | 'side'; admin?: true; adminEnd?: true; moreOnly?: true; zaplecze?: true; adminSide?: true; workerMore?: true };
+/** `workerMore`: u pracownika na telefonie w Więcej zamiast dolnego paska (admin bez zmian). `adminSide`: ekran z Więcej, który u admina jest w menu bocznym komputera. `zaplecze`: u admina zamiast osobnej pozycji w menu – zakładka ekranu „Zaplecze” (pracownik bez zmian; adresy ekranów te same). */
 
 // Ekrany ładowane osobno (mniejszy pierwszy pakiet JS); `preload` = pobranie pakietu bez renderu.
 const lazyScreen = (f: () => Promise<{ default: ComponentType<{ route: Route }> }>) => Object.assign(lazy(f), { preload: f });
@@ -50,13 +50,13 @@ const Klienci = lazyScreen(() => import('./features/klienci/Klienci.js').then((m
 /** Ekrany w kolejności menu. */
 export const screens: Record<string, Screen> = {
   harm: { title: 'Harmonogram', icon: CalendarDots, component: Harmonogram },
-  jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, nav: 'side', adminEnd: true, zaplecze: true }, // admin rzadko: koniec menu; pracownik: w Więcej
+  jutro: { title: 'Na jutro', icon: SunHorizon, component: NaJutro, adminEnd: true, zaplecze: true }, // admin rzadko: koniec menu
   zl: { title: 'Zlecenia', icon: Briefcase, component: Zlecenia },
   czas: { title: 'Czasomierz', icon: Timer, component: Czas },
   leady: { title: 'Leady', icon: Handshake, component: Leady, nav: 'side', admin: true },
   serwis: { title: 'Do serwisu', icon: BellRinging, component: DoSerwisu, nav: 'side', admin: true },
   paszporty: { title: 'Paszporty', icon: IdentificationCard, component: Paszporty, nav: 'side', moreOnly: true, adminSide: true },
-  zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy },
+  zakupy: { title: 'Zakupy', icon: ShoppingCart, component: Zakupy, workerMore: true }, // pracownik: w Więcej (dolny pasek: Harmonogram, Na jutro, Zlecenia, Czasomierz)
   zap: { title: 'Zaplecze', icon: Toolbox, component: Zaplecze, nav: 'side', admin: true },
   auta: { title: 'Samochody', icon: Van, component: Samochody, nav: 'side', zaplecze: true },
   narz: { title: 'Narzędzia', icon: Wrench, component: Narzedzia, nav: 'side', zaplecze: true },
@@ -84,7 +84,7 @@ export const useRoute = (): Route =>
   useSyncExternalStore((f) => { addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, snapshot);
 
 /** Czy ekran jest w dolnym pasku telefonu (reszta: w Więcej). */
-export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.nav === undefined && !(admin && screens[k]!.adminEnd);
+export const inBottomBar = (k: string, admin: boolean): boolean => screens[k]?.nav === undefined && !(admin && screens[k]!.adminEnd) && !(!admin && screens[k]!.workerMore);
 
 /** Czy ekran jest w menu bocznym komputera (bez Więcej). */
 export const inSideNav = (k: string, admin: boolean): boolean => k !== 'wiecej' && screens[k]?.nav !== false && (!screens[k]!.moreOnly || (admin && !!screens[k]!.adminSide)) && (!screens[k]!.admin || admin) && !(admin && screens[k]!.zaplecze);
