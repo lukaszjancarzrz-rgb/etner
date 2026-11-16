@@ -26,6 +26,7 @@ test('czasomierz: pracownik Start/Stop, wpis w „Moje godziny”, admin widzi g
   await login(a, 'Tomasz Wrona', 'Harmonogram');
   await a.goto('/#czas');
   const phone = info.project.name.startsWith('iPhone');
+  await expect(a.getByText(/zakończył dziś/).first()).toBeVisible(); // Teraz: kto dziś skończył, też widać
   if (phone) { await a.getByLabel('Widok').click(); await a.getByRole('option', { name: 'Wpisy' }).click(); }
   else await a.getByRole('radio', { name: 'Wpisy' }).click();
   await expect(a.getByText('Bartek').first()).toBeVisible();

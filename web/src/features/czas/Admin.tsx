@@ -55,12 +55,15 @@ function Teraz() {
   const dzis = today();
   const trwajace = wpisy.filter((e) => !e.do);
   const nazwa = (id: string) => people.find((p) => p.id === id)?.nazwa ?? 'Osoba';
+  // dziś pracowali, licznik już zatrzymany (wcześniej znikali z listy)
+  const skonczyli = people.filter((p) => !trwajace.some((e) => e.personId === p.id) && wpisy.some((e) => e.personId === p.id && e.dzien === dzis))
+    .map((p) => { const es = wpisy.filter((e) => e.personId === p.id && e.dzien === dzis).sort((a, b) => a.od.localeCompare(b.od)); return { p, es, min: es.reduce((s, e) => s + minuty(e, new Date(now)), 0) }; });
   const planowani = people.filter((p) => p.userId && !wpisy.some((e) => e.personId === p.id && e.dzien === dzis)
     && sched.some((s) => s.personId === p.id && s.dzien === dzis && s.rodzaj === 'zlecenie' && s.jobId));
-  if (!trwajace.length && !planowani.length) return <Panel><Empty icon={Plus} title="Nikt nie pracuje" hint="Brak trwających liczników i brak osób do rozpoczęcia w dzisiejszym harmonogramie." /></Panel>;
+  if (!trwajace.length && !planowani.length && !skonczyli.length) return <Panel><Empty icon={Plus} title="Nikt nie pracuje" hint="Brak trwających liczników i brak osób do rozpoczęcia w dzisiejszym harmonogramie." /></Panel>;
   return (
     <div className="grid gap-3">
-      <h2 className="text-lg font-bold">Teraz pracują</h2>
+      <h2 className="text-lg font-bold">Dziś</h2>
       <ul className="grid gap-3 sm:grid-cols-2 desk:grid-cols-3">
         {trwajace.map((e) => { const o = opis(e.jobId); return (
           <li key={e.id}><Panel className="h-full border-l-4 border-l-ok p-4">
@@ -68,6 +71,12 @@ function Teraz() {
             <p className="truncate text-sm text-ink-2">{o.numer} {o.klient} · od {godzinaPl(e.od)}</p>
             <p className="mt-1 text-2xl font-extrabold tabular-nums">{fmtMinuty(minuty(e, new Date(now)))}</p>
           </Panel></li>); })}
+        {skonczyli.map(({ p, es, min }) => (
+          <li key={p.id}><Panel className="h-full border-l-4 border-l-action p-4">
+            <p className="font-bold">{p.nazwa}</p>
+            <p className="text-sm text-ink-2">zakończył dziś · {godzinaPl(es[0]!.od)} – {godzinaPl(es.at(-1)!.do)}</p>
+            <p className="mt-1 text-2xl font-extrabold tabular-nums">{fmtMinuty(min)}</p>
+          </Panel></li>))}
         {planowani.map((p) => {
           const j = sched.find((s) => s.personId === p.id && s.dzien === dzis && s.rodzaj === 'zlecenie' && s.jobId);
           return <li key={p.id}><Panel className="h-full border-l-4 border-l-line p-4"><p className="font-bold">{p.nazwa}</p><p className="text-sm text-ink-2">nie rozpoczął dziś (w harmonogramie: {opis(j?.jobId).klient})</p></Panel></li>;

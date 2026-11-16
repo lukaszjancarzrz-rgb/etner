@@ -108,12 +108,17 @@ export function createApp(deps: AppDeps, defs: ModuleDef[] = []): Hono {
     // serveStatic przyjmuje root względem cwd
     const root = relative(process.cwd(), webDist) || '.';
     const files = serveStatic({ root });
-    app.use('/*', (c, next) => (c.req.path.startsWith('/api/') ? next() : files(c, next)));
+    app.use('/*', (c, next) => {
+      if (c.req.path.startsWith('/api/')) return next();
+      // pliki z hashem w nazwie (/assets/) – na stałe; reszta (index.html, sw.js, manifest) – zawsze sprawdzana, nowa wersja od razu po wydaniu
+      c.header('cache-control', c.req.path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
+      return files(c, next);
+    });
     // Fallback SPA tylko dla GET/HEAD poza /api i bez rozszerzenia (brakujący plik to 404)
     app.notFound((c) =>
       c.req.path.startsWith('/api/') || !['GET', 'HEAD'].includes(c.req.method) || /\.[^/]+$/.test(c.req.path)
         ? c.json({ error: 'Nie znaleziono' }, 404)
-        : c.html(index),
+        : c.html(index, 200, { 'cache-control': 'no-cache' }),
     );
   } else {
     app.notFound((c) => c.json({ error: 'Nie znaleziono' }, 404));

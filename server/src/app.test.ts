@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -27,6 +27,8 @@ describe('serwowanie web/dist', () => {
   const webDist = mkdtempSync(join(tmpdir(), 'etner-web-'));
   writeFileSync(join(webDist, 'index.html'), '<script>var t = 1;</script><h1>ETNER</h1>');
   writeFileSync(join(webDist, 'app.js'), 'console.log(1)');
+  mkdirSync(join(webDist, 'assets'));
+  writeFileSync(join(webDist, 'assets', 'x-abc123.js'), 'console.log(2)');
   const app = createApp(testDeps({ webDist }));
 
   it('nagłówki bezpieczeństwa: CSP ze skrótem skryptu z index.html, czcionki tylko własne, zdjęcia https i blob, bez ramek', async () => {
@@ -45,6 +47,13 @@ describe('serwowanie web/dist', () => {
     const res = await app.request('/app.js');
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('console.log(1)');
+  });
+
+  it('cache: index.html i pliki bez hasha zawsze sprawdzane, /assets/ na stałe', async () => {
+    expect((await app.request('/')).headers.get('cache-control')).toBe('no-cache');
+    expect((await app.request('/zlecenia/1')).headers.get('cache-control')).toBe('no-cache');
+    expect((await app.request('/app.js')).headers.get('cache-control')).toBe('no-cache');
+    expect((await app.request('/assets/x-abc123.js')).headers.get('cache-control')).toContain('immutable');
   });
 
   it('nieznana ścieżka spoza /api dostaje index.html', async () => {

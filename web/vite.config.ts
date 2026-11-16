@@ -13,7 +13,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['icon.svg', 'logo.png', 'logo-mark.png', 'logo-name.png', 'apple-touch-icon.png', 'badge-96.png', 'push-sw.js', 'fonts/*.woff2'],
+      // właściciel 2026-11-16: bez przechowywania aplikacji w telefonie – każde otwarcie pobiera aktualną wersję (offline nie startuje);
+      // service worker zostaje tylko dla powiadomień push (push-sw.js), stara pamięć podręczna jest kasowana
+      includeAssets: [],
+      includeManifestIcons: false,
       manifest: {
         name: 'ETNER',
         short_name: 'ETNER',
@@ -33,8 +36,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/p\//], // /p/<token>: strona klienta z serwera, nie aplikacja
+        globPatterns: [],
+        navigateFallback: null,
         importScripts: ['push-sw.js'],
         cleanupOutdatedCaches: true,
       },
