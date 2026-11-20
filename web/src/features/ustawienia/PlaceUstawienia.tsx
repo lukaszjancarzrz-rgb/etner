@@ -59,7 +59,7 @@ const POLA: [keyof Parametry, string, '%' | 'zł' | 'n'][] = [
   ['placaMinGr', 'Płaca minimalna (zł/mies.)', 'zł'], ['emP', 'Emerytalna – pracownik (%)', '%'], ['rentP', 'Rentowa – pracownik (%)', '%'], ['chor', 'Chorobowa (%)', '%'],
   ['zdr', 'Zdrowotna (%)', '%'], ['pit', 'Zaliczka PIT (%)', '%'], ['kwotaZmnGr', 'Kwota zmniejszająca podatek (zł/mies.)', 'zł'], ['kupGr', 'Koszty uzyskania – umowa o pracę (zł/mies.)', 'zł'],
   ['kupZl', 'Koszty uzyskania – zlecenie (%)', '%'], ['emF', 'Emerytalna – pracodawca (%)', '%'], ['rentF', 'Rentowa – pracodawca (%)', '%'], ['wyp', 'Wypadkowa (%)', '%'],
-  ['fp', 'Fundusz Pracy (%)', '%'], ['fgsp', 'FGŚP (%)', '%'], ['godzDnia', 'Godziny w dniu pracy', 'n'], ['urlopMin', 'Urlop ustawowy – staż < 10 lat (dni)', 'n'],
+  ['fp', 'Fundusz Pracy (%)', '%'], ['fgsp', 'FGŚP (%)', '%'], ['godzDnia', 'Godziny w dniu pracy (dniówka w robociźnie zleceń)', 'n'], ['urlopMin', 'Urlop ustawowy – staż < 10 lat (dni)', 'n'],
   ['urlopMax', 'Urlop ustawowy – staż ≥ 10 lat (dni)', 'n'], ['godzUrlop', 'Godziny płatne za 1 dzień urlopu', 'n'],
 ];
 const pokaz = (v: number, j: '%' | 'zł' | 'n') => String(j === '%' ? +(v * 100).toFixed(4) : j === 'zł' ? v / 100 : v).replace('.', ',');
