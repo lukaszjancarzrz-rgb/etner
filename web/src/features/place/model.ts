@@ -222,7 +222,7 @@ export function minutyCzasu(czas: Rec[] = []): Map<string, number> {
 }
 
 /**
- * Koszt pracy osoby w miesiącu (gr) za dzień albo godzinę. Godziny pracy w miesiącu = godziny z Czasomierza + dni z harmonogramu bez wpisów czasomierza × godziny dnia
+ * Koszt pracy osoby w miesiącu (gr) za dzień albo godzinę; miesiąc w toku zawsze szacunkiem ze stawki (godziny w Płacach niepełne). Godziny pracy w miesiącu = godziny z Czasomierza + dni z harmonogramu bez wpisów czasomierza × godziny dnia
  * (bez Czasomierza: dni pracy × godziny dnia, czyli koszt dnia = koszt całkowity ÷ dni pracy). Bez godzin w Płacach: stawka + koszt umowy ÷ wymiar; bez stawki: stawka osobodnia.
  * Urlop (decyzja właściciela 2026-11-14): zamiast urlopu wziętego w miesiącu – 1/12 rocznego limitu urlopu × godziny dnia urlopu × stawka. Czasomierz: decyzja C7.
  */
@@ -242,13 +242,15 @@ function kosztJednostki(d: Dane, stawkaOsobodniaGr: number, P: Przygotowane, god
     const godzinPracy = minT / 60 + dniBez * p.godzDnia;
     let naGodzine: number, opis: string;
     const mm = `${m.slice(5)}.${m.slice(0, 4)}`;
-    if (r && r.stawka > 0 && r.godziny > 0 && godzinPracy > 0) {
+    // miesiąc w toku: godziny w Płacach zwykle niepełne (np. wstawione z Czasomierza w połowie miesiąca) – szacunek ze stawki, nie koszt ÷ dni
+    const zamkniety = m < d.dzis.slice(0, 7);
+    if (r && r.stawka > 0 && r.godziny > 0 && godzinPracy > 0 && zamkniety) {
       naGodzine = (r.koszt - r.urlop + urlop12) / godzinPracy;
       opis = `Płace ${mm}: koszt ${fmtZl(Math.round(r.koszt - r.urlop + urlop12))} ÷ ${minT ? `${Math.round(godzinPracy * 10) / 10} h pracy` : `${dniBez.toLocaleString('pl-PL')} dni pracy w harmonogramie`}`;
     } else if (r && r.stawka > 0) {
       const wymiar = p.godzDnia * dniRobocze(m, d.dniWolne) * Number(P.osoby.get(personId)?.etat ?? 1);
       naGodzine = r.stawka + (wymiar ? (r.kosztUmowy + urlop12) / wymiar : 0);
-      opis = `brak godzin w Płacach za ${mm}: stawka ${fmtZl(r.stawka)}/h + koszt umowy i urlopu ÷ ${Math.round(wymiar)} h wymiaru`;
+      opis = `${zamkniety ? `brak godzin w Płacach za ${mm}` : `${mm} – miesiąc w toku (szacunek)`}: stawka ${fmtZl(r.stawka)}/h + koszt umowy i urlopu ÷ ${Math.round(wymiar)} h wymiaru`;
     } else {
       naGodzine = stawkaOsobodniaGr / p.godzDnia;
       opis = `brak stawki w Płacach za ${mm} – stawka osobodnia z Ustawień (${fmtZl(stawkaOsobodniaGr)})`;
