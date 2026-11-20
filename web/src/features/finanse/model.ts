@@ -97,10 +97,12 @@ export function statystyki(entries: Rec[], jobs: Rec[], rok: string) {
   return { kategorie: rows(kat), ekipy: rows(eki), krzyz, razem };
 }
 
-export type WynikZlecenia = { przychod: number; materialy: number; dni: number; godziny: number; robocizna: number; wynik: number; marza: number | null };
+/** Pozycja robocizny: osoba w miesiącu – dni z harmonogramu i godziny z Czasomierza, koszt. */
+export type PozycjaRobocizny = { personId: string; miesiac: string; dni: number; godziny: number; koszt: number };
+export type WynikZlecenia = { przychod: number; materialy: number; dni: number; godziny: number; robocizna: number; wynik: number; marza: number | null; pozycje: PozycjaRobocizny[] };
 
 /** Koszt 1 dnia (albo 1 godziny) osoby w miesiącu (gr) – z Płac (place/model.ts kosztDnia / kosztGodziny). */
-export type KosztDnia = (personId: string, miesiac: string) => number;
+export type KosztDnia = ((personId: string, miesiac: string) => number) & { opis?: (personId: string, miesiac: string) => string };
 /** Czasomierz do robocizny: wpisy czasu i koszt godziny osoby. */
 export type CzasRobocizny = { wpisy: Rec[]; godzina: KosztDnia };
 
@@ -118,10 +120,14 @@ export function wynikZlecenia(jobId: string, revenues: Rec[], entries: Rec[], ko
   const czasJob = (czas?.wpisy ?? []).filter((e) => live(e) && e.do && e.jobId === jobId);
   const h = (e: Rec) => (Date.parse(e.do) - Date.parse(e.od)) / 3_600_000;
   const godziny = czasJob.reduce((s, e) => s + h(e), 0);
-  const robocizna = Math.round(wpisy.reduce((s, e) => s + (e.polDnia ? 0.5 : 1) * koszt(e.personId as string, String(e.dzien).slice(0, 7)), 0)
-    + czasJob.reduce((s, e) => s + h(e) * czas!.godzina(e.personId as string, String(e.dzien).slice(0, 7)), 0));
+  const poz = new Map<string, PozycjaRobocizny>();
+  const at = (e: Rec) => { const k = `${e.personId}|${String(e.dzien).slice(0, 7)}`; let x = poz.get(k); if (!x) poz.set(k, x = { personId: e.personId as string, miesiac: String(e.dzien).slice(0, 7), dni: 0, godziny: 0, koszt: 0 }); return x; };
+  for (const e of wpisy) { const x = at(e), w = e.polDnia ? 0.5 : 1; x.dni += w; x.koszt += w * koszt(x.personId, x.miesiac); }
+  for (const e of czasJob) { const x = at(e); x.godziny += h(e); x.koszt += h(e) * czas!.godzina(x.personId, x.miesiac); }
+  const pozycje = [...poz.values()].sort((a, b) => a.miesiac.localeCompare(b.miesiac) || b.koszt - a.koszt);
+  const robocizna = Math.round(pozycje.reduce((s, x) => s + x.koszt, 0));
   const wynik = przychod - materialy - robocizna;
-  return { przychod, materialy, dni, godziny, robocizna, wynik, marza: przychod ? wynik / przychod : null };
+  return { przychod, materialy, dni, godziny, robocizna, wynik, marza: przychod ? wynik / przychod : null, pozycje };
 }
 
 /** Zlecenia z przychodem w danym roku (miesiąc przychodu) z ich wynikiem. */

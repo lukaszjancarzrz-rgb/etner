@@ -59,7 +59,7 @@ describe('3c: wynik zlecenia', () => {
     { id: 'r3', jobId: 'j', sposob: 'zwrot', nettoGr: 99_999, dzien: '2026-10-01' }, { id: 'r4', jobId: 'j', sposob: 'bez', nettoGr: 5, deletedAt: 'x', dzien: '2026-10-01' }];
   const entries = [{ id: 'e1', jobId: 'j', dzien: '2026-09-01' }, { id: 'e2', jobId: 'j', dzien: '2026-09-02', polDnia: true }, { id: 'e3', jobId: 'inne', dzien: '2026-09-02' }];
   it('przychód − materiały − osobodni × stawka; zwrot VAT i usunięte pominięte', () => {
-    expect(wynikZlecenia('j', revenues, entries, () => 48_000)).toEqual({ przychod: 2_000_000, materialy: 800_000, dni: 1.5, godziny: 0, robocizna: 72_000, wynik: 1_128_000, marza: 0.564 });
+    expect(wynikZlecenia('j', revenues, entries, () => 48_000)).toMatchObject({ przychod: 2_000_000, materialy: 800_000, dni: 1.5, godziny: 0, robocizna: 72_000, wynik: 1_128_000, marza: 0.564 });
     expect(wynikZlecenia('brak', revenues, entries, () => 48_000)).toMatchObject({ przychod: 0, marza: null });
   });
   it('robocizna z Czasomierza: osoba-miesiąc z wpisami czasu liczona godzinami, reszta dniami harmonogramu', () => {

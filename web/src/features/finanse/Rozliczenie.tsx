@@ -49,6 +49,19 @@ export default function Rozliczenie({ jobId }: { jobId: string }) {
             <Wiersz k="Przychód netto" v={w.przychod} />
             <Wiersz k="− Materiały" sub="szacunek z przychodu" v={-w.materialy || 0} />
             <Wiersz k="− Robocizna" sub={(w.dni || w.godziny) && !w.robocizna ? 'brak danych w Płacach – uzupełnij Płace albo stawkę osobodnia (Ustawienia → Finanse)' : robSub || '0 osobodni'} v={-w.robocizna || 0} />
+            {w.pozycje.length > 0 && (
+              <details className="-mt-1 text-sm">
+                <summary className="cursor-pointer text-action">Skąd robocizna – osoby</summary>
+                <ul className="mt-1 grid gap-1.5">
+                  {w.pozycje.map((x) => (
+                    <li key={`${x.personId}|${x.miesiac}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3">
+                      <span><b>{people.find((p) => p.id === x.personId)?.nazwa ?? '?'}</b> {x.miesiac.slice(5)}.{x.miesiac.slice(0, 4)}: {[x.dni ? `${dni(x.dni)} ${x.dni === 1 ? 'dzień' : 'dni'} × ${fmtZl(Math.round(koszt(x.personId, x.miesiac)))}` : '', x.godziny ? `${fmtMinuty(x.godziny * 60)} × ${fmtZl(czas.godzina(x.personId, x.miesiac))}/h` : ''].filter(Boolean).join(' + ')}
+                        <span className={cn('block text-xs', x.koszt ? 'text-ink-2' : 'text-danger')}>{x.dni ? koszt.opis?.(x.personId, x.miesiac) : (czas.godzina as typeof koszt).opis?.(x.personId, x.miesiac)}</span></span>
+                      <span className="tabular-nums">{fmtZl(Math.round(x.koszt))}</span>
+                    </li>))}
+                </ul>
+              </details>
+            )}
             <Wiersz k={`Wynik zlecenia${w.marza === null ? '' : ` · ${Math.round(w.marza * 100)}%`}`} v={w.wynik} strong />
           </div>
         </>

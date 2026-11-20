@@ -1,4 +1,4 @@
-import { isWorkday, parametryMiesiaca, type Forma, type Parametry } from '@etner/shared';
+import { fmtZl, isWorkday, parametryMiesiaca, type Forma, type Parametry } from '@etner/shared';
 import type { Rec } from '../../core/store.js';
 
 /** Płace: liczenie jak w arkuszu (Rozliczenie miesiąca, Statystyki urlopów, Podsumowanie płac). Kwoty w groszach. */
@@ -227,29 +227,38 @@ export function minutyCzasu(czas: Rec[] = []): Map<string, number> {
  * Urlop (decyzja właściciela 2026-11-14): zamiast urlopu wziętego w miesiącu – 1/12 rocznego limitu urlopu × godziny dnia urlopu × stawka. Czasomierz: decyzja C7.
  */
 function kosztJednostki(d: Dane, stawkaOsobodniaGr: number, P: Przygotowane, godzina: boolean) {
-  const memo = new Map<string, number>();
+  const memo = new Map<string, { v: number; opis: string }>();
   const czasMin = minutyCzasu(d.czas);
   const dniCzasu = new Set((d.czas ?? []).filter((e) => live(e) && e.do).map((e) => `${e.personId}|${e.dzien}`));
-  return (personId: string, m: string): number => {
+  const licz = (personId: string, m: string) => {
     const k = `${personId}|${m}`;
-    let v = memo.get(k);
-    if (v !== undefined) return v;
+    const got = memo.get(k);
+    if (got) return got;
     const r = P.osoby.has(personId) ? wierszRozliczenia(P, d, personId, m) : null;
     const p = parametryMiesiaca(d.parametry, m);
     const urlop12 = r ? Number(P.osoby.get(personId)?.urlopDni ?? 0) * p.godzUrlop * r.stawka / 12 : 0;
     const minT = czasMin.get(k) ?? 0;
     const dniBez = minT ? P.entries.filter((e) => e.personId === personId && String(e.dzien).startsWith(m) && czyDzienPracy(e) && !dniCzasu.has(`${personId}|${e.dzien}`)).reduce((s, e) => s + waga(e), 0) : r?.dniPracy ?? 0;
     const godzinPracy = minT / 60 + dniBez * p.godzDnia;
-    let naGodzine: number;
-    if (r && r.stawka > 0 && r.godziny > 0 && godzinPracy > 0) naGodzine = (r.koszt - r.urlop + urlop12) / godzinPracy;
-    else if (r && r.stawka > 0) {
+    let naGodzine: number, opis: string;
+    const mm = `${m.slice(5)}.${m.slice(0, 4)}`;
+    if (r && r.stawka > 0 && r.godziny > 0 && godzinPracy > 0) {
+      naGodzine = (r.koszt - r.urlop + urlop12) / godzinPracy;
+      opis = `Płace ${mm}: koszt ${fmtZl(Math.round(r.koszt - r.urlop + urlop12))} ÷ ${minT ? `${Math.round(godzinPracy * 10) / 10} h pracy` : `${dniBez.toLocaleString('pl-PL')} dni pracy w harmonogramie`}`;
+    } else if (r && r.stawka > 0) {
       const wymiar = p.godzDnia * dniRobocze(m, d.dniWolne) * Number(P.osoby.get(personId)?.etat ?? 1);
       naGodzine = r.stawka + (wymiar ? (r.kosztUmowy + urlop12) / wymiar : 0);
-    } else naGodzine = stawkaOsobodniaGr / p.godzDnia;
-    v = Math.round(godzina ? naGodzine : naGodzine * p.godzDnia);
+      opis = `brak godzin w Płacach za ${mm}: stawka ${fmtZl(r.stawka)}/h + koszt umowy i urlopu ÷ ${Math.round(wymiar)} h wymiaru`;
+    } else {
+      naGodzine = stawkaOsobodniaGr / p.godzDnia;
+      opis = `brak stawki w Płacach za ${mm} – stawka osobodnia z Ustawień (${fmtZl(stawkaOsobodniaGr)})`;
+    }
+    const v = { v: Math.round(godzina ? naGodzine : naGodzine * p.godzDnia), opis };
     memo.set(k, v);
     return v;
   };
+  // `opis`: skąd ta kwota (karta zlecenia – rozbicie robocizny)
+  return Object.assign((personId: string, m: string): number => licz(personId, m).v, { opis: (personId: string, m: string): string => licz(personId, m).opis });
 }
 export const kosztDnia = (d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) => kosztJednostki(d, stawkaOsobodniaGr, P, false);
 export const kosztGodziny = (d: Dane, stawkaOsobodniaGr: number, P = przygotuj(d)) => kosztJednostki(d, stawkaOsobodniaGr, P, true);
