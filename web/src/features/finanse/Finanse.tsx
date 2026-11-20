@@ -49,7 +49,7 @@ export function Finanse() {
       {/* telefon: 6 zakładek nie mieści się w jednym rzędzie – lista wyboru */}
       {desk ? <Segmented label="Widok" value={tab} onChange={setTab} options={TABS} className="max-w-4xl" />
         : <Select aria-label="Widok" value={tab} onValueChange={(v) => setTab(v as Tab)} options={TABS.map((o) => ({ value: o.v, label: o.label }))} />}
-      {!lista && <div className="w-40"><Select aria-label="Rok" value={rok} onValueChange={setRok} options={lata.map((y) => ({ value: y, label: y }))} /></div>}
+      {!lista && tab !== 'zlecenia' && <div className="w-40"><Select aria-label="Rok" value={rok} onValueChange={setRok} options={lata.map((y) => ({ value: y, label: y }))} /></div>}
       {lista && <div className="flex flex-wrap items-center gap-3">
         <div className="w-full desk:w-[24rem]"><Search value={q} onChange={setQ} label="Szukaj" placeholder="Klient, opis, kontrahent" /></div>
         <div className="w-52"><Input type="month" aria-label="Miesiąc" value={mies} onChange={(e) => setMies(e.target.value)} /></div>

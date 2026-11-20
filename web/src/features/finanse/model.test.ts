@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { kontrolaKpir, rozliczoneBezPrzychodu, statystyki, sumaMiesiaca, sumaOkresu, wynikiZlecen, wynikRoku, wynikZlecenia } from './model.js';
+import { kontrolaKpir, rozliczoneBezPrzychodu, statystyki, sumaMiesiaca, sumaOkresu, wynikiOkresu, wynikRoku, wynikZlecenia } from './model.js';
+import type { Rec } from '../../core/store.js';
 
 describe('rozliczoneBezPrzychodu', () => {
   it('zwraca „Rozliczone” bez przychodu, pomija z przychodem, „Zakończone” i usunięte przychody nie liczą się', () => {
@@ -72,9 +73,28 @@ describe('3c: wynik zlecenia', () => {
     const w = wynikZlecenia('j', revenues, e, () => 48_000, { wpisy: czas, godzina: () => 6_000 });
     expect(w).toMatchObject({ dni: 1, godziny: 8.5, robocizna: 48_000 + 8.5 * 6_000 });
   });
-  it('wynikiZlecen: tylko zlecenia z przychodem w roku', () => {
-    const w = wynikiZlecen([{ id: 'j' }, { id: 'inne' }], revenues, entries, () => 0, '2026');
-    expect(w.map((x) => x.job.id)).toEqual(['j']);
-    expect(wynikiZlecen([{ id: 'j' }], revenues, entries, () => 0, '2025')).toEqual([]);
+});
+
+describe('wyniki zleceń w okresie', () => {
+  const jobs = [{ id: 'a', status: 'Zakończone' }, { id: 'b', status: 'Zakończone' }, { id: 'c', status: 'W realizacji' }, { id: 'd', status: 'Zakończone' }];
+  const revenues = [{ id: 'r1', jobId: 'a', sposob: 'vat8', nettoGr: 1_000_000, materialyGr: 400_000, dzien: '2026-11-05' }, { id: 'r2', jobId: 'd', sposob: 'vat8', nettoGr: 500_000, materialyGr: 0, dzien: '2026-09-10' }];
+  const entries = [
+    { id: 'e1', jobId: 'a', personId: 'p', dzien: '2026-10-28' }, { id: 'e2', jobId: 'a', personId: 'p', dzien: '2026-10-29', polDnia: true },
+    { id: 'e3', jobId: 'b', personId: 'p', dzien: '2026-11-03' }, { id: 'e4', jobId: 'c', personId: 'p', dzien: '2026-11-04' },
+  ];
+  const czas = { wpisy: [{ id: 't1', jobId: 'a', personId: 'q', dzien: '2026-10-30', od: '2026-10-30T06:00:00Z', do: '2026-10-30T11:00:00Z' }], godzina: () => 5_000 };
+  const o = { od: '2026-11', do: '2026-11', wg: 'faktura' as const, zamkniete: (j: Rec) => j.status === 'Zakończone', godzDnia: () => 10 };
+  it('miesiąc wg faktury, zamknięte bez faktury, roboczodni i wynik na dzień', () => {
+    const w = wynikiOkresu(jobs, revenues, entries, () => 40_000, czas, o);
+    expect(w.map((x) => x.job.id).sort()).toEqual(['a', 'b']); // c – w realizacji bez faktury; d – faktura we wrześniu
+    const a = w.find((x) => x.job.id === 'a')!;
+    expect(a).toMatchObject({ miesiac: '2026-11', bezFaktury: false, roboczodni: 1.5 + 0.5, pierwszyDzien: '2026-10-28', ostatniDzien: '2026-10-30' });
+    expect(a.robocizna).toBe(1.5 * 40_000 + 5 * 5_000);
+    expect(a.naDzien).toBe(a.wynik / 2);
+    expect(w.find((x) => x.job.id === 'b')).toMatchObject({ bezFaktury: true, przychod: 0, miesiac: '2026-11' });
+  });
+  it('miesiąc wg ostatniego dnia pracy', () => {
+    const w = wynikiOkresu(jobs, revenues, entries, () => 40_000, czas, { ...o, od: '2026-10', do: '2026-10', wg: 'praca' });
+    expect(w.map((x) => x.job.id)).toEqual(['a']);
   });
 });

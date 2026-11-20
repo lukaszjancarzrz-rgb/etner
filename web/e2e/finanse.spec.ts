@@ -134,3 +134,26 @@ test('finanse: przychód bez zlecenia → „Zlecenie” w formularzu wiąże go
   await expect(f).toBeHidden();
   await expect.poll(async () => ((await (await page.request.get('/api/revenues')).json()) as { id: string; jobId: string; klient: string }[]).find((r) => r.id === rev.id)).toMatchObject({ jobId: job.id, klient: tag });
 });
+
+test('finanse: Wyniki zleceń – okres od–do, tabela, panel zlecenia po kliknięciu', async ({ page }, info) => {
+  const phone = info.project.name.startsWith('iPhone');
+  const tag = `E2E wyniki ${info.project.name.replace(/\W/g, '')} ${Date.now() % 100000}`;
+  await login(page, 'Tomasz Wrona');
+  const r = await page.request.post('/api/jobs', { data: { newClient: { typ: 'osoba', nazwa: tag }, status: 'Zaplanowane', rodzaj: 'Montaż', kategoria: 'Klimatyzacja' } });
+  expect(r.ok(), await r.text()).toBeTruthy();
+  const job = (await r.json()) as { id: string; numer: string };
+  const rv = await page.request.post('/api/revenues', { data: { jobId: job.id, sposob: 'vat8', dzien: '2031-03-10', kwotaGr: 1_080_000, nettoGr: 1_000_000, materialyGr: 400_000, klient: tag, miejscowosc: '', branza: '', opis: '', nrFaktury: 'E2E' } });
+  expect(rv.ok(), await rv.text()).toBeTruthy();
+  await page.goto('/#fin');
+  if (phone) { await page.getByLabel('Widok').click(); await page.getByRole('option', { name: 'Wyniki zleceń' }).click(); }
+  else await page.getByRole('radio', { name: 'Wyniki zleceń' }).click();
+  await page.getByLabel('Od miesiąca').fill('2031-03');
+  await page.getByLabel('Do miesiąca').fill('2031-03');
+  await page.getByLabel('Szukaj zlecenia').fill(tag);
+  if (phone) await page.getByRole('button', { name: new RegExp(tag) }).click();
+  else await page.getByRole('table', { name: 'Wyniki zleceń' }).getByRole('button', { name: job.numer }).click();
+  const panel = page.getByRole('region', { name: `Wynik zlecenia ${job.numer}` });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole('img', { name: /Przychód 10\s000 zł, materiały 4\s?000 zł/ })).toBeVisible();
+  await expect(panel.getByRole('link', { name: 'Otwórz kartę zlecenia' })).toHaveAttribute('href', `#zl/${job.id}`);
+});

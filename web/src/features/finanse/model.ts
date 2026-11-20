@@ -130,8 +130,32 @@ export function wynikZlecenia(jobId: string, revenues: Rec[], entries: Rec[], ko
   return { przychod, materialy, dni, godziny, robocizna, wynik, marza: przychod ? wynik / przychod : null, pozycje };
 }
 
-/** Zlecenia z przychodem w danym roku (miesiąc przychodu) z ich wynikiem. */
-export function wynikiZlecen(jobs: Rec[], revenues: Rec[], entries: Rec[], koszt: KosztDnia, rok: string, czas?: CzasRobocizny) {
-  const ids = new Set(revenues.filter((r) => live(r) && r.jobId && r.sposob !== 'zwrot' && miesiacWiersza(r)?.startsWith(rok)).map((r) => r.jobId as string));
-  return jobs.filter((j) => live(j) && ids.has(j.id as string)).map((job) => ({ job, ...wynikZlecenia(job.id as string, revenues, entries, koszt, czas) }));
+/** Wiersz zakładki „Wyniki zleceń”: wynik + miesiąc zlecenia, roboczodni i wynik na roboczodzień. */
+export type WierszZlecenia = WynikZlecenia & { job: Rec; miesiac: string; bezFaktury: boolean; roboczodni: number; naDzien: number | null; pierwszyDzien: string | null; ostatniDzien: string | null };
+
+/**
+ * Wyniki zleceń w okresie (RRRR-MM od–do, właściciel 2026-11-20): miesiąc zlecenia wg faktury (ostatni miesiąc przychodu) albo wg ostatniego dnia pracy.
+ * Zlecenia zamknięte bez faktury też (przychód 0, „brak faktury”; miesiąc = ostatni dzień pracy). Roboczodni = dni z harmonogramu + godziny z Czasomierza ÷ godziny dnia.
+ */
+export function wynikiOkresu(jobs: Rec[], revenues: Rec[], entries: Rec[], koszt: KosztDnia, czas: CzasRobocizny | undefined,
+  o: { od: string; do: string; wg: 'faktura' | 'praca'; zamkniete: (job: Rec) => boolean; godzDnia: (miesiac: string) => number }): WierszZlecenia[] {
+  const rev = new Map<string, string[]>(), dni = new Map<string, string[]>();
+  const add = (m: Map<string, string[]>, k: string, v: string) => { const a = m.get(k); if (a) a.push(v); else m.set(k, [v]); };
+  for (const r of revenues) { const mm = live(r) && r.jobId && r.sposob !== 'zwrot' ? miesiacWiersza(r) : null; if (mm) add(rev, r.jobId as string, mm); }
+  for (const e of entries) if (live(e) && e.jobId) add(dni, e.jobId as string, String(e.dzien));
+  for (const e of czas?.wpisy ?? []) if (live(e) && e.jobId && e.do) add(dni, e.jobId as string, String(e.dzien));
+  const out: WierszZlecenia[] = [];
+  for (const job of jobs) {
+    if (!live(job)) continue;
+    const ms = rev.get(job.id as string) ?? [], ds = (dni.get(job.id as string) ?? []).sort();
+    const ostatni = ds.at(-1) ?? null, bezFaktury = !ms.length;
+    if (bezFaktury && (!ostatni || !o.zamkniete(job))) continue;
+    const miesiac = bezFaktury || (o.wg === 'praca' && ostatni) ? ostatni!.slice(0, 7) : ms.sort().at(-1)!;
+    if (miesiac < o.od || miesiac > o.do) continue;
+    const w = wynikZlecenia(job.id as string, revenues, entries, koszt, czas);
+    const roboczodni = w.pozycje.reduce((s, x) => s + x.dni + x.godziny / o.godzDnia(x.miesiac), 0);
+    out.push({ ...w, job, miesiac, bezFaktury, roboczodni, naDzien: roboczodni ? w.wynik / roboczodni : null, pierwszyDzien: ds[0] ?? null, ostatniDzien: ostatni });
+  }
+  return out;
 }
+

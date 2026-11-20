@@ -21,11 +21,11 @@ const k = (gr: number) => (Math.abs(gr) >= 100_000 ? `${Math.round(gr / 100_000)
 
 type Seria = { name: string; color: string; values: number[] };
 
-function Legenda({ s }: { s: { name: string; color: string; line?: boolean }[] }) {
+export function Legenda({ s }: { s: { name: string; color: string; line?: boolean }[] }) {
   return <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-2" aria-hidden>{s.map((x) => <li key={x.name} className="inline-flex items-center gap-1.5"><span className={x.line ? 'h-0.5 w-4' : 'h-2.5 w-2.5 rounded-[2px]'} style={{ background: x.color }} />{x.name}</li>)}</ul>;
 }
 
-function Wykres({ title, children, legend, opis }: { title: string; children: ReactNode; legend?: ReactNode; opis: string }) {
+export function Wykres({ title, children, legend, opis }: { title: string; children: ReactNode; legend?: ReactNode; opis: string }) {
   const [duzy, setDuzy] = useState(false);
   return (
     <figure className="grid gap-2 rounded-[4px] border border-line bg-card p-4" aria-label={title}>
@@ -85,15 +85,15 @@ function Slupki({ s, stacked, line, upto = 12, h = 220 }: { s: Seria[]; stacked?
 }
 
 /** Poziome słupki z podpisem i wartością (ranking: rok wg branży, źródła, osobodni). */
-function Poziome({ rows, fmt }: { rows: { name: string; v: number; color: string }[]; fmt: (v: number) => string }) {
+export function Poziome({ rows, fmt }: { rows: { name: string; v: number; color: string; label?: string }[]; fmt: (v: number) => string }) {
   const max = Math.max(...rows.map((r) => r.v), 1);
   return (
     <ul className="grid gap-1.5">
       {rows.map((r) => (
         <li key={r.name} className="grid grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm">
           <span className="truncate font-semibold">{r.name}</span>
-          <span className="h-4 rounded-r-[4px]" data-tip={`${r.name}\n${fmt(r.v)}`} style={{ width: `${(r.v / max) * 100}%`, minWidth: 2, background: r.color }} />
-          <span className="tabular-nums text-ink-2">{fmt(r.v)}</span>
+          <span className="h-4 rounded-r-[4px]" data-tip={`${r.name}\n${r.label ?? fmt(r.v)}`} style={{ width: `${(r.v / max) * 100}%`, minWidth: 2, background: r.color }} />
+          <span className="tabular-nums text-ink-2">{r.label ?? fmt(r.v)}</span>
         </li>
       ))}
     </ul>
