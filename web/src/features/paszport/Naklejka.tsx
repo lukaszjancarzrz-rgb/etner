@@ -4,13 +4,12 @@ import { api, ApiError } from '../../core/api.js';
 import { useIsAdmin } from '../../core/data.js';
 import { useOnline } from '../../core/layout/status.js';
 import { store, type Rec } from '../../core/store.js';
-import { Segmented } from '../../core/ui/bits.js';
 import { Button } from '../../core/ui/button.js';
 import { Dialog, Sheet } from '../../core/ui/sheet.js';
 import { toast } from '../../core/ui/toast.js';
-import { drawLabel, LABEL_SIZES, labelBlob, printLabel, type Firma, type LabelSize } from './naklejka.js';
+import { drawLabel, LABEL_PX, labelBlob, printLabel, type Firma } from './naklejka.js';
 
-const FIRMA_KEY = 'etner-firma', SIZE_KEY = 'etner-naklejka';
+const FIRMA_KEY = 'etner-firma';
 const ls = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* bez pamięci przeglądarki */ } } };
 
 /** Dane firmy z serwera; ostatnie zapamiętane w telefonie (naklejka offline). */
@@ -41,23 +40,21 @@ function useLogo(): HTMLCanvasElement | undefined {
 
 const canShareFiles = () => { try { return !!navigator.canShare?.({ files: [new File([''], 'n.png', { type: 'image/png' })] }); } catch { return false; } };
 
-/** Kod QR i naklejka (P8): podgląd, rozmiar, udostępnij / pobierz / drukuj / arkusz A4, link; nowy link – admin. Biblioteka QR tylko w tym pakiecie. */
+/** Kod QR i naklejka (P8): podgląd 100×70 mm, udostępnij / pobierz / drukuj / arkusz A4, link; nowy link – admin. Biblioteka QR tylko w tym pakiecie. */
 export default function Naklejka({ passport, klient }: { passport: Rec; klient: string }) {
   const admin = useIsAdmin();
   const firma = useFirma();
   const logo = useLogo();
   const ref = useRef<HTMLCanvasElement>(null);
-  const [size, setSize] = useState<LabelSize>(() => { const v = ls.get(SIZE_KEY); return v && v in LABEL_SIZES ? v as LabelSize : '50x30'; });
   const [renew, setRenew] = useState(false);
   const token = passport.token as string | null;
   const url = token ? `${location.origin}/p/${token}` : ''; // zawsze cały paszport (właściciel: bez linków do teczek)
   const name = `naklejka-${passport.numer}.png`.replace(/[^\w.-]+/g, '_');
 
   useEffect(() => {
-    if (ref.current && url) drawLabel(ref.current, size, { url, numer: passport.numer, klient, firma }, logo);
-  }, [url, size, passport.numer, klient, firma, logo]);
+    if (ref.current && url) drawLabel(ref.current, { url, numer: passport.numer, klient, firma }, logo);
+  }, [url, passport.numer, klient, firma, logo]);
 
-  const pick = (s: LabelSize) => { setSize(s); ls.set(SIZE_KEY, s); };
   const file = async () => new File([await labelBlob(ref.current!)], name, { type: 'image/png' });
   const fail = (what: string) => (e: unknown) => { if ((e as Error).name !== 'AbortError') toast(what, { body: (e as Error).message, tone: 'error' }); };
   async function download() {
@@ -68,20 +65,20 @@ export default function Naklejka({ passport, klient }: { passport: Rec; klient: 
   }
 
   if (!url) return <p className="text-sm text-ink-2">Paszport nie ma aktywnego linku.{admin ? ' Utwórz nowy link poniżej.' : ' Poproś admina o nowy link.'}</p>;
-  const [w, h] = LABEL_SIZES[size];
-  // podgląd w stałym polu (zmiana rozmiaru nie przesuwa przycisków); na szerszym ekranie przyciski obok
+  const [w, h] = LABEL_PX;
+  // podgląd poziomy (100×70 mm) nad przyciskami; na szerszym ekranie przyciski obok
   return (
-    <div className="grid gap-4 min-[560px]:grid-cols-[176px_minmax(0,1fr)] min-[560px]:items-start">
-      <div className="flex h-60 items-center justify-center rounded-[4px] border-2 border-dashed border-line bg-white p-2 min-[560px]:h-[284px]">
-        <canvas ref={ref} role="img" aria-label={`Podgląd naklejki ${passport.numer}`} className="h-full w-auto max-w-full" style={{ aspectRatio: `${w} / ${h}` }} />
+    <div className="grid gap-4 min-[700px]:grid-cols-[320px_minmax(0,1fr)] min-[700px]:items-start">
+      <div className="rounded-[4px] border-2 border-dashed border-line bg-white p-2">
+        <canvas ref={ref} role="img" aria-label={`Podgląd naklejki ${passport.numer}`} className="block h-auto w-full" style={{ aspectRatio: `${w} / ${h}` }} />
       </div>
       <div className="grid min-w-0 gap-2">
-        <Segmented label="Rozmiar naklejki" value={size} onChange={pick} options={(Object.keys(LABEL_SIZES) as LabelSize[]).map((v) => ({ v, label: `${v.replace('x', '×')} mm` }))} />
+        <p className="text-sm text-ink-2">Naklejka 100×70 mm</p>
         <div className="grid grid-cols-2 gap-2">
           {canShareFiles() && <Button className="col-span-2" onClick={() => void file().then((f) => navigator.share({ files: [f], title: name })).catch(fail('Nie udostępniono obrazu'))}><ShareNetwork className="h-5 w-5" />Udostępnij obraz</Button>}
           <Button variant="secondary" className="col-span-2" onClick={() => void download().catch(fail('Nie pobrano obrazu'))}><DownloadSimple className="h-5 w-5" />Pobierz obraz</Button>
-          <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), size, false)}><Printer className="h-5 w-5" />Drukuj</Button>
-          <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), size, true)}><GridFour className="h-5 w-5" />Arkusz A4</Button>
+          <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), false)}><Printer className="h-5 w-5" />Drukuj</Button>
+          <Button variant="secondary" onClick={() => void printLabel(ref.current!.toDataURL('image/png'), true)}><GridFour className="h-5 w-5" />Arkusz A4</Button>
         </div>
         <div className="flex min-w-0 items-center gap-2 rounded-[4px] border border-line px-3 py-1">
           <span className="min-w-0 flex-1 truncate text-sm text-ink-2" title={url}>{url}</span>

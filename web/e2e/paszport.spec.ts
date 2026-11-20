@@ -282,7 +282,7 @@ test('teczka: „Wróć” wraca tam, skąd przyszliśmy (lista → karta obiekt
   expect(new URL(page.url()).hash).toBe(job);
 });
 
-test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 240×400, pionowo), link z naklejki → strona klienta, nowy link', async ({ page, browser }, info) => {
+test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 800×560 = 100×70 mm, poziomo), link z naklejki → strona klienta, nowy link', async ({ page, browser }, info) => {
   await login(page, 'Tomasz Wrona');
   // dane firmy na naklejkę (Ustawienia, admin)
   await page.goto('/#ust');
@@ -313,7 +313,7 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 240×400, 
 
   const qr = page.getByRole('region', { name: 'Kod QR i naklejka' });
   await expect(qr.getByRole('img', { name: `Podgląd naklejki ${psz}` })).toBeVisible();
-  await expect(qr.getByRole('radio', { name: '50×30 mm' })).toHaveAttribute('aria-checked', 'true');
+  await expect(qr.getByText('Naklejka 100×70 mm')).toBeVisible();
   if (!phone(info)) {
     await page.screenshot({ path: `${shots}task7-desktop-site-card.png`, fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -322,12 +322,12 @@ test('karta paszportu: „Załóż paszport” → PSZ, naklejka (PNG 240×400, 
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
 
-  // „Pobierz obraz”: PNG rolki 50×30 mm przy 203 dpi, projekt pionowy (obrót o 90°)
+  // „Pobierz obraz”: PNG 100×70 mm przy 203 dpi, poziomo
   const [dl] = await Promise.all([page.waitForEvent('download'), qr.getByRole('button', { name: 'Pobierz obraz' }).click()]);
   expect(dl.suggestedFilename()).toBe(`naklejka-${psz}.png`);
   const png = Buffer.concat(await (async () => { const out: Buffer[] = []; for await (const c of (await dl.createReadStream())) out.push(c as Buffer); return out; })());
   expect(png.subarray(1, 4).toString()).toBe('PNG');
-  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([240, 400]);
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([800, 560]);
 
   // link z naklejki = „Podgląd klienta” → strona klienta
   const url = (await qr.getByTitle(/\/p\//).getAttribute('title'))!;
