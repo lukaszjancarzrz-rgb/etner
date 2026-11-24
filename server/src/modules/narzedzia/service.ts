@@ -19,7 +19,7 @@ const check = (db: Db, t: { carId: string | null; podmiejsce: string | null }) =
   if (!toolPlaceOk(t)) throw new HTTPException(400, { message: t.carId ? 'Wybierz miejsce w samochodzie' : 'Magazyn nie ma miejsc w samochodzie' });
 };
 
-export function create(db: Db, userId: string, d: Omit<ToolCreate, 'opId'>): ToolRow {
+export function create(db: Db, userId: string, d: Omit<ToolCreate, 'opId' | 'sn' | 'faktura' | 'dataZakupu'> & Partial<Pick<ToolCreate, 'sn' | 'faktura' | 'dataZakupu'>>): ToolRow {
   check(db, d);
   const now = new Date().toISOString();
   const row = db.insert(tools).values({ ...d, id: newId(), by: userId, createdAt: now, createdBy: userId, updatedAt: now }).returning().get();

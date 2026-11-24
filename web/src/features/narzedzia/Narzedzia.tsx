@@ -2,7 +2,7 @@ import { PODMIEJSCA } from '@etner/shared';
 import { TitleCount } from '../../core/layout/TopBar.js';
 import { Check, MagnifyingGlass, PencilSimple, Plus, Wrench } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
-import { matches, useIsAdmin, useLoading, useMe } from '../../core/data.js';
+import { fmtDay, matches, useIsAdmin, useLoading, useMe } from '../../core/data.js';
 import { outbox } from '../../core/outbox.js';
 import { useEntities, type Rec } from '../../core/store.js';
 import { useDesk } from '../../core/layout/status.js';
@@ -30,7 +30,7 @@ const placeOf = (t: Rec, cars: Map<string, Rec>) => (t.carId ? `${cars.get(t.car
 export function Narzedzia() {
   const carsList = useEntities('cars');
   const raw = useEntities('tools');
-  const tools = useMemo(() => withoutEchoes(raw, ['nazwa', 'carId', 'podmiejsce', 'by']), [raw]);
+  const tools = useMemo(() => withoutEchoes(raw, ['nazwa', 'carId', 'podmiejsce', 'sn', 'by']), [raw]);
   const loading = useLoading();
   const admin = useIsAdmin();
   const [editing, setEditing] = useState(false);
@@ -39,14 +39,14 @@ export function Narzedzia() {
   const desk = useDesk();
   const cars = useMemo(() => [...carsList].filter((c) => !c._tmp).sort((a, b) => a.kolejnosc - b.kolejnosc || a.createdAt.localeCompare(b.createdAt)), [carsList]);
   const carMap = useMemo(() => new Map(cars.map((c) => [c.id, c])), [cars]);
-  const found = useMemo(() => (q.trim() ? tools.filter((t) => matches(q, t.nazwa)).sort((a, b) => byName(a, b) || placeOf(a, carMap).localeCompare(placeOf(b, carMap), 'pl')) : null), [q, tools, carMap]);
+  const found = useMemo(() => (q.trim() ? tools.filter((t) => matches(q, t.nazwa, t.sn)).sort((a, b) => byName(a, b) || placeOf(a, carMap).localeCompare(placeOf(b, carMap), 'pl')) : null), [q, tools, carMap]);
 
   if (loading) return <div className="mx-auto grid max-w-3xl gap-3 p-4" aria-busy="true" aria-label="Wczytywanie narzędzi"><Skeleton className="h-12" />{[0, 1, 2].map((i) => <Skeleton key={i} className="h-40" />)}</div>;
 
   const open = admin && editing ? (t: Rec) => setEdit(t) : undefined;
   return (
-    <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:py-6">
-      <Search value={q} onChange={setQ} label="Szukaj narzędzia" placeholder="Szukaj, np. wkrętarka" />
+    <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:max-w-6xl desk:py-6">
+      <Search value={q} onChange={setQ} label="Szukaj narzędzia" placeholder="Szukaj, np. wkrętarka albo numer seryjny" />
       {open && (
         <div className="flex flex-wrap items-center gap-2 rounded-[4px] border border-action/40 bg-action/5 px-4 py-2">
           <p className="mr-auto text-sm font-semibold">Edycja list: dodaj, popraw, przenieś albo usuń narzędzie.</p>
@@ -114,21 +114,27 @@ function ToolTable({ tools, cars, carMap, onEdit }: { tools: Rec[]; cars: Rec[];
   const auto = (t: Rec) => (t.carId ? (carMap.get(t.carId)?.nazwa as string | undefined) ?? 'Samochód' : '');
   const pos = (t: Rec) => (t.carId ? (carAt.get(t.carId) ?? cars.length) * 100 + PODMIEJSCA.indexOf(t.podmiejsce) : 1e6);
   const list = useMemo(() => [...tools].sort((a, b) => pos(a) - pos(b) || byName(a, b)), [tools, carAt]); // eslint-disable-line react-hooks/exhaustive-deps
-  const { rows, by } = useSort(list, { nazwa: (t) => t.nazwa, miejsce: (t) => (t.carId ? t.podmiejsce : 'Magazyn'), auto });
+  const { rows, by } = useSort(list, { nazwa: (t) => t.nazwa, sn: (t) => t.sn, faktura: (t) => t.faktura, data: (t) => t.dataZakupu ?? '', miejsce: (t) => (t.carId ? t.podmiejsce : 'Magazyn'), auto });
   return (
-    <Table aria-label="Narzędzia" className="max-w-[60rem]">
+    <Table aria-label="Narzędzia">
       <thead>
         <tr>
           <Th sort={by('nazwa')}>Narzędzie</Th>
-          <Th sort={by('miejsce')} className="w-[34%]">Miejsce</Th>
-          <Th sort={by('auto')} className="w-[26%]">Auto</Th>
+          <Th sort={by('sn')} className="w-[14%]">SN</Th>
+          <Th sort={by('faktura')} className="w-[14%]">Faktura</Th>
+          <Th sort={by('data')} className="w-[9rem]">Data zakupu</Th>
+          <Th sort={by('miejsce')} className="w-[20%]">Miejsce</Th>
+          <Th sort={by('auto')} className="w-[13%]">Auto</Th>
           {onEdit && <Th className="w-12"><span className="sr-only">Edycja</span></Th>}
         </tr>
       </thead>
       <tbody>
         {rows.map((t) => (
           <Tr key={t.id}>
-            <Td className="font-semibold">{t.nazwa}</Td>
+            <Td className="font-semibold" title={t.nazwa}>{t.nazwa}</Td>
+            <Td title={t.sn}>{t.sn || '—'}</Td>
+            <Td title={t.faktura}>{t.faktura || '—'}</Td>
+            <Td>{t.dataZakupu ? fmtDay(t.dataZakupu) : '—'}</Td>
             <Td>{t.carId ? t.podmiejsce : 'Magazyn'}</Td>
             <Td className="text-ink-2">{auto(t) || '—'}</Td>
             {onEdit && <Td pad="px-1">{t._tmp ? <span className="sr-only">wysyłanie</span>
@@ -147,6 +153,7 @@ function ToolRow({ t, place, flat, onEdit }: { t: Rec; place?: string; flat?: bo
       <div className="min-w-0">
         <p className="font-semibold leading-snug">{t.nazwa}</p>
         {place && <p className="text-sm text-ink-2">{place}</p>}
+        {(t.sn || t.faktura || t.dataZakupu) && <p className="text-sm text-ink-2">{[t.sn && `SN ${t.sn}`, t.faktura && `FV ${t.faktura}`, t.dataZakupu && `kupione ${fmtDay(t.dataZakupu)}`].filter(Boolean).join(' · ')}</p>}
       </div>
       {t._tmp ? <span className="px-2 text-sm text-ink-2">wysyłanie…</span>
         : onEdit && <Button variant="ghost" size="sm" aria-label={`Edytuj: ${t.nazwa}${place ? `, ${place}` : ''}`} onClick={() => onEdit(t)} className="w-10 px-0 text-ink-2"><PencilSimple className="h-5 w-5 shrink-0" /></Button>}
@@ -159,6 +166,9 @@ function ToolForm({ tool, cars, onClose }: { tool?: Rec; cars: Rec[]; onClose: (
   const [nazwa, setNazwa] = useState<string>(tool?.nazwa ?? '');
   const [miejsce, setMiejsce] = useState<string>(tool ? tool.carId ?? MAGAZYN : cars[0]?.id ?? MAGAZYN);
   const [pm, setPm] = useState<string>(tool?.podmiejsce ?? '');
+  const [sn, setSn] = useState<string>(tool?.sn ?? '');
+  const [faktura, setFaktura] = useState<string>(tool?.faktura ?? '');
+  const [data, setData] = useState<string>(tool?.dataZakupu ?? '');
   const [err, setErr] = useState<{ nazwa?: string; pm?: string }>({});
   const [confirm, setConfirm] = useState(false);
   const inCar = miejsce !== MAGAZYN;
@@ -168,7 +178,7 @@ function ToolForm({ tool, cars, onClose }: { tool?: Rec; cars: Rec[]; onClose: (
     const n = nazwa.trim();
     const errs = { nazwa: !n ? 'Wpisz nazwę narzędzia' : n.length > 200 ? 'Nazwa jest za długa' : undefined, pm: inCar && !pm ? 'Wybierz miejsce w samochodzie' : undefined };
     if (errs.nazwa || errs.pm) return setErr(errs);
-    const body = { nazwa: n, carId: inCar ? miejsce : null, podmiejsce: inCar ? pm : null };
+    const body = { nazwa: n, carId: inCar ? miejsce : null, podmiejsce: inCar ? pm : null, sn: sn.trim().slice(0, 100), faktura: faktura.trim().slice(0, 200), dataZakupu: data || null };
     const p = tool
       ? updateVia('tools', tool.id, body, { ...W, url: `/api/tools/${tool.id}`, method: 'PUT', body })
       : createVia('tools', { ...W, url: '/api/tools', method: 'POST', body }, { ...body, by: me?.id });
@@ -188,6 +198,11 @@ function ToolForm({ tool, cars, onClose }: { tool?: Rec; cars: Rec[]; onClose: (
           <Field label="Nazwa" error={err.nazwa}>{(id, d) => <Input id={id} aria-describedby={d} aria-invalid={!!err.nazwa} value={nazwa} onChange={(e) => setNazwa(e.target.value)} placeholder="np. Wkrętarka Makita" />}</Field>
           <Field label="Miejsce">{(id) => <Select id={id} value={miejsce} onValueChange={setMiejsce} options={[...cars.map((c) => ({ value: c.id as string, label: c.nazwa as string })), { value: MAGAZYN, label: 'Magazyn' }]} />}</Field>
           {inCar && <Field label="Gdzie w samochodzie" error={err.pm}>{(id, d) => <Select id={id} aria-describedby={d} aria-invalid={!!err.pm} value={pm || undefined} onValueChange={setPm} placeholder="Wybierz miejsce" options={PODMIEJSCA.map((x) => ({ value: x, label: x }))} />}</Field>}
+          <Field label="Numer seryjny (SN)">{(id) => <Input id={id} value={sn} onChange={(e) => setSn(e.target.value)} maxLength={100} />}</Field>
+          <div className="grid gap-4 min-[480px]:grid-cols-2">
+            <Field label="Faktura (numer)">{(id) => <Input id={id} value={faktura} onChange={(e) => setFaktura(e.target.value)} maxLength={200} placeholder="np. FV 123/2026" />}</Field>
+            <Field label="Data zakupu">{(id) => <Input id={id} type="date" value={data} onChange={(e) => setData(e.target.value)} />}</Field>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             {tool ? <Button variant={confirm ? 'danger' : 'ghost'} onClick={remove} className={cn(!confirm && 'text-danger')}>{confirm ? 'Na pewno usunąć?' : 'Usuń narzędzie'}</Button> : <span />}
             <div className="flex gap-3">

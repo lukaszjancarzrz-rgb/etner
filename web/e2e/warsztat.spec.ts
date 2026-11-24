@@ -113,9 +113,17 @@ test('narzędzia: pracownik tylko szuka (wszystkie miejsca); admin w „Edytuj l
   await expect(dlg.getByText('Wybierz miejsce w samochodzie')).toBeVisible();
   await dlg.getByLabel('Gdzie w samochodzie').click();
   await page.getByRole('option', { name: 'Nad kabiną' }).click();
+  const sn = `SN-${desk ? 'D' : 'P'}${Date.now() % 100000}`;
+  await dlg.getByLabel('Numer seryjny (SN)').fill(sn);
+  await dlg.getByLabel('Faktura (numer)').fill('FV 7/2026');
+  await dlg.getByLabel('Data zakupu').fill('2026-03-15');
   await dlg.getByRole('button', { name: 'Zapisz' }).click();
   await expect(dlg).toBeHidden();
   await expect(place(page, `${tag} szlifierka`, 'Nowa Duża Toyota', 'Nad kabiną')).toBeVisible();
+  // SN, faktura i data zakupu widoczne; wyszukiwanie po numerze seryjnym
+  await page.getByLabel('Szukaj narzędzia').fill(sn);
+  await expect(page.getByText(desk ? '15.03.2026' : /FV 7\/2026 · kupione 15\.03\.2026/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Wyczyść wyszukiwanie' }).click();
 
   await page.getByRole('button', { name: `Edytuj: ${tag} szlifierka` }).click();
   const ed = page.getByRole('dialog', { name: 'Narzędzie' });

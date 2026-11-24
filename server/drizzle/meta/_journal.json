@@ -204,6 +204,13 @@
       "when": 1794691807768,
       "tag": "0028_czasomierz",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1795550885246,
+      "tag": "0029_narzedzia_sn",
+      "breakpoints": true
     }
   ]
 }

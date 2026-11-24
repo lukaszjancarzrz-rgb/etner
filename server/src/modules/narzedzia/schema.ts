@@ -9,5 +9,9 @@ export const tools = sqliteTable('tools', {
   carId: text('car_id').references(() => cars.id),
   /** Miejsce w samochodzie (PODMIEJSCA); w Magazynie null. */
   podmiejsce: text('podmiejsce'),
+  /** Numer seryjny, numer faktury zakupu, data zakupu (RRRR-MM-DD) – właściciel 2026-11-24. */
+  sn: text('sn').notNull().default(''),
+  faktura: text('faktura').notNull().default(''),
+  dataZakupu: text('data_zakupu'),
   by: text('by').notNull(),
 });
