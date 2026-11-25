@@ -5,7 +5,8 @@ const txt = z.string().trim();
 const gr = z.number().int();
 const dzien = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data: RRRR-MM-DD');
 const miesiac = z.string().regex(/^\d{4}-\d{2}$/, 'Miesiąc: RRRR-MM');
-const kolumna = z.union([z.literal(12), z.literal(13), z.literal(14), z.literal(15)]);
+const kolumnaKsiegi = z.union([z.literal(12), z.literal(13), z.literal(14), z.literal(15)]);
+const kolumna = z.union([z.literal(0), kolumnaKsiegi]); // 0 = poza KPiR (KAT_WLASCICIEL); w pliku z KPiR tylko 12–15
 
 export const revenueCreateSchema = z.object({
   opId: z.string().min(1).optional(),
@@ -73,7 +74,7 @@ export const kpirFileSchema = z.object({
     opis: txt,
     kategoria: txt.min(1),
     netto: z.number(),
-    kolumnaKpir: kolumna,
+    kolumnaKpir: kolumnaKsiegi,
     doWyniku: z.boolean().default(true),
     uwagi: txt.default(''),
   })),

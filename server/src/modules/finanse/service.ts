@@ -66,7 +66,13 @@ export function removeRevenue(db: Db, userId: string, id: string): void {
 export const getCost = (db: Db, id: string) => db.select().from(costs).where(and(eq(costs.id, id), live(costs))).get();
 export const listCosts = (db: Db) => db.select().from(costs).where(live(costs)).orderBy(desc(costs.dzien), desc(costs.createdAt)).all();
 
+/** Kwota ujemna (zwrot podatku) tylko poza KPiR (kolumna 0). */
+const checkCost = (c: { nettoGr: number; kolumnaKpir: number }) => {
+  if (c.nettoGr < 0 && c.kolumnaKpir !== 0) throw new HTTPException(400, { message: 'Kwota ujemna tylko w kategorii poza KPiR (np. zwrot podatku)' });
+};
+
 export function createCost(db: Db, userId: string, d: Opt<CostCreate>) {
+  checkCost(d);
   const t = now();
   const row = db.insert(costs).values({ ...d, id: newId(), by: userId, createdAt: t, createdBy: userId, updatedAt: t }).returning().get();
   recordChange(db, userId, 'costs', row.id, 'create', null, row);
@@ -77,6 +83,7 @@ export function updateCost(db: Db, userId: string, id: string, d: Opt<CostUpdate
   const old = getCost(db, id);
   if (!old) return undefined;
   const set = Object.fromEntries(Object.entries(d).filter(([, v]) => v !== undefined));
+  checkCost({ ...old, ...set });
   const row = db.update(costs).set({ ...set, updatedAt: now() }).where(eq(costs.id, id)).returning().get();
   recordChange(db, userId, 'costs', id, 'update', old, row);
   return row;

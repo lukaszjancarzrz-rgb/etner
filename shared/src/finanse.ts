@@ -4,6 +4,9 @@ export const SPOSOBY = ['bez', 'vat8', 'vat23', 'zwrot'] as const;
 export type Sposob = (typeof SPOSOBY)[number];
 export const SPOSOB_LABEL: Record<Sposob, string> = { bez: 'Bez faktury', vat8: 'Faktura VAT 8%', vat23: 'Faktura VAT 23%', zwrot: 'Zwrot VAT z US' };
 
+/** Kategoria kosztu poza KPiR (właściciel 2026-11-25): składka zdrowotna, zaliczki PIT; zwrot podatku = kwota ujemna. Kolumna KPiR 0 = poza KPiR. */
+export const KAT_WLASCICIEL = 'Podatki i składki właściciela';
+
 const STAWKA: Partial<Record<Sposob, number>> = { vat8: 8, vat23: 23 };
 
 /** Kwota wpisana jako brutto (vat8/vat23) albo bez VAT (bez/zwrot) → netto i VAT w groszach. */

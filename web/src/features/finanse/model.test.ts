@@ -40,7 +40,7 @@ describe('3b: wynik, kontrola KPiR, statystyki', () => {
   });
   it('kontrolaKpir: księga vs aplikacja wg kolumn, puste miesiące pominięte', () => {
     const k = kontrolaKpir([{ id: 'k', miesiac: '2026-03', przychodGr: 5000, towaryGr: 1000, uboczneGr: 0, wynagrodzeniaGr: 0, pozostaleGr: 200 }],
-      [rev({ sposob: 'vat23', nettoGr: 5000 }), rev({ sposob: 'bez', nettoGr: 800 })], [{ id: 'c', miesiac: '2026-03', nettoGr: 900, kolumnaKpir: 12, doWyniku: true }], '2026');
+      [rev({ sposob: 'vat23', nettoGr: 5000 }), rev({ sposob: 'bez', nettoGr: 800 })], [{ id: 'c', miesiac: '2026-03', nettoGr: 900, kolumnaKpir: 12, doWyniku: true }, { id: 'w', miesiac: '2026-03', nettoGr: 120_000, kolumnaKpir: 0, doWyniku: true }], '2026'); // kol. 0 (podatki właściciela) poza kontrolą
     expect(k).toHaveLength(1);
     expect(k[0]).toMatchObject({ miesiac: '2026-03', ksiega: { przychod: 5000, towary: 1000, pozostale: 200 }, app: { przychod: 5000, towary: 900, pozostale: 0 } });
   });

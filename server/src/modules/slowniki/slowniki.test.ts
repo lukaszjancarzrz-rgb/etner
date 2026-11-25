@@ -12,7 +12,7 @@ import { save as saveLead, get as getLead } from '../leady/service.js';
 import { get as getUser, createPerson } from '../uzytkownicy/service.js';
 import { scheduleEntries } from '../harmonogram/schema.js';
 import { dict } from './schema.js';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 async function setup() {
   const deps = testDeps();
@@ -53,8 +53,8 @@ describe('seed', () => {
 
 describe('seedModul3', () => {
   const KAT = ['Materiały i towary', 'Narzędzia i wyposażenie', 'Paliwo', 'Samochody (części, serwis, opłaty)', 'Księgowość i biuro', 'Telefon i internet',
-    'Szkolenia', 'Badania i BHP pracowników', 'Amortyzacja', 'Płace z listy płac (w arkuszach pracowników)', 'Inne', 'Do wyjaśnienia – błąd w KPiR (nie liczone)'];
-  it('istniejąca baza bez kategorii kosztu dostaje 12 wartości raz, z wpisami w changes', async () => {
+    'Szkolenia', 'Badania i BHP pracowników', 'Amortyzacja', 'Płace z listy płac (w arkuszach pracowników)', 'Podatki i składki właściciela', 'Inne', 'Do wyjaśnienia – błąd w KPiR (nie liczone)'];
+  it('istniejąca baza bez kategorii kosztu dostaje 13 wartości raz, z wpisami w changes', async () => {
     const { deps } = await setup();
     deps.db.delete(dict).where(eq(dict.rodzaj, 'kategoria_kosztu')).run();
     expect(list(deps.db, 'kategoria_kosztu')).toHaveLength(0);
@@ -62,7 +62,16 @@ describe('seedModul3', () => {
     expect(list(deps.db, 'kategoria_kosztu').map((r) => r.wartosc)).toEqual(KAT);
     expect(deps.db.select().from(changes).where(eq(changes.entity, 'dict')).all().length).toBeGreaterThanOrEqual(12);
     seedBase(deps.db);
-    expect(list(deps.db, 'kategoria_kosztu')).toHaveLength(12);
+    expect(list(deps.db, 'kategoria_kosztu')).toHaveLength(13);
+  });
+  it('baza z kategoriami bez „Podatki i składki właściciela” dostaje ją raz (na końcu)', async () => {
+    const { deps } = await setup();
+    deps.db.delete(dict).where(and(eq(dict.rodzaj, 'kategoria_kosztu'), eq(dict.wartosc, 'Podatki i składki właściciela'))).run();
+    seedBase(deps.db);
+    seedBase(deps.db);
+    const w = list(deps.db, 'kategoria_kosztu').map((r) => r.wartosc);
+    expect(w.filter((x) => x === 'Podatki i składki właściciela')).toHaveLength(1);
+    expect(w.at(-1)).toBe('Podatki i składki właściciela');
   });
 });
 

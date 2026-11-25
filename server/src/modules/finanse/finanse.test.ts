@@ -119,3 +119,19 @@ describe('finanse', () => {
     expect(r).toEqual({ autoPrzychod: true, domyslnySposob: 'bez', stawkaOsobodniaGr: 0 });
   });
 });
+
+describe('podatki i składki właściciela (poza KPiR)', () => {
+  it('kategoria w słowniku; kolumna 0; zwrot ujemny tylko poza KPiR', async () => {
+    const { app, admin } = await setup();
+    const kat = await (await app.request('/api/dict?rodzaj=kategoria_kosztu', req(admin, 'GET'))).json().catch(() => null);
+    if (Array.isArray(kat)) expect(kat.map((d: { wartosc: string }) => d.wartosc)).toContain('Podatki i składki właściciela');
+    const base = { dzien: '2026-11-20', miesiac: '2026-11', nrDokumentu: '', kontrahent: 'ZUS', nip: '', opis: 'Składka zdrowotna', kategoria: 'Podatki i składki właściciela', doWyniku: true, uwagi: '' };
+    expect((await app.request('/api/costs', req(admin, 'POST', { ...base, nettoGr: 81_900, kolumnaKpir: 0 }))).status).toBe(200);
+    const zwrot = await app.request('/api/costs', req(admin, 'POST', { ...base, opis: 'Zwrot PIT', nettoGr: -150_000, kolumnaKpir: 0 }));
+    expect(zwrot.status).toBe(200);
+    expect((await app.request('/api/costs', req(admin, 'POST', { ...base, nettoGr: -100, kolumnaKpir: 15 }))).status).toBe(400);
+    const z = await zwrot.json();
+    expect((await app.request(`/api/costs/${z.id}`, req(admin, 'PUT', { kolumnaKpir: 15 }))).status).toBe(400);
+  });
+});
+

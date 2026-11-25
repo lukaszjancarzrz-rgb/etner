@@ -1,4 +1,4 @@
-import { fmtZl } from '@etner/shared';
+import { fmtZl, KAT_WLASCICIEL } from '@etner/shared';
 import { Coins, Plus, Trash } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { fmtDay, matches, today, useDict } from '../../core/data.js';
@@ -55,13 +55,15 @@ export function Koszty({ q, okres, filtr }: Filtry) {
 
   function add(e: React.FormEvent) {
     e.preventDefault();
-    const k = parseZl(kwota);
-    if (!opis.trim()) return setErr('Wpisz opis kosztu');
-    if ('error' in k) return setErr(k.error);
     const kategoria = kat || kategorie[0]?.wartosc;
     if (!kategoria) return setErr('Wybierz kategorię');
+    // podatki i składki właściciela: poza KPiR, zwrot podatku jako kwota z minusem
+    const wl = kategoria === KAT_WLASCICIEL, minus = wl && kwota.trim().startsWith('-');
+    const k = parseZl(minus ? kwota.trim().slice(1) : kwota);
+    if (!opis.trim()) return setErr('Wpisz opis kosztu');
+    if ('error' in k) return setErr(k.error);
     const dzien = today();
-    const body = { dzien, miesiac: dzien.slice(0, 7), nrDokumentu: '', kontrahent: '', nip: '', opis: opis.trim(), kategoria, nettoGr: k.gr, kolumnaKpir: 15, doWyniku: true, uwagi: '' };
+    const body = { dzien, miesiac: dzien.slice(0, 7), nrDokumentu: '', kontrahent: '', nip: '', opis: opis.trim(), kategoria, nettoGr: minus ? -k.gr : k.gr, kolumnaKpir: wl ? 0 : 15, doWyniku: true, uwagi: '' };
     void createVia('costs', { kind: 'koszt', url: '/api/costs', method: 'POST', body }, body).catch(fail('Koszt nie został zapisany'));
     setOpis(''); setKwota(''); setErr('');
   }
@@ -72,7 +74,7 @@ export function Koszty({ q, okres, filtr }: Filtry) {
       <TitleCount n={list.length} />
       <form onSubmit={add} noValidate className="grid grid-cols-[minmax(0,1fr)] gap-2 min-[700px]:grid-cols-[minmax(0,1fr)_9rem_14rem_auto]">
         <Input aria-label="Opis kosztu" placeholder="Opis kosztu" value={opis} onChange={(e) => setOpis(e.target.value)} aria-invalid={!!err} />
-        <Input aria-label="Kwota netto (zł)" inputMode="decimal" placeholder="Netto zł" value={kwota} onChange={(e) => setKwota(e.target.value)} />
+        <Input aria-label="Kwota netto (zł)" inputMode="decimal" placeholder={(kat || kategorie[0]?.wartosc) === KAT_WLASCICIEL ? "zł (zwrot: -kwota)" : "Netto zł"} value={kwota} onChange={(e) => setKwota(e.target.value)} />
         <Select aria-label="Kategoria kosztu" value={kat || kategorie[0]?.wartosc} onValueChange={setKat} options={kategorie.map((x) => ({ value: x.wartosc as string, label: x.wartosc as string }))} placeholder="Kategoria" />
         <Button type="submit"><Plus className="h-5 w-5" weight="bold" />Koszt</Button>
         {err && <p role="alert" className="text-sm font-semibold text-danger min-[700px]:col-span-4">{err}</p>}
@@ -87,7 +89,7 @@ export function Koszty({ q, okres, filtr }: Filtry) {
           <tbody>{rows.map((c) => (
             <Tr key={c.id} onOpen={c._tmp ? undefined : () => setEdit(c)}>
               <Td>{fmtDay(c.dzien)}</Td><Td title={c.nrDokumentu}>{c.nrDokumentu}</Td><Td title={c.kontrahent}>{c.kontrahent}</Td><Td title={c.opis}>{c.opis}</Td><Td className="text-sm text-ink-2">{c.kategoria}</Td>
-              <Td num className="font-semibold">{fmtZl(c.nettoGr)}</Td><Td num>{c.kolumnaKpir}</Td><Td className={cn(!c.doWyniku && 'text-ink-2')}>{wynik(c)}</Td>
+              <Td num className="font-semibold">{fmtZl(c.nettoGr)}</Td><Td num>{c.kolumnaKpir || '—'}</Td><Td className={cn(!c.doWyniku && 'text-ink-2')}>{wynik(c)}</Td>
               <Td pad="p-0" className="text-center"><Usun c={c} /></Td>
             </Tr>))}
           </tbody>
@@ -97,7 +99,7 @@ export function Koszty({ q, okres, filtr }: Filtry) {
           <li key={c.id} className="flex items-start justify-between gap-3 rounded-[4px] border border-line bg-card px-4 py-3">
             <button type="button" disabled={!!c._tmp} onClick={() => setEdit(c)} className="min-w-0 flex-1 text-left">
               <span className="block font-semibold leading-snug">{c.opis || c.kontrahent || 'Koszt'}</span>
-              <span className="block text-sm text-ink-2">{[fmtDay(c.dzien), c.kontrahent, c.kategoria, `kol. ${c.kolumnaKpir}`, c.doWyniku ? '' : 'poza wynikiem'].filter(Boolean).join(' · ')}</span>
+              <span className="block text-sm text-ink-2">{[fmtDay(c.dzien), c.kontrahent, c.kategoria, c.kolumnaKpir ? `kol. ${c.kolumnaKpir}` : 'poza KPiR', c.doWyniku ? '' : 'poza wynikiem'].filter(Boolean).join(' · ')}</span>
             </button>
             <div className="flex shrink-0 items-center gap-1"><span className="font-extrabold tabular-nums">{fmtZl(c.nettoGr)}</span><Usun c={c} /></div>
           </li>))}

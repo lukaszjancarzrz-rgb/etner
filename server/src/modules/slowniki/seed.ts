@@ -46,7 +46,7 @@ export const SEED: Record<DictRodzaj, Item[]> = {
   ],
   // Moduł 3a: kategorie kosztów z arkusza właściciela
   kategoria_kosztu: ['Materiały i towary', 'Narzędzia i wyposażenie', 'Paliwo', 'Samochody (części, serwis, opłaty)', 'Księgowość i biuro', 'Telefon i internet',
-    'Szkolenia', 'Badania i BHP pracowników', 'Amortyzacja', 'Płace z listy płac (w arkuszach pracowników)', 'Inne', 'Do wyjaśnienia – błąd w KPiR (nie liczone)'],
+    'Szkolenia', 'Badania i BHP pracowników', 'Amortyzacja', 'Płace z listy płac (w arkuszach pracowników)', 'Podatki i składki właściciela', 'Inne', 'Do wyjaśnienia – błąd w KPiR (nie liczone)'],
 };
 
 const parse = (it: Item) => (typeof it === 'string' ? [it, {}] : it) as [string, Exclude<Item, string>[1]];
@@ -80,6 +80,14 @@ function seedModul3(db: Db, now: string): void {
   });
 }
 
+/** Kategoria „Podatki i składki właściciela” w działającej bazie (jednorazowo: póki nie ma takiej wartości, także usuniętej). */
+function seedWlasciciel(db: Db, now: string): void {
+  const kat = db.select().from(dict).where(eq(dict.rodzaj, 'kategoria_kosztu')).all();
+  if (!kat.length || kat.some((d) => d.wartosc === 'Podatki i składki właściciela')) return;
+  const row = db.insert(dict).values({ id: newId(), rodzaj: 'kategoria_kosztu', wartosc: 'Podatki i składki właściciela', kolejnosc: Math.max(...kat.map((d) => d.kolejnosc)) + 1, createdAt: now, updatedAt: now }).returning().get();
+  recordChange(db, null, 'dict', row.id, 'create', null, row);
+}
+
 /** Idempotentne: słowniki wstawiamy tylko do pustej tabeli, firmę tylko gdy nie ma żadnej. Bez wpisów w changes (klient startuje od snapshotu). */
 export function seedBase(db: Db): void {
   const now = new Date().toISOString();
@@ -89,7 +97,7 @@ export function seedBase(db: Db): void {
         db.insert(dict).values({ id: newId(), rodzaj, wartosc, kolejnosc, grupa: extra.grupa ?? null, platne: extra.platne ?? null, kolor: extra.kolor ?? null, kategoria: extra.kategoria ?? null, cyklMies: extra.cyklMies ?? null, createdAt: now, updatedAt: now }).run();
       });
     }
-  } else tx(db, () => { seedModul2(db, now); seedModul3(db, now); });
+  } else tx(db, () => { seedModul2(db, now); seedModul3(db, now); seedWlasciciel(db, now); });
   if (db.select({ n: count() }).from(firmy).get()!.n === 0) {
     db.insert(firmy).values({ id: newId(), nazwa: 'ETNER', skrot: 'ETNER', prefiksZ: 'Z', prefiksL: 'L', createdAt: now, updatedAt: now }).run();
   }
