@@ -88,7 +88,7 @@ describe('paszport – dane', () => {
     expect(cz.find((d) => d.wartosc === 'Przegląd falownika')?.kategoria).toBeNull(); // brak kategorii Fotowoltaika
     expect(list(s.deps.db, 'kategoria').map((d) => [d.wartosc, d.cyklMies])).toEqual([['Rekuperacja', null], ['Klimatyzacja', 3], ['Elektryka', null]]);
     expect(list(s.deps.db, 'ekipa')).toHaveLength(0); // inne rodzaje bez zmian
-    expect(count(s, "select count(*) n from changes where entity = 'dict'")).toBe(27); // 14 czynności + cykl Rekuperacji + 12 kategorii kosztu (moduł 3a)
+    expect(count(s, "select count(*) n from changes where entity = 'dict'")).toBe(28); // 14 czynności + cykl Rekuperacji + 13 kategorii kosztu (moduł 3a + podatki właściciela)
   });
 
   it('zmiana nazwy kategorii w słowniku zmienia nazwę teczki i kategorię czynności (R36)', async () => {
