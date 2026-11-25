@@ -59,3 +59,20 @@ describe('narzędzia', () => {
     expect(await (await app.request('/api/tools', req(admin, 'GET'))).json()).toEqual([]);
   });
 });
+
+describe('historia serwisowa narzędzia', () => {
+  it('admin dodaje, poprawia i usuwa wpis; pracownik tylko czyta (synchronizacja)', async () => {
+    const { app, admin, worker } = await setup();
+    const t = await (await app.request('/api/tools', req(admin, 'POST', { nazwa: 'Wiertarka', carId: null }))).json();
+    const s = await (await app.request(`/api/tools/${t.id}/service`, req(admin, 'POST', { opId: 'op-s', dzien: '2026-11-20', czynnosc: 'Wymiana szczotek' }))).json();
+    expect(s).toMatchObject({ toolId: t.id, dzien: '2026-11-20', czynnosc: 'Wymiana szczotek' });
+    expect((await (await app.request(`/api/tools/${t.id}/service`, req(admin, 'POST', { opId: 'op-s', dzien: '2026-11-20', czynnosc: 'Wymiana szczotek' }))).json()).id).toBe(s.id);
+    expect((await app.request(`/api/tools/${t.id}/service`, req(worker, 'POST', { dzien: '2026-11-20', czynnosc: 'X' }))).status).toBe(403);
+    expect((await app.request(`/api/tools/nie-ma/service`, req(admin, 'POST', { dzien: '2026-11-20', czynnosc: 'X' }))).status).toBe(404);
+    expect((await app.request(`/api/tools/${t.id}/service`, req(admin, 'POST', { dzien: '20.11.2026', czynnosc: 'X' }))).status).toBe(400);
+    expect(await (await app.request(`/api/tool-service/${s.id}`, req(admin, 'PUT', { czynnosc: 'Wymiana szczotek i przegląd' }))).json()).toMatchObject({ czynnosc: 'Wymiana szczotek i przegląd' });
+    expect(JSON.stringify(await (await app.request('/api/changes?since=0', req(worker, 'GET'))).json())).toContain('Wymiana szczotek i przegląd');
+    expect((await app.request(`/api/tool-service/${s.id}`, req(admin, 'DELETE'))).status).toBe(200);
+    expect((await app.request(`/api/tool-service/${s.id}`, req(admin, 'DELETE'))).status).toBe(200);
+  });
+});

@@ -1,6 +1,6 @@
 import type { ModuleDef } from '../../core/registry.js';
 import { routes } from './routes.js';
-import { tools } from './schema.js';
+import { tools, toolService } from './schema.js';
 
-/** Narzędzia widzi każdy zalogowany (R40). */
-export const narzedzia: ModuleDef = { name: 'narzedzia', routes, tables: { tools }, visibleTo: () => true };
+/** Narzędzia i ich historię serwisową widzi każdy zalogowany (R40). */
+export const narzedzia: ModuleDef = { name: 'narzedzia', routes, tables: { tools, tool_service: toolService }, visibleTo: () => true };

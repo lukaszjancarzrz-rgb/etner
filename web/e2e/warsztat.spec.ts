@@ -123,6 +123,17 @@ test('narzędzia: pracownik tylko szuka (wszystkie miejsca); admin w „Edytuj l
   // SN, faktura i data zakupu widoczne; wyszukiwanie po numerze seryjnym
   await page.getByLabel('Szukaj narzędzia').fill(sn);
   await expect(page.getByText(desk ? '15.03.2026' : /FV 7\/2026 · kupione 15\.03\.2026/).first()).toBeVisible();
+  // karta narzędzia: dane i historia serwisowa (admin dodaje wpis)
+  await page.getByRole('button', { name: `${tag} szlifierka`, exact: false }).first().click();
+  const karta = page.getByRole('dialog', { name: `${tag} szlifierka` });
+  await expect(karta.getByText(sn)).toBeVisible();
+  await expect(karta.getByText('FV 7/2026')).toBeVisible();
+  await karta.getByLabel('Data', { exact: true }).fill('2026-11-20');
+  await karta.getByLabel('Czynność').fill('Wymiana tarczy');
+  await karta.getByRole('button', { name: 'Dodaj wpis' }).click();
+  await expect(karta.getByRole('region', { name: 'Historia serwisowa' }).getByText('Wymiana tarczy')).toBeVisible();
+  await expect(karta.getByText('20.11.2026')).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Wyczyść wyszukiwanie' }).click();
 
   await page.getByRole('button', { name: `Edytuj: ${tag} szlifierka` }).click();

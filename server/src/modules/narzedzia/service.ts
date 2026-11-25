@@ -1,10 +1,10 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
-import { newId, toolPlaceOk, type ToolCreate, type ToolUpdate } from '@etner/shared';
+import { newId, toolPlaceOk, type ToolCreate, type ToolServiceCreate, type ToolServiceUpdate, type ToolUpdate } from '@etner/shared';
 import { recordChange } from '../../core/changes.js';
 import type { Db } from '../../core/db.js';
 import * as samochody from '../samochody/service.js';
-import { tools } from './schema.js';
+import { tools, toolService } from './schema.js';
 
 export type ToolRow = typeof tools.$inferSelect;
 
@@ -45,4 +45,31 @@ export function remove(db: Db, userId: string, id: string): void {
   const now = new Date().toISOString();
   const row = db.update(tools).set({ deletedAt: now, updatedAt: now }).where(eq(tools.id, id)).returning().get();
   recordChange(db, userId, 'tools', id, 'delete', old, row);
+}
+
+// ---------- historia serwisowa ----------
+export type ServiceRow = typeof toolService.$inferSelect;
+export const getService = (db: Db, id: string): ServiceRow | undefined =>
+  db.select().from(toolService).where(and(eq(toolService.id, id), isNull(toolService.deletedAt))).get();
+export const serviceRemoved = (db: Db, id: string): boolean => !!db.select({ d: toolService.deletedAt }).from(toolService).where(eq(toolService.id, id)).get()?.d;
+
+export function createService(db: Db, userId: string, toolId: string, d: Omit<ToolServiceCreate, 'opId'>): ServiceRow {
+  if (!get(db, toolId)) throw new HTTPException(404, { message: 'Nie znaleziono narzędzia' });
+  const now = new Date().toISOString();
+  const row = db.insert(toolService).values({ ...d, toolId, id: newId(), by: userId, createdAt: now, createdBy: userId, updatedAt: now }).returning().get();
+  recordChange(db, userId, 'tool_service', row.id, 'create', null, row);
+  return row;
+}
+
+export function updateService(db: Db, userId: string, old: ServiceRow, d: Omit<ToolServiceUpdate, 'opId'>): ServiceRow {
+  const set = Object.fromEntries(Object.entries(d).filter(([, v]) => v !== undefined));
+  const row = db.update(toolService).set({ ...set, updatedAt: new Date().toISOString() }).where(eq(toolService.id, old.id)).returning().get();
+  recordChange(db, userId, 'tool_service', old.id, 'update', old, row);
+  return row;
+}
+
+export function removeService(db: Db, userId: string, old: ServiceRow): void {
+  const now = new Date().toISOString();
+  const row = db.update(toolService).set({ deletedAt: now, updatedAt: now }).where(eq(toolService.id, old.id)).returning().get();
+  recordChange(db, userId, 'tool_service', old.id, 'delete', old, row);
 }

@@ -19,3 +19,10 @@ export type ToolCreate = z.infer<typeof toolCreateSchema>;
 // bez default (zod 4: .partial() z default nadpisałby zapisane pole); spójność miejsca sprawdza serwer po scaleniu
 export const toolUpdateSchema = z.object({ opId, nazwa, carId, podmiejsce, sn, faktura, dataZakupu }).partial();
 export type ToolUpdate = z.infer<typeof toolUpdateSchema>;
+
+const czynnosc = txt.min(1, 'Wpisz czynność').max(500, 'Opis jest za długi');
+const dzien = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data: RRRR-MM-DD');
+export const toolServiceCreateSchema = z.object({ opId, dzien, czynnosc });
+export type ToolServiceCreate = z.infer<typeof toolServiceCreateSchema>;
+export const toolServiceUpdateSchema = z.object({ opId, dzien, czynnosc }).partial();
+export type ToolServiceUpdate = z.infer<typeof toolServiceUpdateSchema>;

@@ -1,4 +1,4 @@
-import { toolCreateSchema, toolUpdateSchema } from '@etner/shared';
+import { toolCreateSchema, toolServiceCreateSchema, toolServiceUpdateSchema, toolUpdateSchema } from '@etner/shared';
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppDeps } from '../../app.js';
@@ -31,6 +31,25 @@ export function routes(app: Hono, { db }: AppDeps): void {
     if (!r && svc.removed(db, c.req.param('id'))) return c.json({ ok: true }); // powtórka z kolejki
     if (!r) throw notFound();
     svc.remove(db, me(c).id, r.id);
+    return c.json({ ok: true });
+  });
+
+  // historia serwisowa: dodaje, poprawia i usuwa admin (jak resztę listy narzędzi)
+  app.post('/api/tools/:id/service', admin, async (c) => {
+    const { opId, ...d } = await body(c, toolServiceCreateSchema);
+    return c.json(runOp(db, opId, me(c).id, () => svc.createService(db, me(c).id, c.req.param('id'), d)).result);
+  });
+  app.put('/api/tool-service/:id', admin, async (c) => {
+    const { opId, ...d } = await body(c, toolServiceUpdateSchema);
+    const old = svc.getService(db, c.req.param('id'));
+    if (!old) throw notFound();
+    return c.json(runOp(db, opId, me(c).id, () => svc.updateService(db, me(c).id, old, d)).result);
+  });
+  app.delete('/api/tool-service/:id', admin, (c) => {
+    const r = svc.getService(db, c.req.param('id'));
+    if (!r && svc.serviceRemoved(db, c.req.param('id'))) return c.json({ ok: true });
+    if (!r) throw notFound();
+    svc.removeService(db, me(c).id, r);
     return c.json({ ok: true });
   });
 }

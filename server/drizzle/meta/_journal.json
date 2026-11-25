@@ -211,6 +211,13 @@
       "when": 1795550885246,
       "tag": "0029_narzedzia_sn",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1795580172268,
+      "tag": "0030_narzedzia_serwis",
+      "breakpoints": true
     }
   ]
 }

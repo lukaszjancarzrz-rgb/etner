@@ -15,3 +15,12 @@ export const tools = sqliteTable('tools', {
   dataZakupu: text('data_zakupu'),
   by: text('by').notNull(),
 });
+
+/** Historia serwisowa narzędzia: dzień (RRRR-MM-DD) i czynność (właściciel 2026-11-25). */
+export const toolService = sqliteTable('tool_service', {
+  ...baseCols(),
+  toolId: text('tool_id').notNull().references(() => tools.id),
+  dzien: text('dzien').notNull(),
+  czynnosc: text('czynnosc').notNull(),
+  by: text('by').notNull(),
+});
