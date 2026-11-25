@@ -26,7 +26,7 @@ const byName = (a: Rec, b: Rec) => a.nazwa.localeCompare(b.nazwa, 'pl');
 /** Miejsce narzędzia: „Mała Toyota · Górna półka na regale” albo „Magazyn” (R42: nazwa auta z listy aut). */
 const placeOf = (t: Rec, cars: Map<string, Rec>) => (t.carId ? `${cars.get(t.carId)?.nazwa ?? 'Samochód'} · ${t.podmiejsce}` : 'Magazyn');
 
-/** Stan narzędzi: wyszukiwanie po wszystkich miejscach, bez niego sekcje per miejsce (w aucie wg podmiejsca). Zmiany tylko admin, w trybie „Edytuj listy” (R43). */
+/** Stan narzędzi: wyszukiwanie po wszystkich miejscach, bez niego sekcje per miejsce (w aucie wg podmiejsca). Zmiany tylko admin, w trybie „Edytuj narzędzia” (R43); poza nim karta narzędzia tylko do podglądu. */
 export function Narzedzia() {
   const carsList = useEntities('cars');
   const raw = useEntities('tools');
@@ -48,10 +48,13 @@ export function Narzedzia() {
   const show = (t: Rec) => { if (!t._tmp) setCard(t.id); };
   return (
     <section className="mx-auto grid max-w-3xl gap-5 px-4 py-4 desk:max-w-6xl desk:py-6">
-      <Search value={q} onChange={setQ} label="Szukaj narzędzia" placeholder="Szukaj, np. wkrętarka albo numer seryjny" />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1 basis-64"><Search value={q} onChange={setQ} label="Szukaj narzędzia" placeholder="Szukaj, np. wkrętarka albo numer seryjny" /></div>
+        {admin && !editing && <Button variant="secondary" onClick={() => setEditing(true)}><PencilSimple className="h-5 w-5" />Edytuj narzędzia</Button>}
+      </div>
       {open && (
         <div className="flex flex-wrap items-center gap-2 rounded-[4px] border border-action/40 bg-action/5 px-4 py-2">
-          <p className="mr-auto text-sm font-semibold">Edycja list: dodaj, popraw, przenieś albo usuń narzędzie.</p>
+          <p className="mr-auto text-sm font-semibold">Edycja narzędzi: dodaj, popraw, przenieś albo usuń narzędzie; w karcie narzędzia – historia serwisowa.</p>
           <Button size="sm" onClick={() => setEdit('new')}><Plus className="h-4 w-4" weight="bold" />Dodaj narzędzie</Button>
           <Button size="sm" variant="secondary" onClick={() => setEditing(false)}><Check className="h-4 w-4" weight="bold" />Gotowe</Button>
         </div>
@@ -62,11 +65,11 @@ export function Narzedzia() {
             <SectionTitle count={found.length}>Gdzie szukać</SectionTitle>
             <ul className="grid gap-2" aria-label="Wyniki wyszukiwania">{found.map((t) => <ToolRow key={t.id} t={t} place={placeOf(t, carMap)} onEdit={open} onShow={show} />)}</ul>
           </div>
-        ) : <Empty icon={MagnifyingGlass} title="Nie ma takiego narzędzia" hint={admin ? 'Sprawdź pisownię albo dodaj narzędzie w trybie „Edytuj listy”.' : 'Sprawdź pisownię. Brakujące narzędzie dopisuje administrator.'} />
+        ) : <Empty icon={MagnifyingGlass} title="Nie ma takiego narzędzia" hint={admin ? 'Sprawdź pisownię albo dodaj narzędzie w trybie „Edytuj narzędzia”.' : 'Sprawdź pisownię. Brakujące narzędzie dopisuje administrator.'} />
       ) : desk && tools.length ? (
         <ToolTable tools={found ?? tools} cars={cars} carMap={carMap} onEdit={open} onShow={show} />
       ) : !tools.length ? (
-        <Empty icon={Wrench} title="Lista narzędzi jest pusta" hint={admin ? 'Dodaj narzędzia z samochodów i Magazynu w trybie „Edytuj listy”, żeby każdy wiedział, gdzie ich szukać.' : 'Administrator dopisze narzędzia z samochodów i Magazynu.'} />
+        <Empty icon={Wrench} title="Lista narzędzi jest pusta" hint={admin ? 'Dodaj narzędzia z samochodów i Magazynu w trybie „Edytuj narzędzia”, żeby każdy wiedział, gdzie ich szukać.' : 'Administrator dopisze narzędzia z samochodów i Magazynu.'} />
       ) : (
         <>
           {cars.map((c) => {
@@ -103,9 +106,8 @@ export function Narzedzia() {
           })()}
         </>
       )}
-      {admin && !editing && <div className="flex justify-center desk:justify-start"><Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-ink-2"><PencilSimple className="h-4 w-4" />Edytuj listy</Button></div>}
       {edit && <ToolForm tool={edit === 'new' ? undefined : edit} cars={cars} onClose={() => setEdit(null)} />}
-      {card && tools.some((t) => t.id === card) && <ToolCard tool={tools.find((t) => t.id === card)!} place={placeOf(tools.find((t) => t.id === card)!, carMap)} onEdit={admin ? (t) => { setCard(null); setEdit(t); } : undefined} onClose={() => setCard(null)} />}
+      {card && tools.some((t) => t.id === card) && <ToolCard tool={tools.find((t) => t.id === card)!} place={placeOf(tools.find((t) => t.id === card)!, carMap)} onEdit={open ? (t) => { setCard(null); setEdit(t); } : undefined} onClose={() => setCard(null)} />}
       <TitleCount n={(found ?? tools).length} />
     </section>
   );
