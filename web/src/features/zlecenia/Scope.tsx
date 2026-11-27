@@ -102,7 +102,7 @@ export function Scope({ jobId, disabled, since }: { jobId: string; disabled?: bo
 function ScopeForm({ jobId, item, next, photos, onClose }: { jobId: string; item?: Rec; next: number; photos: Rec[]; onClose: () => void }) {
   const me = useMe();
   const [tekst, setTekst] = useState<string>(item?.tekst ?? '');
-  const { files, setFiles, busy, previews, buttons } = usePicker({ pdf: false });
+  const { files, setFiles, busy, previews, buttons, onPaste } = usePicker({ pdf: false });
   const [err, setErr] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [gone, setGone] = useState<string[]>([]); // istniejące zdjęcia do usunięcia przy zapisie
@@ -146,8 +146,8 @@ function ScopeForm({ jobId, item, next, photos, onClose }: { jobId: string; item
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <Sheet title={item ? 'Punkt zakresu prac' : 'Nowy punkt zakresu'} description={item ? 'Popraw tekst, dodaj lub usuń zdjęcia.' : 'Tekst i opcjonalnie zdjęcia.'}>
-        <form onSubmit={submit} noValidate className="grid gap-4">
+      <Sheet title={item ? 'Punkt zakresu prac' : 'Nowy punkt zakresu'} description={`${item ? 'Popraw tekst, dodaj lub usuń zdjęcia.' : 'Tekst i opcjonalnie zdjęcia.'} Zdjęcie możesz też wkleić ze schowka (Ctrl+V).`}>
+        <form onSubmit={submit} onPaste={onPaste} noValidate className="grid gap-4">
           <div className="grid gap-2">
             <label htmlFor="zakres-tekst" className="text-sm font-semibold">Co do zrobienia</label>
             <Textarea id="zakres-tekst" value={tekst} onChange={(e) => { setTekst(e.target.value); setErr(''); }} placeholder="np. Centrala na poddaszu, kanały 160 mm do sypialni" aria-invalid={!!err} aria-describedby={err ? 'zakres-tekst-e' : undefined} autoFocus />

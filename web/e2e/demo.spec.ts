@@ -366,6 +366,15 @@ test('zakres prac: admin dodaje punkt ze zdjęciem, pracownik go widzi bez edycj
   await form.getByLabel('Co do zrobienia').fill(tekst);
   await form.locator('input[data-gallery]').setInputFiles(photo);
   await expect(form.getByRole('img', { name: 'zdjecie.jpg' })).toBeVisible();
+  // Ctrl+V: zdjęcie ze schowka dochodzi do wybranych (tu usuwane z powrotem – punkt ma mieć jedno zdjęcie)
+  await form.getByLabel('Co do zrobienia').evaluate((el) => {
+    const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+    const dt = new DataTransfer();
+    dt.items.add(new File([png], 'wklejone.png', { type: 'image/png' }));
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  await expect(form.getByRole('img', { name: 'wklejone.png' })).toBeVisible();
+  await form.getByRole('button', { name: 'Usuń wklejone.png' }).click();
   await form.getByRole('button', { name: 'Zapisz' }).click();
   await expect(form).toBeHidden();
   const item = scope.locator('ol > li', { hasText: tekst });

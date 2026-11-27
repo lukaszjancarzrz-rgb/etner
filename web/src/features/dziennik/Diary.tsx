@@ -176,7 +176,7 @@ export function usePicker(opts: { pdf?: boolean; img?: boolean } = {}) {
   // podglądy niewysłanych plików zwalniamy przy wyjściu z karty
   useEffect(() => () => { for (const f of current.current) URL.revokeObjectURL(f.url); }, []);
 
-  async function add(list: FileList | null) {
+  async function add(list: FileList | File[] | null) {
     if (!list?.length) return;
     setBusy(true);
     try {
@@ -188,6 +188,14 @@ export function usePicker(opts: { pdf?: boolean; img?: boolean } = {}) {
       setFiles((x) => [...x, ...out].slice(0, 30));
     } finally { setBusy(false); }
   }
+
+  /** Wklejenie zdjęcia ze schowka (Ctrl+V) – podpinane na formularzu. */
+  const onPaste = (e: React.ClipboardEvent) => {
+    const imgs = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'));
+    if (!imgs.length) return; // zwykły tekst wkleja się normalnie
+    e.preventDefault();
+    void add(imgs);
+  };
 
   const previews = files.length > 0 && (
     <ul className="flex flex-wrap gap-2" aria-label="Wybrane pliki">
@@ -212,7 +220,7 @@ export function usePicker(opts: { pdf?: boolean; img?: boolean } = {}) {
       {opts.pdf !== false && <Button variant="secondary" size="sm" onClick={() => doc.current?.click()}><FilePdf className="h-5 w-5" />Plik (PDF, Word, Excel)</Button>}
     </>
   );
-  return { files, setFiles, busy, previews, buttons };
+  return { files, setFiles, busy, previews, buttons, onPaste };
 }
 
 function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId: string }) {
