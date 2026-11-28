@@ -22,6 +22,15 @@ test('dziennik: „Oryginał” w aplikacji, „wstecz” zamyka warstwy; usuni�
   await page.getByPlaceholder('Co zrobiono, czego brakuje').fill(`${tag}: do usunięcia`);
   await page.locator('input[data-gallery]').setInputFiles(photo);
   await expect(page.getByRole('list', { name: 'Wybrane pliki' }).getByRole('img', { name: 'zdjecie.jpg' })).toBeVisible();
+  // Ctrl+V: zdjęcie ze schowka dochodzi do wybranych (usuwane z powrotem – wpis ma jedno zdjęcie)
+  await page.getByPlaceholder('Co zrobiono, czego brakuje').evaluate((el) => {
+    const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+    const dt = new DataTransfer();
+    dt.items.add(new File([png], 'wklejone.png', { type: 'image/png' }));
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  await expect(page.getByRole('list', { name: 'Wybrane pliki' }).getByRole('img', { name: 'wklejone.png' })).toBeVisible();
+  await page.getByRole('button', { name: 'Usuń wklejone.png' }).click();
   await page.getByRole('button', { name: 'Dodaj wpis' }).click();
   const entry = page.locator('li[id^="e-"]', { hasText: `${tag}: do usunięcia` });
   await expect(entry).not.toContainText('wysyłanie');

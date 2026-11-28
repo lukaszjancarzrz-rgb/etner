@@ -225,7 +225,7 @@ export function usePicker(opts: { pdf?: boolean; img?: boolean } = {}) {
 
 function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId: string }) {
   const [tekst, setTekst] = useState('');
-  const { files, setFiles, busy, previews, buttons } = usePicker();
+  const { files, setFiles, busy, previews, buttons, onPaste } = usePicker();
   const [err, setErr] = useState('');
   const alive = useRef(true);
   const me = useMe();
@@ -254,9 +254,9 @@ function EntryForm({ ownerType, ownerId }: { ownerType: 'job' | 'lead'; ownerId:
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-3 rounded-[4px] border border-line bg-card p-4" noValidate>
+    <form onSubmit={submit} onPaste={onPaste} className="grid gap-3 rounded-[4px] border border-line bg-card p-4" noValidate>
       <label htmlFor={`dz-${ownerId}`} className="sr-only">Nowy wpis</label>
-      <Textarea id={`dz-${ownerId}`} value={tekst} onChange={(e) => setTekst(e.target.value)} placeholder="Co zrobiono, czego brakuje, uwagi z budowy" aria-invalid={!!err} aria-describedby={err ? `dz-${ownerId}-e` : undefined} className="min-h-20" />
+      <Textarea id={`dz-${ownerId}`} value={tekst} onChange={(e) => setTekst(e.target.value)} placeholder="Co zrobiono, czego brakuje, uwagi z budowy (zdjęcie możesz wkleić: Ctrl+V)" aria-invalid={!!err} aria-describedby={err ? `dz-${ownerId}-e` : undefined} className="min-h-20" />
       {previews}
       {err && <p id={`dz-${ownerId}-e`} role="alert" className="text-sm text-danger">{err}</p>}
       <div className="flex flex-wrap items-center gap-2">
